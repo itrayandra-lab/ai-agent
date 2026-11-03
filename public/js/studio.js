@@ -10,7 +10,7 @@ const skillTools = (sk) => (sk?.tools?.length ? sk.tools : CATEGORY_TOOLS[sk?.ca
 const autoOn = () => D().settings?.autoActivate !== false;
 const toolChips = (ids) => ids.map((t) => `<span class="chip tool-chip">⚡ ${esc(t)}</span>`).join('');
 const catsOf = (list) => [...new Set(list.map((x) => x.category))].sort();
-const blankEmployee = (divisionId = 'mkt') => ({ name: '', title: '', type: 'ai', divisionId, isLead: false, avatar: 'bot', autonomy: 'auto', model: '', effort: '', outputFormat: 'markdown', persona: '', about: '', taskAndFunction: '', instructions: '', escalation: '', skills: [], skillRefs: [], tools: (D().capabilities || []).filter((c) => !c.specialist && !c.leadOnly && !c.paOnly).map((c) => c.id), knowledgeIds: [], starters: [], reasoning: null });
+const blankEmployee = (divisionId = 'mkt') => ({ name: '', title: '', type: 'ai', divisionId, isLead: false, avatar: 'bot', autonomy: 'auto', model: '', effort: '', outputFormat: 'markdown', persona: '', about: '', taskAndFunction: '', instructions: '', escalation: '', skills: [], skillRefs: (D().skills || []).map((s) => ({ id: s.id, proficiency: 5 })), tools: (D().capabilities || []).map((c) => c.id), knowledgeIds: [], starters: [], reasoning: null });
 
 export const StudioView = {
   mount(root) {

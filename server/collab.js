@@ -24,15 +24,16 @@ ${lessons ? `Pelajaran yang kamu ingat:\n${lessons}\n` : ''}Bicaralah sebagai re
 }
 
 // ═════════════════════ meetings ═════════════════════
-export async function runMeeting({ topic, agenda = '', participantIds = [], chairId, rounds = 2, originTaskId = null }) {
+export async function runMeeting({ topic, agenda = '', participantIds = [], representedParticipantIds = [], chairId, rounds = 2, originTaskId = null, ownerLed = false, ownerId = 'owner' }) {
   if (!llm.isLive()) throw new Error('Rapat multi-agen membutuhkan provider AI aktif (Groq/Claude)');
   const chair = emp(chairId) || emp(participantIds[0]) || emp('aria');
-  const people = [...new Set([chair.id, ...participantIds])].map(emp).filter((e) => e && e.type === 'ai').slice(0, 7);
+  const people = [...new Set([chair.id, ...participantIds])].map(emp).filter((e) => e && e.type === 'ai').slice(0, 25);
   if (people.length < 2) throw new Error('Rapat butuh minimal 2 peserta AI');
   const id = store.uid('mtg');
-  const m = store.upsert('meetings', { id, topic: clip(topic, 160), agenda: clip(agenda, 2000), chairId: chair.id, participants: people.map((p) => p.id), status: 'running', transcript: [], minutes: '', actionItems: [], originTaskId, createdAt: Date.now() });
-  store.upsert('channels', { id: `mtg-${id}`, kind: 'meeting', name: `Rapat: ${clip(topic, 60)}`, members: m.participants, meetingId: id, topic: agenda });
-  for (const p of people) { p.meetingUntil = Date.now() + 10 * 60000; engine.setStatus(p, 'meeting', `Rapat: ${clip(topic, 40)}`, p.currentTaskId); }
+  const represented = [...new Set(representedParticipantIds.length ? representedParticipantIds : people.map((p) => p.id))].filter((x) => emp(x)?.type === 'ai');
+  const m = store.upsert('meetings', { id, topic: clip(topic, 160), agenda: clip(agenda, 2000), chairId: chair.id, participants: people.map((p) => p.id), representedParticipants: represented, ownerLed: !!ownerLed, ownerId, status: ownerLed ? 'waiting_owner' : 'running', transcript: [], minutes: '', actionItems: [], originTaskId, createdAt: Date.now() });
+  store.upsert('channels', { id: `mtg-${id}`, kind: 'meeting', name: `Rapat: ${clip(topic, 60)}`, members: [...new Set([ownerId, ...m.participants])], meetingId: id, topic: agenda });
+  for (const p of people) { p.meetingUntil = Date.now() + (ownerLed ? 125 : 10) * 60000; engine.setStatus(p, 'meeting', ownerLed ? 'Mendengarkan Owner' : `Rapat: ${clip(topic, 40)}`, p.currentTaskId); }
   engine.event('meeting', chair.id, `${chair.name} memulai rapat "${clip(topic, 70)}" dengan ${people.filter((p) => p !== chair).map((p) => p.name).join(', ')}`, { participants: m.participants, meetingId: id });
   const say = (p, text) => {
     text = String(text).replace(/^\s*\**\s*[\w .]{2,30}(\([^)]*\))?\s*:\s*\**\s*/, '').trim() || text; // drop "**Name (Role):**" echoes
@@ -43,8 +44,20 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], chai
   };
   try {
     await wait(db().settings.meetingGatherMs ?? 9000); // let everyone walk to the Conference Hall
+    if (ownerLed) {
+      engine.event('meeting_waiting', chair.id, `Peserta rapat "${clip(topic, 60)}" diam dan mendengarkan Owner`, { participants: m.participants, meetingId: id });
+      const deadline = Date.now() + 2 * 3600e3;
+      while (!m.ownerFinishedAt && Date.now() < deadline) await wait(750);
+      if (!m.ownerFinishedAt) {
+        m.status = 'paused'; m.pauseReason = 'Owner belum menyatakan selesai berbicara dalam 2 jam'; store.upsert('meetings', m);
+        return m;
+      }
+      m.status = 'running'; store.upsert('meetings', m);
+      for (const p of people) { p.meetingUntil = Date.now() + 15 * 60000; engine.setStatus(p, 'meeting', `Rapat: ${clip(topic, 40)}`, p.currentTaskId); }
+    }
     say(chair, `Rapat dimulai. Topik: **${topic}**${agenda ? `\nAgenda: ${agenda}` : ''}\nSilakan masing-masing menyampaikan pandangan dari sisi peran kalian.`);
-    for (let r = 0; r < Math.min(3, Math.max(1, rounds)); r++) {
+    const effectiveRounds = people.length > 12 ? 1 : Math.min(3, Math.max(1, rounds));
+    for (let r = 0; r < effectiveRounds; r++) {
       for (const p of people) {
         if (r === 0 && p === chair) continue;
         const transcript = m.transcript.slice(-14).map((x) => `${emp(x.speakerId)?.name}: ${x.text}`).join('\n');
@@ -65,12 +78,12 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], chai
       prompt: `Transkrip rapat "${topic}":\n${m.transcript.map((x) => `${emp(x.speakerId)?.name}: ${x.text}`).join('\n')}\n\nTulis notulen: ringkasan, keputusan, dan action item (maks 3, hanya yang benar-benar perlu dan sesuai topik; jangan menciptakan proyek baru) dengan penanggung jawab dari peserta rapat atau karyawan lain yang paling cocok.`,
       schema: { type: 'object', additionalProperties: false, required: ['summary', 'decisions', 'action_items'], properties: {
         summary: { type: 'string' }, decisions: { type: 'array', items: { type: 'string' } },
-        action_items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'description', 'assignee_id', 'priority'], properties: { title: { type: 'string' }, description: { type: 'string' }, assignee_id: { type: 'string', enum: ids }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } } } },
+        action_items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'description', 'assignee_id', 'priority'], properties: { title: { type: 'string', minLength: 3 }, description: { type: 'string' }, assignee_id: { type: 'string', enum: ids }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } } } },
       } },
       employee: chair, effort: 'low', maxTokens: 6000,
     });
     const created = [];
-    for (const a of (out.action_items || []).slice(0, 3)) {
+    for (const a of (out.action_items || []).filter((x) => String(x?.title || '').trim().length >= 3).slice(0, 3)) {
       try { created.push(engine.createTask({ title: a.title, description: `${a.description}\n\n(Dari rapat: ${topic})`, assigneeId: emp(a.assignee_id) ? a.assignee_id : chair.id, createdBy: originTaskId ? chair.id : 'owner', priority: a.priority || 'medium', parentId: originTaskId || null })); }
       catch (err) { console.warn('[meeting] action item dilewati:', err.message); }
     }
@@ -92,6 +105,19 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], chai
   } finally {
     for (const p of people) { delete p.meetingUntil; engine.setStatus(p, p.currentTaskId ? 'working' : 'idle', p.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja', p.currentTaskId); }
   }
+}
+
+/** Keep an owner-led meeting silent until the owner explicitly yields the floor. */
+export function handleOwnerMeetingMessage(msg) {
+  const ch = db().channels.find((c) => c.id === msg.channelId && c.kind === 'meeting');
+  const m = ch && db().meetings.find((x) => x.id === ch.meetingId);
+  if (!m || m.status !== 'waiting_owner' || msg.authorId !== m.ownerId) return false;
+  if (!/\bbelum\s+selesai\b/i.test(msg.text) && /(?:^|\b)(?:saya\s+)?(?:sudah\s+)?selesai(?:\s+bicara)?(?:\b|$)|silakan\s+(?:mulai|tanggapi|diskusi)|\/selesai/i.test(msg.text)) {
+    m.ownerFinishedAt = Date.now();
+    store.upsert('meetings', m);
+    engine.event('meeting_owner_done', m.chairId, 'Owner selesai berbicara; peserta mulai menanggapi', { meetingId: m.id });
+  }
+  return true;
 }
 
 // ═════════════════════ consult a colleague ═════════════════════
@@ -139,6 +165,7 @@ export async function reflect(e, t) {
     brain.writeNote({ title: `Playbook ${d.name}`, folder: 'Playbooks', authorId: e.id, tags: ['learning', d.short.toLowerCase()], append: true,
       content: `- ${new Date().toLocaleDateString('id-ID')} · **${e.name}** (${t.title.slice(0, 60)}): ${clip(out.team_tip, 260)}` });
     engine.event('learned', e.id, `${e.name} belajar: ${clip(out.lesson, 110)}`, { taskId: t.id });
+    engine.postMessage(`div-${e.divisionId}`, e.id, `💡 **Berbagi pelajaran:** ${clip(out.team_tip, 260)}`, { taskId: t.id, learning: true });
   } catch (err) { console.warn('[reflect]', err.message); }
 }
 
@@ -300,3 +327,27 @@ export async function mcpCall(name, args) {
   return `Tool MCP ${name} tidak ditemukan (server belum terhubung?).`;
 }
 export function resetMcp() { sessions.clear(); toolCache.clear(); }
+
+// ═════════════════════ Google Workspace via free Apps Script ═════════════════════
+const googleConfig = () => db().settings.googleAppsScript || {};
+export const googleWorkspaceConfigured = () => {
+  const c = googleConfig();
+  try { const u = new URL(c.url); return c.enabled !== false && !!c.secret && /(^|\.)script\.google(?:usercontent)?\.com$/i.test(u.hostname); } catch { return false; }
+};
+export async function googleWorkspaceCall(action, payload = {}) {
+  const c = googleConfig();
+  if (!googleWorkspaceConfigured()) throw new Error('Konektor Google belum aktif. Isi URL Web App dan secret di Pengaturan → Google Workspace.');
+  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 25000);
+  try {
+    const res = await fetch(c.url, { method: 'POST', redirect: 'follow', signal: ctrl.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, secret: c.secret, payload }) });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch { throw new Error(`respons bukan JSON (HTTP ${res.status})`); }
+    if (!res.ok || data.ok === false || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    const receipt = data.receipt || data;
+    const proof = receipt.spreadsheetId || receipt.fileId || receipt.eventId || receipt.url;
+    if (action !== 'status' && !proof) throw new Error('konektor tidak mengembalikan receipt/ID; eksekusi tidak dapat diverifikasi');
+    return { ok: true, action, executedAt: Date.now(), receipt };
+  } catch (err) { throw new Error(`Google Workspace gagal: ${err.name === 'AbortError' ? 'timeout' : err.message}`); }
+  finally { clearTimeout(timer); }
+}

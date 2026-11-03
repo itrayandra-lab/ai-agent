@@ -958,6 +958,7 @@ export function createOffice(container, { onSelect, onZone, onPlayerHint, onPlay
         break;
       case 'message': if (a) { const txt = String(ev.text).split(': ').slice(1).join(': ') || ev.text; say(a, txt, 6000, true); a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45);
         if (/haha|wkwk|😂|🎉|mantap|selamat|keren/i.test(txt)) { feel(a, 'laugh', 2500); gesture(a, 'laugh', 1800); } else if (/maaf|gagal|sayang|kendala|masalah/i.test(txt)) feel(a, 'sad', 3000); else if (/\?/.test(txt)) gesture(a, 'shrug', 1500); else if (Math.random() < 0.4) gesture(a, 'present', 2500); if (b) { packet(a.g.position, b.g.position, 0x9ecbff); a.lookAt = b.g.position; setTimeout(() => { if (a.lookAt === b.g.position) a.lookAt = null; }, 4000); if (Math.random() < 0.3) visit(a, b); } } break;
+      case 'reasoning': if (a) { say(a, '💭 ' + ev.text, 7000, true); a.talkUntil = performance.now() + 6500; gesture(a, 'think', 4200); feel(a, 'focus', 5000); emote(a, '💭', 2600); } break;
       case 'meeting_say': if (a) {
         say(a, ev.text, 9000, true); a.talkUntil = performance.now() + 6000; gesture(a, 'present', 4000);
         for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.35) gesture(o, 'observe', 4000);

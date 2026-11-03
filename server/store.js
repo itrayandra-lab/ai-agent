@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildSeed } from './seed.js';
-import { SEED_SKILLS, ensureEmployeeConfig, defaultTools, autoActivate } from './catalog.js';
+import { SEED_SKILLS, ensureEmployeeConfig, defaultTools, autoActivate, grantUniversalSkills, CAP_IDS } from './catalog.js';
 import { personalAssistant } from './roster.js';
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
@@ -48,10 +48,63 @@ export function load({ reset = false } = {}) {
         for (const e of db.employees) { const s = seed.employees.find((x) => x.id === e.id); if (s?.team && !e.team) e.team = s.team; if (e.type === 'ai') autoActivate(e, db.skills); }
         db.needsOrganize = true;
       }
-      db.version = 5;
+      // v6 migration: universal skill/tool access + repair known strict-tool failures.
+      if ((db.version || 1) < 6) {
+        for (const e of db.employees.filter((x) => x.type === 'ai')) {
+          grantUniversalSkills(e, db.skills);
+          e.tools = [...CAP_IDS];
+        }
+        // Keep exactly one global five-minute self-learning job. Older agents
+        // created several equivalent schedules, which multiplied cost and errors.
+        const noisy = db.routines.filter((r) => r.enabled && (/self.?learning|update knowledge|knowledge update/i.test(`${r.title} ${r.description}`)) && (r.cron === '*/5 * * * *' || Number(r.everyMinutes) === 5));
+        if (noisy.length) {
+          const keep = noisy.find((r) => r.id === 'r-mw04a0t9n3lb6') || noisy[0];
+          Object.assign(keep, {
+            title: 'Self-Learning Knowledge Update — Semua Agen',
+            description: 'Audit perubahan pengetahuan terbaru, pilih pembaruan yang benar-benar relevan, validasi sumber, simpan ringkasan ke Brain, lalu selesaikan dengan laporan singkat. Jangan membuat job atau subtugas baru.',
+            cron: '*/5 * * * *', everyMinutes: 0, employeeId: 'pustaka', enabled: true,
+          });
+          for (const r of noisy) if (r.id !== keep.id) { r.enabled = false; r.disabledReason = `Digabung ke ${keep.id} pada migrasi v6`; }
+        }
+        const repairable = /Agen berhenti tanpa menyelesaikan tugas|attempted to call tool|did not match schema/i;
+        for (const t of db.tasks.filter((x) => x.status === 'blocked')) {
+          const lastErrors = (t.log || []).filter((x) => x.type === 'error').slice(-3).map((x) => x.text).join(' ');
+          if (repairable.test(lastErrors)) {
+            t.status = 'todo'; t.failures = 0; t.updatedAt = Date.now();
+            (t.log ||= []).push({ t: Date.now(), actorId: 'system', type: 'resumed', text: 'Dicoba ulang setelah perbaikan engine v6' });
+          }
+        }
+      }
+      // v7: scoped mass routines, automatic approval, and resilient learning defaults.
+      if ((db.version || 1) < 7) {
+        db.settings.autoApprove ??= true;
+        db.settings.massDispatchSize ??= 20;
+        for (const r of db.routines) {
+          r.targetType ??= 'employee';
+          r.targetId ??= r.employeeId;
+        }
+      }
+      // v8: verified Google execution, efficient company-wide cadence, and
+      // owner-led meeting controls.
+      if ((db.version || 1) < 8) {
+        db.settings.googleAppsScript ??= { url: '', secret: '', enabled: false };
+        for (const e of db.employees.filter((x) => x.type === 'ai')) e.tools = [...CAP_IDS];
+        for (const r of db.routines.filter((x) => /self.?learning|knowledge update|update knowledge/i.test(`${x.title} ${x.description}`) && (x.cron === '*/5 * * * *' || Number(x.everyMinutes) === 5))) {
+          Object.assign(r, { title: 'Self-Learning Knowledge Update — Terverifikasi', description: 'Audit kegagalan dan hasil terbaru, validasi fakta, bagikan satu perbaikan ke Playbook serta channel Knowledge & AI Ops. Jangan membuat jadwal atau subtugas baru.', cron: '30 18 * * 1-5', everyMinutes: 0, employeeId: 'pustaka', targetType: 'employee', targetId: 'pustaka' });
+        }
+        db.divisions.forEach((d, i) => {
+          const id = `r-execute-${d.id}`;
+          if (db.routines.some((r) => r.id === id)) return;
+          const lead = db.employees.find((e) => e.id === d.leadId) || db.employees.find((e) => e.type === 'ai' && e.divisionId === d.id);
+          if (!lead) return;
+          db.routines.push({ id, employeeId: lead.id, targetType: 'division', targetId: d.id, title: `Eksekusi nyata harian — ${d.name}`, description: 'Periksa tugas dan prioritas divisi. Pilih satu tindakan konkret bernilai tertinggi yang belum selesai, konsultasikan maksimal dua staf relevan, eksekusi memakai tool yang tersedia, lalu kirim hasil dan bukti ke channel divisi. Untuk Google/sistem eksternal, hasil hanya boleh disebut berhasil jika ada receipt ID/URL/range; bila konektor belum aktif tulis BELUM TEREKSEKUSI. Bagikan satu pelajaran untuk tim.', cron: `${(5 + i * 7) % 60} ${9 + Math.floor(i / 8)} * * 1-5`, everyMinutes: 0, enabled: true, lastRunAt: Date.now(), createdBy: 'system-v8' });
+        });
+      }
+      db.version = 8;
       // Agents that were mid-task when the server stopped resume from todo.
       for (const e of db.employees) if (e.status !== 'offline') Object.assign(e, { status: 'idle', statusText: 'Siap bekerja', currentTaskId: null });
       for (const t of db.tasks) if (t.status === 'in_progress' && isAI(t.assigneeId)) t.status = 'todo';
+      saveNow();
       return db;
     } catch (err) {
       console.error('db.json rusak, membuat ulang:', err.message);
@@ -73,7 +126,22 @@ export function save() {
 export function saveNow() {
   const tmp = DB_FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(db));
-  fs.renameSync(tmp, DB_FILE);
+  let lastError;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try { fs.renameSync(tmp, DB_FILE); return; }
+    catch (err) {
+      lastError = err;
+      if (!['EPERM', 'EACCES', 'EEXIST'].includes(err.code)) throw err;
+      // Antivirus/indexers can briefly hold db.json on Windows.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20 * (attempt + 1));
+    }
+  }
+  try {
+    fs.copyFileSync(tmp, DB_FILE);
+    fs.unlinkSync(tmp);
+  } catch (err) {
+    throw new Error(`Gagal menyimpan database setelah retry: ${err.message}; rename awal: ${lastError?.message}`);
+  }
 }
 
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
@@ -118,6 +186,9 @@ export function publicSettings() {
   s.apiKey = s.apiKey ? '••••' + s.apiKey.slice(-4) : '';
   s.hasGroqKey = !!(s.groqApiKey || process.env.GROQ_API_KEY);
   s.groqApiKey = s.groqApiKey ? '••••' + s.groqApiKey.slice(-4) : '';
+  if (s.googleAppsScript) {
+    s.googleAppsScript = { ...s.googleAppsScript, secret: s.googleAppsScript.secret ? '••••' + s.googleAppsScript.secret.slice(-4) : '', hasSecret: !!s.googleAppsScript.secret };
+  }
   return s;
 }
 

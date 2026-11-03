@@ -51,11 +51,17 @@ Di PowerShell: `$env:HOST="0.0.0.0"; npm start`. Server ini belum punya login, j
 | 🎭 Agen ekspresif | Agen menampilkan emote yang muncul di atas kepala (🎉 💡 ✋ 📨 😵 👏) dan gestur: bersorak, berpikir, mengangguk, menunjuk, mengangkat bahu, tepuk tangan, dan meregang. Peserta rapat mengangguk saat setuju, dan postur agen mengikuti mood dari refleksinya. Di mode Play, agen yang Anda ajak bicara menoleh dan melambai. |
 | ⏰ Otomasi | Cron 5-field (`schedule_job`/`list_jobs`): standup harian, KPI mingguan, sosial media, laporan marketplace, cek regulasi, dan retro setiap head. Agen juga punya `visit_url` (dengan SSRF guard) dan klien **MCP** (Streamable HTTP) yang tool-nya otomatis tersedia untuk agen. |
 | ⚡ Hemat token | Tier model: lead dan worker memakai `gpt-oss-120b`, sedangkan chat staf, rapat, dan refleksi memakai `gpt-oss-20b`. Prefix prompt stabil dan bisa di-cache. Ada juga cache riset 6 jam, compaction konteks, batas giliran, dan budget per goal ($1,5) dan per tugas ($0,4). **Governor** menolak tugas kosong atau duplikat, inisiatif berlebihan, dan delegasi terlalu dalam. |
+| 📊 Google Workspace nyata | Konektor gratis Google Apps Script untuk menambah baris Sheets, membuat file/Google Doc di Drive, dan membuat event Calendar. Agen hanya boleh mengaku berhasil jika menerima receipt berisi ID/URL/range; tanpa konektor hasil ditandai **BELUM TEREKSEKUSI**. |
+| 🎙️ Rapat owner-led | Saat Owner memulai rapat, peserta masuk Conference Hall tetapi diam mendengarkan. Diskusi AI baru dimulai setelah Owner mengirim `saya selesai` atau `/selesai`. Pemilih peserta mendukung semua agen, semua kepala, per divisi, dan individu. |
 | 🎓 Training | Dataset fine-tuning JSONL per agen (Pengaturan → Training) dan log feedback dari persetujuan manusia. |
 | ✨ Agent Studio | Editor karyawan berlapis: identitas, instruksi, KPI, skill dengan proficiency, tool, dan knowledge. Ada AI Draft dari satu brief, bulk create, dan preview prompt final. |
 | 🎯 Goal → eksekusi | Goal dikirim ke PA Anda, diteruskan ke Aria, lalu dipecah ke head divisi dan staf. Hasilnya disintesis kembali dan dilaporkan ke Anda. Persetujuan manusia hanya diminta untuk keputusan berisiko: uang, publikasi, kontrak, dan HR. |
 | 🌆 Dunia | Di sekitar kantor ada skyline kota (gedung instanced dengan jendela menyala saat senja), ring road dengan mobil yang berjalan, dan lampu jalan. Ada juga gedung Ray Group Tower, Ray Beauty Plant, gedung parkir, plaza dengan air mancur, bendera, bangku, payung kafe, dan hutan pohon. Kabut sinematik mengikuti jarak kamera dan menyatu dengan sky dome, jadi ujung dunia tidak terlihat. Color grading-nya filmic dengan vignette, dan bloom hanya muncul pada lampu (tidak silau). |
 | 💬 Chat cerdas | `/goal`, `/tugas @nama judul`, `/rapat`, `/cari`, `/status`, autocomplete `@nama` (dengan tim dan status), dan chip aksi cepat. |
+| 📣 Broadcast hemat token | Pesan di `#general` selalu dijawab PA. Gunakan `@all`, `@kepala`, `@staff`, `#divisi`, atau hashtag keahlian untuk routing massal. Eksekusi dibagi per head divisi dan dibatasi maksimal dua konsultasi staf per divisi agar tidak memanggil seluruh model serentak. |
+| 🔁 Rutinitas berscope | Target rutinitas dapat berupa semua agen, semua kepala, semua staf, satu divisi, hashtag/tim/keahlian, atau satu agen. Target massal memakai antrean koordinator divisi. |
+| 🧠 Failure recovery | Kegagalan menjadi failure case di Playbook dan channel divisi/Knowledge & AI Ops, memakai retry dengan backoff, lalu handoff otomatis ke agen cadangan bila tiga percobaan gagal. |
+| ⚡ Auto-approve | Mode auto-approve melanjutkan pekerjaan tanpa klik manual sambil tetap menyimpan keputusan sebagai audit trail. |
 | 📋 Tugas cerdas | Lensa: sedang dikerjakan, macet, butuh keputusan, prioritas tinggi, selesai hari ini, dan inisiatif agen. Ada juga rata-rata waktu selesai dan biaya AI. |
 | 📋 Tugas · 💬 Chat · 🧠 Brain · 📊 Dashboard | Kanban dengan jejak kerja (pikiran, tool call, biaya). Chat berisi channel divisi, DM, dan notulen rapat. Brain berisi 42 catatan (SOP 18 divisi, produk, pedoman klaim kosmetik, kalender kampanye). Dashboard menampilkan KPI, hierarki, dan biaya per model. |
 
@@ -89,5 +95,14 @@ public/js/
   furniture.js   furnitur & material prosedural
   people.js      karakter + rig
 ```
+
+## Menghubungkan Google Workspace (gratis)
+
+1. Buat project baru di [Google Apps Script](https://script.google.com), lalu salin isi `integrations/google-apps-script/Code.gs`.
+2. Jalankan `setRayAgentSecret('secret-acak-minimal-16-karakter')` satu kali dari editor.
+3. Pilih **Deploy → New deployment → Web app**, jalankan sebagai akun Anda, lalu salin URL `/exec`.
+4. Di Ray Office buka **Pengaturan → Google Workspace**, isi URL dan secret yang sama, simpan, lalu tekan **Tes + verifikasi receipt**.
+
+Setelah tes sukses, tool `google_sheets_append`, `google_drive_create`, dan `google_calendar_create` tersedia untuk seluruh agen. Setiap eksekusi tercatat di jejak tugas sebagai `external_receipt`.
 
 `npm run reset` mengembalikan data ke kondisi awal (API key tetap disimpan).

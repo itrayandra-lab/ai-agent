@@ -8,7 +8,7 @@ import * as brain from './brain.js';
 import * as llm from './llm.js';
 import { slug } from './seed.js';
 import * as studio from './studio.js';
-import { CAPABILITIES, ensureEmployeeConfig, autoActivate, skillTools } from './catalog.js';
+import { CAPABILITIES, ensureEmployeeConfig, autoActivate, skillTools, grantUniversalSkills } from './catalog.js';
 import * as lib from './librarian.js';
 import { personalAssistant } from './roster.js';
 import * as collab from './collab.js';
@@ -140,11 +140,18 @@ on('GET', '/api/employees/:id/prompt', (b, p) => {
 });
 on('POST', '/api/studio/generate', (b) => studio.generate(b));
 on('POST', '/api/meetings', (b) => {
-  const ids = (b.participantIds || []).filter((id) => db().employees.some((e) => e.id === id));
-  const chairId = b.chairId || ids[0];
+  const representedIds = [...new Set((b.participantIds || []).filter((id) => db().employees.some((e) => e.id === id && e.type === 'ai')))];
+  let ids = representedIds;
+  // A company-wide meeting is represented by every division head. All selected
+  // employees remain recorded as represented participants without 154 LLM calls.
+  if (ids.length > 25) {
+    const divisions = new Set(ids.map((id) => db().employees.find((e) => e.id === id)?.divisionId));
+    ids = db().divisions.filter((d) => divisions.has(d.id)).map((d) => db().employees.find((e) => e.id === d.leadId) || db().employees.find((e) => e.type === 'ai' && e.divisionId === d.id)).filter(Boolean).map((e) => e.id);
+  }
+  const chairId = b.chairId || ids[0] || 'aria';
   // run in background; progress streams over SSE (meetings collection + meeting channel)
-  collab.runMeeting({ topic: need(b.topic, 'Topik wajib'), agenda: b.agenda || '', participantIds: ids, chairId, rounds: Number(b.rounds) || 2 }).catch((err) => console.warn('[meeting]', err.message));
-  return { ok: true };
+  collab.runMeeting({ topic: need(b.topic, 'Topik wajib'), agenda: b.agenda || '', participantIds: ids, representedParticipantIds: representedIds, chairId, rounds: Number(b.rounds) || 2, ownerLed: b.ownerLed !== false, ownerId: b.userId || db().settings.currentUserId }).catch((err) => console.warn('[meeting]', err.message));
+  return { ok: true, represented: representedIds.length, activeParticipants: [...new Set([chairId, ...ids])].length, ownerLed: b.ownerLed !== false };
 });
 on('POST', '/api/mcp/test', async (b) => {
   const server = { id: 'test', name: b.name || 'test', url: need(b.url, 'URL wajib'), headers: b.headers || {} };
@@ -153,6 +160,7 @@ on('POST', '/api/mcp/test', async (b) => {
   collab.resetMcp();
   return { ok: true, tools: tools.map((t) => ({ name: t.name, description: (t.description || '').slice(0, 160) })) };
 });
+on('POST', '/api/google-workspace/test', async () => collab.googleWorkspaceCall('status', {}));
 on('GET', '/api/training/:id', (b, p) => {
   const file = collab.trainingFile(p.id);
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').trim().split('\n').filter(Boolean) : [];
@@ -184,7 +192,12 @@ const SKILL_FIELDS = ['name', 'category', 'description', 'promptSnippet', 'usage
 on('POST', '/api/skills', (b) => {
   let id = slug(need(b.name, 'Nama skill wajib'));
   while (db().skills.some((x) => x.id === id)) id += '-' + Math.random().toString(36).slice(2, 4);
-  return store.upsert('skills', { id, category: 'Strategy', description: '', promptSnippet: '', usageGuide: '', example: '', tags: [], divisions: [], ...pick(b, SKILL_FIELDS), builtIn: false, createdAt: Date.now() });
+  const skill = store.upsert('skills', { id, category: 'Strategy', description: '', promptSnippet: '', usageGuide: '', example: '', tags: [], divisions: [], ...pick(b, SKILL_FIELDS), builtIn: false, createdAt: Date.now() });
+  for (const e of db().employees.filter((x) => x.type === 'ai')) {
+    grantUniversalSkills(e, db().skills);
+    store.upsert('employees', e);
+  }
+  return skill;
 });
 on('PATCH', '/api/skills/:id', (b, p) => store.patch('skills', p.id, pick(b, SKILL_FIELDS)));
 on('DELETE', '/api/skills/:id', (b, p) => {
@@ -195,20 +208,32 @@ on('DELETE', '/api/skills/:id', (b, p) => {
 on('POST', '/api/divisions', (b) => org.createDivision(b));
 on('PATCH', '/api/divisions/:id', (b, p) => store.patch('divisions', p.id, pick(b, ['name', 'short', 'color', 'icon', 'mission', 'leadId', 'delegation'])));
 
-on('POST', '/api/routines', (b) => store.upsert('routines', { id: store.uid('r'), employeeId: need(b.employeeId, 'employeeId wajib'), title: need(b.title, 'Judul wajib'), description: b.description || '', everyMinutes: Math.max(1, Number(b.everyMinutes) || 60), enabled: b.enabled !== false, lastRunAt: Date.now() }));
-on('PATCH', '/api/routines/:id', (b, p) => store.patch('routines', p.id, pick(b, ['title', 'description', 'everyMinutes', 'enabled', 'employeeId'])));
+on('POST', '/api/routines', (b) => {
+  const targetType = b.targetType || 'employee';
+  const targetId = b.targetId || b.employeeId || 'aria';
+  return store.upsert('routines', { id: store.uid('r'), employeeId: targetType === 'employee' ? targetId : (b.employeeId || 'aria'), targetType, targetId, targetTag: String(b.targetTag || '').replace(/^#/, '').slice(0, 60), title: need(b.title, 'Judul wajib'), description: b.description || '', everyMinutes: Math.max(1, Number(b.everyMinutes) || 60), enabled: b.enabled !== false, lastRunAt: Date.now() });
+});
+on('PATCH', '/api/routines/:id', (b, p) => store.patch('routines', p.id, pick(b, ['title', 'description', 'everyMinutes', 'enabled', 'employeeId', 'targetType', 'targetId', 'targetTag'])));
 on('DELETE', '/api/routines/:id', (b, p) => ({ ok: store.remove('routines', p.id) }));
-on('POST', '/api/routines/:id/run', (b, p) => { const r = db().routines.find((x) => x.id === p.id); return engine.createTask({ title: r.title, description: r.description, assigneeId: r.employeeId, createdBy: 'system', kind: 'routine', routineId: r.id, priority: 'medium' }); });
+on('POST', '/api/routines/:id/run', (b, p) => engine.runRoutine(db().routines.find((x) => x.id === p.id), { priority: 'medium' }));
 
 on('PATCH', '/api/settings', (b) => {
   const s = db().settings;
-  const ch = pick(b, ['mcpServers', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize']);
+  const ch = pick(b, ['mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize']);
   if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = b.apiKey.trim();
   if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = b.groqApiKey.trim();
   for (const k of ['tickMs', 'maxConcurrent', 'dailyBudgetUSD']) if (k in ch) ch[k] = Number(ch[k]);
   if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); collab.resetMcp(); }
+  if (ch.googleAppsScript) {
+    const prev = s.googleAppsScript || {};
+    const next = ch.googleAppsScript || {};
+    if (!/^https:\/\/(script\.google\.com|script\.googleusercontent\.com)\//i.test(next.url || '')) next.url = '';
+    if (typeof next.secret !== 'string' || next.secret.startsWith('••••')) next.secret = prev.secret || '';
+    ch.googleAppsScript = { url: String(next.url || '').slice(0, 1000), secret: String(next.secret || '').slice(0, 300), enabled: next.enabled !== false };
+  }
   Object.assign(s, ch);
   store.setRoot('settings', s);
+  if (ch.autoApprove === true) engine.autoApprovePending();
   store.broadcast({ kind: 'root', key: 'live', value: llm.isLive() });
   store.broadcast({ kind: 'root', key: 'provider', value: llm.provider() });
   return store.publicSettings();

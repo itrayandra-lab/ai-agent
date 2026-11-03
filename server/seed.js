@@ -295,10 +295,11 @@ Terkait: [[Cara Kerja AI + Manusia]]
     { id: 'r-eval', employeeId: 'sekar', title: 'Evaluasi kualitas agen', description: 'Gunakan company_status dan catatan Playbook untuk menilai kualitas kerja minggu ini per divisi, lalu rekomendasikan agen yang perlu dilatih.', cron: '0 11 * * 4', everyMinutes: 0, enabled: true, lastRunAt: t },
     { id: 'r-faq', employeeId: 'wulan', title: 'Update FAQ pelanggan', description: 'Tinjau pertanyaan berulang dan perbarui FAQ di Brain.', cron: '0 15 * * 3', everyMinutes: 0, enabled: false, lastRunAt: t },
     ...DIVISIONS.map((d) => ({ id: `r-retro-${d.id}`, employeeId: ROSTER.find((x) => x.div === d.id && x.lead).id, title: `Retro & berbagi ilmu ${d.name}`, description: 'Baca Playbook divisimu dan pelajaran tim. Pilih 1 pelajaran terpenting: latih satu anggota (train_colleague) dan, bila metode skill perlu diperbaiki, perbarui skill (improve_skill). Tulis ringkasan retro singkat. Jangan membuat tugas baru.', cron: '0 15 * * 5', everyMinutes: 0, enabled: true, lastRunAt: t })),
+    ...DIVISIONS.map((d, i) => ({ id: `r-execute-${d.id}`, employeeId: ROSTER.find((x) => x.div === d.id && x.lead).id, targetType: 'division', targetId: d.id, title: `Eksekusi nyata harian — ${d.name}`, description: 'Periksa tugas dan prioritas divisi. Pilih satu tindakan konkret bernilai tertinggi yang belum selesai, konsultasikan maksimal dua staf relevan, eksekusi memakai tool yang tersedia, lalu kirim hasil dan bukti ke channel divisi. Untuk Google/sistem eksternal, hasil hanya boleh disebut berhasil jika ada receipt ID/URL/range; bila konektor belum aktif tulis BELUM TEREKSEKUSI. Bagikan satu pelajaran untuk tim.', cron: `${(5 + i * 7) % 60} ${9 + Math.floor(i / 8)} * * 1-5`, everyMinutes: 0, enabled: true, lastRunAt: t, createdBy: 'system-v8' })),
   ];
 
   return {
-    version: 5,
+    version: 8,
     meetings: [],
     company: { name: 'Ray Group', tagline: 'Kerja lebih ringan, bisnis lebih kencang.', language: 'Bahasa Indonesia' },
     divisions: DIVISIONS.map((d) => ({ ...d, teams: (TEAMS[d.id] || []).map((x) => x.name), delegation: 'best_fit', leadId: ROSTER.find((r) => r.div === d.id && r.lead)?.id || null })),
@@ -310,6 +311,7 @@ Terkait: [[Cara Kerja AI + Manusia]]
       apiKey: '', model: 'claude-opus-5-5', workerModel: 'claude-opus-5-5', effort: 'low',
       provider: 'auto', groqApiKey: '', groqModel: 'openai/gpt-oss-120b', groqWorkerModel: 'openai/gpt-oss-120b',
       autonomy: true, tickMs: 2500, maxConcurrent: 3, dailyBudgetUSD: 5, mode: 'auto', currentUserId: 'owner', autoActivate: true, autoOrganize: true,
+      autoApprove: true, massDispatchSize: 20, googleAppsScript: { url: '', secret: '', enabled: false },
     },
   };
 }

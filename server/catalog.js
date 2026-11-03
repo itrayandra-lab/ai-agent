@@ -143,9 +143,12 @@ export const CAPABILITIES = [
   { id: 'list_jobs', label: 'Lihat jadwal', category: 'Automation', risk: 'low', guide: 'Cek jadwal yang sudah ada sebelum membuat yang baru agar tidak duplikat.' },
   { id: 'visit_url', label: 'Buka situs', category: 'Research', risk: 'low', guide: 'Baca isi halaman web tertentu (pricing, dokumentasi, berita) bila URL sudah diketahui.' },
   { id: 'mcp', label: 'Tool MCP', category: 'Integration', risk: 'medium', leadOnly: true, guide: 'Gunakan tool dari server MCP yang terhubung (mcp__server__tool) untuk sistem eksternal.' },
+  { id: 'google_sheets_append', label: 'Tulis Google Sheets', category: 'Integration', risk: 'medium', guide: 'Tulis data sungguhan melalui konektor Google Apps Script. Klaim berhasil hanya bila tool mengembalikan receipt spreadsheetId, range, dan URL.' },
+  { id: 'google_drive_create', label: 'Buat file Google Drive', category: 'Integration', risk: 'medium', guide: 'Buat dokumen/file sungguhan di Drive. Klaim berhasil hanya bila tool mengembalikan fileId dan URL.' },
+  { id: 'google_calendar_create', label: 'Buat Google Calendar event', category: 'Integration', risk: 'medium', guide: 'Buat acara sungguhan di Calendar. Klaim berhasil hanya bila tool mengembalikan eventId.' },
   { id: 'web_search', label: 'Riset web (live)', category: 'Research', risk: 'low', guide: 'Riset internet sungguhan lewat Groq Compound untuk data terbaru (pasar, kompetitor, harga, regulasi). Tulis query spesifik dan selalu cantumkan sumber di output.' },
   { id: 'calculate', label: 'Kalkulator', category: 'Analysis', risk: 'low', guide: 'Gunakan untuk setiap perhitungan angka agar akurat.' },
-  { id: 'company_status', label: 'Status perusahaan', category: 'Collaboration', risk: 'low', guide: 'Lihat beban kerja dan tugas aktif per divisi sebelum mendelegasikan atau membuat laporan.' },
+  { id: 'company_status', label: 'Status perusahaan', category: 'Collaboration', risk: 'low', guide: 'Sumber kebenaran live untuk jumlah, ID, nama, status, dan beban kerja seluruh agen/divisi. Wajib gunakan untuk audit roster atau cakupan agen; catatan Brain bisa usang.' },
   { id: 'search_brain', label: 'Cari Brain', category: 'Knowledge', risk: 'low', guide: 'Gunakan di awal tugas untuk menemukan SOP, kebijakan, dan deliverable terkait. Coba 2-3 kata kunci berbeda bila hasil kosong.' },
   { id: 'read_note', label: 'Baca catatan', category: 'Knowledge', risk: 'low', guide: 'Baca catatan lengkap setelah search_brain menemukan judul yang relevan.' },
   { id: 'write_note', label: 'Tulis ke Brain', category: 'Knowledge', risk: 'low', guide: 'Simpan pengetahuan jangka panjang (SOP baru, temuan riset, keputusan). Jangan simpan draf sementara. Tautkan dengan [[Judul]].' },
@@ -160,8 +163,26 @@ export const CAPABILITIES = [
   { id: 'build_training_set', label: 'Bangun dataset training', category: 'AI', risk: 'low', specialist: true, guide: 'Ekspor dataset fine-tuning JSONL berkualitas (per divisi/agen) dan dokumentasikan versinya.' },
 ];
 export const CAP_IDS = CAPABILITIES.map((c) => c.id);
-/** Leaders (heads, master, personal assistants) get every capability; staff get everything except costly orchestration tools. */
-export const defaultTools = (e) => CAPABILITIES.filter((c) => !c.specialist && (!c.leadOnly || e.isLead || e.isPA || e.isMaster) && (!c.paOnly || e.isPA || e.isMaster)).map((c) => c.id);
+/**
+ * Every AI employee can discover and call every first-party capability. Runtime
+ * policy still blocks unsafe uses (for example recurring jobs cannot recursively
+ * recruit or delegate). Keeping one authoritative list prevents the prompt/tool
+ * mismatch that makes strict providers reject an otherwise valid tool call.
+ */
+export const defaultTools = (e) => e?.type === 'ai' ? [...CAP_IDS] : [];
+
+/** Grant the whole skill library while preserving an employee's specialist levels. */
+export function grantUniversalSkills(e, skills = SEED_SKILLS) {
+  if (e.type !== 'ai') return [];
+  const refs = new Map((e.skillRefs || []).map((r) => [r.id, { ...r }]));
+  const added = [];
+  for (const s of skills) if (!refs.has(s.id)) {
+    refs.set(s.id, { id: s.id, proficiency: 5 });
+    added.push(s.id);
+  }
+  e.skillRefs = [...refs.values()];
+  return added;
+}
 
 // Tools a skill needs when it does not declare them, inferred from its category.
 const CATEGORY_TOOLS = { Research: ['web_search', 'visit_url'], Analysis: ['calculate'], Finance: ['calculate'], Data: ['calculate'], Knowledge: ['search_brain', 'read_note', 'write_note'], Automation: ['schedule_job', 'list_jobs'], Marketing: ['web_search'], Commerce: ['web_search', 'calculate'], Sales: ['calculate'], Strategy: ['web_search'] };
@@ -225,6 +246,8 @@ export function ensureEmployeeConfig(e, skills, notes = []) {
   e.effort ??= '';
   e.skillRefs ??= suggestSkills(e, skills);
   e.tools ??= defaultTools(e);
+  grantUniversalSkills(e, skills);
+  e.tools = [...CAP_IDS];
   e.knowledgeIds ??= [SOP_OF[e.divisionId], 'kebijakan-persetujuan'].filter((id) => notes.some((n) => n.id === id));
   e.starters ??= [];
   e.reasoning ??= null;

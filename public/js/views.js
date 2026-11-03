@@ -7,7 +7,7 @@ import { StudioView } from './studio.js';
 const D = () => S.data;
 const me = () => emp(S.me) || emp('owner');
 const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
-const EV_ICON = { task_created: '📥', delegated: '➡️', task_started: '⚡', task_done: '✅', note_written: '📝', message: '💬', approval_requested: '🛑', approved: '🎉', rejected: '✏️', meeting: '👥', alert: '⚠️', hired: '🎊', handoff: '📦' };
+const EV_ICON = { task_created: '📥', delegated: '➡️', task_started: '⚡', task_done: '✅', note_written: '📝', message: '💬', reasoning: '💭', learned: '💡', approval_requested: '🛑', approved: '🎉', rejected: '✏️', meeting: '👥', alert: '⚠️', hired: '🎊', handoff: '📦' };
 const FOLDER_COLORS = { Company: '#f5b942', SOP: '#4dd4ac', Deliverables: '#5b8cff', Reports: '#ffd166', Research: '#ff9f43', Marketing: '#ff6b8b', Memori: '#c58bff', Knowledge: '#36c2f0', Notes: '#a3a8b8' };
 const folderColor = (f) => FOLDER_COLORS[f] || '#' + ((Math.abs([...f].reduce((a, c) => a * 31 + c.charCodeAt(0), 7)) % 0xaaaaaa) + 0x444444).toString(16);
 const openTasks = (id) => D().tasks.filter((t) => t.assigneeId === id && t.status !== 'done');
@@ -52,15 +52,22 @@ export function meetingModal(pre = {}) {
     <label class="f">Agenda / pertanyaan kunci<textarea class="input" name="agenda" rows="3" placeholder="Apa yang harus diputuskan? Data apa yang relevan?">${esc(pre.agenda || '')}</textarea></label>
     <div class="grid2"><label class="f">Pemimpin rapat<select class="input" name="chairId">${empOptions(pre.chairId || 'aria', { aiOnly: true })}</select></label>
     <label class="f">Putaran diskusi<select class="input" name="rounds">${opt(1, '1 putaran (cepat)')}${opt(2, '2 putaran (diskusi)', 2)}${opt(3, '3 putaran (mendalam)')}</select></label></div>
-    <div class="f" style="display:grid;gap:6px"><span class="small muted">Peserta (2–6)</span><div class="list-scroll" style="max-height:260px">${D().divisions.map((d) => `<div class="eyebrow" style="margin:6px 0 2px">${esc(d.name)}</div>${ai.filter((e) => e.divisionId === d.id).map((e) => `<label class="row small" style="gap:8px;padding:3px 0"><input type="checkbox" data-p="${e.id}" ${(pre.participants || []).includes(e.id) ? 'checked' : ''}>${esc(e.name)} <span class="muted">· ${esc(e.title)}</span></label>`).join('')}`).join('')}</div></div>
-    <p class="small muted" style="margin:0">Peserta berjalan ke Conference Hall, berdiskusi bergiliran dengan AI sungguhan, lalu pemimpin rapat menulis notulen dan membagikan action item sebagai tugas.</p>`, {
+    <label class="row small" style="align-items:flex-start"><input type="checkbox" name="ownerLed" checked><span><b>Saya mengawali rapat</b><br><span class="muted">Semua agen diam dan mendengarkan sampai Anda mengirim “saya selesai” atau <code>/selesai</code> di chat rapat.</span></span></label>
+    <div class="f" style="display:grid;gap:6px"><span class="small muted">Peserta <b id="mtgcount">0 dipilih</b></span><div class="row wrap"><button class="btn sm" type="button" data-ms="all">Pilih semua</button><button class="btn sm" type="button" data-ms="heads">Semua kepala</button><button class="btn sm" type="button" data-ms="clear">Kosongkan</button>${D().divisions.map((d) => `<button class="btn sm ghost" type="button" data-ms="${d.id}">${d.icon} ${esc(d.short)}</button>`).join('')}</div><div class="list-scroll" style="max-height:260px">${D().divisions.map((d) => `<div class="eyebrow" style="margin:6px 0 2px">${esc(d.name)} <button class="btn sm ghost" type="button" data-ms="${d.id}">pilih divisi</button></div>${ai.filter((e) => e.divisionId === d.id).map((e) => `<label class="row small" style="gap:8px;padding:3px 0"><input type="checkbox" data-p="${e.id}" ${(pre.participants || []).includes(e.id) ? 'checked' : ''}>${esc(e.name)} <span class="muted">· ${esc(e.title)}</span></label>`).join('')}`).join('')}</div></div>
+    <p class="small muted" style="margin:0">Untuk pilihan massal, seluruh agen tetap tercatat sebagai peserta yang diwakili; kepala tiap divisi aktif berdiskusi agar rapat tidak menghabiskan 154 panggilan AI. Notulen dan action item otomatis menjadi tugas.</p>`, {
     wide: true,
+    onMount: (b) => {
+      const boxes = () => [...b.querySelectorAll('[data-p]')];
+      const update = () => { b.querySelector('#mtgcount').textContent = `${boxes().filter((x) => x.checked).length} dipilih`; };
+      b.querySelectorAll('[data-ms]').forEach((x) => (x.onclick = () => { const s = x.dataset.ms; for (const c of boxes()) c.checked = s === 'all' ? true : s === 'heads' ? !!emp(c.dataset.p)?.isLead : s === 'clear' ? false : emp(c.dataset.p)?.divisionId === s ? true : c.checked; update(); }));
+      boxes().forEach((x) => (x.onchange = update)); update();
+    },
     actions: [{ label: 'Batal' }, { label: 'Mulai rapat', kind: 'primary', run: async (b) => {
       const f = formData(b); const ids = [...b.querySelectorAll('[data-p]:checked')].map((x) => x.dataset.p);
       if (!f.topic.trim()) { toast('Topik wajib', 'warn'); return false; }
       if (ids.length < 1) { toast('Pilih minimal 1 peserta selain pemimpin', 'warn'); return false; }
-      await api('POST', '/api/meetings', { topic: f.topic, agenda: f.agenda, chairId: f.chairId, rounds: f.rounds, participantIds: ids.slice(0, 6) });
-      toast('👥 Rapat dimulai — lihat Conference Hall & tab Percakapan', 'ok');
+      const r = await api('POST', '/api/meetings', { topic: f.topic, agenda: f.agenda, chairId: f.chairId, rounds: f.rounds, participantIds: ids, ownerLed: f.ownerLed });
+      toast(r.ownerLed ? `🎙️ ${r.represented} peserta mendengarkan. Buka chat rapat dan kirim /selesai saat Anda selesai bicara.` : `👥 Rapat aktif dengan ${r.activeParticipants} peserta`, 'ok');
     } }],
   });
 }
@@ -720,9 +727,9 @@ export const ChatView = {
     this.ch = S.params.ch || this.ch || 'general';
     root.style.overflow = 'hidden';
     root.innerHTML = `<div class="chat has-sel" id="chat"><div class="chat-list" id="cl"></div><div class="chat-main"><div class="chat-h" id="chh"></div><div class="msgs" id="msgs"></div>
-      <div class="quick" id="cquick">${[['/goal ', '🎯 Goal'], ['/tugas @', '📋 Tugas'], ['/rapat ', '👥 Rapat'], ['/cari ', '🔎 Cari Brain'], ['/status', '📊 Status']].map(([c, l]) => `<button class="chip" data-cmd="${c}">${l}</button>`).join('')}<span class="small faint hide-m" style="margin-left:auto">Ketik / untuk perintah · @ untuk menyebut agen</span></div>
+      <div class="quick" id="cquick">${[['@all ', '📣 Semua agen'], ['@kepala ', '👑 Semua kepala'], ['@staff ', '🤖 Semua staf'], ['/goal ', '🎯 Goal'], ['/tugas @', '📋 Tugas'], ['/rapat ', '👥 Rapat'], ['/cari ', '🔎 Cari Brain'], ['/status', '📊 Status']].map(([c, l]) => `<button class="chip" data-cmd="${c}">${l}</button>`).join('')}<span class="small faint hide-m" style="margin-left:auto">@all · @kepala · @staff · #divisi</span></div>
       <div class="mention-pop" id="cpop" hidden></div>
-      <div class="composer"><textarea class="input" id="cin" rows="1" placeholder="Tulis pesan… @nama untuk memanggil agen, /goal /tugas /rapat /cari /status untuk aksi cepat"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
+      <div class="composer"><textarea class="input" id="cin" rows="1" placeholder="Tulis pesan… gunakan @all, @kepala, @staff, #divisi, atau @nama"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
     const send = async () => {
       const i = root.querySelector('#cin'); const text = i.value.trim(); if (!text) return;
       i.value = ''; i.style.height = ''; root.querySelector('#cpop').hidden = true;
@@ -749,9 +756,10 @@ export const ChatView = {
       const before = cin.value.slice(0, cin.selectionStart); const m = before.match(/@([\w-]{0,20})$/);
       if (m) {
         const q = m[1].toLowerCase();
-        const hits = D().employees.filter((x) => x.id !== S.me && (`${x.name} ${x.title} ${x.team || ''}`.toLowerCase().includes(q))).slice(0, 7);
-        pop.innerHTML = hits.map((x, k) => `<div class="mi ${k ? '' : 'on'}" data-name="${esc(x.name)}">${avatar(x)}<div><b>${esc(x.name)}</b><small>${esc(x.title)}${x.team ? ' · ' + esc(x.team) : ''}</small></div><span class="status-dot st-${x.status}"></span></div>`).join('');
-        pop.hidden = !hits.length; pop.querySelectorAll('[data-name]').forEach((el) => (el.onmousedown = (ev) => { ev.preventDefault(); pick(el); }));
+        const special = [['all', '📣 Semua agen', `${D().employees.filter((x) => x.type === 'ai').length} agen · eksekusi bertahap`], ['kepala', '👑 Semua kepala', 'orkestrator setiap divisi'], ['staff', '🤖 Semua staf', 'melalui kepala divisi']].filter((x) => x[0].includes(q) || x[1].toLowerCase().includes(q));
+        const hits = D().employees.filter((x) => x.id !== S.me && (`${x.name} ${x.title} ${x.team || ''}`.toLowerCase().includes(q))).slice(0, Math.max(0, 7 - special.length));
+        pop.innerHTML = special.map((x, k) => `<div class="mi ${k ? '' : 'on'}" data-name="${x[0]}"><span class="ava">${x[1].slice(0, 2)}</span><div><b>${x[1]}</b><small>${x[2]}</small></div></div>`).join('') + hits.map((x, k) => `<div class="mi ${k || special.length ? '' : 'on'}" data-name="${esc(x.name)}">${avatar(x)}<div><b>${esc(x.name)}</b><small>${esc(x.title)}${x.team ? ' · ' + esc(x.team) : ''}</small></div><span class="status-dot st-${x.status}"></span></div>`).join('');
+        pop.hidden = !hits.length && !special.length; pop.querySelectorAll('[data-name]').forEach((el) => (el.onmousedown = (ev) => { ev.preventDefault(); pick(el); }));
       } else if (/^\/\w*$/.test(cin.value)) {
         pop.innerHTML = CMDS.map((c, k) => `<div class="mi ${k ? '' : 'on'}" data-cmd="${c[0]}"><span class="cmd">${c[0]}</span><div><b>${c[1]}</b><small>${c[2]}</small></div></div>`).join('');
         pop.hidden = false; pop.querySelectorAll('[data-cmd]').forEach((el) => (el.onmousedown = (ev) => { ev.preventDefault(); cin.value = el.dataset.cmd + ' '; pop.hidden = true; cin.focus(); }));
@@ -774,7 +782,7 @@ export const ChatView = {
     if (listChanged && listKey !== this.listKey) { this.listKey = listKey; r.querySelector('#cl').innerHTML = `<button class="btn sm" id="newdm" style="width:100%">＋ Chat dengan karyawan</button>
       <h4>Channel</h4>${d.channels.filter((c) => c.kind === 'channel').map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>#</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span></div>`).join('')}
       <h4>Pesan langsung</h4>${sortedDMs.map((c) => { const o = emp(c.members.find((m) => m !== S.me)); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}">${avatar(o)}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o?.name)}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
-      <h4>Rapat</h4>${meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>${m?.status === 'running' ? '🔴' : '👥'}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name.replace(/^Rapat: /, ''))}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
+      <h4>Rapat</h4>${meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>${m?.status === 'waiting_owner' ? '🎙️' : m?.status === 'running' ? '🔴' : '👥'}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name.replace(/^Rapat: /, ''))}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
       <h4>Antar agen (pantau)</h4>${agentDMs.map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>👀</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name)}</span></div>`).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}`;
     r.querySelectorAll('[data-ch]').forEach((x) => (x.onclick = () => { this.ch = x.dataset.ch; r.querySelector('#chat').classList.add('has-sel'); this.lastCount = -1; this.update(); }));
     }
@@ -782,14 +790,14 @@ export const ChatView = {
     const ch = d.channels.find((c) => c.id === this.ch) || d.channels[0];
     if (!ch) return;
     const other = ch.kind === 'dm' ? emp(ch.members.find((m) => m !== S.me)) : null;
-    r.querySelector('#chh').innerHTML = `<button class="btn ghost icon" id="chback" title="Kembali">‹</button>${other ? `${avatar(other)}<div style="flex:1;min-width:0"><b data-agent="${other.id}" style="cursor:pointer">${esc(other.name)}</b><div class="small muted">${esc(other.title)} · ${esc(other.statusText || '')}</div></div>` : `<div style="flex:1;min-width:0"><b>${ch.kind === 'dm' ? '👀 ' + esc(ch.name) : ch.kind === 'meeting' ? '👥 ' + esc(ch.name) : '# ' + esc(ch.name)}</b><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ch.kind === 'meeting' ? (() => { const m = d.meetings?.find((x) => x.id === ch.meetingId); return `${m?.status === 'running' ? '🔴 berlangsung' : m?.status === 'failed' ? 'gagal' : 'selesai'} · ${(m?.participants || []).map((p) => esc(emp(p)?.name || p)).join(', ')}`; })() : esc(ch.topic || (ch.kind === 'dm' ? 'Percakapan antar agen' : ''))}</div></div>${ch.kind === 'meeting' && d.meetings?.find((x) => x.id === ch.meetingId)?.noteId ? `<button class="btn sm" data-note="${d.meetings.find((x) => x.id === ch.meetingId).noteId}">Notulen</button>` : ''}`}`;
+    r.querySelector('#chh').innerHTML = `<button class="btn ghost icon" id="chback" title="Kembali">‹</button>${other ? `${avatar(other)}<div style="flex:1;min-width:0"><b data-agent="${other.id}" style="cursor:pointer">${esc(other.name)}</b><div class="small muted">${esc(other.title)} · ${esc(other.statusText || '')}</div></div>` : `<div style="flex:1;min-width:0"><b>${ch.kind === 'dm' ? '👀 ' + esc(ch.name) : ch.kind === 'meeting' ? '👥 ' + esc(ch.name) : '# ' + esc(ch.name)}</b><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ch.kind === 'meeting' ? (() => { const m = d.meetings?.find((x) => x.id === ch.meetingId); return `${m?.status === 'waiting_owner' ? '🎙️ peserta diam—kirim /selesai saat Anda selesai' : m?.status === 'running' ? '🔴 berlangsung' : m?.status === 'failed' ? 'gagal' : 'selesai'} · ${m?.representedParticipants?.length || m?.participants?.length || 0} peserta diwakili`; })() : esc(ch.topic || (ch.kind === 'dm' ? 'Percakapan antar agen' : ''))}</div></div>${ch.kind === 'meeting' && d.meetings?.find((x) => x.id === ch.meetingId)?.noteId ? `<button class="btn sm" data-note="${d.meetings.find((x) => x.id === ch.meetingId).noteId}">Notulen</button>` : ''}`}`;
     r.querySelector('#chback').onclick = () => r.querySelector('#chat').classList.remove('has-sel');
     const msgs = d.messages.filter((m) => m.channelId === ch.id).slice(-150);
     if (msgs.length === this.lastCount && this.lastCh === ch.id) return;
     const box = r.querySelector('#msgs');
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80 || this.lastCh !== ch.id;
     this.lastCount = msgs.length; this.lastCh = ch.id;
-    box.innerHTML = msgs.map((m) => { const a = emp(m.authorId); return `<div class="msg">${avatar(a)}<div class="body"><div class="who"><span data-agent="${a?.id}" style="cursor:pointer;margin:0;font-size:13px;font-weight:650;color:var(--text)">${esc(a?.name || m.authorId)}</span><span>${a?.type === 'ai' ? '🤖 ' : ''}${clock(m.t)}</span></div><div class="md">${md(m.text)}</div>${m.taskId ? `<button class="btn sm" data-task="${m.taskId}" style="margin-top:4px">📋 Lihat tugas</button>` : ''}</div></div>`; }).join('') || `<div class="empty">Mulai percakapan. ${other?.type === 'ai' ? `${esc(other.name)} akan membalas otomatis.` : 'Sebut @nama agar agen ikut membalas.'}</div>`;
+    box.innerHTML = msgs.map((m) => { const a = emp(m.authorId); return `<div class="msg">${avatar(a)}<div class="body"><div class="who"><span data-agent="${a?.id}" style="cursor:pointer;margin:0;font-size:13px;font-weight:650;color:var(--text)">${esc(a?.name || m.authorId)}</span><span>${a?.type === 'ai' ? '🤖 ' : ''}${clock(m.t)}</span></div><div class="md">${md(m.text)}</div>${m.broadcast ? `<span class="chip" style="color:var(--ok)">📣 diterima ${m.deliveredTo || 0} agen/koordinator</span>` : ''}${m.taskId ? `<button class="btn sm" data-task="${m.taskId}" style="margin-top:4px">📋 Lihat tugas</button>` : ''}</div></div>`; }).join('') || `<div class="empty">Mulai percakapan. ${other?.type === 'ai' ? `${esc(other.name)} akan membalas otomatis.` : '#general selalu dijawab PA; gunakan @all untuk seluruh perusahaan.'}</div>`;
     if (atBottom) box.scrollTop = box.scrollHeight;
   },
   /** Slash commands act directly instead of posting a message. Returns true when handled. */
@@ -962,7 +970,7 @@ export const TeamView = {
     }).join('');
     this.root.querySelectorAll('[data-divd]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.divd)));
     const rts = this.root.querySelector('#rts');
-    rts.innerHTML = d.routines.map((r) => { const e = emp(r.employeeId); return `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:10px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(r.title)}</b><div class="small muted">${esc(e?.name)} · tiap ${r.everyMinutes} menit · terakhir ${ago(r.lastRunAt)}</div></div><button class="btn sm" data-run="${r.id}" title="Jalankan sekarang">▶</button><button class="btn sm ghost" data-edit="${r.id}">✎</button><label class="switch"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label></div>`; }).join('') || '<div class="muted small">Belum ada rutinitas</div>';
+    rts.innerHTML = d.routines.map((r) => { const e = emp(r.employeeId); const cadence = r.cron ? `cron ${r.cron}` : `tiap ${r.everyMinutes || 60} menit`; return `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:10px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(r.title)}</b><div class="small muted">🎯 ${esc(routineTargetLabel(r))} · ${esc(cadence)} · terakhir ${ago(r.lastRunAt)}</div></div><button class="btn sm" data-run="${r.id}" title="Jalankan sekarang">▶</button><button class="btn sm ghost" data-edit="${r.id}">✎</button><label class="switch"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label></div>`; }).join('') || '<div class="muted small">Belum ada rutinitas</div>';
     rts.querySelectorAll('[data-tog]').forEach((c) => (c.onchange = () => api('PATCH', `/api/routines/${c.dataset.tog}`, { enabled: c.checked })));
     rts.querySelectorAll('[data-run]').forEach((c) => (c.onclick = async () => { await api('POST', `/api/routines/${c.dataset.run}/run`); toast('Rutinitas dijalankan', 'ok'); }));
     rts.querySelectorAll('[data-edit]').forEach((c) => (c.onclick = () => routineModal(d.routines.find((r) => r.id === c.dataset.edit))));
@@ -1009,17 +1017,28 @@ export function employeeModal(e, pre = {}) {
     ],
   });
 }
+function routineTargetLabel(r) {
+  const type = r.targetType || 'employee';
+  if (type === 'all') return `Semua agen (${D().employees.filter((e) => e.type === 'ai').length})`;
+  if (type === 'heads') return 'Semua kepala divisi';
+  if (type === 'staff') return 'Semua staf';
+  if (type === 'division') return `Divisi ${div(r.targetId)?.name || r.targetId}`;
+  if (type === 'tag') return `#${r.targetTag || r.targetId}`;
+  return emp(r.targetId || r.employeeId)?.name || 'Agen';
+}
 function routineModal(r) {
   const isNew = !r;
-  r = r || { title: '', description: '', employeeId: 'aria', everyMinutes: 60, enabled: true };
-  modal(isNew ? '＋ Rutinitas otomatis' : '✎ Edit rutinitas', `<label class="f">Judul<input class="input" name="title" value="${esc(r.title)}" placeholder="mis. Laporan penjualan harian"></label><label class="f">Instruksi<textarea class="input" name="description" rows="3">${esc(r.description)}</textarea></label><div class="grid2"><label class="f">Dikerjakan oleh<select class="input" name="employeeId">${empOptions(r.employeeId, { aiOnly: true })}</select></label><label class="f">Setiap (menit)<input class="input" type="number" min="1" name="everyMinutes" value="${r.everyMinutes}"></label></div>`, {
-    actions: [...(!isNew ? [{ label: 'Hapus', kind: 'danger', run: () => api('DELETE', `/api/routines/${r.id}`) }] : []), { label: 'Batal' }, { label: 'Simpan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; isNew ? await api('POST', '/api/routines', f) : await api('PATCH', `/api/routines/${r.id}`, f); } }],
+  r = r || { title: '', description: '', employeeId: 'aria', targetType: 'employee', targetId: 'aria', targetTag: '', everyMinutes: 60, enabled: true };
+  const current = (r.targetType || 'employee') === 'employee' ? `employee:${r.targetId || r.employeeId}` : (r.targetType === 'division' ? `division:${r.targetId}` : r.targetType || 'employee:aria');
+  const targetOpts = `<option value="all" ${current === 'all' ? 'selected' : ''}>📣 Semua agen (hemat: via head divisi)</option><option value="heads" ${current === 'heads' ? 'selected' : ''}>👑 Semua kepala divisi</option><option value="staff" ${current === 'staff' ? 'selected' : ''}>🤖 Semua staf (via head divisi)</option><option value="tag" ${current === 'tag' ? 'selected' : ''}># Hashtag / tim / keahlian</option>${D().divisions.map((d) => `<option value="division:${d.id}" ${current === `division:${d.id}` ? 'selected' : ''}>${d.icon} Divisi ${esc(d.name)}</option>`).join('')}${D().employees.filter((e) => e.type === 'ai').map((e) => `<option value="employee:${e.id}" ${current === `employee:${e.id}` ? 'selected' : ''}>${esc(e.name)} · ${esc(e.title)}</option>`).join('')}`;
+  modal(isNew ? '＋ Rutinitas otomatis' : '✎ Edit rutinitas', `<label class="f">Judul<input class="input" name="title" value="${esc(r.title)}" placeholder="mis. Laporan penjualan harian"></label><label class="f">Instruksi<textarea class="input" name="description" rows="3">${esc(r.description)}</textarea></label><label class="f">Target<select class="input" name="targetSpec">${targetOpts}</select></label><label class="f">Hashtag / tim / keahlian (dipakai jika target Hashtag)<input class="input" name="targetTag" value="${esc(r.targetTag || '')}" placeholder="mis. seo, marketplace, Growth Team"></label><div class="grid2"><label class="f">Koordinator fallback<select class="input" name="employeeId">${empOptions(r.employeeId || 'aria', { aiOnly: true })}</select></label><label class="f">Setiap (menit)<input class="input" type="number" min="1" name="everyMinutes" value="${r.everyMinutes || 60}"></label></div><div class="small muted">Target massal dijalankan per koordinator divisi dan masuk antrean bertahap, bukan memanggil semua model sekaligus.</div>`, {
+    actions: [...(!isNew ? [{ label: 'Hapus', kind: 'danger', run: () => api('DELETE', `/api/routines/${r.id}`) }] : []), { label: 'Batal' }, { label: 'Simpan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; const [kind, id] = f.targetSpec.split(':'); f.targetType = kind; f.targetId = id || (kind === 'tag' ? f.targetTag : ''); delete f.targetSpec; if (kind === 'employee') f.employeeId = id; isNew ? await api('POST', '/api/routines', f) : await api('PATCH', `/api/routines/${r.id}`, f); } }],
   });
 }
 
 // ═════════════════════ APPROVALS ═════════════════════
 export const ApprovalsView = {
-  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Persetujuan (Human-in-the-loop)</h2><p class="muted" style="margin:0">Agen berhenti di sini untuk keputusan berisiko sesuai <a class="wikilink" data-note="Kebijakan Persetujuan">Kebijakan Persetujuan</a>. Setujui atau minta revisi dengan arahan.</p><div id="ap" style="display:grid;gap:10px"></div><h3 style="margin:10px 0 0">Riwayat</h3><div id="aph" style="display:grid;gap:6px"></div></div>`; bindCommon(root); this.root = root; this.update(); },
+  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Persetujuan</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif: keputusan dicatat sebagai audit trail dan pekerjaan langsung berlanjut.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Persetujuan">Kebijakan Persetujuan</a></p><div id="ap" style="display:grid;gap:10px"></div><h3 style="margin:10px 0 0">Riwayat</h3><div id="aph" style="display:grid;gap:6px"></div></div>`; bindCommon(root); this.root = root; this.update(); },
   update() {
     const aps = D().approvals;
     const pend = aps.filter((a) => a.status === 'pending').reverse();
@@ -1053,6 +1072,7 @@ export const SettingsView = {
       </div></div>
       <div class="card"><div class="card-h">⚡ Otonomi</div><div class="card-b" style="display:grid;gap:12px">
         <div class="row"><label class="switch"><input type="checkbox" id="auto" ${s.autonomy ? 'checked' : ''}><span></span></label><div><b>Kantor berjalan otomatis</b><div class="small muted">Agen mengambil tugas, mendelegasi, dan menjalankan rutinitas sendiri.</div></div></div>
+        <div class="row"><label class="switch"><input type="checkbox" id="autoapprove" ${s.autoApprove !== false ? 'checked' : ''}><span></span></label><div><b>Auto-approve</b><div class="small muted">Permintaan persetujuan tetap dicatat untuk audit, tetapi langsung dilanjutkan tanpa menunggu klik manual.</div></div></div>
         <label class="f">Kecepatan siklus (ms per tick)<input class="input" type="range" min="800" max="8000" step="100" id="tick" value="${s.tickMs}"><span class="small" id="tickv">${s.tickMs} ms</span></label>
       </div></div>
       <div class="card"><div class="card-h">🏢 Perusahaan & identitas</div><div class="card-b" style="display:grid;gap:12px">
@@ -1066,6 +1086,12 @@ export const SettingsView = {
         <div class="row"><label class="switch"><input type="checkbox" id="train" ${s.collectTraining !== false ? 'checked' : ''}><span></span></label><div><b>Kumpulkan dataset fine-tuning</b><div class="small muted">Hasil kerja yang selesai/disetujui disimpan sebagai JSONL (format chat OpenAI/Groq) per agen di <code>data/training/</code>, siap dipakai untuk fine-tune model.</div></div></div>
         <div class="row wrap"><select class="input" id="trsel" style="width:auto">${D().employees.filter((e) => e.type === 'ai').map((e) => opt(e.id, `${e.name} · ${e.stats.trainingExamples || 0} contoh`)).join('')}</select><button class="btn" id="trdl">⬇ Unduh dataset JSONL</button></div>
       </div></div>
+      <div class="card"><div class="card-h">📊 Google Workspace · eksekusi nyata</div><div class="card-b" style="display:grid;gap:10px">
+        <p class="small muted" style="margin:0">Konektor gratis melalui Google Apps Script Web App. Setelah aktif, agen dapat benar-benar menambah baris Sheets, membuat file/Doc di Drive, dan membuat Calendar event. Setiap keberhasilan wajib mempunyai receipt ID/URL/range.</p>
+        <label class="f">URL Web App<input class="input" id="gurl" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(s.googleAppsScript?.url || '')}"></label>
+        <div class="grid2"><label class="f">Shared secret ${s.googleAppsScript?.hasSecret ? '<span class="chip" style="color:var(--ok)">terpasang</span>' : ''}<input class="input" id="gsecret" type="password" autocomplete="off" placeholder="secret yang sama dengan Script Properties" value="${esc(s.googleAppsScript?.secret || '')}"></label><label class="row small"><input type="checkbox" id="genabled" ${s.googleAppsScript?.enabled !== false ? 'checked' : ''}> Aktifkan konektor</label></div>
+        <div class="row"><button class="btn primary" id="gsave">Simpan konektor</button><button class="btn" id="gtest">Tes + verifikasi receipt</button><span class="small muted">Template: <code>integrations/google-apps-script/Code.gs</code></span></div>
+      </div></div>
       <div class="card"><div class="card-h">🔌 MCP server</div><div class="card-b" style="display:grid;gap:10px">
         <p class="small muted" style="margin:0">Hubungkan server Model Context Protocol (Streamable HTTP). Tool-nya otomatis tersedia untuk agen yang punya capability <code>mcp</code> (head divisi, master, asisten pribadi).</p>
         <div id="mcpl" style="display:grid;gap:8px">${(s.mcpServers || []).map((m, i) => `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:9px"><b style="flex:1">${esc(m.name)}</b><span class="small mono muted" style="flex:2;overflow:hidden;text-overflow:ellipsis">${esc(m.url)}</span><button class="btn sm" data-mcptest="${i}">Tes</button><button class="btn sm danger" data-mcpdel="${i}">Hapus</button></div>`).join('') || '<div class="small faint">Belum ada server.</div>'}</div>
@@ -1078,12 +1104,15 @@ export const SettingsView = {
     $('#saveai').onclick = async () => { const b = formData(root.querySelector('.card .card-b')); await api('PATCH', '/api/settings', b); toast('Pengaturan AI disimpan', 'ok'); setTimeout(() => this.mount(root), 300); };
     $('#testkey').onclick = async () => { $('#testkey').disabled = true; try { const r = await api('POST', '/api/test-key'); toast(`✅ Terhubung ke ${r.provider === "groq" ? "Groq" : "Claude"} (${esc(r.model)}): “${esc(r.reply.slice(0, 40))}”`, 'ok'); } finally { $('#testkey').disabled = false; } };
     $('#auto').onchange = (e) => api('PATCH', '/api/settings', { autonomy: e.target.checked });
+    $('#autoapprove').onchange = (e) => api('PATCH', '/api/settings', { autoApprove: e.target.checked });
     $('#tick').oninput = (e) => ($('#tickv').textContent = e.target.value + ' ms');
     $('#tick').onchange = (e) => api('PATCH', '/api/settings', { tickMs: e.target.value });
     $('#savec').onclick = async () => { await api('PATCH', '/api/company', { name: $('#cname').value, tagline: $('#ctag').value, language: $('#clang').value }); await api('PATCH', '/api/settings', { currentUserId: $('#meid').value }); S.me = $('#meid').value; toast('Tersimpan', 'ok'); };
     root.querySelectorAll('[data-th]').forEach((b) => { b.classList.toggle('active', document.documentElement.dataset.theme === b.dataset.th); b.onclick = () => { window.setTheme(b.dataset.th); root.querySelectorAll('[data-th]').forEach((x) => x.classList.toggle('active', x === b)); }; });
     $('#learn').onchange = (e) => api('PATCH', '/api/settings', { learning: e.target.checked });
     $('#train').onchange = (e) => api('PATCH', '/api/settings', { collectTraining: e.target.checked });
+    $('#gsave').onclick = async () => { await api('PATCH', '/api/settings', { googleAppsScript: { url: $('#gurl').value.trim(), secret: $('#gsecret').value, enabled: $('#genabled').checked } }); toast('Konektor Google disimpan', 'ok'); setTimeout(() => this.mount(root), 250); };
+    $('#gtest').onclick = async () => { $('#gtest').disabled = true; try { const r = await api('POST', '/api/google-workspace/test'); toast(`✅ Google terhubung: ${esc(r.receipt?.service || 'Apps Script')}`, 'ok'); } finally { $('#gtest').disabled = false; } };
     $('#trdl').onclick = async () => { const id = $('#trsel').value; const r = await api('GET', `/api/training/${id}`); if (!r.examples) return toast('Belum ada contoh training untuk agen ini', 'warn'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([r.jsonl + '\n'], { type: 'application/jsonl' })); a.download = `training-${id}.jsonl`; a.click(); };
     const mcpSave = (list) => api('PATCH', '/api/settings', { mcpServers: list }).then(() => setTimeout(() => this.mount(root), 200));
     $('#mcpadd').onclick = async () => {
