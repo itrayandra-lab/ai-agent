@@ -32,16 +32,19 @@ engine.start();
 const clients = new Set();
 const BOOT = Date.now();
 let lastCpu = os.cpus().map((c) => c.times);
+let lastProc = process.cpuUsage(), lastProcT = Date.now();
 function hostStats() {
   const now = os.cpus().map((c) => c.times);
   let idle = 0, total = 0;
   now.forEach((t, i) => { const p = lastCpu[i] || t; const d = (k) => t[k] - p[k]; const tot = d('user') + d('nice') + d('sys') + d('idle') + d('irq'); idle += d('idle'); total += tot; });
   lastCpu = now;
+  const pu = process.cpuUsage(lastProc), pdt = Math.max(1, Date.now() - lastProcT); lastProc = process.cpuUsage(); lastProcT = Date.now();
+  const procCpu = Math.round(((pu.user + pu.system) / 1000 / pdt) * 100);   // % of ONE core used by this server process
   let disk = null;
   try { const st = fs.statfsSync(process.cwd()); disk = Math.round((1 - st.bavail / st.blocks) * 100); } catch { /* unsupported fs */ }
   return {
     cpu: total ? Math.round((1 - idle / total) * 100) : 0, mem: Math.round((1 - os.freemem() / os.totalmem()) * 100), disk,
-    rss: Math.round(process.memoryUsage().rss / 1048576), uptime: Math.round((Date.now() - BOOT) / 1000), platform: `${os.platform()} ${os.arch()}`,
+    rss: Math.round(process.memoryUsage().rss / 1048576), procCpu, uptime: Math.round((Date.now() - BOOT) / 1000), platform: `${os.platform()} ${os.arch()}`,
     node: process.version, sessions: engine.running().length, llm: llm.health(),
   };
 }

@@ -25,8 +25,8 @@ check('assets3d.js: SIT_CLIPS (Sitting/Type/Read)', /const SIT_CLIPS = new Set\(
 check('assets3d.js: sitting memakai SIT_CLIPS', a3.includes('const sitting = SIT_CLIPS.has(name);'));
 check("assets3d.js: lengan digerakkan klip (clipDriven, kecuali 'Type')", a3.includes("const clipDriven = !!acts[name] && name !== 'Type';"), 'jika armIK dipaksa lagi, lengan kiri diam & ayunan jalan hilang');
 check('assets3d.js: stateOf memakai klip Type/Talk/HoldR/Read dan fidget', ['acts.Type', 'acts.HoldR', 'acts.Talk', 'a.fidgetAt'].every((k) => a3.includes(k)));
-check('assets3d.js: kecepatan siklus jalan/lari diselaraskan (GAIT)', a3.includes("v = name === 'Run' ? GAIT.run : GAIT.walk") && a3.includes('Math.min(2.2, Math.max(0.85, v / nat))'), 'tanpa ini kaki meluncur');
-check('assets3d.js: export GAIT (jalan 2.0 / lari 3.9)', /export const GAIT = \{ walk: 2\.0, run: 3\.9 \}/.test(a3), 'kecepatan agen harus kira-kira kecepatan alami klip');
+check('assets3d.js: kecepatan siklus jalan/lari diselaraskan (GAIT)', a3.includes("v = name === 'Run' ? GAIT.run : GAIT.walk") && a3.includes('Math.min(2.2, Math.max(0.5, v / nat))'), 'tanpa ini kaki meluncur');
+check('assets3d.js: export GAIT (jalan santai 1.25 / lari 3.9)', /export const GAIT = \{ walk: 1\.25, run: 3\.9 \}/.test(a3), 'kecepatan agen harus kira-kira kecepatan alami klip');
 check('assets3d.js: peran warna V4 (V4_ROLE) + palet unik per agen', a3.includes('const V4_ROLE =') && a3.includes('pickMascotLook(') && a3.includes('function heroMatsFor'), 'tanpa ini ratusan agen terlihat kembar');
 check('assets3d.js: uniform roleColors[8] dan uji Face memakai abs(roleId - 5.0)', a3.includes('uniform vec3 roleColors[8];') && a3.includes('abs(roleId - 5.0) < 0.5'), 'peran 6 tidak boleh dianggap Face');
 check('assets3d.js: napas Torso', a3.includes('bones.Torso.scale.set(2 - br, br, 2 - br)'));
@@ -42,7 +42,7 @@ check('office3d.js: API cinematicIntro/hasAvatar/introActive diekspor', o3.inclu
 check('office3d.js: FOV Mode Play dibatasi (PLAY_FOV)', o3.includes('const PLAY_FOV = 38;') && o3.includes('Math.min(V.fov, PLAY_FOV)'), 'FOV 65 meregangkan objek di tepi layar (+32%)');
 check('office3d.js: exitPlayer mengembalikan FOV', /function exitPlayer\(\) \{\s*camera\.fov = V\.fov;/.test(o3));
 check('office3d.js: tanpa kode uji (TEST ONLY)', !o3.includes('TEST ONLY'));
-check('office3d.js: kecepatan NPC/pemain memakai GAIT; NPC lari untuk jarak jauh', o3.includes('GAIT } from') && o3.includes('(a.running ? GAIT.run : GAIT.walk) * realDt') && o3.includes('(a.running ? GAIT.run : GAIT.walk) * dt') && o3.includes('dEnd > 28'), 'kecepatan lama 2.6/2.8/5.2 membuat langkah terlalu cepat');
+check('office3d.js: kecepatan NPC/pemain memakai GAIT; NPC selalu berjalan (tidak lari otomatis)', o3.includes('GAIT } from') && o3.includes('(a.running ? GAIT.run : GAIT.walk) * realDt') && o3.includes('(a.running ? GAIT.run : GAIT.walk) * dt') && o3.includes('semua agen berjalan santai'), 'kecepatan lama 2.6/2.8/5.2 membuat langkah terlalu cepat');
 check('office3d.js: keluar Mode Play = tarik-mundur halus (bukan overview jauh)', o3.includes('function softPullBack') && o3.includes('} else softPullBack(a);') && o3.includes('else if (pull) stepPull(realDt);'), 'fitCamera(iso) melempar kamera ke pandangan seluruh kampus');
 
 // ---------- mascot-palettes.js ----------
@@ -93,7 +93,7 @@ check('environment.js: haze memakai skala dunia (bukan fokus Play)', read('publi
 check('life.js: kabut mimpi hemat fill-rate', read('public/js/life.js').includes('sp.visible = o > 0.006') && read('public/js/life.js').includes('setDreamLite'), 'sprite kabut membebani GPU (docs 07 H)');
 // gelombang 16: build() tidak boleh berhenti di tengah; resolusi dijaga, efek dikorbankan dulu
 check('office3d.js: blok bukit memakai Math.PI (bukan PI di luar cakupan)', read('public/js/office3d.js').includes('tg.rotateX(-Math.PI / 2); const pa') && !read('public/js/office3d.js').includes('tg.rotateX(-PI'), 'build() melempar ReferenceError: semua agen dan detail dunia hilang (docs 07 I)');
-check('office3d.js: resolusi tidak jatuh di bawah RES_FLOOR 0.8', read('public/js/office3d.js').includes('const RES_FLOOR = 0.8') && read('public/js/office3d.js').includes('perf: () =>'), 'resolusi turun ke 0.55 = tepi bergerigi (docs 07 I)');
+check('office3d.js: resolusi tidak jatuh di bawah RES_FLOOR 0.8', read('public/js/office3d.js').includes("let RES_FLOOR = gfx === 'eco' ? 0.6 : 0.8") && read('public/js/office3d.js').includes('perf: () =>'), 'resolusi turun ke 0.55 = tepi bergerigi (docs 07 I)');
 // gelombang 17: rapat dari chat nyata + hemat token
 check('collab.js: rapat hemat token (1 panggilan) + batal + onStart', read('server/collab.js').includes('async function meetingScript') && read('server/collab.js').includes('export function cancelMeeting') && read('server/collab.js').includes('onStart'), 'rapat kembali boros/tidak bisa dibatalkan (docs 07 J)');
 check('engine.js: niat rapat dari chat + balasan nol token', read('server/engine.js').includes('export function meetingIntent') && read('server/engine.js').includes('export function startChatMeeting') && read('server/engine.js').includes('function quickReply'), 'chat hanya mengaku mengadakan rapat (docs 07 J)');
@@ -102,6 +102,15 @@ check('engine.js: chat tidak lagi memberi model tool convene_meeting', !read('se
 check('collab.js: rapat live (Owner di ruangan) menjawab tiap pesan', read('server/collab.js').includes('export function ownerSpeaks') && read('server/collab.js').includes('async function liveTurn') && read('server/collab.js').includes('export const isMeetingEnd'), 'rapat kembali diam menunggu kata "selesai" (docs 07 K)');
 check('engine.js: chat memakai prompt ringkas berbasis status nyata', read('server/engine.js').includes('function chatSystem') && read('server/engine.js').includes('system: chatSystem(e)') && read('server/engine.js').includes('export const activeLiveMeeting'), 'agen mengarang pekerjaan / chat boros token (docs 07 K)');
 check('office3d.js: clampCamera tidak menyeret kamera Play ke bawah', read('public/js/office3d.js').includes('(camera "stuck below")'), 'kamera Play tertahan di bawah saat naik tangga/deck (docs 07 K)');
+// gelombang 19: optimasi terukur (draw call, idle, panel beban aplikasi)
+check('office3d.js: material Standard identik digabung (draw call)', read('public/js/office3d.js').includes('function matKey(mat)') && read('public/js/office3d.js').includes('(kind || matKey(m.material))'), 'ribuan mesh satu-material kembali (docs 07 L)');
+check('office3d.js: tingkat idle 30/20/10/5 fps + agen jauh dijarangkan', read('public/js/office3d.js').includes('idle > 120000 ? 200') && read('public/js/office3d.js').includes('const farIdle'), 'beban idle kembali penuh (docs 07 L)');
+check('views.js + index.js: panel menampilkan beban aplikasi sendiri', read('public/js/views.js').includes('Aplikasi ini') && read('server/index.js').includes('procCpu'), 'panel hanya menunjukkan beban seluruh PC (docs 07 L)');
+// gelombang 20: batas agen idle yang berkeliling
+check('office3d.js: agen idle berkeliling dibatasi (V.crowd) + slider', read('public/js/office3d.js').includes('crowdNow < crowdCap()') && read('public/js/office3d.js').includes('crowd: 14') && read('public/js/views.js').includes("'crowd'"), 'seratus lebih agen berkeliling bersamaan lagi (docs 07 M)');
+// gelombang 21: mode Ringan otomatis untuk laptop sederhana
+check('office3d.js: deteksi perangkat sederhana -> mode Ringan', read('public/js/office3d.js').includes('function weakDevice()') && read('public/js/office3d.js').includes("mode Ringan") && read('public/js/office3d.js').includes('lambat: beralih ke mode Ringan'), 'laptop lemah tidak otomatis memakai mode ringan (docs 07 N)');
+check('office3d.js: batching eco (vertex color, sel, detail jauh disembunyikan)', read('public/js/office3d.js').includes('const vcBasicEligible') && read('public/js/office3d.js').includes('const ecoDetail = []') && read('public/js/office3d.js').includes('const far = d > 55'), 'draw call/segitiga mode Ringan kembali tinggi (docs 07 N)');
 const stray = OLD.filter((o) => fs.existsSync(path.join(root, dir, `${o}.glb`)));
 check('karakter lama tidak ada di characters/agents/', !stray.length, `masih ada: ${stray.join(', ')} (cadangan ada di "3D karakter/_backup_agents_v3_20261117/")`);
 

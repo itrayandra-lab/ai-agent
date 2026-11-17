@@ -17,7 +17,7 @@ const BODIES = { male: ['1352', '1353', '1354', '1355'], female: ['1348', '1349'
 // When at least one chibi body loads, every agent uses it; set enabled: false to go back to the Quaternius bodies.
 // toy_ray: vinyl-toy style body (hips at 0.345 model units -> 0.41 m at height 1.2, matching FURNITURE_SCALE)
 /** natural pace of the chibi clips: walk cycle 0.54 s, stride ~0.56 u -> ~1.04 u/s; run ~2.0 u/s. Agents move at these speeds (x ~1.35 at most) so feet do not slide. office3d.js uses the same numbers. */
-export const GAIT = { walk: 2.0, run: 3.9 };
+export const GAIT = { walk: 1.25, run: 3.9 };
 const CHIBI = { enabled: true, height: 1.74, ids: ['kiko', 'kiko_ocean', 'kiko_coral', 'azure', 'azure_ocean', 'azure_coral', 'charcoal', 'charcoal_ocean', 'charcoal_coral', 'branch', 'branch_ocean', 'branch_coral'] };
 // arm-IK hand targets from the hips: [outward, height, forward]. Human values are metres; chibi values are model units (x body scale).
 const HUMAN_POSE = { rest: [0.22, -0.52, 0.04], sit: [0.1, -0.39, 0.12], wave: [0.34, 0.5, 0.05], talk: [0.12, 0.12, 0.34], shrug: [0.34, 0.1, 0.2], present: [0.22, 0.1, 0.45], think: [0.1, 0.5, 0.2], cheer: [0.3, 0.55, 0.0], type: [0.12, 0.2, 0.36], hold: [0.16, 0.12, 0.34] };
@@ -545,7 +545,7 @@ export function buildFbxRig(e, divisionHex) {
       const name = acts[want] ? want : (acts.Standing ? 'Standing' : 'Idle');
       if (name !== curName) { if (curName) acts[curName].fadeOut(0.3); acts[name].reset().fadeIn(0.3).play(); curName = name; }
       // gait: agents move at fixed speeds (2.8 walk / 5.2 run); the clip's natural pace is stride/0.54 s, so speed the cycle up to avoid feet sliding
-      { const act = acts[name]; if (name === 'Walk' || name === 'Run') { const nat = (((tpl.info && tpl.info.walkStride) || 0.5) * scale / 0.54) * (name === 'Run' ? 1.92 : 1), v = name === 'Run' ? GAIT.run : GAIT.walk; act.timeScale = Math.min(2.2, Math.max(0.85, v / nat)); } else act.timeScale = 1; }
+      { const act = acts[name]; if (name === 'Walk' || name === 'Run') { const nat = (((tpl.info && tpl.info.walkStride) || 0.5) * scale / 0.54) * (name === 'Run' ? 1.92 : 1), v = name === 'Run' ? GAIT.run : GAIT.walk; act.timeScale = Math.min(2.2, Math.max(0.5, v / nat)); } else act.timeScale = 1; }
       mixer.update(dt);
       // breathing: the chest swells a little, out of phase between agents
       { const br = 1 + 0.011 * Math.sin(now / 640 + breathSeed); if (bones.Torso) { bones.Torso.scale.set(2 - br, br, 2 - br); } }

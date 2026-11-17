@@ -767,8 +767,18 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
 .ov-left { top: 12px; }
 .cam-btns .btn.x { display: none; }
 .ov-right.open .cam-btns .btn.x { display: inline-flex; }
-.ov-right .hud { display: none; }
-.ov-right.open .hud { display: block; }
+/* info sistem: popup kecil di bawah tombol !, hanya saat dibuka */
+.ov-right .hud { display: none; position: absolute; top: calc(100% + 8px); right: 0; z-index: 9; width: min(300px, calc(100vw - 24px)); max-height: 62dvh; overflow: auto; animation: hudpop .18s ease; }
+.ov-right.info .hud { display: block; }
+@keyframes hudpop { from { opacity: 0; transform: translateY(-6px) scale(.98); } }
+/* menu ⋯: turun ke bawah dari tombol (floating), tidak ke samping */
+.ov-right .cam-menu { position: absolute; top: calc(100% + 8px); right: 40px; z-index: 9; min-width: 190px; padding: 8px; border-radius: 18px; display: flex; flex-direction: column; gap: 2px; }
+.ov-right .cam-menu[hidden] { display: none; }
+.ov-right .cam-menu:not([hidden]) { animation: menudrop .22s cubic-bezier(.2,.8,.2,1); }
+@keyframes menudrop { from { opacity: 0; transform: translateY(-10px); } }
+.cm-i { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 12px; cursor: pointer; text-align: left; }
+.cm-i:hover { background: rgba(130,140,230,.16); }
+.cm-i i { font-style: normal; width: 22px; text-align: center; }
 .cam-btns { flex-wrap: wrap; justify-content: flex-end; max-width: 300px; }
 .kpis { gap: 0; border-radius: 999px; overflow: hidden; width: max-content; max-width: 100%; }
 .kpis .kpi-mini { display: flex; align-items: baseline; gap: 5px; padding: 7px 12px; border-radius: 0; min-width: 0; border-width: 0 1px 0 0; box-shadow: none; transform: none !important; }

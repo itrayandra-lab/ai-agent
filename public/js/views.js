@@ -156,20 +156,17 @@ export const OfficeView = {
       <div class="ov-right">
         <div class="cam-btns">
           <button class="btn glass primary-play" title="Masuk ke kantor sebagai karakter Anda (WASD)" data-cam="play" style="width:auto;padding:0 12px">▶ PLAY</button>
-          <button class="btn glass x" title="Tampilan isometrik" data-cam="reset">ISO</button>
-          <button class="btn glass x" title="Tampilan atas" data-cam="top">TOP</button>
-          <button class="btn glass x" title="Zoom in" data-cam="in">＋</button>
-          <button class="btn glass x" title="Zoom out" data-cam="out">－</button>
-          <button class="btn glass x" title="Label nama" data-cam="labels">Aa</button>
-          <button class="btn glass x" title="Atap: otomatis / tampil / sembunyi" data-cam="roof">🏠</button>
-          <button class="btn glass" title="Lantai: tampilkan gedung sampai lantai ini" data-cam="floor">🏢</button>
-          <button class="btn glass x" title="Suara & musik latar [M]" data-cam="sound">🔊</button>
-          <button class="btn glass x" title="Aplikasi: Brain, Dashboard, Tugas, Chat, Tim, Pengetahuan, Pengaturan…" data-cam="apps">🗂</button>
-          <button class="btn glass x" title="Pengaturan visual: kamera, warna, awan, langit" data-cam="visual">🎛</button>
-          <button class="btn glass x" title="Layar penuh" data-cam="full">⛶</button>
-          <button class="btn glass x" title="Karakter saya (pria/wanita, rambut, kulit)" data-cam="me">👤</button>
-          <button class="btn glass" title="Alat kamera & info sistem" data-cam="more">⋯</button>
-          <button class="btn glass" title="Kontrol & pintasan keyboard [H]" data-cam="help">?</button>
+          <button class="btn glass" title="Layar penuh" data-cam="full">⛶</button>
+          <button class="btn glass" title="Menu lainnya" data-cam="more">⋯</button>
+          <button class="btn glass" title="Tampilkan / sembunyikan petunjuk kontrol" data-cam="hint">?</button>
+        </div>
+        <div class="glass cam-menu" hidden>
+          <button class="cm-i" data-cam="labels"><i>Aa</i>Label nama</button>
+          <button class="cm-i" data-cam="apps"><i>🗂</i>Aplikasi</button>
+          <button class="cm-i" data-cam="visual"><i>🎛</i>Visual</button>
+          <button class="cm-i" data-cam="me"><i>👤</i>Karakter saya</button>
+          <button class="cm-i" data-cam="settings"><i>⚙</i>Pengaturan</button>
+          <button class="cm-i" data-cam="info"><i>!</i>Info sistem</button>
         </div>
         <div class="glass hud" id="ohud"></div>
       </div>
@@ -201,15 +198,19 @@ export const OfficeView = {
     this.dockInit();
     ov.querySelectorAll('[data-cam]').forEach((b) => (b.onclick = () => {
       const c = b.dataset.cam;
+      if (b.closest('.cam-menu')) ov.querySelector('.cam-menu').hidden = true; // pilihan dari menu ⋯ menutup menu
       if (!office) return;
       if (c === 'play') return OfficeView.togglePlayer();
       if (c === 'reset') office.resetView(); if (c === 'top') office.topView(); if (c === 'in') office.zoom(0.7); if (c === 'out') office.zoom(1.4);
       if (c === 'labels') office.toggleLabels();
       if (c === 'floor') { const n = office.floorCount(); const k = office.setFloor((office.getFloor() - 1 + n) % n); document.querySelectorAll('[data-cam="floor"]').forEach((x) => (x.textContent = k === n - 1 ? '🏢' : 'L' + (k + 1))); toast('🏢 Lantai ' + (k + 1) + ' dari ' + n + (k === n - 1 ? ' (seluruh gedung)' : ''), 'ok'); }
-      if (c === 'more') ov.querySelector('.ov-right').classList.toggle('open');
+      if (c === 'more') { const m = ov.querySelector('.cam-menu'); m.hidden = !m.hidden; if (!m.hidden) setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('.ov-right')) { m.hidden = true; document.removeEventListener('click', off); } }), 0); }
+      if (c === 'info') { const r = ov.querySelector('.ov-right'); r.classList.toggle('info'); if (r.classList.contains('info')) setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('.ov-right')) { r.classList.remove('info'); document.removeEventListener('click', off); } }), 0); }
       if (c === 'roof') { const m = office.toggleRoof(); toast('🏠 Atap: ' + ({ auto: 'otomatis (terpotong saat melihat ke dalam)', on: 'selalu tampil', off: 'selalu sembunyi' })[m], 'ok'); }
       if (c === 'sound') { const o = sfx.toggle(); b.textContent = o ? '🔊' : '🔇'; if (o) sfx.play('click'); }
       if (c === 'help') OfficeView.help();
+      if (c === 'settings') return navigate('settings');
+      if (c === 'hint') { this.hintOn = !this.hintOn; ov.querySelector('#phud').hidden = !this.hintOn; b.classList.toggle('on', this.hintOn); return; }
       if (c === 'visual') OfficeView.visual();
       if (c === 'apps') OfficeView.appsMenu();
       if (c === 'me') OfficeView.characterPicker();
@@ -231,7 +232,7 @@ export const OfficeView = {
     const st = office.stats();
     const color = (r) => div(r.id)?.color || '#e0c9a6';
     const html = st.rooms.map((r) => `<div class="room" data-room="${r.id}"><i style="background:${color(r)}"></i>${esc(r.name)}<b>${r.here}</b></div>`).join('') + `<div class="room"><i style="background:#555"></i>Koridor<b>${st.corridor}</b></div>`;
-    this.roomsOpen ??= innerWidth >= 1500;
+    this.roomsOpen ??= false; // Ruangan default tertutup; klik judulnya untuk membuka
     const key = html + this.roomsOpen;
     if (key !== this.roomsHtml) {
       this.roomsHtml = key;
@@ -264,7 +265,8 @@ export const OfficeView = {
       <div class="kv"><span>Model</span><span>${esc(activeModel || '-')}</span></div>
       <div class="kv"><span>Tokens</span><span>${num(d.usage.tokensIn + d.usage.tokensOut)} · ${usd(d.usage.costToday)}/${usd(s.dailyBudgetUSD)}</span></div>
       <div class="kv"><span>Brain</span><span>${d.notes.length} notes · ${d.skills?.length || 0} skills</span></div>
-      <div class="kv"><span>Host</span><span>CPU ${meter(h.cpu)} MEM ${meter(h.mem)}</span></div>
+      <div class="kv"><span>Host (seluruh PC)</span><span>CPU ${meter(h.cpu)} MEM ${meter(h.mem)}</span></div>
+      <div class="kv"><span>Aplikasi ini</span><span>server ${h.rss ?? '–'} MB · ${h.procCpu ?? '–'}% · tab ${(() => { try { return Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB · ' + (window.__ray3d?.perf?.().fps ?? '–') + ' fps'; } catch { return '–'; } })()}</span></div>
       <div class="kv"><span>Disk</span><span>${meter(h.disk)} · up ${up(h.uptime)}</span></div>`;
     if (this.talkId && (colls.has('messages') || colls.has('employees')) && !this.ov.querySelector('#ptin:focus')) this.renderTalk(false);
     else if (this.talkId && colls.has('messages')) { const box = this.ov.querySelector('.ptalk-msgs'); const n = D().messages.filter((m) => m.channelId === this.talkCh).length; if (n !== this.talkN) { this.talkN = n; const v = this.ov.querySelector('#ptin').value; this.renderTalk(true); this.ov.querySelector('#ptin').value = v; } }
@@ -371,7 +373,7 @@ export const OfficeView = {
   },
   playerUI(on) {
     const ov = this.ov; if (!ov) return;
-    ov.querySelector('#phud').hidden = !on;
+    ov.querySelector('#phud').hidden = !(on && this.hintOn); // petunjuk hanya tampil saat tombol ? ditekan
     ov.querySelector('#pmobile').hidden = !on || !matchMedia('(pointer: coarse)').matches;
     ov.querySelector('[data-cam="play"]').textContent = on ? '■ EXIT' : '▶ PLAY';
     ov.classList.toggle('playing', on); office?.setInset?.(on ? 0 : (this.dock?.open && innerWidth > 900 ? 392 : 0));
@@ -540,7 +542,7 @@ export const OfficeView = {
     const mm = (f) => (12 / Math.tan((f * Math.PI) / 360)).toFixed(1) + 'mm';
     // [key, label, min, max, step, formatter]
     const SCHEMA = {
-      main: [['Kamera', [['fov', 'Sudut pandang (FOV)', 20, 90, 1, (x) => Math.round(x) + '° / ' + mm(x)], ['dof', 'Kedalaman medan (blur latar)', 0, 2.5, 0.05, pct], ['exposure', 'Kecerahan / exposure', 0, 1, 0.01, pct]]]],
+      main: [['Kamera', [['fov', 'Sudut pandang (FOV)', 20, 90, 1, (x) => Math.round(x) + '° / ' + mm(x)], ['dof', 'Kedalaman medan (blur latar)', 0, 2.5, 0.05, pct], ['exposure', 'Kecerahan / exposure', 0, 1, 0.01, pct]]], ['Keramaian', [['crowd', 'Agen idle yang boleh berkeliling sekaligus', 0, 60, 1, (x) => Math.round(x) + ' agen']]]],
       image: [['Koreksi', [['hi', 'Highlights', -1, 1, 0.01, pct], ['sh', 'Shadows', -1, 1, 0.01, pct]]], ['Warna', [['sat', 'Saturasi', 0, 2, 0.01, pct], ['temp', 'Suhu warna', 3000, 10000, 100, (x) => Math.round(x) + ' K']]], ['Efek', [['bloom', 'Bloom / glow', 0, 1, 0.01, pct], ['vig', 'Vignette', 0, 1, 0.01, pct], ['ca', 'Chromatic aberration', 0, 1, 0.01, pct]]]],
       atmos: [['Kabut', [['fog', 'Atmosfer (kabut)', 0, 100, 1, (x) => Math.round(x) + '%']]], ['Awan', [['density', 'Kepadatan', 0, 1, 0.01, pct], ['variety', 'Keragaman', 0, 1, 0.01, pct], ['cirrus', 'Awan cirrus (tipis tinggi)', 0, 1, 0.01, pct], ['contrails', 'Jejak pesawat', 0, 6, 1, (x) => Math.round(x)], ['lon', 'Bujur (arah awan)', 0, 1, 0.01, (x) => Math.round(x * 10000) + 'm'], ['lat', 'Lintang (jarak awan)', 0, 1, 0.01, (x) => Math.round(x * 10000) + 'm']]], ['Mimpi berkabut', [['dream', 'Kabut tipis & berkas cahaya', 0, 1, 0.01, pct]]], ['Cahaya langit', [['sun', 'Kecerahan matahari', 0, 2, 0.01, pct], ['starsMoon', 'Bintang & bulan', 0, 2, 0.01, pct], ['moon', 'Ukuran bulan', 0.5, 3, 0.05, pct]]]],
     };

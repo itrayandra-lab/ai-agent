@@ -38,6 +38,8 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   renderer.shadowMap.enabled = !isMobile;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false; // refreshed from frame() a few times a second
+  const crowdCap = () => (gfx === 'eco' ? Math.min(V.crowd ?? 14, 6) : (V.crowd ?? 14));
+  let crowdNow = 0;   /* idle agents currently away from their desk (leisure/visit), counted each frame; capped by V.crowd */
   let uiBlock = false, winDim = false, shadowT = 0, lastInput = performance.now(), lastDraw = 0, frameNo = 0, agentSeq = 0, lifeAcc = 0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.AgXToneMapping;
@@ -77,7 +79,21 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   let quality = 1, fpsAvg = 60, slowSecs = 0, fpsFrames = 0, fpsT = performance.now(), resScale = 1, fastSecs = 0;
   // below quality 2 the scene is drawn straight to the screen (two full-screen passes and two big buffers less); a CSS vignette replaces the grade
   let gfx = 'auto'; try { gfx = localStorage.getItem('office-gfx') || 'auto'; } catch { /* default */ }
+  /** Most users are on modest laptops (integrated Intel/AMD graphics, 4 cores or fewer, 4 GB or less). The scene is limited by the NUMBER OF OBJECTS the CPU/driver must submit (~19 us each,
+   *  measured: hiding half of the meshes cut the frame by 28%, while 4x fewer pixels changed nothing), so such devices start in "eco": batched geometry, no post chain, no shadows, fewer wanderers. */
+  function weakDevice() {
+    try {
+      const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'), rn = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+      if (/swiftshader|llvmpipe|software|basic render|mali|adreno|powervr|videocore/i.test(rn)) return true;
+      if (/intel/i.test(rn) && !/arc|iris xe|iris pro/i.test(rn)) return true;
+      if (navigator.deviceMemory && navigator.deviceMemory <= 4) return true;
+      if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) return true;
+    } catch { /* unknown: stay on auto */ }
+    return false;
+  }
+  { let stored = null; try { stored = localStorage.getItem('office-gfx'); } catch { /* none */ } if (!stored && weakDevice()) { gfx = 'eco'; console.info('[office3d] perangkat sederhana terdeteksi: mode Ringan'); } }
   if (gfx === 'eco') { quality = 0; resScale = 0.8; } else if (gfx === 'high') quality = 2;
+  let lagSecs = 0;
   const dofSz = new THREE.Vector2();
   const LOOKS = { natural: { warm: 0.6, teal: 0, con: 0.25, sat: 0.97, ca: 0, glow: 0 }, cinema: { warm: 1, teal: 0.8, con: 0.4, sat: 0.93, ca: 0.7, glow: 0.22 }, soft: { warm: 1.2, teal: 0.3, con: 0.12, sat: 0.88, ca: 0.2, glow: 0.4 }, cool: { warm: 0.35, teal: 1.1, con: 0.3, sat: 1.02, ca: 0.3, glow: 0.1 } };
   let lookName = 'soft', lookNow = LOOKS.soft, bars = false;
@@ -96,13 +112,13 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     camera.fov = lens; camera.updateProjectionMatrix(); applyLook();
     sky.material.uniforms.uSunB.value = V.sun; sky.material.uniforms.uMoonB.value = V.starsMoon; sky.material.uniforms.uMoonS.value = V.moon;
     env?.setStarB?.(V.starsMoon);
-    life?.setDream?.(V.dream * 0.75); life?.setDreamLite?.(perfLite);
+    life?.setDream?.(gfx === 'eco' ? 0 : V.dream * 0.75); life?.setDreamLite?.(perfLite);
     life?.setClouds?.({ density: V.density, variety: V.variety, cirrus: V.cirrus, contrails: Math.min(1, V.contrails), lon: V.lon, lat: V.lat });
     if (typeof applySun === 'function') applySun();
   }
   const applyBars = () => { const w = container.clientWidth, h = container.clientHeight, bh = bars && w && h ? Math.max(0, (h - w / 2.39) / 2) : 0; barT.style.height = barB.style.height = bh + 'px'; };
   // every user-facing visual setting lives here, is saved, and is applied by applyVisual()
-  const VDEF = { ver: 4, dof: 0.3, fov: 50, exposure: 0.21, hi: 0.39, sh: -0.49, sat: 1.4, temp: 5400, bloom: 0.67, vig: 0.59, ca: 0.33, fog: 41, density: 1, variety: 0, cirrus: 1, contrails: 2, lon: 0.49, lat: 0, sun: 0.36, starsMoon: 2, moon: 3, dream: 0.6 };   /* ver 4 = the Owner's own preset (screenshots 4-6) as the default + the foggy-dreams layer */
+  const VDEF = { ver: 4, dof: 0.3, fov: 50, exposure: 0.21, hi: 0.39, sh: -0.49, sat: 1.4, temp: 5400, bloom: 0.67, vig: 0.59, ca: 0.33, fog: 41, density: 1, variety: 0, cirrus: 1, contrails: 2, lon: 0.49, lat: 0, sun: 0.36, starsMoon: 2, moon: 3, dream: 0.6, crowd: 14 };   /* ver 4 = the Owner's own preset (screenshots 4-6) as the default + the foggy-dreams layer */
   const V = { ...VDEF };
   try { let sv = JSON.parse(localStorage.getItem('office-visual') || '{}'); if (sv.ver !== 4) sv = {}; Object.assign(V, sv); const f = parseFloat(localStorage.getItem('office-fov')); if (!localStorage.getItem('office-visual') && f >= 20 && f <= 90) V.fov = f; const d = parseFloat(localStorage.getItem('office-dof')); if (!localStorage.getItem('office-visual') && d >= 0) V.dof = d; } catch { /* defaults */ }
   const saveV = () => { try { localStorage.setItem('office-visual', JSON.stringify(V)); } catch { /* ignore */ } };
@@ -114,17 +130,21 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     vig.style.display = quality >= 1 ? 'none' : 'block'; dofT.style.display = dofB.style.display = 'none';
     bloom.enabled = quality >= 1 && V.bloom > 0;
     sun.castShadow = quality >= 1;
+    RES_FLOOR = gfx === 'eco' ? 0.6 : 0.8;
     renderer.setPixelRatio((quality >= 2 ? Math.min(devicePixelRatio, 1.5) : quality === 1 ? Math.min(devicePixelRatio, 1.0) : 0.85) * resScale);
     const w = container.clientWidth, h = container.clientHeight;
     if (w && h) { renderer.setSize(w, h, false); composer.setSize(w, h); try { fxaaRes(); } catch { /* not created yet */ } }
     applyBars(); applyLook();
   }
-  const RES_FLOOR = 0.8;   /* below ~0.8 the picture turns visibly blocky (it used to fall to 0.55 = stair-stepped edges) */
+  let RES_FLOOR = gfx === 'eco' ? 0.6 : 0.8;   /* below ~0.8 the picture turns visibly blocky (it used to fall to 0.55 = stair-stepped edges) */
   function trackFps(now) {
     fpsFrames++;
     if (now - fpsT < 1000) return;
     const fps = (fpsFrames * 1000) / (now - fpsT); fpsFrames = 0; fpsT = now;
     fpsAvg = fpsAvg * 0.6 + fps * 0.4;
+    if (gfx === 'auto' && fpsAvg < 30 && (player || performance.now() - lastInput < 4000)) {
+      if (++lagSecs >= 8) { lagSecs = 0; gfx = 'eco'; try { localStorage.setItem('office-gfx', 'eco'); } catch { /* ignore */ } quality = 0; resScale = 0.8; applyQuality(); console.info('[office3d] lambat: beralih ke mode Ringan'); layoutKey = ''; if (data) sync(data); return; }
+    } else lagSecs = Math.max(0, lagSecs - 1);
     if (performance.now() - lastInput < 4000 || player) { // only judge speed while the person is actually moving around (idle frames are capped on purpose)
       if (fpsAvg < 42 && resScale > RES_FLOOR) { resScale = Math.max(RES_FLOOR, resScale - 0.1); fastSecs = 0; applyQuality(); }
       else if (fpsAvg > 56 && resScale < 1) { if (++fastSecs >= 3) { resScale = Math.min(1, resScale + 0.05); fastSecs = 0; applyQuality(); } } else fastSecs = 0;
@@ -272,7 +292,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     ground: std(0x15120f, { roughness: 1 }), slab: std(0xe2e6f2, { roughness: 0.5, metalness: 0.2 }), concrete: std(0xffffff, { roughness: 0.85, map: TEX.concrete }),
     corridor: std(0xffffff, { roughness: 0.7, map: TEX.corridor }), parquet: std(0xffffff, { roughness: 0.55, map: TEX.parquet }), darkwood: std(0x3b2a1e, { roughness: 0.6 }),
     stone: std(0xffffff, { roughness: 0.8, map: TEX.stone }), carpet: std(0xffffff, { roughness: 1, map: TEX.carpet }), playfloor: std(0x3a3f44, { roughness: 0.95 }),
-    wall: std(0xeceaf2, { roughness: 0.8 }), glass: new THREE.MeshStandardMaterial({ color: 0xc9d6e2, transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.1, depthWrite: false }),
+    wall: std(0xeceaf2, { roughness: 0.8 }), glass: new THREE.MeshStandardMaterial({ color: 0xc9d6e2, transparent: true, opacity: 0.24, roughness: 0.05, metalness: 0.1, depthWrite: false }),
     mullion: std(0xc4c8dc, { metalness: 0.6, roughness: 0.4 }), desk: std(0xdfe4f2, { roughness: 0.3, metalness: 0.2 }), deskTop: std(0xf4f6fc, { roughness: 0.22, metalness: 0.15 }),
     whiteTop: std(0xe4e0d8, { roughness: 0.45 }), metal: std(0xc2c9e2, { metalness: 0.85, roughness: 0.25 }), chair: std(0x8188ab, { roughness: 0.6 }),
     leather: std(0xd6b59c, { roughness: 0.55 }), screen: std(0x2f3556, { roughness: 0.3 }), plant: std(0x86c49a, { roughness: 0.9 }), pot: std(0xdcdbe6),
@@ -384,22 +404,52 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   }
 
   // ───── draw-call reduction: merge static meshes that share a material into one mesh
-  function mergeInto(parent, meshes) {
+  // Two plain Standard materials with the same look ARE the same material. The builders make a fresh material per prop, which left ~1,800 one-mesh groups (= ~1,800 draw calls) after merging.
+  // Only non-emissive, non-custom Standard materials are folded; anything that glows, pulses, is shared (F.M) or is retinted at runtime keeps its own identity.
+  const sharedMats = new Set(Object.values(F.M || {}));
+  function matKey(mat) {
+    if (!mat || Array.isArray(mat)) return mat ? String(mat[0]?.uuid) : '';
+    if (!mat.isMeshStandardMaterial || mat.isMeshPhysicalMaterial || sharedMats.has(mat) || mat.userData?.noMerge) return mat.uuid;
+    if (mat.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile || mat.customProgramCacheKey !== THREE.Material.prototype.customProgramCacheKey) return mat.uuid;
+    if (mat.emissiveIntensity > 0 && mat.emissive.getHex() !== 0) return mat.uuid;
+    return ['S', mat.color.getHex(), mat.roughness, mat.metalness, mat.opacity, mat.transparent ? 1 : 0, mat.side, mat.depthWrite ? 1 : 0, mat.depthTest ? 1 : 0, mat.alphaTest, mat.map?.uuid, mat.normalMap?.uuid, mat.roughnessMap?.uuid, mat.vertexColors ? 1 : 0, mat.flatShading ? 1 : 0, mat.envMapIntensity, mat.polygonOffset ? 1 : 0, mat.fog ? 1 : 0].join('|');
+  }
+  let vcMat = null;
+  const vcEligible = (mat) => mat && !Array.isArray(mat) && mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial && !sharedMats.has(mat) && !mat.userData?.noMerge && !mat.map && !mat.transparent && mat.opacity === 1
+    && mat.side === THREE.FrontSide && !mat.vertexColors && !mat.alphaTest && !(mat.emissiveIntensity > 0 && mat.emissive.getHex() !== 0) && mat.onBeforeCompile === THREE.Material.prototype.onBeforeCompile;
+  const vcBasicEligible = (mat) => mat && !Array.isArray(mat) && !sharedMats.has(mat) && !mat.userData?.noMerge && !mat.map && !mat.transparent && mat.opacity === 1 && mat.side === THREE.FrontSide && !mat.alphaTest && !mat.vertexColors
+    && mat.onBeforeCompile === THREE.Material.prototype.onBeforeCompile && (mat.isMeshBasicMaterial || (mat.isMeshStandardMaterial && !mat.isMeshPhysicalMaterial && mat.emissiveIntensity > 0 && mat.emissive.getHex() !== 0));
+  let vcBasic = null;
+  const ECO_CELL = 26;
+  const ecoDetail = [];   /* eco: merged cells of SMALL props (furniture, plants, trinkets): hidden when the camera is far, where they are invisible anyway but cost most of the triangles */
+  const sizeOf = (m) => { const g = m.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const e = m.matrixRel.elements; return g.boundingSphere.radius * Math.max(Math.hypot(e[0], e[1], e[2]), Math.hypot(e[4], e[5], e[6]), Math.hypot(e[8], e[9], e[10])); };
+  function mergeInto(parent, meshes, eco = false) {
     const groups = new Map();
     for (const m of meshes) {
-      const k = m.material.uuid + (m.castShadow ? 'c' : '') + (m.receiveShadow ? 'r' : '') + m.renderOrder;
+      const kind = eco ? (vcEligible(m.material) ? 'VL' : vcBasicEligible(m.material) ? 'VB' : '') : ''; const el = m.matrixRel.elements;
+      const cell = kind ? '@' + Math.floor(el[12] / ECO_CELL) + ',' + Math.floor(el[13] / 7) + ',' + Math.floor(el[14] / ECO_CELL) + (sizeOf(m) < 0.8 ? 's' : 'b') : '';
+      const k = (kind || matKey(m.material)) + cell + (eco ? '' : (m.castShadow ? 'c' : '')) + (m.receiveShadow ? 'r' : '') + m.renderOrder;
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(m);
     }
     for (const list of groups.values()) {
       if (list.length < 2) continue;
-      const geos = list.map((m) => { const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); for (const n of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(n)) g.deleteAttribute(n); g.applyMatrix4(m.matrixRel); return g; });
+      const kind0 = eco ? (vcEligible(list[0].material) ? 'VL' : vcBasicEligible(list[0].material) ? 'VB' : '') : '';
+      const isVC = !!kind0 && list.every((m) => (kind0 === 'VL' ? vcEligible(m.material) : vcBasicEligible(m.material)));
+      const geos = list.map((m) => {
+        const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); for (const n of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(n)) g.deleteAttribute(n); g.applyMatrix4(m.matrixRel);
+        if (isVC) { const mt = m.material, glow = mt.isMeshStandardMaterial, ei = glow ? Math.min(1.5, mt.emissiveIntensity) : 0, c = mt.color, e2 = glow ? mt.emissive : null, n = g.attributes.position.count, arr = new Float32Array(n * 3), r0 = glow ? Math.min(1, c.r * 0.35 + e2.r * ei) : c.r, g0 = glow ? Math.min(1, c.g * 0.35 + e2.g * ei) : c.g, b0 = glow ? Math.min(1, c.b * 0.35 + e2.b * ei) : c.b; for (let i = 0; i < n; i++) { arr[i * 3] = r0; arr[i * 3 + 1] = g0; arr[i * 3 + 2] = b0; } g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); }
+        return g;
+      });
       let merged;
       try { merged = mergeGeometries(geos, false); } catch { merged = null; }
       geos.forEach((g) => g.dispose());
       if (!merged) continue;
-      const mesh = new THREE.Mesh(merged, list[0].material);
-      mesh.castShadow = list[0].castShadow; mesh.receiveShadow = list[0].receiveShadow; mesh.renderOrder = list[0].renderOrder;
+      if (isVC && kind0 === 'VL' && !vcMat) vcMat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+      if (isVC && kind0 === 'VB' && !vcBasic) vcBasic = new THREE.MeshBasicMaterial({ vertexColors: true });
+      const mesh = new THREE.Mesh(merged, isVC ? (kind0 === 'VL' ? vcMat : vcBasic) : list[0].material);
+      mesh.castShadow = eco ? false : list[0].castShadow; mesh.receiveShadow = eco ? false : list[0].receiveShadow;
+      if (isVC && sizeOf(list[0]) < 0.8) { merged.computeBoundingSphere(); mesh.userData.ecoR = merged.boundingSphere.radius; mesh.userData.ecoC = merged.boundingSphere.center.clone().applyMatrix4(parent.matrixWorld); ecoDetail.push(mesh); } mesh.renderOrder = list[0].renderOrder;
       parent.add(mesh);
       for (const m of list) m.parent.remove(m);
     }
@@ -426,12 +476,12 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     walls.length = 0; walls.push(...out);
   }
   function mergeStatic() {
-    world.updateMatrixWorld(true);
+    ecoDetail.length = 0; world.updateMatrixWorld(true);
     for (const root of [...floors, world]) {
       const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
       const meshes = [];
       root.traverse((o) => { if (o.isMesh && !skipMerge(o) && o.geometry.attributes.uv && o.geometry.attributes.normal) { o.matrixRel = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld); meshes.push(o); } });
-      mergeInto(root, meshes);
+      mergeInto(root, meshes, gfx === 'eco');
       if (root !== world) root.userData.keep = true;
     }
   }
@@ -586,8 +636,14 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     const std2 = (o) => new THREE.MeshStandardMaterial({ flatShading: true, ...o });
     const mintM = worldTextured(std2({ color: 0xcfeedb, roughness: 0.9 }), F.M.floor.grass.map, 0.16, 0.9, 'wtg'), promM = worldTextured(std2({ color: 0xe6e9f6, roughness: 0.55, metalness: 0.1 }), F.M.floor.paving.map, 0.1, 0.8, 'wtp');
     const glowM = std2({ color: 0xcfeaff, emissive: 0x8fd0ff, emissiveIntensity: 1.5 }), postM = std2({ color: 0xf1f4fb, roughness: 0.4, metalness: 0.3 }); glowRef = glowM;
-    const shellM = new THREE.MeshStandardMaterial({ color: 0xcfe4ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, roughness: 0.1 });
-    const domeM = new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0x5a7fd0, emissiveIntensity: 0.25, transparent: true, opacity: 0.13, side: THREE.DoubleSide, depthWrite: false, flatShading: true, roughness: 0.1 });
+    const shellM = new THREE.MeshStandardMaterial({ color: 0xcfe4ff, transparent: true, opacity: 0.26, side: THREE.DoubleSide, depthWrite: false, roughness: 0.1 });
+    const domeM = new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0x5a7fd0, emissiveIntensity: 0.25, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, flatShading: true, roughness: 0.1 });
+    // shared, cheap rim lines for every pod dome (one geometry + one material for all 27)
+    const hudSegs = [], hudW = 1.1, hudH = 0.7, hudL = 0.35;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) hudSegs.push(sx * hudW, sy * hudH, 0, sx * (hudW - hudL), sy * hudH, 0, sx * hudW, sy * hudH, 0, sx * hudW, sy * (hudH - hudL), 0);
+    const hudGeo = new THREE.BufferGeometry(); hudGeo.setAttribute('position', new THREE.Float32BufferAttribute(hudSegs, 3));
+    const hudM = new THREE.LineBasicMaterial({ color: 0x9fe4ff, transparent: true, opacity: 0.85, fog: false, depthWrite: false });
+    const podEdgeGeo = new THREE.EdgesGeometry(new THREE.SphereGeometry(1, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(8.8, 7.4, 8.8), 20), podEdgeM = new THREE.LineBasicMaterial({ color: 0xa8dcff, transparent: true, opacity: 0.6, fog: false, depthWrite: false });
     const GAP = 0.55, padGeo = new THREE.CylinderGeometry(9.4, 9.4, 0.3, 28), shellGeo = new THREE.CylinderGeometry(8.8, 8.8, 4.8, 24, 1, true, GAP / 2, Math.PI * 2 - GAP), ringGeo = new THREE.TorusGeometry(1, 0.012, 4, 20), domeGeo = new THREE.SphereGeometry(1, 16, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(8.8, 7.4, 8.8);
     const skirtGeo = (() => { const sh = new THREE.Shape(), p0 = GAP / 2 - Math.PI / 2, p1 = Math.PI * 2 - GAP / 2 - Math.PI / 2; sh.absarc(0, 0, 8.85, p0, p1, false); sh.absarc(0, 0, 8.75, p1, p0, true); sh.closePath(); return new THREE.ExtrudeGeometry(sh, { depth: 1.2, bevelEnabled: false, curveSegments: 26 }).rotateX(-Math.PI / 2); })(), skirtM = std2({ color: 0xf1f4fb, roughness: 0.4, metalness: 0.2, side: THREE.DoubleSide }), muGeo = new THREE.BoxGeometry(0.1, 5.0, 0.1);
     secs.forEach((sec, i) => {
@@ -617,6 +673,10 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       for (const sgn of [-1, 1]) { const gp = new THREE.Mesh(F.cyl(0.2, 0.24, 6.6, 6), glowM); gp.position.set(Math.sin((sgn * GAP) / 2) * 8.8, 3.3, Math.cos((sgn * GAP) / 2) * 8.8); g.add(gp); }
       const rg = new THREE.Mesh(ringGeo, glowM); rg.rotation.x = Math.PI / 2; rg.scale.set(8.8, 8.8, 26); rg.position.y = 6.2; g.add(rg);
       const dome = new THREE.Mesh(domeGeo, domeM); dome.position.y = 6.2; dome.userData.keep = true; dome.userData.c = new THREE.Vector3(px, 6.2, pz); dome.castShadow = false; g.add(dome); podDomes.push(dome);
+      dome.add(new THREE.LineSegments(podEdgeGeo, podEdgeM)); // rim lines of the glass dome (child, so it hides with the dome)
+      const baseRing = new THREE.Mesh(ringGeo, glowM); baseRing.rotation.x = Math.PI / 2; baseRing.scale.set(8.8, 8.8, 26); baseRing.position.y = 0.2; g.add(baseRing); // light line where the glass meets the pad
+      // HUD brackets: two corner frames on the outside of the glass wall (one shared geometry, one material)
+      for (const th of [Math.PI / 2, -Math.PI / 2]) { const hb = new THREE.LineSegments(hudGeo, hudM); hb.position.set(Math.sin(th) * 8.95, 4.6, Math.cos(th) * 8.95); hb.rotation.y = th; g.add(hb); }
     });
     // promenade and plaza
     const prom = new THREE.Mesh(new THREE.RingGeometry(ringR - ringW / 2, ringR + ringW / 2, 64).rotateX(-Math.PI / 2), promM); prom.position.y = 0.02; prom.receiveShadow = true; world.add(prom);
@@ -651,7 +711,9 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     {
       const bg = new THREE.Group(); bg.userData.dynamic = true; bg.scale.setScalar(BRAIN_K); bg.position.y = -0.75 * (BRAIN_K / 1.5); world.add(bg);
       const warm = std2({ color: 0xffe3c2, emissive: 0xff9a3c, emissiveIntensity: 1.3 });
-      const glassB = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.9, 5.2, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0xffe8cf, emissive: 0xffa75c, emissiveIntensity: 0.25, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, flatShading: true })); glassB.position.y = 1.5 + 2.6; bg.add(glassB);
+      const glassB = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.9, 5.2, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0xffe8cf, emissive: 0xffa75c, emissiveIntensity: 0.25, transparent: true, opacity: 0.24, side: THREE.DoubleSide, depthWrite: false, flatShading: true })); glassB.position.y = 1.5 + 2.6; bg.add(glassB);
+      // HUD brackets on the atrium glass, four around it (shared geometry from the pods)
+      for (let i = 0; i < 4; i++) { const th = (i / 4) * Math.PI * 2 + Math.PI / 4; const hb = new THREE.LineSegments(hudGeo, hudM); hb.scale.setScalar(0.8); hb.position.set(Math.sin(th) * 2.95, 4.1, Math.cos(th) * 2.95); hb.rotation.y = th; bg.add(hb); }
       for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 8; const p = new THREE.Mesh(F.cyl(0.07, 0.1, 5.2, 4), warm); p.position.set(Math.cos(a) * 2.7, 4.1, Math.sin(a) * 2.7); bg.add(p); }
       for (const y of [1.55, 6.65]) { const rr = new THREE.Mesh(new THREE.TorusGeometry(2.75, 0.06, 4, 8), warm); rr.rotation.x = Math.PI / 2; rr.position.y = y; bg.add(rr); }
       const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 1), new THREE.MeshStandardMaterial({ color: 0xffd9a8, emissive: 0xff9a3c, emissiveIntensity: 1.1, wireframe: true })); orb.position.y = 4.2; bg.add(orb);
@@ -1013,7 +1075,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     domeR = RO + 14; domeH = 84;
     domeG = new THREE.Group(); domeG.userData.keep = true; domeG.position.set(0, -0.05, 0); world.add(domeG);
     const dgeo = new THREE.SphereGeometry(1, 22, 8, 0, Math.PI * 2, 0, Math.PI / 2); dgeo.scale(domeR, domeH, domeR);
-    const glass = new THREE.Mesh(dgeo, new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0x5a7fd0, emissiveIntensity: 0.3, transparent: true, opacity: 0.14, side: THREE.FrontSide, depthWrite: false, flatShading: true, roughness: 0.1, metalness: 0.2 }));
+    const glass = new THREE.Mesh(dgeo, new THREE.MeshStandardMaterial({ color: 0xcfe4ff, emissive: 0x5a7fd0, emissiveIntensity: 0.3, transparent: true, opacity: 0.2, side: THREE.FrontSide, depthWrite: false, flatShading: true, roughness: 0.1, metalness: 0.2 }));
     glass.renderOrder = 4; glass.castShadow = false; glass.receiveShadow = false; glass.frustumCulled = false; domeG.add(glass);
     const edges = new THREE.LineSegments(new THREE.EdgesGeometry(dgeo, 8), new THREE.LineBasicMaterial({ color: 0xa8dcff, transparent: true, opacity: 0.7, fog: false })); edges.frustumCulled = false; domeG.add(edges);
     const drim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.012, 4, 48), glowM); drim.rotation.x = Math.PI / 2; drim.scale.set(domeR, domeR, 34); drim.position.y = 0.1; domeG.add(drim);
@@ -2785,7 +2847,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     let iz = (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) - joy.y;
     const len = Math.hypot(ix, iz);
     if (player.sitting && len > 0.3) playerStand();
-    a.running = !player.sitting && (keys.has('ShiftLeft') || keys.has('ShiftRight') || len > 1.3);
+    a.running = !player.sitting && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
     a.moving = !player.sitting && len > 0.15;
     if (a.moving) {
       ix /= Math.max(1, len); iz /= Math.max(1, len);
@@ -2856,7 +2918,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     const now = performance.now();
     if (step !== true && gfx === 'eco' && now - lastDraw < 30) return;
     if (step !== true && winDim && now - lastDraw < 66) return;
-    if (step !== true && !player && !chaseId && !camAnim && now - lastInput > 4000 && now - lastDraw < (now - lastInput > 12000 ? 48 : 32)) return;
+    if (step !== true && !player && !chaseId && !camAnim && now - lastInput > 4000 && now - lastDraw < (() => { const idle = now - lastInput; return idle > 120000 ? 200 : idle > 45000 ? 100 : idle > 12000 ? 50 : 32; })()) return;   /* idle tiers: ~30 fps, 20, 10, 5; any input wakes it at once. The scene is GPU-bound (~40 ms/frame on an integrated GPU), so frame rate is the lever that cuts average load without touching how it looks while you use it */
     if ((frameNo % 8) === 0) {
       const cp = camera.position, list = [];
       for (const a of avatars.values()) { if (!a.bubble) continue; const d = a.g.position.distanceTo(cp); list.push([d, a]); }
@@ -2866,13 +2928,15 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     sfx.tick(now / 1000); socialTick(now); animateFloaters(now / 1000, Math.min((now - lastT) / 1000, 0.1));
     PR.l = performance.now(); trackFps(now); renderer.info.reset();
     const realDt = Math.min((now - lastT) / 1000, 0.5); const dt = Math.min(realDt, 0.05); lastT = now; // movement uses real time so walking speed survives low FPS
+    let crowdCount = 0;
     for (const a of avatars.values()) {
       a.phase += dt;
+      if ((a.mode === 'leisure' || a.mode === 'visit') && a.e.type === 'ai') crowdCount++;
       if (a.path.length) {
         const tgt = a.path[0]; tmp.subVectors(tgt, a.g.position); tmp.y = 0;
         const d = tmp.length();
         // walk short trips, run long ones (hysteresis 28 / 14 units to the final target) at the clips' natural paces
-        { const end = a.path[a.path.length - 1], dEnd = Math.hypot(end.x - a.g.position.x, end.z - a.g.position.z); if (!a.running && dEnd > 28) a.running = true; else if (a.running && dEnd < 14) a.running = false; }
+        a.running = false; // semua agen berjalan santai (tidak berlari)
         let step = (a.running ? GAIT.run : GAIT.walk) * realDt;
         // global traffic rules, for every agent: wait for a seat someone is still using; slow down behind a standing person
         a.seatWait = a.path.length === 1 && seatTaken(a, tgt) ? (a.seatWait || 0) + realDt : 0;
@@ -2887,21 +2951,23 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       if (a.lod === 4) { a.ran = false; a.path.length || (a.moving = false); }
       { const mv = a.path.length > 0 || a.moving, k = a.lod === 4 ? 16 : a.lod === 3 ? 8 : a.lod === 2 ? (mv ? 2 : 4) : a.lod === 1 ? (mv ? 1 : 2) : 1; a.ran = k === 1 || (frameNo + (a.seq ??= ++agentSeq)) % k === 0; if (a.ran) { animate(a, a.acc, now); a.acc = 0; } }
       if (a.faceTo !== undefined) { let d = a.faceTo - a.g.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); a.g.rotation.y += d * Math.min(1, dt * 7); }
-      a.ring.material.opacity = a.e.status === 'working' ? 0.55 + Math.sin(a.phase * 5) * 0.4 : 0.9;
-      a.statusDot.rotation.y += dt * 2.2; a.statusDot.position.y = (a.topY || 1.85) + 0.24 + Math.sin(a.phase * 2.4) * 0.05;
+      const farIdle = a.lod === 4 && !a.path.length && !a.player && (frameNo + (a.seq || 0)) % 4 !== 0;   /* tiny dots in the distance: skip this frame's cosmetics and life logic */
+      if (!farIdle) { a.ring.material.opacity = a.e.status === 'working' ? 0.55 + Math.sin(a.phase * 5) * 0.4 : 0.9;
+      a.statusDot.rotation.y += dt * 2.2 * (a.lod === 4 ? 4 : 1); a.statusDot.position.y = (a.topY || 1.85) + 0.24 + Math.sin(a.phase * 2.4) * 0.05; }
       if (a.jump > 0) { a.jump = Math.max(0, a.jump - dt * 1.6); a.body.position.y += Math.sin(a.jump * Math.PI * 2) * 0.25 * (a.jump > 0 ? 1 : 0); }
       if (!walking && !a.player) {
         if (a.mode === 'desk' && a.pose === 'sit' && a.e.status === 'working' && a.lod < 3 && now > (a.nextWork ??= now + 8000 + Math.random() * 40000)) { a.nextWork = now + 35000 + Math.random() * 60000; const wl = chat.work(a.desk?.room?.div?.id); if (wl && !a.bubble) say(a, wl, 4200, true); }
-        if (a.until && now > a.until) { a.until = 0; const w = want(a); if (w === 'free' && a.mode !== 'desk' && Math.random() < 0.4) { /* linger elsewhere */ if (Math.random() < 0.5 && goPlaza(a)) { /* plaza */ } else { const s = claimSpot(a, ['cafe', 'play', 'lounge'][(Math.random() * 3) | 0], 'leisure'); s ? goSpot(a, s, 'leisure', 12000 + Math.random() * 20000) : goDesk(a); } } else if (w === 'free' || a.mode === 'visit' || a.mode === 'leisure') goDesk(a); else applyWant(a); }
-        if (want(a) === 'free' && a.mode === 'desk' && a.e.type === 'ai' && now > a.nextIdle) {
-          a.nextIdle = now + 20000 + Math.random() * 40000;
+        if (a.until && now > a.until) { a.until = 0; const w = want(a); if (w === 'free' && a.mode !== 'desk' && crowdNow < crowdCap() && Math.random() < 0.4) { crowdNow++; /* linger elsewhere */ if (Math.random() < 0.5 && goPlaza(a)) { /* plaza */ } else { const s = claimSpot(a, ['cafe', 'play', 'lounge'][(Math.random() * 3) | 0], 'leisure'); s ? goSpot(a, s, 'leisure', 12000 + Math.random() * 20000) : goDesk(a); } } else if (w === 'free' || a.mode === 'visit' || a.mode === 'leisure') goDesk(a); else applyWant(a); }
+        if (want(a) === 'free' && a.mode === 'desk' && a.e.type === 'ai' && now > a.nextIdle && crowdNow < crowdCap() && Math.random() < 0.06) {   // at most V.crowd idle agents roam at once; the rest stay at their desks
+          a.nextIdle = now + 20000 + Math.random() * 40000; crowdNow++;
           if (Math.random() < 0.35) { gesture(a, ['stretch', 'think', 'nod'][(Math.random() * 3) | 0], 2200); if (Math.random() < 0.4) emote(a, ['☕', '🎧', '🤔', '😌', '✨'][(Math.random() * 5) | 0], 2400); }
           if (Math.random() < 0.55 && goPlaza(a)) { /* off to the plaza */ } else if (Math.random() < 0.6) { const s = claimSpot(a, ['cafe', 'play', 'lounge', 'library'][(Math.random() * 4) | 0], null); if (s && s.tag !== 'meeting') goSpot(a, s, 'leisure', 10000 + Math.random() * 25000); }
         }
       }
       if (a.bubble && now > a.bubbleUntil) { disposeSprite(a.bubble); a.bubble = null; }
-      leisureLife(a, now); stationLife(a, now); followLife(a, now);
+      if (!farIdle) { leisureLife(a, now); stationLife(a, now); followLife(a, now); }
     }
+    crowdNow = crowdCount;
     mark("agentsLoop"); separate(); mark("separate");
     updateRoof(); updateDome();
     if (aiCore) { aiCore.rotation.y += 0.006; aiCore.children[0].position.y = Math.sin(performance.now() * 0.0012) * 0.25; aiCore.children[1].rotation.z += 0.004; aiCore.children[2].rotation.z -= 0.003; }
@@ -2929,7 +2995,10 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     if ((lodTick % 10) === 0) for (const a of avatars.values()) deskScreen(a);
     if ((lodTick % 10) === 0) for (const a of avatars.values()) { const dk = a.desk; if (!dk?.seat) continue; const dd = toWorld(dk.seat, tmpW).distanceTo(camera.position); if (dk.screen) dk.screen.visible = dd < 45; if (dk.chair) dk.chair.visible = dd < 85; }
     if ((lodTick % 10) === 0) { camera.updateMatrixWorld(); frustum.setFromProjectionMatrix(frustumM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)); }
-    if ((lodTick++ % 10) === 0) for (const a of avatars.values()) { const d = wp(a, tmpW).distanceTo(camera.position); const near = d < 22 ? 0 : d < 50 ? 1 : d < 110 ? 2 : 4; sphere.center.copy(tmpW); sphere.radius = 1.6; const lod = a.mode === 'walk' || a.path.length || near === 0 || frustum.intersectsSphere(sphere) ? near : 3; if (lod !== a.lod) { a.lod = lod; a.rig?.setLod?.(Math.min(lod, 2)); } }
+    if (gfx === 'eco' && (lodTick % 10) === 0) for (const m of ecoDetail) { const vis = m.userData.ecoC.distanceTo(camera.position) - m.userData.ecoR < 75; if (vis !== m.visible) m.visible = vis; }
+    if ((lodTick++ % 10) === 0) for (const a of avatars.values()) { const d = wp(a, tmpW).distanceTo(camera.position); const eL = gfx === 'eco' ? 0.55 : 1, near = d < 22 * eL ? 0 : d < 50 * eL ? 1 : d < 110 * eL ? 2 : 4;   /* eco: the detailed bodies only very close */ sphere.center.copy(tmpW); sphere.radius = 1.6; const lod = a.mode === 'walk' || a.path.length || near === 0 || frustum.intersectsSphere(sphere) ? near : 3; if (lod !== a.lod) { a.lod = lod; a.rig?.setLod?.(Math.min(lod, 2)); }
+      if (gfx === 'eco') { const far = d > 55, farDot = d > 110, dk = a.desk; if (far !== a.ecoFar) { a.ecoFar = far; if (a.ring) a.ring.visible = !far; if (dk?.screen) dk.screen.visible = !far; if (dk?.chair) dk.chair.visible = !far; } if (farDot !== a.ecoFarDot) { a.ecoFarDot = farDot; if (a.statusDot) a.statusDot.visible = !farDot; } }
+      else if (a.ecoFar || a.ecoFarDot) { a.ecoFar = a.ecoFarDot = false; if (a.ring) a.ring.visible = true; if (a.statusDot) a.statusDot.visible = true; if (a.desk?.screen) a.desk.screen.visible = true; if (a.desk?.chair) a.desk.chair.visible = true; } }
     if (frameNo % 4 === 0) { let n = 0; for (const a of avatars.values()) { if (a.lod !== 4 || n >= 320) continue; wp(a, dotP); dotP.y += 1; dotM.compose(dotP, dotQ, dotS); dots.setMatrixAt(n, dotM); dots.setColorAt(n, a.ring.material.color); n++; } dots.count = n; dots.instanceMatrix.needsUpdate = true; if (dots.instanceColor) dots.instanceColor.needsUpdate = true; }
     env?.update(realDt, now / 1000); lifeAcc += realDt; if (frameNo % 2 === 0) { life?.update(lifeAcc, now / 1000); lifeAcc = 0; }
     sky.position.copy(camera.position);
@@ -3050,7 +3119,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     bars: () => bars, setBars: (b) => { bars = !!b; try { localStorage.setItem('office-bars', bars ? '1' : '0'); } catch { /* ignore */ } applyBars(); },
     setBlocking: (on) => { uiBlock = !!on; winDim = !!on; if (on) { keys.clear(); fly.clear(); try { document.exitPointerLock?.(); } catch { /* ignore */ } } },
     gfx: () => gfx,
-    setGfx: (m) => { gfx = m; try { localStorage.setItem('office-gfx', m); } catch { /* ignore */ } if (m === 'eco') { quality = 0; resScale = Math.min(resScale, 0.8); } else if (m === 'high') { quality = 2; resScale = 1; } else { quality = 1; resScale = 1; } applyQuality(); },
+    setGfx: (m) => { const wasEco = gfx === 'eco'; gfx = m; try { localStorage.setItem('office-gfx', m); } catch { /* ignore */ } if (m === 'eco') { quality = 0; resScale = Math.min(resScale, 0.8); } else if (m === 'high') { quality = 2; resScale = 1; } else { quality = 1; resScale = 1; } applyQuality(); if ((m === 'eco') !== wasEco && data) { layoutKey = ''; sync(data); } },
     gfxStats: () => ({ gfx, fps: Math.round(fpsAvg), res: +resScale.toFixed(2), quality, calls: renderer.info.render.calls, tris: renderer.info.render.triangles }),
     timeOfDay: (h) => { if (h != null) { tod = ((h % 24) + 24) % 24; applySun(); } return fmtTod(); },
     setAutoDay: (v) => { autoDay = !!v; }, isAutoDay: () => autoDay,
