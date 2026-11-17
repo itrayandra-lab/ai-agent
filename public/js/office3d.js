@@ -54,6 +54,8 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   /** Keeps the camera inside the world: the focus stays near the ground and inside the campus, the eye never dips under the floor. */
   let camBound = 120;
   function clampCamera() {
+    // In Play the camera follows the character up stairs and onto sky decks (higher than the free-camera ceiling below): clamping dragged it back down every frame (camera "stuck below")
+    if (typeof player !== 'undefined' && player) { if (camera.position.y < 0.12) camera.position.y = 0.12; return; }
     const t = controls.target, b = camBound;
     const dx = Math.max(-b, Math.min(b, t.x)) - t.x, dz = Math.max(-b, Math.min(b, t.z)) - t.z, dy = Math.max(0, Math.min(2.5 + (floors.length - 1) * FH, t.y)) - t.y;
     if (dx || dy || dz) { t.x += dx; t.y += dy; t.z += dz; camera.position.x += dx; camera.position.y += dy; camera.position.z += dz; }

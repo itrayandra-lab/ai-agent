@@ -154,7 +154,8 @@ on('POST', '/api/meetings', (b) => {
   }
   const chairId = b.chairId || ids[0] || 'aria';
   // run in background; progress streams over SSE (meetings collection + meeting channel)
-  collab.runMeeting({ topic: need(b.topic, 'Topik wajib'), agenda: b.agenda || '', participantIds: ids, representedParticipantIds: representedIds, chairId, rounds: Number(b.rounds) || 2, ownerLed: b.ownerLed !== false, ownerId: b.userId || db().settings.currentUserId }).catch((err) => console.warn('[meeting]', err.message));
+  const meetUser = b.userId || db().settings.currentUserId, meetPA = db().employees.find((e) => e.isPA && e.ownerId === meetUser);
+  collab.runMeeting({ topic: need(b.topic, 'Topik wajib'), agenda: b.agenda || '', participantIds: ids, representedParticipantIds: representedIds, chairId, rounds: Number(b.rounds) || 2, ownerLed: b.ownerLed !== false, ownerId: meetUser, mode: b.mode, mirrorChannelId: meetPA ? engine.ensureDM(meetUser, meetPA.id) : null }).catch((err) => console.warn('[meeting]', err.message));
   return { ok: true, represented: representedIds.length, activeParticipants: [...new Set([chairId, ...ids])].length, ownerLed: b.ownerLed !== false };
 });
 on('POST', '/api/mcp/test', async (b) => {

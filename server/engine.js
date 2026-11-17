@@ -994,6 +994,12 @@ export async function onHumanMessage(msg) {
   // In an owner-led meeting agents must not interrupt. The collaboration layer
   // only releases them after the owner explicitly says "selesai".
   if (ch.kind === 'meeting' && collab.handleOwnerMeetingMessage(msg)) return;
+  if ((ch.kind === 'dm' || ch.kind === 'group') && emp(msg.authorId)?.type === 'human') {
+    const mids = ch.members.filter((x) => x !== msg.authorId && emp(x)?.type === 'ai'); let intent = meetingIntent(msg.text, mids);
+    const live = activeLiveMeeting(msg.authorId); if (live && collab.isMeetingEnd(msg.text)) intent = null;
+    if (live && !intent) { postMessage(`mtg-${live.id}`, msg.authorId, msg.text); collab.ownerSpeaks(live.id, msg.text, msg.authorId); return; }
+    if (intent) { startChatMeeting({ text: msg.text, userId: msg.authorId, channelId: ch.id, ids: mids, intent }); return; }
+  }
   let targets = [];
   const closed = ch.kind === 'dm' || ch.kind === 'group';   // only the members of a DM/group may answer in it
   if (ch.kind === 'dm' || ch.kind === 'group') targets = ch.members.filter((m) => m !== msg.authorId).map(emp);
@@ -1030,17 +1036,21 @@ async function replyAs(e, ch, msg) {
   if (e.status === 'idle') setStatus(e, 'chatting', `Membalas ${emp(msg.authorId)?.name}`);
   event('message', msg.authorId, `${emp(msg.authorId)?.name} → ${e.name}: ${msg.text.slice(0, 80)}`, { targetId: e.id, channelId: ch.id });
   try {
-    if (llm.isLive() && llm.budgetLeft() > 0) {
+    const quick = quickReply(e, msg);
+    if (quick) {
+      await new Promise((r) => setTimeout(r, 500 + Math.random() * 600));
+      postMessage(ch.id, e.id, quick);
+    } else if (llm.isLive() && llm.budgetLeft() > 0) {
       const history = db().messages.filter((m) => m.channelId === ch.id).slice(-10);
       const convo = history.map((m) => `${emp(m.authorId)?.name || m.authorId}: ${m.text}`).join('\n');
-      const chatTools = toolsFor(e).filter((x) => ['search_brain', 'read_note', 'write_note', 'web_search', 'calculate', 'company_status', 'ask_colleague', 'convene_meeting', 'schedule_job', 'list_jobs', 'visit_url', 'google_sheets_append', 'google_drive_create', 'google_calendar_create'].includes(x.name)).concat([{
+      const chatTools = toolsFor(e).filter((x) => ['search_brain', 'company_status', 'ask_colleague', 'web_search', 'calculate'].includes(x.name)).concat([{
         name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description'] },
       }]);
       const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : ch.kind === 'group' ? 'diskusi grup (' + ch.name + ')' : '#' + ch.name}:\n${convo}\n\n${wantsFollow ? 'Kamu SEKARANG ikut berjalan bersama orang ini di kantor 3D. Jawab singkat bahwa kamu ikut sambil mengobrol, jangan bilang tidak bisa ikut.\n\n' : ''}${wantsStop ? 'Kamu berhenti ikut dan kembali bekerja di meja. Jawab singkat.\n\n' : ''}Balas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu.${ch.kind === 'group' ? ' Ini diskusi grup: baca jawaban peserta lain di atas, jangan mengulang isinya; tambahkan sudut pandang divisimu atau setuju/tidak setuju dengan singkat.' : ''} Jawab langsung dan natural seperti rekan kerja; JANGAN menyebut nama tool atau istilah teknis (mis. create_task) kepada manusia. Untuk sapaan atau obrolan ringan, balas satu atau dua kalimat saja. Jika diminta pekerjaan besar, panggil tool create_task lalu konfirmasi singkat apa yang sudah kamu buat dan siapa yang mengerjakan.` }];
       const pseudo = { id: 'chat', title: 'chat', log: [], transient: true };
       let posted = false;
       for (let i = 0; i < 5; i++) {
-        const res = await llm.call({ system: systemPrompt(e), messages, tools: chatTools, model: e.model || llm.defaultModels()[e.isPA || e.isMaster || e.isLead ? 'worker' : 'small'], employee: e, maxTokens: 4000 });
+        const res = await llm.call({ system: chatSystem(e), messages, tools: chatTools, model: e.model || llm.defaultModels()[e.isPA || e.isMaster || e.isLead ? 'worker' : 'small'], employee: e, maxTokens: 1200 });
         messages.push({ role: 'assistant', content: res.content });
         const uses = res.content.filter((b) => b.type === 'tool_use');
         if (!uses.length) { postMessage(ch.id, e.id, (llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); posted = true; break; }
@@ -1080,6 +1090,96 @@ async function replyAs(e, ch, msg) {
 
 export const running = () => [...jobs.entries()].map(([taskId, j]) => ({ taskId, empId: j.empId, mode: j.mode }));
 
+// ───────────────────────── meetings and quick replies from chat ─────────────────────────
+// A chat sentence that asks for a meeting must REALLY start one (agents walk to the Conference Hall and talk in 3D). Before, the PA model only claimed it had.
+const MEETING_RE = /\b(rapat|meeting|rapatkan|kumpul(?:kan)?|berkumpul|ngumpul|briefing|town ?hall|sinkronisasi)\b|ayo\s+ke\s+ruang|ke\s+ruang\s+(?:rapat|meeting)|ke\s+conference/i;
+const PAST_MEETING_RE = /\b(notulen|hasil\s+(?:rapat|meeting)|rapat\s+(?:kemarin|tadi|sebelumnya)|jadwal\s+(?:rapat|meeting))\b/i;
+const CANCEL_MEETING_RE = /\b(batal(?:kan)?|hentikan|bubarkan|stop|sudahi)\b.*\b(rapat|meeting)\b|\b(rapat|meeting)\b.*\b(batal|dibatalkan|stop)\b/i;
+const INVITE_RE = /\b(undang|ajak|panggil|libatkan|tambah(?:kan)?|cuma|hanya)\b/i;
+
+/** ids of AI employees whose name appears in the text, with or without @ ("undang maya aja"); a first name several people share goes to the division head */
+export function namesIn(text) {
+  const t = ' ' + String(text || '').toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ') + ' ';
+  const firsts = new Map(), out = new Set();
+  for (const e of db().employees) {
+    if (e.type !== 'ai') continue;
+    const full = String(e.name || '').toLowerCase().trim(); if (!full) continue;
+    if (full.includes(' ') && t.includes(' ' + full + ' ')) out.add(e.id);
+    if (String(e.id).length >= 4 && t.includes(' ' + String(e.id).toLowerCase() + ' ')) out.add(e.id);   // the id also works ("kenzo")
+    const first = full.split(/\s+/)[0]; const cur = firsts.get(first);
+    if (!cur || (e.isLead && !cur.isLead)) firsts.set(first, e);
+  }
+  for (const [first, e] of firsts) if (first.length >= 3 && t.includes(' ' + first + ' ')) out.add(e.id);
+  return [...out];
+}
+const activeChatMeeting = () => db().meetings.find((m) => m.fromChat && (m.status === 'running' || m.status === 'waiting_owner') && Date.now() - m.createdAt < 15 * 60000);
+/** 'new' | 'replace' | 'cancel' | null */
+export function meetingIntent(text, ids = []) {
+  const t = String(text || '').trim();
+  if (!t || /\?\s*$|^\s*(?:apa|apakah|siapa|kenapa|mengapa|bagaimana|gimana|berapa|kapan|dimana|mana|bisakah)\b/i.test(t) || PAST_MEETING_RE.test(t)) return null;   // questions about meetings are chat, not a request to hold one
+  const active = activeChatMeeting();
+  if (active && CANCEL_MEETING_RE.test(t)) return 'cancel';
+  if (active) return /\b(?:rapat|meeting)\s+baru\b/i.test(t) || (INVITE_RE.test(t) && (ids.length || namesIn(t).length)) ? 'replace' : null;   // "udah cuma undang maya aja" swaps the guests; anything else is just talk inside the running meeting
+  return MEETING_RE.test(t) ? 'new' : null;
+}
+export const activeLiveMeeting = (userId) => db().meetings.find((m) => m.status === 'waiting_owner' && (!userId || m.ownerId === userId));   // any meeting the Owner sits in (chat-started or from the Rapat form)
+export function startChatMeeting({ text, userId = 'owner', channelId, ids = [], intent = 'new' }) {
+  const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
+  const say = (msg, extra = {}) => postMessage(channelId, pa.id, msg, extra);
+  const active = activeChatMeeting();
+  if (intent === 'cancel') { if (active && collab.cancelMeeting(active.id)) say('Rapat dibatalkan. Semua kembali ke pekerjaan masing-masing.'); else say('Tidak ada rapat yang sedang berjalan.'); return { action: 'meeting', cancelled: true }; }
+  const named = namesIn(text).filter((id) => id !== pa.id);
+  let invited = [...new Set([...ids, ...named])].filter((id) => emp(id)?.type === 'ai' && id !== pa.id);
+  if (/\b(semua|seluruh)\b/i.test(text) && !invited.length) invited = db().divisions.map((d) => d.leadId).filter((id) => emp(id)?.type === 'ai' && id !== pa.id);
+  if (!invited.length) { const m = db().employees.find((x) => x.isMaster && x.id !== pa.id); invited = [m?.id || db().divisions.map((d) => d.leadId).find((id) => id && id !== pa.id)].filter(Boolean); }
+  const nameSet = new Set(invited.flatMap((id) => [String(emp(id)?.name || '').toLowerCase().split(/\s+/)[0], String(id).toLowerCase()]));
+  const rest = String(text).replace(/@[\w-]+/g, ' ').replace(/\b(ayo|yuk|ya|tolong|coba|kita|ke|di|ruang|rapat|meeting|conference|hall|kumpul|berkumpul|ngumpul|diskusi|undang|ajak|dengan|bareng|saja|aja|cuma|hanya|udah|sudah|sebisa|mungkin|hemat|token|loh|semua|seluruh|dan)\b/gi, ' ').split(/\s+/).map((w) => w.replace(/^[,;:.!]+|[,;:.!]+$/g, '')).filter((w) => w && !nameSet.has(w.toLowerCase())).join(' ').replace(/^(?:soal|tentang|mengenai|untuk)\s+/i, '').trim();
+  const names = invited.map((id) => emp(id).name);
+  const topic = rest.length >= 8 ? rest.slice(0, 140) : 'Diskusi Owner dengan ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ` dan ${names.length - 3} lainnya` : '');
+  if (active && intent === 'replace') collab.cancelMeeting(active.id);   // "undang Maya saja" replaces the meeting that was just opened with default guests
+  let started = null;
+  const auto = /\b(tanpa\s+(?:saya|aku)|sendiri(?:an)?|laporkan\s+hasil|kabari\s+hasil|otomatis)\b/i.test(text);   // "rapat sendiri dulu" = agents only; otherwise the Owner is in the room
+  collab.runMeeting({ topic, participantIds: invited, chairId: pa.id, ownerLed: !auto, ownerId: userId, fromChat: true, mirrorChannelId: channelId, onStart: (m) => { started = m; } })
+    .catch((err) => { console.warn('[meeting]', err.message); say('⚠️ Rapat belum bisa dimulai: ' + err.message); });
+  if (started) {
+    const how = auto ? 'Mereka berdiskusi sendiri lalu menyusun notulen (1 panggilan AI saja).' : 'Setelah berkumpul, saya buka dengan usulan agenda. Tulis arahanmu di kotak ini: peserta menjawab setiap pesanmu. Ketik "selesai" atau "tutup rapat" untuk mengakhiri (otomatis ditutup bila 10 menit tanpa arahan).';
+    say(`📅 **Rapat dimulai** di Conference Hall bersama ${names.join(', ')}.\nTopik: ${topic}\n${how}`, { meetingId: started.id });
+  }
+  return { action: 'meeting', channelId, meetingId: started?.id || null, members: invited, orchestrator: pa.id };
+}
+
+/** A compact chat persona grounded in the agent's REAL state. The full work prompt (skills, knowledge, self-model: thousands of tokens) made chat expensive and let the model
+ *  invent work ("fokus pada kalender kampanye Q3") from old memories. Chat gets who-you-are + what is actually true right now, and a ban on inventing the rest. */
+function chatSystem(e) {
+  const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status) && t.status !== 'blocked').slice(0, 5);
+  const where = e.status === 'meeting' ? 'sedang di rapat' : e.status === 'working' ? 'sedang bekerja' : e.status === 'chatting' ? 'sedang mengobrol' : 'sedang luang';
+  const c = db().company;
+  return `Kamu ${e.name}, ${e.title} di divisi ${div(e.divisionId)?.name || '-'} ${c.name}. ${String(e.about || e.persona || '').slice(0, 280)}
+Keahlian: ${(e.skills || []).slice(0, 4).join(', ') || '-'}.
+
+# KEADAAN NYATA SAAT INI (satu-satunya sumber kebenaran tentang dirimu)
+- Status: ${where}${e.statusText ? ` (${String(e.statusText).slice(0, 60)})` : ''}
+- Tugas aktif: ${open.length ? open.map((t) => `"${String(t.title).slice(0, 60)}" [${t.status}]`).join('; ') : 'TIDAK ADA'}
+
+# ATURAN
+- Jawab 1-3 kalimat, natural, ${c.language}, seperti rekan kerja.
+- JANGAN mengarang pekerjaan, proyek, angka, atau status yang tidak tertulis di atas. Bila ditanya sedang apa atau di mana, jawab sesuai keadaan nyata; bila tidak ada tugas, katakan sedang luang.
+- Jangan menyebut nama tool atau istilah teknis.
+- Bila diminta pekerjaan besar, panggil create_task lalu konfirmasi singkat apa yang dibuat dan siapa pengerjanya.`;
+}
+
+const GREET_WORDS = new Set(['hai', 'halo', 'hi', 'hello', 'hey', 'p', 'tes', 'test', 'pagi', 'siang', 'sore', 'malam', 'oi', 'woi', 'assalamualaikum', 'selamat', 'ya', 'owner']);
+/** zero-token answers for greetings and "what can you do": the model adds nothing there, and it kept parroting tool names */
+function quickReply(e, msg) {
+  const raw = String(msg.text || '').replace(/@[\w-]+/g, ' ').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+  const who = /^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : String(emp(msg.authorId)?.name || 'Owner').split(' ')[0];
+  const words = raw.split(' ').filter(Boolean);
+  const first = String(e.name || '').toLowerCase().split(' ')[0];
+  if (words.length && words.length <= 3 && words.every((w) => GREET_WORDS.has(w) || w === first)) return `Halo ${who}! Saya ${e.name}, ${e.title}. Beri saya tugas ("buat rencana promo"), ajak rapat ("rapat dengan Maya"), atau minta saya mendekat ("ikuti saya").`;
+  if (/\b(bisa\s+apa|apa\s+(?:saja|aja)\s+(?:yang\s+)?bisa|bantuan|help|fitur)\b/.test(raw)) return 'Yang bisa kita lakukan lewat kotak ini: (1) beri tugas/goal, mis. "buat rencana promo akhir tahun", akan dipecah ke tim; (2) ajak rapat, mis. "rapat dengan Maya soal promo", mereka benar-benar berkumpul di Conference Hall; (3) tanya status atau isi Brain; (4) "ikuti saya" agar saya berjalan bersamamu. Tambah beberapa agen lewat "+ Agen" untuk diskusi grup.';
+  return null;
+}
+
 // ───────────────────────── orchestrator entry point (one chat box for everything) ─────────────────────────
 /** One message from the Owner. mode: 'auto' | 'chat' | 'goal'. auto = goal when it reads like work and nobody was addressed, otherwise a chat (DM with one agent, group with several). */
 export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto' }) {
@@ -1088,6 +1188,12 @@ export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto' }) 
   const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
   const mentioned = [...text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase()).map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter(Boolean).map((e) => e.id);
   const ids = [...new Set([...(Array.isArray(to) ? to : []), ...mentioned])].filter((id) => emp(id)?.type === 'ai');
+  if (mode !== 'goal') {
+    const live = activeLiveMeeting(userId);
+    let intent = meetingIntent(text, ids); if (live && collab.isMeetingEnd(text)) intent = null;
+    if (live && !intent) { const chId = ensureDM(userId, pa.id); postMessage(chId, userId, text); postMessage(`mtg-${live.id}`, userId, text); collab.ownerSpeaks(live.id, text, userId); return { action: 'meeting-say', channelId: chId, meetingId: live.id, orchestrator: pa.id }; }   // inside a live meeting every message is said to the room
+    if (intent) { const chId = ensureDM(userId, pa.id); postMessage(chId, userId, text); return startChatMeeting({ text, userId, channelId: chId, ids, intent }); }
+  }
   const action = mode === 'goal' ? 'goal' : mode === 'chat' ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
   if (action === 'goal') {
     const chId = ensureDM(userId, pa.id);

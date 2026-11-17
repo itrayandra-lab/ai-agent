@@ -94,6 +94,14 @@ check('life.js: kabut mimpi hemat fill-rate', read('public/js/life.js').includes
 // gelombang 16: build() tidak boleh berhenti di tengah; resolusi dijaga, efek dikorbankan dulu
 check('office3d.js: blok bukit memakai Math.PI (bukan PI di luar cakupan)', read('public/js/office3d.js').includes('tg.rotateX(-Math.PI / 2); const pa') && !read('public/js/office3d.js').includes('tg.rotateX(-PI'), 'build() melempar ReferenceError: semua agen dan detail dunia hilang (docs 07 I)');
 check('office3d.js: resolusi tidak jatuh di bawah RES_FLOOR 0.8', read('public/js/office3d.js').includes('const RES_FLOOR = 0.8') && read('public/js/office3d.js').includes('perf: () =>'), 'resolusi turun ke 0.55 = tepi bergerigi (docs 07 I)');
+// gelombang 17: rapat dari chat nyata + hemat token
+check('collab.js: rapat hemat token (1 panggilan) + batal + onStart', read('server/collab.js').includes('async function meetingScript') && read('server/collab.js').includes('export function cancelMeeting') && read('server/collab.js').includes('onStart'), 'rapat kembali boros/tidak bisa dibatalkan (docs 07 J)');
+check('engine.js: niat rapat dari chat + balasan nol token', read('server/engine.js').includes('export function meetingIntent') && read('server/engine.js').includes('export function startChatMeeting') && read('server/engine.js').includes('function quickReply'), 'chat hanya mengaku mengadakan rapat (docs 07 J)');
+check('engine.js: chat tidak lagi memberi model tool convene_meeting', !read('server/engine.js').includes("'ask_colleague', 'convene_meeting', 'schedule_job'"), 'model kembali berhalusinasi rapat (docs 07 J)');
+// gelombang 18: rapat interaktif, chat dipagari status nyata, kamera Play di tangga
+check('collab.js: rapat live (Owner di ruangan) menjawab tiap pesan', read('server/collab.js').includes('export function ownerSpeaks') && read('server/collab.js').includes('async function liveTurn') && read('server/collab.js').includes('export const isMeetingEnd'), 'rapat kembali diam menunggu kata "selesai" (docs 07 K)');
+check('engine.js: chat memakai prompt ringkas berbasis status nyata', read('server/engine.js').includes('function chatSystem') && read('server/engine.js').includes('system: chatSystem(e)') && read('server/engine.js').includes('export const activeLiveMeeting'), 'agen mengarang pekerjaan / chat boros token (docs 07 K)');
+check('office3d.js: clampCamera tidak menyeret kamera Play ke bawah', read('public/js/office3d.js').includes('(camera "stuck below")'), 'kamera Play tertahan di bawah saat naik tangga/deck (docs 07 K)');
 const stray = OLD.filter((o) => fs.existsSync(path.join(root, dir, `${o}.glb`)));
 check('karakter lama tidak ada di characters/agents/', !stray.length, `masih ada: ${stray.join(', ')} (cadangan ada di "3D karakter/_backup_agents_v3_20261117/")`);
 
