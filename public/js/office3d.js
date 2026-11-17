@@ -32,7 +32,7 @@ const FACILITIES = [
 ];
 const READING = /brain|catatan|riset|research|mencari|membaca|referensi/i;
 
-export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, onHolo, onZone, onPlayerHint, onPlayerAction, onFollow, onRequestPlay, onHelp, onToast, onMenu, onTime, onKeys } = {}) {
+export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, onHolo, onZone, onPlayerHint, onPlayerAction, onFollow, onRequestPlay, onHelp, onToast, onMenu, onTime, onKeys, onTeleport, onTeleportMenu } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: devicePixelRatio < 1.5, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 1.75));
   renderer.shadowMap.enabled = !isMobile;
@@ -112,13 +112,13 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     camera.fov = lens; camera.updateProjectionMatrix(); applyLook();
     sky.material.uniforms.uSunB.value = V.sun; sky.material.uniforms.uMoonB.value = V.starsMoon; sky.material.uniforms.uMoonS.value = V.moon;
     env?.setStarB?.(V.starsMoon);
-    life?.setDream?.(gfx === 'eco' ? 0 : V.dream * 0.75); life?.setDreamLite?.(perfLite);
+    life?.setDream?.(gfx === 'eco' ? 0 : V.dream * 0.75); life?.setDreamLite?.(perfLite); life?.setFireflies?.(gfx === 'eco' ? 28 : perfLite ? 44 : 84);
     life?.setClouds?.({ density: V.density, variety: V.variety, cirrus: V.cirrus, contrails: Math.min(1, V.contrails), lon: V.lon, lat: V.lat });
     if (typeof applySun === 'function') applySun();
   }
   const applyBars = () => { const w = container.clientWidth, h = container.clientHeight, bh = bars && w && h ? Math.max(0, (h - w / 2.39) / 2) : 0; barT.style.height = barB.style.height = bh + 'px'; };
   // every user-facing visual setting lives here, is saved, and is applied by applyVisual()
-  const VDEF = { ver: 4, dof: 0.3, fov: 50, exposure: 0.21, hi: 0.39, sh: -0.49, sat: 1.4, temp: 5400, bloom: 0.67, vig: 0.59, ca: 0.33, fog: 41, density: 1, variety: 0, cirrus: 1, contrails: 2, lon: 0.49, lat: 0, sun: 0.36, starsMoon: 2, moon: 3, dream: 0.6, crowd: 14 };   /* ver 4 = the Owner's own preset (screenshots 4-6) as the default + the foggy-dreams layer */
+  const VDEF = { ver: 4, dof: 0.3, fov: 50, exposure: 0.21, hi: 0.39, sh: -0.49, sat: 1.4, temp: 5400, bloom: 0.67, vig: 0.59, ca: 0.33, fog: 41, density: 1, variety: 0, cirrus: 1, contrails: 2, lon: 0.49, lat: 0, sun: 0.36, starsMoon: 2, moon: 3, dream: 0.6, crowd: 14, tele: 45 };   /* ver 4 = the Owner's own preset (screenshots 4-6) as the default + the foggy-dreams layer */
   const V = { ...VDEF };
   try { let sv = JSON.parse(localStorage.getItem('office-visual') || '{}'); if (sv.ver !== 4) sv = {}; Object.assign(V, sv); const f = parseFloat(localStorage.getItem('office-fov')); if (!localStorage.getItem('office-visual') && f >= 20 && f <= 90) V.fov = f; const d = parseFloat(localStorage.getItem('office-dof')); if (!localStorage.getItem('office-visual') && d >= 0) V.dof = d; } catch { /* defaults */ }
   const saveV = () => { try { localStorage.setItem('office-visual', JSON.stringify(V)); } catch { /* ignore */ } };
@@ -149,7 +149,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       if (fpsAvg < 42 && resScale > RES_FLOOR) { resScale = Math.max(RES_FLOOR, resScale - 0.1); fastSecs = 0; applyQuality(); }
       else if (fpsAvg > 56 && resScale < 1) { if (++fastSecs >= 3) { resScale = Math.min(1, resScale + 0.05); fastSecs = 0; applyQuality(); } } else fastSecs = 0;
     }
-    { const pl = fpsAvg < 46 && (player || performance.now() - lastInput < 4000); if (pl !== perfLite) { perfLite = pl; life?.setDreamLite?.(perfLite); applyLook(); } }   /* effects are dropped first (blur taps, bloom, mist); resolution is the last resort */
+    { const pl = fpsAvg < 46 && (player || performance.now() - lastInput < 4000); if (pl !== perfLite) { perfLite = pl; life?.setDreamLite?.(perfLite); life?.setFireflies?.(gfx === 'eco' ? 28 : perfLite ? 44 : 84); applyLook(); } }   /* effects are dropped first (blur taps, bloom, mist); resolution is the last resort */
     slowSecs = fpsAvg < 26 && resScale <= RES_FLOOR + 0.01 ? slowSecs + 1 : 0;
     if (slowSecs >= 3 && quality > 1 && gfx === 'auto') { quality--; slowSecs = 0; applyQuality(); console.info('[office3d] kualitas grafis diturunkan ke', quality); }
   }
@@ -195,7 +195,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     ].join('\n'),
   }));
   sky.renderOrder = -1; sky.frustumCulled = false; scene.add(sky);
-  window.__ray3d = { perf: () => ({ fps: Math.round(fpsAvg), resScale, perfLite, quality, dpr: devicePixelRatio, pixelRatio: renderer.getPixelRatio(), canvas: [renderer.domElement.width, renderer.domElement.height] }), terrainH: (x, z) => (terrainH ? terrainH(x, z) : 0), composer: () => composer, grade: () => grade, bloom: () => bloom, scene, camera, controls, renderer, get rooms() { return rooms; }, get solids() { return solids; }, collides: (x, z) => collides(x, z), play: (id) => enterPlayer(id), walk: (on) => setWalk(on), zoneAt: (p) => zoneAt(p), idle: (ms) => { lastInput = performance.now() - ms; }, surfaceAt: (x, z, y) => surfaceAt(x, z, y), get envWalk() { return envWalk; }, get player() { return player; }, sit: () => { const q = sitAll?.find((x) => !claimed.has(x.key)); return q; }, sendTo: (id, tag) => { const a = avatars.get(id), sp = claimPlaza(a, tag); if (sp) goSpot(a, sp, 'leisure', 60000); return !!sp; }, get plazaSpots() { return plazaSpots; }, step: (n = 1) => { for (let i = 0; i < n; i++) frame(true); } }; // inspection hook for debugging
+  window.__ray3d = { applyWant: (id) => { const q = avatars.get(id); if (q) applyWant(q); }, perf: () => ({ fps: Math.round(fpsAvg), resScale, perfLite, quality, dpr: devicePixelRatio, pixelRatio: renderer.getPixelRatio(), canvas: [renderer.domElement.width, renderer.domElement.height] }), terrainH: (x, z) => (terrainH ? terrainH(x, z) : 0), composer: () => composer, grade: () => grade, bloom: () => bloom, scene, camera, controls, renderer, get rooms() { return rooms; }, get solids() { return solids; }, collides: (x, z) => collides(x, z), play: (id) => enterPlayer(id), walk: (on) => setWalk(on), zoneAt: (p) => zoneAt(p), idle: (ms) => { lastInput = performance.now() - ms; }, surfaceAt: (x, z, y) => surfaceAt(x, z, y), get envWalk() { return envWalk; }, get player() { return player; }, sit: () => { const q = sitAll?.find((x) => !claimed.has(x.key)); return q; }, sendTo: (id, tag) => { const a = avatars.get(id), sp = claimPlaza(a, tag); if (sp) goSpot(a, sp, 'leisure', 60000); return !!sp; }, get plazaSpots() { return plazaSpots; }, step: (n = 1) => { for (let i = 0; i < n; i++) frame(true); } }; // inspection hook for debugging
   const world = new THREE.Group();
   // partition walls: kept as separate meshes so the player view can cut them away when they block the camera (Sims-style)
   const walls = [];
@@ -263,11 +263,14 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   const screenT = { value: 0 };
   const STRIPS = new Map();
   const ROLE_SCREENS = { eng: ['code', 'term', 'doc'], it: ['term', 'code', 'chart'], data: ['chart', 'sheet', 'code'], mkt: ['chart', 'design', 'doc', 'chat'], sales: ['chat', 'sheet', 'chart'], design: ['design', 'design', 'doc'], cs: ['chat', 'doc'], fin: ['sheet', 'chart', 'doc'], hr: ['doc', 'chat', 'sheet'], ops: ['kanban', 'sheet', 'chart'], legal: ['doc', 'doc'], reg: ['doc', 'sheet'], ecom: ['chart', 'design', 'sheet'], kms: ['doc', 'kanban'], exec: ['chart', 'doc', 'kanban'], bizdev: ['chart', 'doc', 'chat'], retail: ['sheet', 'chart'], mfg: ['chart', 'term'], scm: ['sheet', 'kanban'], rnd: ['chart', 'doc', 'term'], qa: ['term', 'kanban', 'sheet'] };
+  ROLE_SCREENS.mkt.push('video', 'dash'); ROLE_SCREENS.design.push('video', 'wave'); ROLE_SCREENS.ecom.push('video', 'dash'); ROLE_SCREENS.sales.push('dash', 'mail'); ROLE_SCREENS.cs.push('mail', 'feed'); ROLE_SCREENS.exec.push('dash', 'cal');
+  ROLE_SCREENS.hr.push('cal', 'mail'); ROLE_SCREENS.ops.push('feed'); ROLE_SCREENS.kms.push('feed'); ROLE_SCREENS.fin.push('dash'); ROLE_SCREENS.data.push('dash'); ROLE_SCREENS.legal.push('mail'); ROLE_SCREENS.bizdev.push('mail', 'cal');
+  const AMBIENT = ['dash', 'feed', 'mail', 'cal', 'chart', 'kanban'];   /* idle desks are never dark or a blue screensaver: they show dim ambient content */
   function scrStrip(kind) {
     if (STRIPS.has(kind)) return STRIPS.get(kind);
     const W = 128, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
     let sd = 1 + kind.length * 97 + kind.charCodeAt(0); const rnd = () => ((sd = (sd * 16807) % 2147483647) - 1) / 2147483646;
-    const dark = !['doc', 'sheet', 'design'].includes(kind); g.fillStyle = dark ? '#0d1220' : '#f4f6fb'; g.fillRect(0, 0, W, H);
+    const dark = !['doc', 'sheet', 'design', 'mail', 'cal'].includes(kind); g.fillStyle = dark ? '#0d1220' : '#f4f6fb'; g.fillRect(0, 0, W, H);
     const pick = (a) => a[(rnd() * a.length) | 0];
     if (kind === 'code') { const cols = ['#c792ea', '#82aaff', '#c3e88d', '#f78c6c', '#89ddff', '#6b7499']; for (let y = 6; y < H - 6; y += 8) { let x = 6 + ((rnd() * 4) | 0) * 7; g.fillStyle = '#3a4160'; g.fillRect(1, y, 3, 5); while (x < W - 14 && rnd() < 0.9) { const w = 6 + rnd() * 26; g.fillStyle = pick(cols); g.fillRect(x, y, w, 5); x += w + 4; } } }
     else if (kind === 'term') { for (let y = 6; y < H - 6; y += 8) { g.fillStyle = rnd() < 0.2 ? '#7ee787' : '#8fa0c8'; g.fillRect(6, y, 4, 5); let x = 14; const n = 1 + ((rnd() * 4) | 0); for (let k = 0; k < n; k++) { const w = 8 + rnd() * 30; g.fillStyle = rnd() < 0.08 ? '#ff7b72' : rnd() < 0.15 ? '#e3b341' : '#c9d1d9'; g.fillRect(x, y, w, 5); x += w + 4; } } }
@@ -277,6 +280,15 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     else if (kind === 'design') { for (let y0 = 0; y0 < H; y0 += 128) { g.fillStyle = '#e9edf7'; g.fillRect(6, y0 + 6, W - 12, 116); for (let i = 0; i < 5; i++) { g.fillStyle = pick(['#ff6b9a', '#5b8cff', '#34d399', '#f59e0b', '#a78bfa']); if (rnd() < 0.5) { g.beginPath(); g.arc(20 + rnd() * 88, y0 + 24 + rnd() * 80, 8 + rnd() * 16, 0, 7); g.fill(); } else g.fillRect(14 + rnd() * 80, y0 + 16 + rnd() * 70, 14 + rnd() * 30, 10 + rnd() * 26); } g.strokeStyle = '#2f6fe4'; g.lineWidth = 1; g.strokeRect(18 + rnd() * 20, y0 + 18 + rnd() * 20, 50, 40); } }
     else if (kind === 'chat') { for (let y = 8; y < H - 14; y += 20) { const me = rnd() < 0.45, w = 30 + rnd() * 54; g.fillStyle = me ? '#3b6cf0' : '#26304f'; const x = me ? W - w - 8 : 18; g.fillRect(x, y, w, 12); if (!me) { g.fillStyle = pick(['#f59e0b', '#34d399', '#ec4899']); g.beginPath(); g.arc(9, y + 6, 5, 0, 7); g.fill(); } } }
     else if (kind === 'kanban') { for (let y0 = 0; y0 < H; y0 += 128) for (let k = 0; k < 3; k++) { g.fillStyle = '#18203a'; g.fillRect(4 + k * 41, y0 + 4, 38, 120); for (let i = 0; i < 1 + ((rnd() * 3) | 0) + 1; i++) { g.fillStyle = pick(['#5b8cff', '#34d399', '#f59e0b', '#ec4899']); g.fillRect(7 + k * 41, y0 + 10 + i * 30, 32, 24); g.fillStyle = '#c9d1d9'; g.fillRect(10 + k * 41, y0 + 16 + i * 30, 20, 3); } } }
+    else if (kind === 'video') { for (let y0 = 0; y0 < H; y0 += 128) { g.fillStyle = '#05070d'; g.fillRect(4, y0 + 4, W - 8, 52); const gr = g.createLinearGradient(4, 0, W - 4, 0); gr.addColorStop(0, pick(['#ff7a59', '#5b8cff', '#34d399', '#f59e0b'])); gr.addColorStop(1, pick(['#a78bfa', '#ff6b9a', '#22d3ee'])); g.fillStyle = gr; g.globalAlpha = 0.75; g.fillRect(10, y0 + 9, W - 20, 42); g.globalAlpha = 1; g.fillStyle = '#e5e9ff'; g.beginPath(); g.moveTo(W / 2 - 5, y0 + 22); g.lineTo(W / 2 + 6, y0 + 30); g.lineTo(W / 2 - 5, y0 + 38); g.fill();
+      for (let tr = 0; tr < 3; tr++) { let x = 4 + rnd() * 10; const ty = y0 + 64 + tr * 18; while (x < W - 12) { const w = 14 + rnd() * 34; g.fillStyle = pick(tr === 2 ? ['#34d399', '#22c55e'] : ['#5b8cff', '#a78bfa', '#f59e0b', '#ff6b9a']); g.fillRect(x, ty, Math.min(w, W - 8 - x), 13); x += w + 2 + rnd() * 6; } }
+      const px = 20 + rnd() * (W - 40); g.fillStyle = '#ff4d4d'; g.fillRect(px, y0 + 60, 2, 56); } }
+    else if (kind === 'wave') { for (let y0 = 0; y0 < H; y0 += 64) { g.fillStyle = '#0a1020'; g.fillRect(4, y0 + 3, W - 8, 58); g.fillStyle = pick(['#22d3ee', '#a78bfa', '#34d399']); for (let x = 8; x < W - 8; x += 3) { const h = 4 + Math.abs(Math.sin(x * 0.07 + y0) + (rnd() - 0.5)) * 20; g.fillRect(x, y0 + 32 - h / 2, 2, h); } } }
+    else if (kind === 'dash') { for (let y0 = 0; y0 < H; y0 += 128) { for (let k = 0; k < 3; k++) { g.fillStyle = '#151c33'; g.fillRect(4 + k * 41, y0 + 4, 38, 30); g.fillStyle = pick(['#5b8cff', '#34d399', '#f59e0b', '#ff6b9a']); g.fillRect(8 + k * 41, y0 + 10, 14 + rnd() * 16, 7); g.fillStyle = '#8b93ad'; g.fillRect(8 + k * 41, y0 + 22, 20, 3); }
+      g.fillStyle = '#151c33'; g.fillRect(4, y0 + 40, W - 8, 80); g.strokeStyle = pick(['#5b8cff', '#34d399', '#22d3ee']); g.lineWidth = 2; g.beginPath(); let yy = y0 + 90; for (let x = 8; x < W - 8; x += 8) { yy = Math.max(y0 + 50, Math.min(y0 + 112, yy + (rnd() - 0.5) * 22)); if (x === 8) g.moveTo(x, yy); else g.lineTo(x, yy); } g.stroke(); } }
+    else if (kind === 'feed') { for (let y = 6; y < H - 6; y += 22) { g.fillStyle = pick(['#34d399', '#5b8cff', '#f59e0b', '#a78bfa']); g.beginPath(); g.arc(12, y + 8, 4, 0, 7); g.fill(); g.fillStyle = '#d7dcf2'; g.fillRect(24, y + 2, 40 + rnd() * 54, 5); g.fillStyle = '#6b7499'; g.fillRect(24, y + 11, 30 + rnd() * 50, 4); g.fillStyle = '#3a4160'; g.fillRect(W - 22, y + 4, 14, 4); } }
+    else if (kind === 'mail') { for (let y = 6; y < H - 6; y += 24) { const sel = rnd() < 0.18; g.fillStyle = sel ? '#e7eeff' : '#f4f6fb'; g.fillRect(2, y, W - 4, 21); g.fillStyle = pick(['#ff6b9a', '#5b8cff', '#34d399', '#f59e0b']); g.beginPath(); g.arc(13, y + 10, 6, 0, 7); g.fill(); g.fillStyle = '#1f2a55'; g.fillRect(26, y + 4, 30 + rnd() * 40, 5); g.fillStyle = '#8b93ad'; g.fillRect(26, y + 12, 50 + rnd() * 40, 4); } }
+    else if (kind === 'cal') { for (let y0 = 0; y0 < H; y0 += 128) { g.fillStyle = '#f4f6fb'; g.fillRect(0, y0, W, 128); g.strokeStyle = '#d5dae8'; g.lineWidth = 1; for (let c = 0; c <= 7; c++) { g.beginPath(); g.moveTo(c * 18, y0); g.lineTo(c * 18, y0 + 128); g.stroke(); } for (let r = 0; r <= 6; r++) { g.beginPath(); g.moveTo(0, y0 + r * 21); g.lineTo(W, y0 + r * 21); g.stroke(); } for (let i = 0; i < 7; i++) { g.fillStyle = pick(['#5b8cff', '#34d399', '#f59e0b', '#ff6b9a', '#a78bfa']); g.fillRect(((rnd() * 6) | 0) * 18 + 2, y0 + ((rnd() * 5) | 0) * 21 + 3, 15, 8 + rnd() * 10); } } }
     else { for (let i = 0; i < 40; i++) { g.fillStyle = 'rgba(120,150,255,' + (0.1 + rnd() * 0.35).toFixed(2) + ')'; g.beginPath(); g.arc(rnd() * W, rnd() * H, 2 + rnd() * 8, 0, 7); g.fill(); } }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.generateMipmaps = true; t.anisotropy = 2; STRIPS.set(kind, t); return t;
   }
@@ -342,12 +354,12 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     const { bg = 'rgba(255,255,255,0.84)', fg = '#1a2140', size = 28, accent = null, scale = 0.0092, border = 'rgba(255,255,255,0.55)' } = o; const M = 9; const pad = o.pad ?? Math.round(size * 0.62), mono = false;
     const c = document.createElement('canvas'); const g = c.getContext('2d');
     const fam = mono ? '"Geist Mono", ui-monospace, Consolas, monospace' : 'Geist, Inter, system-ui, sans-serif';
-    const font = (i) => `${o.glass ? 500 : i === 0 || o.sameColor ? 600 : 450} ${i === 0 || o.sameColor ? size : size * 0.82}px ${fam}`;
+    const font = (i) => `${o.halo ? 650 : o.glass ? 500 : i === 0 || o.sameColor ? 600 : 450} ${i === 0 || o.sameColor ? size : size * 0.82}px ${fam}`;
     const arr = Array.isArray(lines) ? lines : [lines];
     const widths = arr.map((l, i) => { g.font = font(i); return g.measureText(l).width; });
     const dot = accent ? size * 0.75 : 0;
     const w = Math.ceil(Math.max(...widths) + pad * 2 + dot) + M * 2; const lh = size * 1.3; const h = Math.ceil(lh * arr.length + pad) + M * 2;
-    const Q = 2; c.width = w * Q; c.height = h * Q; g.scale(Q, Q);
+    const Q = o.glass ? 3 : 2; c.width = w * Q; c.height = h * Q; g.scale(Q, Q);
     if (o.glass) {
       // frosted glass: a soft gradient veil, a hairline highlight on top, a tiny tail; tint drifts the whole pill toward a colour
       const rad = Math.min((h - M * 2) / 2, size * 0.95), t = o.tint || [255, 255, 255];
@@ -360,7 +372,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     g.save(); g.shadowColor = 'rgba(40,52,120,0.20)'; g.shadowBlur = 9; g.shadowOffsetY = 2; g.fillStyle = bg; rr(g, M, M, w - M * 2, h - M * 2, Math.min((h - M * 2) / 2, size * 0.8)); g.fill(); g.restore(); g.strokeStyle = border; g.lineWidth = 1.5; rr(g, M, M, w - M * 2, h - M * 2, Math.min((h - M * 2) / 2, size * 0.8)); g.stroke();
     }
     if (accent) { g.fillStyle = accent; g.beginPath(); g.arc(M + pad + size * 0.25, M + pad / 2 + lh / 2, size * 0.22, 0, Math.PI * 2); g.fill(); }
-    arr.forEach((l, i) => { g.font = font(i); g.fillStyle = i === 0 || o.sameColor ? fg : (o.sub || 'rgba(27,31,59,0.6)'); g.textBaseline = 'middle'; g.fillText(l, M + pad + dot, M + pad / 2 + lh * (i + 0.5)); });
+    arr.forEach((l, i) => { g.font = font(i); g.textBaseline = 'middle'; const tx = M + pad + dot, ty = M + pad / 2 + lh * (i + 0.5); if (o.halo) { g.save(); g.lineJoin = 'round'; g.lineWidth = size * 0.2; g.strokeStyle = 'rgba(255,255,255,0.9)'; g.strokeText(l, tx, ty); g.restore(); } g.fillStyle = i === 0 || o.sameColor ? fg : (o.sub || 'rgba(27,31,59,0.6)'); g.fillText(l, tx, ty); });
     const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: true, alphaTest: o.glass ? 0.14 : 0.08, transparent: true, opacity: 0.97, fog: false }));
     s.scale.set(w * scale, h * scale, 1); s.renderOrder = 10; s.userData.base = [w * scale, h * scale];
@@ -805,7 +817,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         const { x: cx, z: cz, a: sa } = sites.stage;
         const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.3, 0.14, 28), pm(0xdfe5f7, 0.5)); disc.position.set(cx, 0.07, cz); disc.receiveShadow = true; world.add(disc);
         const sr = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.05, 4, 36), glowM); sr.rotation.x = PI / 2; sr.position.set(cx, 0.15, cz); world.add(sr);
-        const thc = PI / 2 - sa, scr = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 2.6, 24, 1, true, thc - 0.85, 1.7), new THREE.MeshStandardMaterial({ color: 0x1b2a3a, emissive: 0x3b6fd0, emissiveIntensity: 0.9, side: THREE.DoubleSide, flatShading: true })); { const sc2 = mkScreenTex(1024, 440); screens.dash = sc2; scr.material = mkScreenMat(sc2.tex); } scr.position.set(cx, 2.0, cz); scr.userData.keep = true; world.add(scr); addCurvedFrame(world, { R: 3.6, H: 2.6, t0: thc - 0.85, tl: 1.7, pos: [cx, 2.0, cz], glow: 0x38bdf8 }); pulseMats.push({ m: scr.material, base: 0.9, amp: 0.35, sp: 0.6, ph: 2 });
+        const thc = PI / 2 - sa, scr = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 2.6, 24, 1, true, thc - 0.85, 1.7), new THREE.MeshStandardMaterial({ color: 0x1b2a3a, emissive: 0x3b6fd0, emissiveIntensity: 0.9, side: THREE.DoubleSide, flatShading: true })); { const sc2 = mkScreenTex(1024, 440); screens.dash = sc2; scr.material = mkScreenMat(sc2.tex, 0.9); } scr.position.set(cx, 2.0, cz); scr.userData.keep = true; world.add(scr); addCurvedFrame(world, { R: 3.6, H: 2.6, t0: thc - 0.85, tl: 1.7, pos: [cx, 2.0, cz], glow: 0x38bdf8 }); pulseMats.push({ m: scr.material, base: 0.9, amp: 0.35, sp: 0.6, ph: 2 });
         const fwd = [-Math.cos(sa), -Math.sin(sa)];
         for (let k = -1; k <= 1; k++) { const x = cx + Math.cos(sa) * 0.6 + Math.cos(sa + PI / 2) * k * 1.3, z = cz + Math.sin(sa) * 0.6 + Math.sin(sa + PI / 2) * k * 1.3; addPs(x, z, yawTo(fwd[0], fwd[1]), 'stand', 'stage'); }
         for (let k = -2; k <= 2; k++) { const al = sa + PI + k * 0.2, x = cx + Math.cos(al) * 5.4, z = cz + Math.sin(al) * 5.4; addPs(x, z, toward(x, z, cx, cz), 'stand', 'audience'); }
@@ -905,7 +917,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
           const ring = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.045, 4, 32), glowM); ring.rotation.x = PI / 2; ring.position.y = 0.3; g1.add(ring);
           if (id === 'tasks') {
             for (const sx of [-2.34, 2.34]) { const p = new THREE.Mesh(F.box(0.14, 3.6, 0.14), F.M.blackMetal); p.position.set(sx, 1.9, 0); g1.add(p); }
-            const kb = mkCv(768, 420), pl = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 2.13), mkScreenMat(kb.tex)); pl.position.set(0, 2.6, 0); pl.userData.keep = true; an.add(pl);
+            const kb = mkCv(768, 420), pl = new THREE.Mesh(new THREE.PlaneGeometry(3.9, 2.13), mkScreenMat(kb.tex, 0.9)); pl.position.set(0, 2.6, 0); pl.userData.keep = true; an.add(pl);
             { const km = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.75, roughness: 0.35, flatShading: true }), kg = new THREE.MeshBasicMaterial({ color: 0x22d3ee, fog: false }), bw = 3.9, bh = 2.13;
               const add2 = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g1.add(m); return m; };
               add2(new THREE.BoxGeometry(bw + 0.36, bh + 0.36, 0.18), km, 0, 2.6, -0.12);
@@ -965,7 +977,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         const disc = (g0, r, col, h = 0.1) => { const d = new THREE.Mesh(new THREE.CylinderGeometry(r, r + 0.1, h, 24), pm(col, 0.7)); d.position.y = h / 2; d.receiveShadow = true; g0.add(d); const rg = new THREE.Mesh(new THREE.TorusGeometry(r, 0.04, 4, 32), glowM); rg.rotation.x = PI / 2; rg.position.y = h + 0.01; g0.add(rg); };
         { // content creator corner
           const c = zone(10), g0 = grp(c); disc(g0, 2.9, 0xe9d5ff);
-          const bd = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 2.8, 20, 1, true, PI - 0.9, 1.8), new THREE.MeshStandardMaterial({ color: 0xff8fb8, emissive: 0xff5c9a, emissiveIntensity: 0.5, side: THREE.DoubleSide, flatShading: true })); { const sc2 = mkScreenTex(1024, 440); screens.feed = sc2; bd.material = mkScreenMat(sc2.tex); } bd.position.y = 1.4; bd.userData.keep = true; g0.add(bd); addCurvedFrame(g0, { R: 2.6, H: 2.8, t0: PI - 0.9, tl: 1.8, pos: [0, 1.4, 0], glow: 0xe879f9 });
+          const bd = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 2.8, 20, 1, true, PI - 0.9, 1.8), new THREE.MeshStandardMaterial({ color: 0xff8fb8, emissive: 0xff5c9a, emissiveIntensity: 0.5, side: THREE.DoubleSide, flatShading: true })); { const sc2 = mkScreenTex(1024, 440); screens.feed = sc2; bd.material = mkScreenMat(sc2.tex, 0.85); } bd.position.y = 1.4; bd.userData.keep = true; g0.add(bd); addCurvedFrame(g0, { R: 2.6, H: 2.8, t0: PI - 0.9, tl: 1.8, pos: [0, 1.4, 0], glow: 0xe879f9 });
           const cam = F.camera(); cam.position.set(0, 0, 1.9); cam.rotation.y = PI; g0.add(cam);
           for (const sx of [-1.5, 1.5]) { const rl = F.ringLight(); rl.position.set(sx, 0, 1.2); rl.rotation.y = PI; g0.add(rl); }
           const rec = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a2a })); rec.userData.keep = true; rec.position.set(0.12, 1.55, 1.9); g0.add(rec); floaters.push({ kind: 'rec', m: rec });
@@ -1359,9 +1371,29 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       const kinds = ROLE_SCREENS[a.desk?.room?.div?.id] || ['doc', 'chart', 'code']; dk.kind = kinds[(Math.random() * kinds.length) | 0];
       dk.nextSwitch = now + 18000 + Math.random() * 30000; dk.scrU.uSpd.value = -(0.012 + Math.random() * 0.05); if (changed) dk.scrU.uPh.value = Math.random();
       dk.screenMat.map = scrStrip(dk.kind); dk.screenMat.color.set(0xffffff);
-    } else if (st === 'idle') { dk.screenMat.map = scrStrip('saver'); dk.scrU.uSpd.value = -0.006; dk.screenMat.color.set(0x7d8cc0); }
+    } else if (st === 'idle') { let h = 0; for (const ch of a.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0; dk.kind = AMBIENT[h % AMBIENT.length]; dk.screenMat.map = scrStrip(dk.kind); dk.scrU.uSpd.value = -(0.006 + (h % 7) * 0.0012); dk.screenMat.color.set(0xa7b3d9); }
     else { dk.screenMat.map = null; dk.screenMat.color.set(0x050505); }
     dk.screenMat.needsUpdate = true;
+  }
+  /** the live "what is this person doing" bar on the top fifth of a desk screen; only desks near the camera get a texture (created on demand, disposed when the camera leaves) */
+  function deskTitle(a, d) {
+    const dk = a.desk; if (!dk?.scrU) return;
+    const lim = gfx === 'eco' ? 9 : 18;
+    if (d > lim + 6) { if (dk.titleTex) { dk.titleTex.dispose(); dk.titleTex = null; dk.titleKey = ''; dk.scrU.uTitle.value = null; dk.scrU.uHasT.value = 0; } return; }
+    if (d > lim) return;
+    const e = a.e, task = e.status === 'working' ? data?.tasks?.find((t) => t.assigneeId === e.id && t.status === 'in_progress') : null;
+    const txt = e.status === 'offline' ? 'Offline' : e.status === 'working' ? (task?.title || e.statusText || 'Bekerja') : e.status === 'meeting' ? (e.statusText || 'Rapat') : e.status === 'chatting' ? 'Mengobrol' : 'Siap bekerja';
+    const key = e.status + '|' + txt;
+    if (dk.titleKey === key) { dk.scrU.uHasT.value = dk.state === 'off' ? 0 : 1; return; }
+    dk.titleKey = key;
+    const c = document.createElement('canvas'); c.width = 256; c.height = 32; const g = c.getContext('2d');
+    g.fillStyle = 'rgba(8,12,26,0.92)'; g.fillRect(0, 0, 256, 32);
+    g.fillStyle = '#' + new THREE.Color(STATUS_COLOR[e.status] ?? STATUS_COLOR.idle).getHexString(); g.beginPath(); g.arc(11, 16, 4.5, 0, 7); g.fill();
+    g.font = '600 15px Geist, Inter, system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillStyle = '#e8ecff';
+    let t = String(txt).replace(/\s+/g, ' '); while (t.length > 3 && g.measureText(t).width > 226) t = t.slice(0, -2); if (t.length < String(txt).length) t = t.replace(/\s+$/, '') + '…';
+    g.fillText(t, 22, 17);
+    if (dk.titleTex) dk.titleTex.dispose();
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; dk.titleTex = tex; dk.scrU.uTitle.value = tex; dk.scrU.uHasT.value = dk.state === 'off' ? 0 : 1;
   }
   const partitionMats = new Map();
   const partitionMat = (hex) => { if (!partitionMats.has(hex)) partitionMats.set(hex, new THREE.MeshStandardMaterial({ color: new THREE.Color(hex).lerp(new THREE.Color(0xeeeeee), 0.55), roughness: 1 })); return partitionMats.get(hex); };
@@ -1372,15 +1404,15 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     const desk = F.desk({ w: lead ? 2 : 1.6, d: lead ? 0.9 : 0.8, lead });
     DECOR.deskItems(desk, room.div?.id, lead ? 2 : 1.6);
     g.add(desk);
-    const scrU = { uSpd: { value: -0.025 }, uPh: { value: Math.random() } };
+    const scrU = { uSpd: { value: -0.025 }, uPh: { value: Math.random() }, uTitle: { value: null }, uHasT: { value: 0 } };
     const screenMat = new THREE.MeshBasicMaterial({ color: 0x14181d });
     screenMat.onBeforeCompile = (sh) => {
-      sh.uniforms.uT = screenT; sh.uniforms.uSpd = scrU.uSpd; sh.uniforms.uPh = scrU.uPh;
-      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uT; uniform float uSpd; uniform float uPh;').replace('#include <map_fragment>', '#ifdef USE_MAP\n vec4 sampledDiffuseColor = texture2D(map, vec2(vMapUv.x, fract(vMapUv.y * 0.15 + uT * uSpd + uPh))); diffuseColor *= sampledDiffuseColor;\n#endif');
+      sh.uniforms.uT = screenT; sh.uniforms.uSpd = scrU.uSpd; sh.uniforms.uPh = scrU.uPh; sh.uniforms.uTitle = scrU.uTitle; sh.uniforms.uHasT = scrU.uHasT;
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uT; uniform float uSpd; uniform float uPh; uniform sampler2D uTitle; uniform float uHasT;').replace('#include <map_fragment>', '#ifdef USE_MAP\n vec4 sampledDiffuseColor = texture2D(map, vec2(vMapUv.x, fract(vMapUv.y * 0.15 + uT * uSpd + uPh))); if (uHasT > 0.5 && vMapUv.y > 0.8) { vec4 tc = texture2D(uTitle, vec2(vMapUv.x, (vMapUv.y - 0.8) * 5.0)); sampledDiffuseColor = vec4(mix(sampledDiffuseColor.rgb * 0.3, tc.rgb, tc.a), 1.0); }\n diffuseColor *= sampledDiffuseColor;\n#endif');
     };
-    screenMat.customProgramCacheKey = () => 'deskscreen';
+    screenMat.customProgramCacheKey = () => 'deskscreen2';
     { const ec = new THREE.Color(room.div?.color || '#8fb4ff'); const em = new THREE.MeshBasicMaterial({ color: ec.lerp(new THREE.Color(0xffffff), 0.35) }); F.put(g, F.box(lead ? 1.8 : 1.4, 0.014, 0.014), em, 0, 0.752, 0.37, { cast: false }); }
-    const scr = add(new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.34), screenMat), 0, 1.12, -(lead ? 0.9 : 0.8) / 2 + 0.188, g, { cast: false }); scr.userData.keep = true;
+    const scr = add(new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.34), screenMat), 0, 1.13, -(lead ? 0.9 : 0.8) / 2 + 0.224, g, { cast: false });   /* the desk model's own (blue) screen face and bezel front sit at -d/2 + 0.21/0.215: the live screen was 0.022 m BEHIND them, so every monitor looked plain blue */ scr.userData.keep = true;
     const hitBox = (w, h, d, x, y, z, prop) => { const m = add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ visible: false })), x, y, z, g, { cast: false }); m.userData = { prop, owner: e.id, keep: true }; pickables.push(m); };
     hitBox(0.78, 0.52, 0.14, 0, 1.12, -(lead ? 0.9 : 0.8) / 2 + 0.2, 'pc'); hitBox(0.62, 0.95, 0.62, 0, 0.48, CHAIR_Z, 'chair'); hitBox(lead ? 2 : 1.6, 0.1, lead ? 0.9 : 0.8, 0, 0.74, 0, 'desk');
     const chairGrp = deskChair(lead ? '#8f9be0' : '#' + new THREE.Color(room.div?.color || '#a3a9c9').lerp(new THREE.Color(0xffffff), 0.15).getHexString());
@@ -1712,7 +1744,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     if (!text) return;
     disposeSprite(a.bubble);
     const lines = long ? wrap(text, 34, 4) : wrap(text, 38, 2);
-    a.bubble = textSprite(lines, { glass: true, fg: '#27325c', size: 15, scale: 0.0054, sameColor: true, a0: 0.8, a1: 0.66 });
+    a.bubble = textSprite(lines, { glass: true, halo: true, fg: '#141c42', size: 16, scale: 0.0053, sameColor: true, a0: 0.94, a1: 0.88 });
     a.bubble.userData.glass = true; a.bubble.userData.y0 = (a.topY || 1.85) + 0.62 + (lines.length - 1) * 0.085; a.bubble.position.y = a.bubble.userData.y0; a.g.add(a.bubble); a.bubbleUntil = performance.now() + ms;
     a.bubble.userData.base = a.bubble.scale.clone(); a.bubble.userData.t0 = performance.now();
   }
@@ -1751,7 +1783,62 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   const deckOf = (v) => decks.find((dk) => Math.hypot(v.x - dk.cx, v.z - dk.cz) < dk.R1 + 0.5);
   const inPlaza = (v) => Math.hypot(v.x, v.z) < podRI - 2;
   const gapAt = (v) => { let best = 0, bd = 9; const an = Math.atan2(v.z, v.x); for (let i = 0; i < gaps.length; i++) { const d = Math.abs(Math.atan2(Math.sin(gaps[i] - an), Math.cos(gaps[i] - an))); if (d < bd) { bd = d; best = i; } } return gaps[best]; };
+  // ───── urgent trips: far = teleport, medium = run, near = walk. Leisure strolls always walk; "urgent" means the trip was caused by work (meeting, library, station, back to the desk).
+  let teleBatch = { names: [], label: '', n: 0, timer: 0 };
+  const teleFx = []; let teleRoot = null;
+  function teleFxItem() {
+    if (!teleRoot || teleRoot.parent !== world) { teleRoot = new THREE.Group(); teleRoot.userData.keep = true; world.add(teleRoot); teleFx.length = 0; }
+    const free = teleFx.find((q) => !q.on); if (free) return free;
+    if (teleFx.length >= 10) return teleFx.reduce((o, q) => (q.t0 < o.t0 ? q : o));
+    const mk = (geo) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x7fe9ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false })); m.frustumCulled = false; m.renderOrder = 6; return m; };
+    const g = new THREE.Group(), ringA = mk(new THREE.RingGeometry(0.28, 0.4, 40).rotateX(-Math.PI / 2)), ringB = mk(new THREE.RingGeometry(0.5, 0.56, 48).rotateX(-Math.PI / 2)), col = mk(new THREE.CylinderGeometry(0.42, 0.55, 3.4, 20, 1, true));
+    col.position.y = 1.7; g.add(ringA, ringB, col);
+    const N = 16, pos = new Float32Array(N * 3), seed = []; for (let i = 0; i < N; i++) seed.push({ a: Math.random() * 6.28, r: 0.15 + Math.random() * 0.45, h: Math.random(), s: 0.6 + Math.random() * 0.8 });
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.14, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); pts.frustumCulled = false; pts.renderOrder = 6; g.add(pts);
+    g.visible = false; teleRoot.add(g); const it = { g, ringA, ringB, col, pts, pos, seed, on: false, t0: 0, kind: 'in' }; teleFx.push(it); return it;
+  }
+  function spawnTeleFx(pos, a, kind) {
+    const it = teleFxItem(), c = new THREE.Color(a?.desk?.room?.div?.color || '#7fe9ff').lerp(new THREE.Color(0xffffff), 0.45);
+    for (const m of [it.ringA, it.ringB, it.col]) m.material.color.copy(c); it.pts.material.color.copy(c.clone().lerp(new THREE.Color(0xffffff), 0.5));
+    it.g.position.set(pos.x, pos.y + 0.03, pos.z); it.g.visible = true; it.on = true; it.t0 = performance.now(); it.kind = kind;
+  }
+  function animateTele(now) {
+    for (const it of teleFx) {
+      if (!it.on) continue; const u = (now - it.t0) / 950; if (u >= 1) { it.on = false; it.g.visible = false; continue; }
+      const out = it.kind === 'out', fade = 1 - u;
+      it.ringA.scale.setScalar(out ? 2.2 - 1.7 * u : 0.5 + 1.8 * u); it.ringA.material.opacity = fade * 0.85;
+      it.ringB.scale.setScalar(out ? 3.2 - 2.6 * u : 0.4 + 3.0 * u); it.ringB.material.opacity = fade * fade * 0.55;
+      it.col.scale.set(out ? 1 - 0.7 * u : 1 + 0.15 * u, out ? 1 - 0.8 * u : 0.3 + 0.7 * Math.min(1, u * 2.5), out ? 1 - 0.7 * u : 1 + 0.15 * u); it.col.position.y = 1.7 * it.col.scale.y; it.col.material.opacity = (u < 0.2 ? u / 0.2 : (1 - u) / 0.8) * 0.45;
+      for (let i = 0; i < it.seed.length; i++) { const q = it.seed[i], ang = q.a + u * 3; it.pos[i * 3] = Math.cos(ang) * q.r * (1 + u * 0.6); it.pos[i * 3 + 1] = q.h * 0.2 + u * (1.2 + q.s * 1.8); it.pos[i * 3 + 2] = Math.sin(ang) * q.r * (1 + u * 0.6); }
+      it.pts.geometry.attributes.position.needsUpdate = true; it.pts.material.opacity = fade * 0.9;
+    }
+  }
+  function teleAnnounce(a, near, land) {
+    const label = a.tele?.label || (a.mode === 'meeting' ? 'Conference Hall' : a.mode === 'read' ? 'Library' : a.mode === 'station' ? 'stasiun kerja' : a.mode === 'desk' ? 'meja kerja' : 'tujuan');
+    teleBatch.names.push(String(a.e.name).split(' ')[0]); teleBatch.n++; teleBatch.label = label;
+    if (!teleBatch.timer) teleBatch.timer = setTimeout(() => { const b = teleBatch; teleBatch = { names: [], label: '', n: 0, timer: 0 }; onTeleport?.({ names: b.names, n: b.n, label: b.label }); }, 800);
+    if (near) { emote(a, '⚡', 1600); if (camera.position.distanceTo(land) < 35) sfx.play('tele'); }
+  }
+  /** one step of the teleport of an agent: it dissolves where it stands (0.33 s), reappears near its destination (0.38 s), then walks the last few steps so the normal arrival logic still runs */
+  function teleStep(a, now) {
+    const T = a.tele, near = Math.min(a.g.position.distanceTo(camera.position), T.land.distanceTo(camera.position)) < 90;
+    if (T.phase === 'out') {
+      if (!T.fx) { T.fx = true; if (near) spawnTeleFx(a.g.position, a, 'out'); }
+      a.g.scale.setScalar(T.base * (near ? Math.max(0.02, 1 - (now - T.t0) / 330) : 1));
+      if (!near || now - T.t0 >= 330) {
+        a.path.splice(0, T.drop); a.g.position.copy(T.land); if (decks.length && !T.exactY) a.g.position.y = elev(T.land.x, T.land.z); else if (T.exactY) a.g.position.y = T.land.y;
+        if (a.player && player) { a.g.rotation.y = T.yaw; a.faceTo = T.yaw; player.yaw = T.yaw; player.vy = 0; player.safe = { x: T.land.x, y: a.g.position.y, z: T.land.z };
+          const tg = wp(a).add(new THREE.Vector3(0, player.fp ? 1.62 : 1.35, 0)); if (player.fp) { camera.position.copy(tg); } else { const cp = Math.cos(player.pitch); camera.position.copy(tg).add(new THREE.Vector3(-Math.sin(player.yaw) * cp, Math.sin(player.pitch), -Math.cos(player.yaw) * cp).multiplyScalar(player.dist)); } controls.target.copy(tg); }
+        teleAnnounce(a, near, T.land);
+        if (near) { T.phase = 'in'; T.t0 = now; spawnTeleFx(T.land, a, 'in'); } else { a.g.scale.setScalar(T.base); a.tele = null; }
+      }
+    } else {
+      const k = Math.min(1, (now - T.t0) / 380), e = 1 - Math.pow(1 - k, 3); a.g.scale.setScalar(T.base * (0.02 + 0.98 * e)); if (k >= 1) { a.g.scale.setScalar(T.base); a.tele = null; }
+    }
+  }
   function routeTo(a, target, onArrive) {
+    if (a.tele) { a.g.scale.setScalar(a.tele.base); a.tele = null; }   /* a new route replaces a teleport in progress (its path indices would no longer match) */
     const from = a.g.position.clone();
     const pts = [];
     if (decks.length && from.y > 0.5) { const dk = deckOf(from); if (dk) { for (let i = dk.via.length - 1; i >= 0; i--) pts.push(dk.via[i].clone()); from.copy(dk.via[0]); from.y = 0; } }
@@ -1774,7 +1861,13 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       if (f2) pts.push(rad(gTo, R), rad(gTo, podRI), rad(gTo, podRI - 9));
     }
     pts.push(target.clone());
-    a.path = pts; a.onArrive = onArrive;
+    a.path = pts; a.onArrive = onArrive; a.runTrip = false;
+    if (a.urgent && !a.player && a.e?.type === 'ai') {
+      let L = 0, prev = from; for (const p of pts) { L += Math.hypot(p.x - prev.x, p.z - prev.z); prev = p; }
+      const cap = V.tele ?? 45;
+      if (cap > 0 && L > cap && pts.length >= 2 && !a.tele) a.tele = { t0: performance.now(), phase: 'out', land: pts[pts.length - 2].clone(), drop: pts.length - 1, base: a.g.scale.x || 1, fx: false };
+      else if (L > 6) a.runTrip = true;   /* near but not trivial (within a room or an area): run, with the Run clip and GAIT.run speed; the path is measured along the corridors, so across rooms it is almost always far = teleport */
+    }
   }
   function release(a) { if (a.spot) { claimed.delete(a.spot.key); a.spot = null; } }
   function claimSpot(a, roomId, tag) {
@@ -1903,8 +1996,8 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   }
   const mkScreenTex = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return { cv, tex }; };
   /** emissive screen: the front face shows the picture as drawn, the back face mirrors it back so it never reads reversed; a thin scanline drifts down it */
-  const mkScreenMat = (tex) => {
-    const m = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, toneMapped: false, fog: false });
+  const mkScreenMat = (tex, glass) => {   // glass = intensity of a see-through hologram: additive, so dark panel fills vanish and only the neon glows; omitted = solid screen
+    const m = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, toneMapped: false, fog: false, ...(glass ? { transparent: true, opacity: glass, depthWrite: false, blending: THREE.AdditiveBlending } : {}) });
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uT = screenT;
       sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uT;').replace('#include <map_fragment>', '#ifdef USE_MAP\n vec2 uvm = vMapUv; if (!gl_FrontFacing) uvm.x = 1.0 - uvm.x;\n vec4 sampledDiffuseColor = texture2D(map, uvm); diffuseColor *= sampledDiffuseColor;\n float sl = smoothstep(0.0, 0.05, 0.05 - abs(fract(uvm.y - uT * 0.06) - 0.5) + 0.45); diffuseColor.rgb *= 0.93 + 0.07 * sin(uvm.y * 380.0 + uT * 3.0) + 0.05 * sl;\n#endif');
@@ -2063,7 +2156,8 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     if (s === 'working' || s === 'chatting' || s === 'offline') return 'desk';
     return 'free';
   }
-  function applyWant(a) {
+  function applyWant(a) { a.urgent = true; try { applyWantInner(a); } finally { a.urgent = false; } }   /* work-driven trips may teleport or run */
+  function applyWantInner(a) {
     if (a.player || followers.has(a.id)) return;
     const w = want(a);
     if (w === 'meeting' && a.mode !== 'meeting') { const s = claimSpot(a, 'conference', 'meeting'); if (s) goSpot(a, s, 'meeting'); }
@@ -2172,7 +2266,8 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       deskScreen(a);
       if (a.visor) a.visor.visible = e.status !== 'offline';
       updateLabel(a);
-      if (prevText !== e.statusText && e.status !== 'idle' && e.statusText) say(a, e.statusText);
+      /* a status change must never cover real dialogue: in meetings the words said ARE the bubble, and a line someone is still saying stays up */
+      if (prevText !== e.statusText && e.status !== 'idle' && e.status !== 'meeting' && e.statusText && !(performance.now() < (a.speechUntil || 0))) say(a, e.statusText);
       if (prevStatus !== e.status || prevText !== e.statusText) applyWant(a);
     }
     for (const r of rooms.values()) {
@@ -2241,11 +2336,11 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         if (ev.type === 'task_created') { sfx.play('task'); if (brainCore) { brainHit(0x8fd0ff, 'brain'); if (b) packet(brainFlat(), b.desk.seat, 0x8fd0ff); } } else if (ev.type === 'delegated') sfx.play('task');
         if (a && b) { packet(a.g.position, b.desk.seat, col(a), () => { burst(b.desk.seat, col(a)); emote(b, '📥', 2200); feel(b, 'surprised', 900); setTimeout(() => feel(b, 'focus', 3000), 900); }); if (ev.type !== 'task_created') { gesture(a, 'point', 1600); emote(a, '📨', 2000); if (Math.random() < 0.55) visit(a, b); } }
         break;
-      case 'message': sfx.play('msg'); if (a) { const txt = String(ev.text).split(': ').slice(1).join(': ') || ev.text; if (a.mode !== 'talk') speak(a, txt, 2); a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45);
+      case 'message': sfx.play('msg'); if (a) { const txt = String(ev.text).split(': ').slice(1).join(': ') || ev.text; if (a.mode !== 'talk') speak(a, txt, 2); a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45); a.speechUntil = a.talkUntil;
         if (/haha|wkwk|😂|🎉|mantap|selamat|keren/i.test(txt)) { feel(a, 'laugh', 2500); gesture(a, 'laugh', 1800); } else if (/maaf|gagal|sayang|kendala|masalah/i.test(txt)) feel(a, 'sad', 3000); else if (/\?/.test(txt)) gesture(a, 'shrug', 1500); else if (Math.random() < 0.4) gesture(a, 'present', 2500); if (b) { packet(a.g.position, b.g.position, 0x9ecbff); a.lookAt = b.g.position; setTimeout(() => { if (a.lookAt === b.g.position) a.lookAt = null; }, 4000); if (Math.random() < 0.3) visit(a, b); } } break;
       case 'reasoning': if (a) { say(a, '💭 ' + ev.text, 7000, true); a.talkUntil = performance.now() + 6500; gesture(a, 'think', 4200); feel(a, 'focus', 5000); emote(a, '💭', 2600); } break;
       case 'meeting_say': if (a) {
-        say(a, ev.text, 9000, true); a.talkUntil = performance.now() + 6000; gesture(a, 'present', 4000);
+        say(a, ev.text, 9000, true); a.speechUntil = performance.now() + 9000; a.talkUntil = performance.now() + 6000; gesture(a, 'present', 4000);
         for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.35) gesture(o, 'observe', 4000);
         if (/setuju|sepakat|bagus|tepat|agree/i.test(ev.text)) for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.5) gesture(o, 'nod', 2500);
         if (/\?|bagaimana|apakah|kenapa/i.test(ev.text)) gesture(a, 'shrug', 1800); else if (/risiko|masalah|hati-hati|kendala/i.test(ev.text)) gesture(a, 'think', 2600);
@@ -2422,7 +2517,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     ['free', 'KeyL', 'KeyL', 'Label nama'], ['free', 'KeyH', 'KeyH', 'Bantuan'], ['free', 'KeyB', 'KeyB', 'Simpan tampilan favorit'], ['free', 'PageUp', 'PageUp', 'Favorit sebelumnya'], ['free', 'PageDown', 'PageDown', 'Favorit berikutnya'],
     ['free', 'Digit8', 'Digit8', 'Tampilan dari atas'], ['free', 'Digit5', 'Digit5', 'Tampilan isometrik'], ['free', 'Digit4', 'Digit4', 'Putar 90° ke kiri'], ['free', 'Digit6', 'Digit6', 'Putar 90° ke kanan'], ['free', 'Digit2', 'Digit2', 'Tampilan depan'], ['free', 'Digit0', 'Digit0', 'Posisi awal'],
     ['play', 'KeyW', 'KeyW', 'Maju'], ['play', 'KeyS', 'KeyS', 'Mundur'], ['play', 'KeyA', 'KeyA', 'Kiri'], ['play', 'KeyD', 'KeyD', 'Kanan'],
-    ['play', 'KeyQ', 'KeyQ', 'Putar kamera ke kiri'], ['play', 'KeyR', 'KeyR', 'Putar kamera ke kanan'], ['play', 'KeyE', 'KeyE', 'Panggil & bicara'], ['play', 'KeyF', 'KeyF', 'Beri tugas'], ['play', 'KeyG', 'KeyG', 'Lambai'], ['play', 'Space', 'Space', 'Lompat'], ['play', 'KeyH', 'KeyH', 'Bantuan'],
+    ['play', 'KeyQ', 'KeyQ', 'Putar kamera ke kiri'], ['play', 'KeyR', 'KeyR', 'Putar kamera ke kanan'], ['play', 'KeyE', 'KeyE', 'Panggil & bicara'], ['play', 'KeyF', 'KeyF', 'Beri tugas'], ['play', 'KeyG', 'KeyG', 'Lambai'], ['play', 'Space', 'Space', 'Lompat'], ['play', 'KeyH', 'KeyH', 'Bantuan'], ['play', 'KeyV', 'KeyV', 'Teleport (menu tujuan)'], ['free', 'KeyV', 'KeyV', 'Teleport (menu tujuan)'],
   ].map(([mode, id, def, label]) => ({ mode, id, def, label }));
   const RESERVED = /^(Escape|Shift|Control|Alt|Meta|Arrow|F\d|Enter|Backspace|ContextMenu|CapsLock)/;
   let custom = { free: {}, play: {} }, lookInvert = false, hasStored = false;
@@ -2642,6 +2737,58 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     }
     return false;
   }
+  // ───── teleport menu (V / the ⚡ button): any place on the campus or any agent. Works in Play (the mouse is released while the menu is open) and in the free camera.
+  function teleTargets() {
+    const out = [], ICON = { brain: '🧠', stage: '🎤', fountain: '⛲', kiosk: '☕', meeting: '🗣️', pitch: '🤝' };
+    out.push({ id: 'center', group: 'Plaza', icon: '🌿', label: 'Plaza tengah', sub: 'Taman, bangku, dan bukit' });
+    const roomNames = new Set([...rooms.values()].map((r) => String(r.div?.name || r.name || '').toLowerCase()));
+    const iconFor = (l) => (/brain/i.test(l) ? '🧠' : /panggung|stage/i.test(l) ? '🎤' : /air mancur/i.test(l) ? '⛲' : /kopi|kios|pantry|kafe|café/i.test(l) ? '☕' : /taman|peregangan|wellness/i.test(l) ? '🧘' : /pitch|booth|penawaran/i.test(l) ? '🤝' : /konten|studio|kreator/i.test(l) ? '🎬' : /lab|maker|bengkel/i.test(l) ? '🧪' : /papan tugas|kanban/i.test(l) ? '📋' : /approval|persetujuan/i.test(l) ? '✅' : /knowledge|pengetahuan|library|perpustakaan/i.test(l) ? '📚' : /chat|percakapan/i.test(l) ? '💬' : /rapat|whiteboard/i.test(l) ? '🗣️' : '📍');
+    for (const p of pois) {
+      if (!p.label) continue; const deck = String(p.id).startsWith('skydeck');
+      if (!deck && (roomNames.has(String(p.label).toLowerCase()) || /^E: lihat divisi/i.test(p.sub || ''))) continue;   /* room signs are already in the "Ruangan" group */
+      out.push({ id: 'poi:' + p.id, group: deck ? 'Sky Deck' : 'Plaza', icon: deck ? '🛰️' : (ICON[p.id] || iconFor(p.label)), label: p.label, sub: String(p.sub || '').replace(/^E:\s*/i, '') });
+    }
+    for (const r of rooms.values()) out.push({ id: 'room:' + r.id, group: 'Ruangan', icon: r.div?.icon || '🏢', label: r.div?.name || r.name || String(r.id), sub: r.kind === 'work' ? 'Ruang kerja' : '' });
+    for (const a of avatars.values()) out.push({ id: 'agent:' + a.id, group: 'Agen', icon: '🙂', label: a.e.name, sub: a.e.title || '', status: a.e.status });
+    return out;
+  }
+  function teleResolve(id) {
+    const land = (x, z) => { for (let rad = 0; rad <= 7; rad += 0.8) for (let k = 0; k < (rad ? 12 : 1); k++) { const ang = (k / 12) * Math.PI * 2, px = x + Math.cos(ang) * rad, pz = z + Math.sin(ang) * rad; if (!collides(px, pz)) return [px, pz]; } return [x, z]; };
+    const face = (px, pz, tx, tz) => Math.atan2(tx - px, tz - pz);
+    const ground = (x, z, high) => { try { return surfaceAt(x, z, high ? 40 : 1.2) ?? 0; } catch { return 0; } };
+    if (id === 'center') { const [x, z] = land(0, 12); return { x, z, y: ground(x, z), yaw: Math.PI, label: 'Plaza tengah' }; }
+    if (id.startsWith('poi:')) {
+      const p = pois.find((q) => 'poi:' + q.id === id); if (!p) return null;
+      if (String(p.id).startsWith('skydeck')) return { x: p.x, z: p.z, y: ground(p.x, p.z, true), yaw: face(p.x, p.z, 0, 0), label: p.label, exactY: true };
+      const h = Math.hypot(p.x, p.z), dx = h > 6 ? -p.x / h : 0, dz = h > 6 ? -p.z / h : 1, r = (p.r || 3) * 0.9 + 1.2, [x, z] = land(p.x + dx * r, p.z + dz * r);
+      return { x, z, y: ground(x, z), yaw: face(x, z, p.x, p.z), label: p.label };
+    }
+    if (id.startsWith('room:')) {
+      const r = rooms.get(id.slice(5)); if (!r || !r.inside) return null; const [x, z] = land(r.inside.x, r.inside.z);
+      return { x, z, y: ground(x, z), yaw: r.door ? face(r.door.x, r.door.z, r.inside.x, r.inside.z) : 0, label: r.div?.name || r.name || 'ruangan' };
+    }
+    if (id.startsWith('agent:')) {
+      const a = avatars.get(id.slice(6)); if (!a) return null; const p = wp(a), fy = yawW(a), [x, z] = land(p.x + Math.sin(fy) * 1.4, p.z + Math.cos(fy) * 1.4);
+      return { x, z, y: ground(x, z), yaw: face(x, z, p.x, p.z), label: a.e.name };
+    }
+    return null;
+  }
+  function teleportTo(id) {
+    const T = teleResolve(id); if (!T) return false;
+    const y = T.y || 0, dest = new THREE.Vector3(T.x, y, T.z);
+    if (player) {
+      if (player.sitting) playerStand();
+      const a = player.a; keys.clear(); a.moving = false;
+      a.tele = { t0: performance.now(), phase: 'out', land: dest, drop: 0, base: a.g.scale.x || 1, fx: false, yaw: T.yaw, label: T.label, exactY: !!T.exactY };
+      return true;
+    }
+    // free camera: fly there (and mark the spot with the portal)
+    stopChase(); spawnTeleFx(dest, null, 'in');
+    const back = new THREE.Vector3(-Math.sin(T.yaw) * 10, 7, -Math.cos(T.yaw) * 10);
+    animateTo(dest.clone().add(new THREE.Vector3(0, 1, 0)).add(back), dest.clone().add(new THREE.Vector3(0, 1.2, 0)));
+    onToast?.('⚡ Teleport: ' + T.label);
+    return true;
+  }
   function enterPlayer(id) {
     const a = avatars.get(id); if (!a) return false;
     stopChase(); fly.clear();
@@ -2734,6 +2881,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     const e = code === ev.code ? ev : new Proxy(ev, { get: (t, p) => (p === 'code' ? code : typeof t[p] === 'function' ? t[p].bind(t) : t[p]) });
     if (typingInField(e) || !onOfficePage()) return;
     if (uiBlock && e.code !== 'Escape') return;
+    if (e.code === 'KeyV' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); onTeleportMenu?.(); return; }
     if (!player) {
       // free navigation (no Play mode needed)
       const nav = ['Act:lookLeft', 'Act:lookRight', 'Act:up', 'Act:down', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight'];
@@ -2925,27 +3073,30 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       list.sort((x, y) => x[0] - y[0]);
       list.forEach(([d, a], i) => { const k = d > 36 || i >= 6 ? 0 : 1 - Math.max(0, (d - 14) / 22); a.bubble.visible = k > 0.04; a.bubble.userData.k = k; });
     }
-    sfx.tick(now / 1000); socialTick(now); animateFloaters(now / 1000, Math.min((now - lastT) / 1000, 0.1));
+    sfx.tick(now / 1000); animateTele(now); socialTick(now); animateFloaters(now / 1000, Math.min((now - lastT) / 1000, 0.1));
     PR.l = performance.now(); trackFps(now); renderer.info.reset();
     const realDt = Math.min((now - lastT) / 1000, 0.5); const dt = Math.min(realDt, 0.05); lastT = now; // movement uses real time so walking speed survives low FPS
     let crowdCount = 0;
     for (const a of avatars.values()) {
       a.phase += dt;
       if ((a.mode === 'leisure' || a.mode === 'visit') && a.e.type === 'ai') crowdCount++;
-      if (a.path.length) {
+      if (a.tele) teleStep(a, now);
+      if (a.path.length && !(a.tele && a.tele.phase === 'out')) {
         const tgt = a.path[0]; tmp.subVectors(tgt, a.g.position); tmp.y = 0;
         const d = tmp.length();
         // walk short trips, run long ones (hysteresis 28 / 14 units to the final target) at the clips' natural paces
-        a.running = false; // semua agen berjalan santai (tidak berlari)
+        a.running = !!a.runTrip;   /* leisure strolls walk; urgent medium trips run */
         let step = (a.running ? GAIT.run : GAIT.walk) * realDt;
         // global traffic rules, for every agent: wait for a seat someone is still using; slow down behind a standing person
         a.seatWait = a.path.length === 1 && seatTaken(a, tgt) ? (a.seatWait || 0) + realDt : 0;
         if (a.seatWait > 0 && a.seatWait < 8) step = 0; // waits up to 8 s, then goes anyway so nobody is stuck forever
         else if (yieldTo(a, tmp)) step *= 0.2;
-        if (step === 0) { /* waiting */ } else if (d <= step) { a.g.position.copy(tgt); a.path.shift(); if (!a.path.length) { const f = a.onArrive; a.onArrive = null; f?.(); } }
+        if (step === 0) { /* waiting */ } else if (d <= step) { a.g.position.copy(tgt); a.path.shift(); if (!a.path.length) { a.runTrip = false; const f = a.onArrive; a.onArrive = null; f?.(); } }
         else { tmp.normalize(); steer(a, tmp); a.g.position.addScaledVector(tmp, step); a.faceTo = Math.atan2(tmp.x, tmp.z); }
         if (decks.length) a.g.position.y = elev(a.g.position.x, a.g.position.z);
       }
+      // NPCs follow the lawn hills too (the player already did through surfaceAt): before, agents walked at y=0 and sank into every mound
+      if (terrainH && !a.player && a.pose !== 'sit' && a.lod < 4) { const th = terrainH(a.g.position.x, a.g.position.z); if (th > 0.001 || a.onHill) { const base = decks.length ? elev(a.g.position.x, a.g.position.z) : 0; a.g.position.y = base + th; a.onHill = th > 0.001; } }
       const walking = a.path.length > 0 || a.moving;
       a.acc = (a.acc || 0) + dt;
       if (a.lod === 4) { a.ran = false; a.path.length || (a.moving = false); }
@@ -2996,7 +3147,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     if ((lodTick % 10) === 0) for (const a of avatars.values()) { const dk = a.desk; if (!dk?.seat) continue; const dd = toWorld(dk.seat, tmpW).distanceTo(camera.position); if (dk.screen) dk.screen.visible = dd < 45; if (dk.chair) dk.chair.visible = dd < 85; }
     if ((lodTick % 10) === 0) { camera.updateMatrixWorld(); frustum.setFromProjectionMatrix(frustumM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)); }
     if (gfx === 'eco' && (lodTick % 10) === 0) for (const m of ecoDetail) { const vis = m.userData.ecoC.distanceTo(camera.position) - m.userData.ecoR < 75; if (vis !== m.visible) m.visible = vis; }
-    if ((lodTick++ % 10) === 0) for (const a of avatars.values()) { const d = wp(a, tmpW).distanceTo(camera.position); const eL = gfx === 'eco' ? 0.55 : 1, near = d < 22 * eL ? 0 : d < 50 * eL ? 1 : d < 110 * eL ? 2 : 4;   /* eco: the detailed bodies only very close */ sphere.center.copy(tmpW); sphere.radius = 1.6; const lod = a.mode === 'walk' || a.path.length || near === 0 || frustum.intersectsSphere(sphere) ? near : 3; if (lod !== a.lod) { a.lod = lod; a.rig?.setLod?.(Math.min(lod, 2)); }
+    if ((lodTick++ % 10) === 0) for (const a of avatars.values()) { const d = wp(a, tmpW).distanceTo(camera.position); deskTitle(a, d); const eL = gfx === 'eco' ? 0.55 : 1, near = d < 22 * eL ? 0 : d < 50 * eL ? 1 : d < 110 * eL ? 2 : 4;   /* eco: the detailed bodies only very close */ sphere.center.copy(tmpW); sphere.radius = 1.6; const lod = a.mode === 'walk' || a.path.length || near === 0 || frustum.intersectsSphere(sphere) ? near : 3; if (lod !== a.lod) { a.lod = lod; a.rig?.setLod?.(Math.min(lod, 2)); }
       if (gfx === 'eco') { const far = d > 55, farDot = d > 110, dk = a.desk; if (far !== a.ecoFar) { a.ecoFar = far; if (a.ring) a.ring.visible = !far; if (dk?.screen) dk.screen.visible = !far; if (dk?.chair) dk.chair.visible = !far; } if (farDot !== a.ecoFarDot) { a.ecoFarDot = farDot; if (a.statusDot) a.statusDot.visible = !farDot; } }
       else if (a.ecoFar || a.ecoFarDot) { a.ecoFar = a.ecoFarDot = false; if (a.ring) a.ring.visible = true; if (a.statusDot) a.statusDot.visible = true; if (a.desk?.screen) a.desk.screen.visible = true; if (a.desk?.chair) a.desk.chair.visible = true; } }
     if (frameNo % 4 === 0) { let n = 0; for (const a of avatars.values()) { if (a.lod !== 4 || n >= 320) continue; wp(a, dotP); dotP.y += 1; dotM.compose(dotP, dotQ, dotS); dots.setMatrixAt(n, dotM); dots.setColorAt(n, a.ring.material.color); n++; } dots.count = n; dots.instanceMatrix.needsUpdate = true; if (dots.instanceColor) dots.instanceColor.needsUpdate = true; }
@@ -3099,7 +3250,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
 
   return {
     sync, onEvent, focus, setTheme, stats,
-    summon, endTalk, listen, think, speak, startChase, stopChase, following: () => chaseId, spotlight, setInset: (px) => { inset = Math.max(0, px | 0); applyInset(); },
+    summon, endTalk, listen, think, speak, startChase, stopChase, following: () => chaseId, spotlight, mark: (id, ch, ms) => { const x = avatars.get(id); if (x) emote(x, ch, ms); }, setInset: (px) => { inset = Math.max(0, px | 0); applyInset(); },
     keyActions: () => KEYACT.map((a) => ({ mode: a.mode, id: a.id, label: a.label, def: a.def, key: effKey(a) })),
     lookInvert: () => lookInvert, setLookInvert: (v) => { lookInvert = !!v; saveKeys(); },
     /** bind an action to a key; if another action in the same mode already uses it, the two swap keys */
@@ -3117,6 +3268,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     fov: () => V.fov, setFov: (v) => { V.fov = Math.max(20, Math.min(90, v)); saveV(); applyVisual(); },
     look: () => lookName, setLook: (n) => { if (!LOOKS[n]) return; lookName = n; lookNow = LOOKS[n]; try { localStorage.setItem('office-look', n); } catch { /* ignore */ } applyLook(); },
     bars: () => bars, setBars: (b) => { bars = !!b; try { localStorage.setItem('office-bars', bars ? '1' : '0'); } catch { /* ignore */ } applyBars(); },
+    teleportTargets: () => teleTargets(), teleportTo: (id) => teleportTo(id), relock: () => lockMouse(),
     setBlocking: (on) => { uiBlock = !!on; winDim = !!on; if (on) { keys.clear(); fly.clear(); try { document.exitPointerLock?.(); } catch { /* ignore */ } } },
     gfx: () => gfx,
     setGfx: (m) => { const wasEco = gfx === 'eco'; gfx = m; try { localStorage.setItem('office-gfx', m); } catch { /* ignore */ } if (m === 'eco') { quality = 0; resScale = Math.min(resScale, 0.8); } else if (m === 'high') { quality = 2; resScale = 1; } else { quality = 1; resScale = 1; } applyQuality(); if ((m === 'eco') !== wasEco && data) { layoutKey = ''; sync(data); } },

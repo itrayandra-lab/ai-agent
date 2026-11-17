@@ -50,19 +50,30 @@ export function postMessage(channelId, authorId, text, extra = {}) {
 
 const depthOf = (t) => { let d = 0; let p = t; while (p?.parentId && d < 10) { p = task(p.parentId); d++; } return d; };
 
-export function createTask({ title, description = '', assigneeId, createdBy = 'owner', parentId = null, priority = 'medium', kind = 'task', routineId = null, dueAt = null }) {
+/** Quest contract: every task says what "done" looks like. Agents that do not say it get a sensible default per kind, so nothing is open-ended. */
+function defaultExpected(kind, title) {
+  if (kind === 'goal') return `Laporan akhir untuk "${String(title).slice(0, 80)}": hasil per bagian, keputusan yang dibutuhkan dari Owner, dan langkah berikutnya. Setiap angka/fakta disertai sumber; yang tidak ada datanya ditulis "data tidak tersedia".`;
+  if (kind === 'routine') return 'Ringkasan singkat hasil rutinitas (apa yang dicek, temuan, tindak lanjut) dengan sumber.';
+  return `Dokumen hasil "${String(title).slice(0, 80)}" yang siap dipakai, disertai sumber untuk setiap fakta/angka dan daftar hal yang belum bisa dipenuhi.`;
+}
+export function createTask({ title, description = '', assigneeId, createdBy = 'owner', parentId = null, priority = 'medium', kind = 'task', routineId = null, dueAt = null, expected = '', stage = 0 }) {
   gov.checkCreate({ title, createdBy, parentId, kind, assigneeId });
   const a = emp(assigneeId) || emp('aria');
+  const parent = parentId ? task(parentId) : null;
   const t = {
     id: uid('t'), title: String(title).slice(0, 160), description: String(description).slice(0, 6000),
+    expected: String(expected || '').trim().slice(0, 600) || defaultExpected(kind, title),   // definition of done
+    rootId: parent ? (parent.rootId || parent.id) : null, stage: Math.max(0, Math.min(5, stage | 0)),
     divisionId: a.divisionId, assigneeId: a.id, createdBy, parentId, priority, kind, routineId,
     dueAt: dueAt || task(parentId)?.dueAt || Date.now() + ({ high: 1, medium: 3, low: 7 }[priority] || 3) * (kind === 'routine' ? 0.25 : 1) * 864e5,
     status: 'todo', output: '', summary: '', revisions: 0, failures: 0, log: [],
     createdAt: Date.now(), updatedAt: Date.now(),
   };
+  if (!t.rootId) t.rootId = t.id;
   store.upsert('tasks', t);
   logTask(t, createdBy, 'created', `Tugas dibuat untuk ${a.name}`);
   const by = emp(createdBy);
+  if (parent && depthOf(t) <= 2) goalNote(t, createdBy, `📨 **${by?.name || 'Sistem'} → ${a.name}**${t.stage ? ` · tahap ${t.stage}` : ''}: ${t.title}\n_Hasil diharapkan:_ ${t.expected.slice(0, 220)}`);
   if (parentId) event('delegated', createdBy, `${by?.name || 'Sistem'} mendelegasikan "${t.title}" ke ${a.name}`, { targetId: a.id, taskId: t.id });
   else event('task_created', createdBy, `${by?.name || 'Sistem'} membuat tugas "${t.title}" untuk ${a.name}`, { targetId: a.id, taskId: t.id });
   return t;
@@ -117,7 +128,8 @@ async function tick() {
   const { settings } = db();
   const now = Date.now();
   // meetings end
-  for (const e of db().employees) if (e.meetingUntil && e.meetingUntil < now) { delete e.meetingUntil; if (e.status === 'meeting') setStatus(e, e.currentTaskId ? 'working' : 'idle', e.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja'); }
+  try { collab.sweepOrphanMeetings(); } catch (err) { console.warn('[tick] sweep rapat:', err.message); }   // dead meetings must not keep agents "busy" or capture chat
+  for (const e of db().employees) if (e.meetingUntil && e.meetingUntil < now) { delete e.meetingUntil; delete e.kickoff; if (e.status === 'meeting') setStatus(e, e.currentTaskId ? 'working' : 'idle', e.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja'); }
   if (!settings.autonomy) return;
 
   // routines
@@ -153,7 +165,7 @@ async function tick() {
   const liveRunning = [...jobs.values()].filter((j) => j.mode === 'live').length;
   let slots = live ? Math.max(0, settings.maxConcurrent - liveRunning) : 6;
   const order = { high: 0, medium: 1, low: 2 };
-  const queue = db().tasks.filter((t) => t.status === 'todo' && !jobs.has(t.id) && (!t.retryAt || t.retryAt <= now))
+  const queue = db().tasks.filter((t) => t.status === 'todo' && !jobs.has(t.id) && (!t.retryAt || t.retryAt <= now) && stageReady(t))
     .sort((a, b) => order[a.priority] - order[b.priority] || a.createdAt - b.createdAt);
   for (const t of queue) {
     if (slots <= 0) break;
@@ -189,6 +201,20 @@ async function tick() {
   }
 }
 
+/** stage gate: a stage-2 subtask waits until every earlier-stage sibling is done (riset dulu, baru eksekusi), so later work builds on real results and tokens are not spent on guesses */
+function stageReady(t) {
+  if (!t.stage || !t.parentId) return true;
+  const p = task(t.parentId); if (!p) return true;
+  const earlier = children(p).filter((c) => c.stage && c.stage < t.stage);
+  if (!earlier.every((c) => c.status === 'done' || c.status === 'blocked' || c.status === 'cancelled')) return false;
+  p.stagesOpened = p.stagesOpened || [];
+  if (earlier.length && !p.stagesOpened.includes(t.stage)) {
+    p.stagesOpened.push(t.stage); store.upsert('tasks', p);
+    const prev = earlier.filter((c) => c.status === 'done').map((c) => `${c.title.slice(0, 60)} (${emp(c.assigneeId)?.name})`).join('; ');
+    goalNote(p, p.assigneeId, `▶️ **Tahap ${t.stage} dimulai.** Dibangun di atas hasil tahap sebelumnya: ${prev || '-'}`);
+  }
+  return true;
+}
 function startJob(e, t, mode) {
   t.status = 'in_progress'; t.startedAt = t.startedAt || Date.now();
   logTask(t, e.id, 'started', t.synth ? 'Mulai menyusun hasil dari subtugas' : (mode === 'live' ? `Mulai bekerja (${llm.provider() === 'groq' ? 'Groq' : 'Claude'})` : 'Mulai bekerja (simulasi)'));
@@ -245,15 +271,31 @@ function failTask(e, t, err) {
     } else if ((t.recoveryCount || 0) >= 2 || t.failures >= 5) t.status = 'blocked';   // nobody to hand over to: stop after 5 failures instead of retrying forever
   }
   logTask(t, e.id, 'error', `Error: ${msg.slice(0, 400)}${t.status === 'blocked' ? ' — diblokir setelah recovery lintas agen' : ' — retry adaptif dijadwalkan'}`);
+  if (t.status === 'blocked') goalNote(t, e.id, `⚠️ **Macet:** ${t.title} (${e.name}). Alasan: ${msg.slice(0, 180)}\nBuka **Butuh kamu** untuk mencoba lagi atau memindahkan tugas.`);
   event('alert', e.id, `${e.name} gagal mengerjakan "${t.title}": ${msg.slice(0, 160)}`, { taskId: t.id });
 }
 
 // ───────────────────────── completion / approvals ─────────────────────────
 const POLICY_RE = /\b(publikasi|publish|posting|kontrak|contract|penawaran resmi|harga|diskon|budget|anggaran|bayar|payment|transfer|rekrut|offer letter|pecat|kebijakan)\b/i;
 
-function finishTask(e, t, { summary, output, needsApproval }) {
+/** Check the evidence an agent cites: a Brain note that exists, a URL, an integration receipt, or real tool output gathered while working. Claims alone do not count. */
+function verifyEvidence(list, toolEvidence = 0) {
+  const items = (Array.isArray(list) ? list : String(list || '').split(/\n|;/)).map((x) => String(x || '').trim()).filter((x) => x && !/^(-|tidak ada|none|n\/a)$/i.test(x)).slice(0, 12);
+  const checked = items.map((text) => {
+    const title = text.replace(/^\[\[|\]\]$/g, '').replace(/^.*\[\[([^\]|]+).*$/, '$1').trim();
+    const ok = /https?:\/\/\S+/.test(text) || !!brain.findNote(title) || /\b(receipt|spreadsheetId|documentId|eventId|range)\b|docs\.google|drive\.google/i.test(text);
+    return { text: text.slice(0, 200), ok };
+  });
+  return { checked, verified: checked.filter((x) => x.ok).length + (toolEvidence > 0 ? 1 : 0) };
+}
+const needsOwnerReview = (t) => !t.parentId && t.kind !== 'routine' && emp(t.createdBy)?.type === 'human' && db().settings.ownerReview !== false;
+
+function finishTask(e, t, { summary, output, needsApproval, evidence = [], gaps = '', toolEvidence = 0 }) {
   t.output = String(output || summary || '').slice(0, 40000);
   t.summary = String(summary || '').slice(0, 600);
+  const ev = verifyEvidence(evidence, toolEvidence);
+  t.evidence = ev.checked; t.gaps = String(gaps || '').trim().slice(0, 800); t.unverified = ev.verified === 0;
+  if (t.unverified) logTask(t, e.id, 'note', '⚠️ Selesai tanpa bukti yang bisa dicek (catatan Brain, URL, receipt, atau hasil tool). Dianggap asumsi sampai ditinjau.');
   delete t.synth;
   if (t.output.length > 40) {
     // auto-filed into "<Division>/<Type>" with a clean title (same task overwrites; a different task gets a suffix)
@@ -269,6 +311,15 @@ function finishTask(e, t, { summary, output, needsApproval }) {
     event('note_written', e.id, `${e.name} menyimpan "${n.title}" ke ${n.folder}`, { noteId: n.id, taskId: t.id });
   }
   brain.remember(e, `Menyelesaikan "${t.title}"${t.summary ? ' — ' + t.summary.slice(0, 160) : ''}`);
+  // "Butuh kamu": what a human asked for is reviewed by that human before it counts as done (auto-approve never skips this)
+  if (needsOwnerReview(t)) {
+    t.status = 'review';
+    const a = store.upsert('approvals', { id: uid('ap'), kind: 'review', taskId: t.id, requesterId: e.id, approverId: t.createdBy, title: t.title, summary: t.summary, expected: t.expected, evidence: t.evidence, gaps: t.gaps, unverified: t.unverified, status: 'pending', createdAt: Date.now() });
+    logTask(t, e.id, 'approval', 'Hasil diserahkan untuk direview Owner', { approvalId: a.id });
+    event('approval_requested', e.id, `${e.name} menyerahkan "${t.title}" untuk direview`, { taskId: t.id, targetId: t.createdBy });
+    goalNote(t, e.id, `🔎 **Hasil siap direview:** ${t.title}\n${t.summary || ''}\n_Bukti:_ ${t.evidence.filter((x) => x.ok).length}/${t.evidence.length} terverifikasi${t.unverified ? ' — ⚠️ belum ada bukti yang bisa dicek' : ''}${t.gaps ? `\n_Belum terpenuhi:_ ${t.gaps.slice(0, 240)}` : ''}\nSetujui atau minta revisi di **Butuh kamu**, atau balas di sini.`, { approvalId: a.id });
+    return;
+  }
   const approve = gov.needsHumanApproval(t, needsApproval) || (e.autonomy === 'ask' && !t.parentId);
   if (needsApproval && t.parentId) logTask(t, e.id, 'note', 'Ditandai untuk ditinjau orkestrator di atasnya (bukan manusia).');
   if (approve && db().settings.autoApprove !== false) {
@@ -301,8 +352,10 @@ function completeTask(e, t) {
   // personal assistants report finished goals back to their human in DM
   if (!t.parentId && emp(t.createdBy)?.type === 'human') {
     const pa = db().employees.find((x) => x.isPA && x.ownerId === t.createdBy);
-    if (pa) postMessage(ensureDM(pa.id, t.createdBy), pa.id, `✅ **${t.title}** selesai${e.id !== pa.id ? ` (dikerjakan ${e.name})` : ''}.\n${t.summary || ''}`, { taskId: t.id });
-  }
+    const text = `✅ **${t.title}** selesai${e.id !== pa?.id ? ` (dikerjakan ${e.name})` : ''}.\n${t.summary || ''}${t.noteId ? `\nHasil lengkap: [[${db().notes.find((n) => n.id === t.noteId)?.title || t.title}]]` : ''}`;
+    if (t.kind === 'goal') goalNote(t, pa?.id || e.id, text);
+    else if (pa) postMessage(ensureDM(pa.id, t.createdBy), pa.id, text, { taskId: t.id });
+  } else if (t.parentId) goalNote(t, e.id, `✅ **${e.name}** menyelesaikan: ${t.title}${t.summary ? ` — ${t.summary.slice(0, 200)}` : ''}${t.unverified ? '\n⚠️ _tanpa bukti yang bisa dicek; dianggap asumsi_' : ''}`);
   const parent = t.parentId && task(t.parentId);
   if (parent) event('handoff', e.id, `${e.name} menyerahkan hasil "${t.title}" ke ${emp(parent.assigneeId)?.name}`, { targetId: parent.assigneeId, taskId: t.id });
   if (t.routineId === 'r-standup' || !t.parentId) {
@@ -329,13 +382,14 @@ export function decideApproval(approvalId, { decision, feedback = '', userId = '
     collab.recordFeedback(e, t, 'reject', feedback);
     logTask(t, userId, 'rejected', `${who} meminta revisi: ${feedback || '(tanpa catatan)'}`);
     event('rejected', userId, `${who} meminta revisi "${t.title}"`, { taskId: t.id, targetId: e.id });
+    if (a.kind === 'review') goalNote(t, userId, `↩️ **Revisi diminta** untuk "${t.title}": ${feedback || '(tanpa catatan)'}`);
   }
   return a;
 }
 
 export function autoApprovePending() {
   if (db().settings.autoApprove === false) return 0;
-  const pending = db().approvals.filter((a) => a.status === 'pending');
+  const pending = db().approvals.filter((a) => a.status === 'pending' && a.kind !== 'review');   // Owner reviews are never auto-approved
   let count = 0;
   for (const a of pending) {
     try { decideApproval(a.id, { decision: 'approve', feedback: 'Auto-approve diaktifkan', userId: 'system-auto' }); count++; }
@@ -357,7 +411,9 @@ export function humanComplete(taskId, { userId, output = '' }) {
 export function submitGoal({ title, description, userId = 'owner', priority = 'high' }) {
   const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline');
   const master = db().employees.find((x) => x.isMaster) || emp('aria');
-  return createTask({ title, description, assigneeId: (pa || master).id, createdBy: userId, kind: 'goal', priority });
+  const t = createTask({ title, description, assigneeId: (pa || master).id, createdBy: userId, kind: 'goal', priority });
+  if (emp(userId)?.type === 'human') ensureGoalThread(t);   // the goal's own discussion: progress, questions and the review all land here
+  return t;
 }
 
 // ───────────────────────── context helpers ─────────────────────────
@@ -368,12 +424,18 @@ function taskContext(t) {
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const lines = [`# Tugas: ${t.title}`, `ID: ${t.id} · Prioritas: ${t.priority} · Jenis: ${t.kind} · Tanggal hari ini: ${today} (gunakan tahun ini saat riset data terbaru)`];
   if (t.description) lines.push('', '## Deskripsi', t.description);
+  lines.push('', '## Hasil yang diharapkan (definisi selesai)', t.expected || defaultExpected(t.kind, t.title), 'Saat complete_task: isi "evidence" hanya dengan sumber yang benar-benar ada ([[catatan Brain]], URL, receipt) dan isi "gaps" dengan bagian yang belum terpenuhi. Jujur lebih baik daripada lengkap tapi karangan.');
+  if (t.stage > 1 && t.parentId) {
+    const prev = children(task(t.parentId)).filter((c) => c.stage && c.stage < t.stage && c.status === 'done');
+    if (prev.length) { lines.push('', '## Hasil tahap sebelumnya (pakai sebagai dasar, jangan diulang)'); for (const c of prev) lines.push('', `### ${c.title} — ${emp(c.assigneeId)?.name}${c.unverified ? ' (tanpa bukti: perlakukan sebagai asumsi)' : ''}`, (c.summary || c.output || '').slice(0, 1500)); }
+  }
   let p = t.parentId && task(t.parentId); let d = 0;
   while (p && d < 3) { lines.push('', `## Konteks tugas induk (${emp(p.assigneeId)?.name}): ${p.title}`, p.description.slice(0, 1200)); p = p.parentId && task(p.parentId); d++; }
   if (t.feedback) lines.push('', `## Feedback revisi dari manusia (revisi ke-${t.revisions})`, t.feedback, 'Perbaiki hasil sebelumnya:', t.output.slice(0, 4000));
   if (t.synth) {
     lines.push('', '## Hasil subtugas (sudah selesai) — gabungkan menjadi hasil akhir');
-    for (const c of children(t)) lines.push('', `### ${c.title} — ${emp(c.assigneeId)?.name}`, (c.output || c.summary).slice(0, 5000));
+    lines.push('Bagian bertanda TANPA BUKTI adalah asumsi: jangan sajikan sebagai fakta. Gabungkan juga semua "belum terpenuhi" menjadi satu daftar jujur di hasil akhir.');
+    for (const c of children(t)) lines.push('', `### ${c.title} — ${emp(c.assigneeId)?.name}${c.status === 'blocked' ? ' (MACET, tidak ada hasil)' : c.unverified ? ' (TANPA BUKTI)' : ''}`, (c.output || c.summary || '').slice(0, 5000), c.gaps ? `Belum terpenuhi: ${c.gaps}` : '', c.evidence?.length ? `Sumber: ${c.evidence.filter((x) => x.ok).map((x) => x.text).join('; ')}` : '');
   }
   return lines.join('\n');
 }
@@ -470,9 +532,9 @@ const TOOLS = [
   { name: 'search_brain', description: 'Cari catatan di Brain perusahaan (SOP, kebijakan, deliverable, memori). Kembalikan judul + cuplikan.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'read_note', description: 'Baca isi lengkap satu catatan Brain berdasarkan judul.', input_schema: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } },
   { name: 'write_note', description: 'Buat atau perbarui catatan pengetahuan di Brain (Markdown, boleh [[wikilink]]).', input_schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' }, folder: { type: 'string', description: 'mis. Knowledge, SOP, Research, Marketing' }, tags: { type: 'array', items: { type: 'string' } } }, required: ['title', 'content'] } },
-  { name: 'create_subtask', description: 'Delegasikan subtugas ke rekan (pakai id karyawan). Tugas induk akan menunggu sampai semua subtugas selesai.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string', description: 'Brief lengkap: konteks, ekspektasi output, batasan' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description', 'assignee_id'] } },
+  { name: 'create_subtask', description: 'Delegasikan subtugas ke rekan (pakai id karyawan). Tugas induk akan menunggu sampai semua subtugas selesai. Pakai "stage" untuk urutan: tahap 2 baru dimulai setelah semua tahap 1 selesai (mis. riset dulu, baru eksekusi).', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string', description: 'Brief lengkap: konteks, batasan' }, expected: { type: 'string', description: 'Hasil yang diharapkan / definisi selesai: apa persisnya yang diserahkan dan kriterianya' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] }, stage: { type: 'integer', description: '1 = langsung jalan; 2/3 = menunggu tahap sebelumnya selesai' } }, required: ['title', 'description', 'expected', 'assignee_id'] } },
   { name: 'send_message', description: 'Kirim pesan ke channel (mis. "general", "standup", "div-mkt") atau DM ke karyawan (pakai id karyawan).', input_schema: { type: 'object', properties: { to: { type: 'string' }, text: { type: 'string' } }, required: ['to', 'text'] } },
-  { name: 'complete_task', description: 'Selesaikan tugas dengan output akhir.', input_schema: { type: 'object', properties: { summary: { type: 'string', description: '1-2 kalimat' }, output: { type: 'string', description: 'Hasil lengkap dalam Markdown' } }, required: ['summary', 'output'] } },
+  { name: 'complete_task', description: 'Selesaikan tugas dengan output akhir, bukti, dan hal yang belum terpenuhi.', input_schema: { type: 'object', properties: { summary: { type: 'string', description: '1-2 kalimat' }, output: { type: 'string', description: 'Hasil lengkap dalam Markdown' }, evidence: { type: 'array', items: { type: 'string' }, description: 'Sumber yang bisa dicek: [[Judul catatan Brain]], URL, atau receipt ID. Kosong bila tidak ada; jangan mengarang.' }, gaps: { type: 'string', description: 'Bagian dari "hasil yang diharapkan" yang BELUM terpenuhi atau datanya tidak tersedia; string kosong bila semua terpenuhi' } }, required: ['summary', 'output', 'evidence', 'gaps'] } },
   { name: 'organize_brain', description: 'Audit kerapian Brain: jumlah per folder, catatan yang belum terklasifikasi (dengan saran folder), judul buruk (dengan saran), dan kandidat duplikat.', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: 'maks item per daftar (5-40)' } }, required: ['limit'] } },
   { name: 'move_note', description: 'Pindahkan catatan ke folder "<Nama Divisi>/<Jenis>" (Jenis: Research, Strategy, Plan, Report, SOP, Policy, Content, Design, Analysis, Meeting, Data, Technical, Training, Knowledge).', input_schema: { type: 'object', properties: { note: { type: 'string', description: 'id atau judul' }, folder: { type: 'string' } }, required: ['note', 'folder'] } },
   { name: 'rename_note', description: 'Ganti judul catatan; semua [[wikilink]] ke catatan ini otomatis diperbarui.', input_schema: { type: 'object', properties: { note: { type: 'string', description: 'id atau judul' }, new_title: { type: 'string' } }, required: ['note', 'new_title'] } },
@@ -516,7 +578,7 @@ async function runTool(e, t, name, input, state) {
       if (depthOf(t) >= 4) return 'Kedalaman delegasi maksimum tercapai — kerjakan sendiri.';
       if (children(t).length >= 5) return 'Maksimum 5 subtugas per tugas. Kerjakan sisanya sendiri.';
       if (t.kind === 'routine') return 'Tugas rutin tidak boleh didelegasikan.';
-      const c = createTask({ title: input.title, description: input.description, assigneeId: a.id, createdBy: e.id, parentId: t.id, priority: input.priority || t.priority });
+      const c = createTask({ title: input.title, description: input.description, expected: input.expected, stage: input.stage, assigneeId: a.id, createdBy: e.id, parentId: t.id, priority: input.priority || t.priority });
       state.delegated = true;
       logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${a.name}: ${c.title}`, { childId: c.id });
       return `Subtugas ${c.id} dibuat untuk ${a.name}${a.type === 'human' ? ' (manusia — akan dikerjakan manual)' : ''}.`;
@@ -700,12 +762,15 @@ async function runTool(e, t, name, input, state) {
       state.finished = true;
       const needsApproval = name === 'request_approval';
       if (name === 'request_approval') logTask(t, e.id, 'tool', `🛑 request_approval: ${input.reason || ''}`);
-      finishTask(e, t, { summary: input.summary, output: input.output, needsApproval });
+      finishTask(e, t, { summary: input.summary, output: input.output, needsApproval, evidence: input.evidence, gaps: input.gaps, toolEvidence: realEvidence(state) });
       return 'Tercatat. Akhiri giliranmu.';
     }
     default: return 'Tool tidak dikenal.';
   }
 }
+
+/** tool results that are real evidence (Brain, web, live status, integrations), not chatter like send_message */
+const realEvidence = (state) => (state?.evidence || []).filter((x) => /^### (search_brain|read_note|web_search|company_status|calculate|visit_url|ask_colleague|google_|mcp__)/.test(x) && !/Tidak ada hasil|tidak ditemukan|GAGAL/i.test(x.slice(0, 200))).length;
 
 async function runLive(e, t) {
   const ctx = retrievedContext(e, t);
@@ -743,7 +808,7 @@ async function runLive(e, t) {
       if (state.delegated) break;
       // Model ended without calling complete_task: treat its text as the output.
       const fallback = said || state.evidence.slice(-8).join('\n\n') || 'Pekerjaan selesai tanpa keluaran teks dari model.';
-      finishTask(e, t, { summary: fallback.slice(0, 200), output: fallback, needsApproval: false });
+      finishTask(e, t, { summary: fallback.slice(0, 200), output: fallback, needsApproval: false, toolEvidence: realEvidence(state), gaps: 'Agen tidak memanggil complete_task; hasil diambil dari teks terakhirnya.' });
       state.finished = true;
       break;
     }
@@ -771,7 +836,7 @@ async function runLive(e, t) {
     } else {
       const fallback = state.evidence.slice(-8).join('\n\n');
       if (fallback) {
-        finishTask(e, t, { summary: 'Tugas diselesaikan otomatis dari hasil tool yang telah dikumpulkan.', output: fallback, needsApproval: false });
+        finishTask(e, t, { summary: 'Tugas diselesaikan otomatis dari hasil tool yang telah dikumpulkan.', output: fallback, needsApproval: false, toolEvidence: realEvidence(state), gaps: 'Batas giliran tercapai sebelum agen menyusun hasil akhir; ini kumpulan hasil tool mentah.' });
         logTask(t, e.id, 'note', 'Engine menyelamatkan hasil tool setelah batas giliran tercapai.');
       } else throw new Error('Agen berhenti tanpa hasil yang dapat diselamatkan');
     }
@@ -780,7 +845,7 @@ async function runLive(e, t) {
 
 // ───────────────────────── simulation agent ─────────────────────────
 const ROUTES = {
-  mkt: /market|konten|content|sosial|social|iklan|ads|campaign|kampanye|brand|seo|promosi|launch|peluncuran/i,
+  mkt: /market|konten|content|sosial|social|iklan|ads|campaign|kampanye|brand|seo|promo\w*|launch|peluncuran/i,
   sales: /sales|jual|penjualan|lead|klien|client|prospek|deal|revenue|omzet|pelanggan baru/i,
   eng: /aplikasi|app|fitur|feature|bug|website|web|develop|sistem|api|produk|teknis|integrasi/i,
   cs: /customer|support|komplain|tiket|layanan|retensi|churn|nps|onboarding/i,
@@ -815,15 +880,16 @@ function simSteps(e, t) {
       if (!divs.length) divs = ['data', 'mkt', 'ops'];
       divs = divs.slice(0, 5);
       const heads = divs.map((d) => emp(div(d)?.leadId)).filter((x) => x && x.id !== e.id);
-      if (!heads.length) { finishTask(e, t, { summary: `Goal "${t.title.slice(0, 80)}" dikerjakan langsung (tidak ada divisi lain yang relevan).`, output: simDeliverable(e, t, refs), needsApproval: false }); return true; }
+      if (!heads.length) { finishTask(e, t, { summary: `Goal "${t.title.slice(0, 80)}" dikerjakan langsung (tidak ada divisi lain yang relevan).`, output: simDeliverable(e, t, refs), needsApproval: false, evidence: refs.map((r) => `[[${r.title}]]`), gaps: 'Mode simulasi (tanpa AI).' }); return true; }
       const until = Date.now() + 9000;
-      for (const h of [e, ...heads]) if (h.status !== 'working' || h.id === e.id) { h.meetingUntil = until; setStatus(h, 'meeting', 'Rapat kickoff goal', h.currentTaskId); }
+      for (const h of [e, ...heads]) if (h.status !== 'working' || h.id === e.id) { h.meetingUntil = until; h.kickoff = true; setStatus(h, 'meeting', 'Rapat kickoff goal', h.currentTaskId); }
       event('meeting', e.id, `${e.name} memimpin rapat kickoff dengan ${heads.map((h) => h.name).join(', ')}`, { participants: heads.map((h) => h.id), taskId: t.id });
       logTask(t, e.id, 'thought', `Goal ini menyentuh divisi: ${divs.map((d) => div(d).name).join(', ')}. Saya pecah per divisi.`);
+      const staged = heads.length > 1 && heads.some((h) => h.divisionId === 'data');   // research first, then the divisions act on it
       for (const h of heads) {
         if (children(t).some((x) => x.assigneeId === h.id)) continue;   // a retried step must not create the same part twice
         const d = div(h.divisionId);
-        const c = createTask({ title: `[${d.short}] ${t.title}`, description: `Bagian ${d.name} dari goal: "${t.title}".\n${t.description}\n\nFokus: ${d.mission}\nOutput: rencana & deliverable konkret untuk divisi ${d.name}.`, assigneeId: h.id, createdBy: e.id, parentId: t.id, priority: t.priority });
+        const c = createTask({ title: `[${d.short}] ${t.title}`, description: `Bagian ${d.name} dari goal: "${t.title}".\n${t.description}\n\nFokus: ${d.mission}`, expected: `Rencana & deliverable konkret divisi ${d.name} untuk goal ini, dengan sumber untuk setiap fakta dan daftar hal yang belum bisa dipenuhi.`, stage: staged ? (h.divisionId === 'data' ? 1 : 2) : 0, assigneeId: h.id, createdBy: e.id, parentId: t.id, priority: t.priority });
         logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${h.name}: ${c.title}`, { childId: c.id });
       }
       t.status = 'waiting';
@@ -877,7 +943,7 @@ function simSteps(e, t) {
     const output = t.synth ? simSynthesis(e, t) : simDeliverable(e, t, refs);
     const summary = t.synth ? `Hasil ${children(t).length} subtugas digabung menjadi satu deliverable.` : `Deliverable ${e.title.toLowerCase()} untuk "${t.title}" siap (mode simulasi).`;
     if (t.routineId === 'r-standup') postMessage('standup', e.id, standupText());
-    finishTask(e, t, { summary, output, needsApproval: POLICY_RE.test(t.title) && !t.parentId });
+    finishTask(e, t, { summary, output, needsApproval: POLICY_RE.test(t.title) && !t.parentId, evidence: refs.map((r) => `[[${r.title}]]`), gaps: 'Mode simulasi (tanpa AI): isi berupa kerangka dari catatan Brain, belum dianalisis sungguhan.' });
     return true;
   });
   return steps;
@@ -932,6 +998,36 @@ export function ensureGroup(ownerId, memberIds) {
   const id = 'grp-' + members.join('--').slice(0, 120);
   if (!db().channels.some((c) => c.id === id)) store.upsert('channels', { id, kind: 'group', members, name: 'Diskusi: ' + members.filter((m) => m !== ownerId).map((m) => emp(m)?.name || m).join(', ') });
   return id;
+}
+
+// ───────────────────────── goal threads: one discussion per goal (progress, questions, reviews in one place) ─────────────────────────
+const rootOf = (t) => { let r = t, d = 0; while (r?.parentId && d < 12) { r = task(r.parentId) || r; if (!r.parentId) break; d++; } return task(t.rootId) || r; };
+export function ensureGoalThread(root) {
+  if (!root) return null;
+  const id = `goal-${root.id}`;
+  if (!db().channels.some((c) => c.id === id)) {
+    const pa = db().employees.find((x) => x.isPA && x.ownerId === root.createdBy) || emp(root.assigneeId);
+    store.upsert('channels', { id, kind: 'group', goalId: root.id, members: [...new Set([root.createdBy, pa?.id, root.assigneeId].filter(Boolean))], name: `🎯 ${String(root.title).slice(0, 70)}`, topic: root.expected || '' });
+  }
+  return id;
+}
+/** a short, token-free progress line in the goal's thread (only when the task belongs to a goal a human asked for) */
+function goalNote(t, authorId, text, extra = {}) {
+  const root = t && rootOf(t);
+  if (!root || root.kind !== 'goal' || emp(root.createdBy)?.type !== 'human') return;
+  const ch = ensureGoalThread(root);
+  const c = db().channels.find((x) => x.id === ch);
+  if (authorId && emp(authorId)?.type === 'ai' && !c.members.includes(authorId)) { c.members.push(authorId); store.upsert('channels', c); }
+  postMessage(ch, emp(authorId) ? authorId : root.assigneeId, text, { taskId: t.id, progress: true, ...extra });
+}
+/** the real state of a goal, from the database: used to answer "progresnya gimana?" without inventing anything */
+export function goalStatus(root) {
+  const all = db().tasks.filter((x) => (x.rootId || x.id) === root.id && x.id !== root.id);
+  const label = { todo: 'antre', in_progress: 'dikerjakan', waiting: 'menunggu subtugas', review: 'menunggu review', blocked: 'MACET', done: 'selesai' };
+  const now = Date.now();
+  const lines = all.slice(0, 14).map((x) => `- ${x.stage ? `[tahap ${x.stage}] ` : ''}${x.title.slice(0, 70)} — ${emp(x.assigneeId)?.name || '?'}: ${label[x.status] || x.status}${OPEN.has(x.status) && x.dueAt && x.dueAt < now ? ' (LEWAT TENGGAT)' : ''}${x.status === 'done' && x.unverified ? ' (tanpa bukti)' : ''}`);
+  const done = all.filter((x) => x.status === 'done').length;
+  return `Goal "${root.title.slice(0, 90)}" — status ${label[root.status] || root.status}; ${done}/${all.length} bagian selesai.${all.length ? '\n' + lines.join('\n') : '\n(belum dipecah ke tim)'}`;
 }
 
 const WORK_RE = /\b(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tulis|cari|riset|rancang|lakukan|jalankan|pastikan|pelajari|harus|please|create|make|write|draft|prepare)\b/i;
@@ -995,10 +1091,13 @@ export async function onHumanMessage(msg) {
   // only releases them after the owner explicitly says "selesai".
   if (ch.kind === 'meeting' && collab.handleOwnerMeetingMessage(msg)) return;
   if ((ch.kind === 'dm' || ch.kind === 'group') && emp(msg.authorId)?.type === 'human') {
-    const mids = ch.members.filter((x) => x !== msg.authorId && emp(x)?.type === 'ai'); let intent = meetingIntent(msg.text, mids);
-    const live = activeLiveMeeting(msg.authorId); if (live && collab.isMeetingEnd(msg.text)) intent = null;
-    if (live && !intent) { postMessage(`mtg-${live.id}`, msg.authorId, msg.text); collab.ownerSpeaks(live.id, msg.text, msg.authorId); return; }
-    if (intent) { startChatMeeting({ text: msg.text, userId: msg.authorId, channelId: ch.id, ids: mids, intent }); return; }
+    const mids = ch.members.filter((x) => x !== msg.authorId && emp(x)?.type === 'ai');
+    // the live room hears only the Owner's orchestrator thread (DM with the PA); a DM with a colleague or a goal thread stays that conversation
+    const orchestratorThread = !ch.goalId && mids.length > 0 && mids.every((x) => emp(x)?.isPA || emp(x)?.isMaster);
+    const guests = orchestratorThread || ch.goalId ? [] : mids;   // in the PA thread or a goal thread, guests come from the names in the sentence
+    const intent = meetingIntent(msg.text, guests, msg.authorId);
+    if (intent === 'say' && orchestratorThread) { const live = activeLiveMeeting(msg.authorId); postMessage(`mtg-${live.id}`, msg.authorId, msg.text); collab.ownerSpeaks(live.id, msg.text, msg.authorId); return; }
+    if (intent && intent !== 'say') { startChatMeeting({ text: msg.text, userId: msg.authorId, channelId: ch.id, ids: guests, intent }); return; }
   }
   let targets = [];
   const closed = ch.kind === 'dm' || ch.kind === 'group';   // only the members of a DM/group may answer in it
@@ -1011,7 +1110,12 @@ export async function onHumanMessage(msg) {
     targets.push(db().employees.find((e) => e.isPA && e.ownerId === msg.authorId) || db().employees.find((e) => e.isMaster));
   }
   const mentions = [...msg.text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase());
-  if (ch.kind === 'group') { const only = mentions.map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter((e) => e && ch.members.includes(e.id)); if (only.length) targets = only; }   // @name inside a group narrows who answers
+  if (ch.goalId) {   // goal thread: the PA answers by default; a named head/colleague (with or without @) joins the thread and answers instead
+    const named = [...new Set([...mentions.map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)?.id).filter(Boolean), ...namesIn(msg.text)])].map(emp).filter((x) => x?.type === 'ai').slice(0, 3);
+    for (const x of named) if (!ch.members.includes(x.id)) { ch.members.push(x.id); store.upsert('channels', ch); postMessage(ch.id, x.id, `👋 ${x.name} (${x.title}) bergabung ke diskusi goal ini.`); }
+    const owner = db().employees.find((x) => x.isPA && x.ownerId === msg.authorId) || emp(task(ch.goalId)?.assigneeId);
+    targets = named.length ? named : [owner].filter(Boolean);
+  } else if (ch.kind === 'group') { let only = mentions.map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter((e) => e && ch.members.includes(e.id)); if (!only.length) only = namesIn(msg.text).filter((id) => ch.members.includes(id)).map(emp); if (only.length) targets = only; }   // "maya gimana menurutmu" = only Maya answers (saves tokens)   // @name inside a group narrows who answers
   else for (const name of mentions) { const e = db().employees.find((x) => x.id === name || x.name.toLowerCase() === name); if (e && (!closed || ch.members.includes(e.id))) targets.push(e); }
   if (!targets.length && ch.kind === 'channel') targets.push(ch.divisionId ? headOf(ch.divisionId) : db().employees.find((e) => e.isPA && e.ownerId === msg.authorId) || db().employees.find((e) => e.isMaster));
   targets = [...new Set(targets.filter((e) => e && e.type === 'ai'))].slice(0, ch.kind === 'group' ? 4 : 3);
@@ -1026,6 +1130,8 @@ const TASK_RE = /^(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tul
 
 const chatBusy = new Map();
 async function replyAs(e, ch, msg) {
+  // every reply is also SAID in the office: a speech bubble over the agent who answers
+  const reply = (text, extra = {}) => { const m = postMessage(ch.id, e.id, text, extra); event('message', e.id, `${e.name} → ${emp(msg.authorId)?.name || ''}: ${String(text).replace(/s+/g, ' ').slice(0, 180)}`, { targetId: msg.authorId, channelId: ch.id }); return m; };
   const prev = { status: e.status, text: e.statusText };
   chatBusy.set(e.id, (chatBusy.get(e.id) || 0) + 1);
   // "ikuti saya" / "berhenti ikut": the agent walks with the person who asked (and stops when asked)
@@ -1036,52 +1142,65 @@ async function replyAs(e, ch, msg) {
   if (e.status === 'idle') setStatus(e, 'chatting', `Membalas ${emp(msg.authorId)?.name}`);
   event('message', msg.authorId, `${emp(msg.authorId)?.name} → ${e.name}: ${msg.text.slice(0, 80)}`, { targetId: e.id, channelId: ch.id });
   try {
-    const quick = quickReply(e, msg);
+    const quick = quickReply(e, msg, ch);
     if (quick) {
       await new Promise((r) => setTimeout(r, 500 + Math.random() * 600));
-      postMessage(ch.id, e.id, quick);
+      reply(quick);
     } else if (llm.isLive() && llm.budgetLeft() > 0) {
       const history = db().messages.filter((m) => m.channelId === ch.id).slice(-10);
       const convo = history.map((m) => `${emp(m.authorId)?.name || m.authorId}: ${m.text}`).join('\n');
       const chatTools = toolsFor(e).filter((x) => ['search_brain', 'company_status', 'ask_colleague', 'web_search', 'calculate'].includes(x.name)).concat([{
-        name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description'] },
+        name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, expected: { type: 'string', description: 'Hasil yang diharapkan / definisi selesai' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description', 'expected'] },
       }]);
-      const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : ch.kind === 'group' ? 'diskusi grup (' + ch.name + ')' : '#' + ch.name}:\n${convo}\n\n${wantsFollow ? 'Kamu SEKARANG ikut berjalan bersama orang ini di kantor 3D. Jawab singkat bahwa kamu ikut sambil mengobrol, jangan bilang tidak bisa ikut.\n\n' : ''}${wantsStop ? 'Kamu berhenti ikut dan kembali bekerja di meja. Jawab singkat.\n\n' : ''}Balas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu.${ch.kind === 'group' ? ' Ini diskusi grup: baca jawaban peserta lain di atas, jangan mengulang isinya; tambahkan sudut pandang divisimu atau setuju/tidak setuju dengan singkat.' : ''} Jawab langsung dan natural seperti rekan kerja; JANGAN menyebut nama tool atau istilah teknis (mis. create_task) kepada manusia. Untuk sapaan atau obrolan ringan, balas satu atau dua kalimat saja. Jika diminta pekerjaan besar, panggil tool create_task lalu konfirmasi singkat apa yang sudah kamu buat dan siapa yang mengerjakan.` }];
+      const named = namesIn(msg.text).filter((id) => id !== e.id).slice(0, 4).map(emp).filter(Boolean);
+      const goalRoot = ch.goalId ? task(ch.goalId) : null;
+      const goalFacts = goalRoot ? `KEADAAN NYATA GOAL INI (dari papan tugas; jangan mengarang progres di luar ini):\n${goalStatus(goalRoot)}\nDefinisi selesai: ${goalRoot.expected || '-'}\nBila Owner memberi arahan baru untuk goal ini, buat tugas lewat create_task dan sebutkan siapa pengerjanya.\n\n` : '';
+      const facts = goalFacts + (named.length ? `KEADAAN NYATA rekan yang disebut (pakai ini bila ditanya tentang mereka; jangan menjawab tentang dirimu sendiri):\n${named.map((x) => `- ${x.name} (${x.title || '-'}): ${colleagueState(x)}`).join('\n')}\n\n` : '');
+      const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : ch.kind === 'group' ? 'diskusi grup (' + ch.name + ')' : '#' + ch.name}:\n${convo}\n\n${facts}${wantsFollow ? 'Kamu SEKARANG ikut berjalan bersama orang ini di kantor 3D. Jawab singkat bahwa kamu ikut sambil mengobrol, jangan bilang tidak bisa ikut.\n\n' : ''}${wantsStop ? 'Kamu berhenti ikut dan kembali bekerja di meja. Jawab singkat.\n\n' : ''}Balas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu.${ch.kind === 'group' ? ' Ini diskusi grup: baca jawaban peserta lain di atas, jangan mengulang isinya; tambahkan sudut pandang divisimu atau setuju/tidak setuju dengan singkat.' : ''} Jawab langsung dan natural seperti rekan kerja; JANGAN menyebut nama tool atau istilah teknis (mis. create_task) kepada manusia. Untuk sapaan atau obrolan ringan, balas satu atau dua kalimat saja. Jika diminta pekerjaan besar, panggil tool create_task lalu konfirmasi singkat apa yang sudah kamu buat dan siapa yang mengerjakan.` }];
       const pseudo = { id: 'chat', title: 'chat', log: [], transient: true };
       let posted = false;
       for (let i = 0; i < 5; i++) {
         const res = await llm.call({ system: chatSystem(e), messages, tools: chatTools, model: e.model || llm.defaultModels()[e.isPA || e.isMaster || e.isLead ? 'worker' : 'small'], employee: e, maxTokens: 1200 });
         messages.push({ role: 'assistant', content: res.content });
         const uses = res.content.filter((b) => b.type === 'tool_use');
-        if (!uses.length) { postMessage(ch.id, e.id, (llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); posted = true; break; }
+        if (!uses.length) { reply((llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); posted = true; break; }
         const results = [];
         for (const u of uses) {
           let out;
           try {
             if (u.name === 'create_task') {
-              const t = createTask({ title: u.input.title, description: u.input.description, assigneeId: emp(u.input.assignee_id) ? u.input.assignee_id : e.id, createdBy: msg.authorId, priority: u.input.priority || 'medium' });
-              out = `Tugas ${t.id} dibuat untuk ${emp(t.assigneeId).name}.`;
+              const g = ch.goalId && task(ch.goalId), inGoal = g && ['todo', 'in_progress', 'waiting'].includes(g.status);   // an instruction inside a goal thread becomes part of that goal
+              const t = createTask({ title: u.input.title, description: u.input.description, expected: u.input.expected, assigneeId: emp(u.input.assignee_id) ? u.input.assignee_id : e.id, createdBy: inGoal ? g.assigneeId : msg.authorId, parentId: inGoal ? g.id : null, priority: u.input.priority || 'medium' });              out = `Tugas ${t.id} dibuat untuk ${emp(t.assigneeId).name}.`;
             } else out = await runTool(e, pseudo, u.name, u.input, {});
           } catch (err) { out = `Error: ${err.message}`; }
           results.push({ type: 'tool_result', tool_use_id: u.id, content: String(out) });
         }
         messages.push({ role: 'user', content: results });
       }
-      if (!posted) postMessage(ch.id, e.id, 'Saya sudah menjalankan beberapa langkah untuk permintaan ini, tetapi belum sempat merangkum hasilnya. Tanya lagi, atau minta saya membuat tugas.');
+      if (!posted) reply('Saya sudah menjalankan beberapa langkah untuk permintaan ini, tetapi belum sempat merangkum hasilnya. Tanya lagi, atau minta saya membuat tugas.');
     } else {
       await new Promise((r) => setTimeout(r, 900 + Math.random() * 1200));
       const text = msg.text.replace(/@[\w-]+/g, '').trim();
       const dup = ch.kind === 'group' && db().tasks.find((x) => x.createdBy === msg.authorId && x.description === text && Date.now() - x.createdAt < 120000);
-      if (dup) postMessage(ch.id, e.id, `Setuju. Tugas itu sudah diambil **${emp(dup.assigneeId)?.name}**; saya siap membantu dari sisi ${e.title} bila diminta.`, { taskId: dup.id });
+      if (dup) reply(`Setuju. Tugas itu sudah diambil **${emp(dup.assigneeId)?.name}**; saya siap membantu dari sisi ${e.title} bila diminta.`, { taskId: dup.id });
       else if (TASK_RE.test(text)) {
         const t = createTask({ title: text.slice(0, 100), description: text, assigneeId: e.id, createdBy: msg.authorId, priority: 'medium' });
-        postMessage(ch.id, e.id, `Siap! Sudah saya masukkan ke antrean kerja: **${t.title}**. Pantau progresnya di Kanban atau lihat saya di kantor 3D 👀`, { taskId: t.id });
+        reply(`Siap! Sudah saya masukkan ke antrean kerja: **${t.title}**. Pantau progresnya di Kanban atau lihat saya di kantor 3D 👀`, { taskId: t.id });
       } else {
         const r = brain.search(text, { limit: 2 });
         const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status));
-        postMessage(ch.id, e.id, `Halo! Saya ${e.name}, ${e.title}. ${open.length ? `Saat ini saya pegang ${open.length} tugas (terbaru: "${open.at(-1).title}").` : 'Saat ini saya sedang luang.'}${r.length ? `\nMungkin relevan: ${r.map((x) => `[[${x.title}]]`).join(', ')}` : ''}\nMinta saya "buat …" / "tolong …" untuk memberi tugas. _(mode simulasi)_`);
+        {
+          const who = /^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : String(emp(msg.authorId)?.name || 'Owner').split(' ')[0];
+          const prev = db().messages.filter((m) => m.channelId === ch.id && m.authorId === e.id).slice(-3).map((m) => m.text);
+          const heads = [`Dicatat, ${who}.`, 'Baik, saya dengar.', `Oke ${who}, saya catat.`, 'Siap.'];
+          const head = heads.find((h) => !prev.some((p) => p.startsWith(h))) || heads[0];
+          const state = e.status === 'meeting' ? 'Saya sedang di rapat.' : open.filter((t) => t.status !== 'blocked').length ? `Saya sedang menangani "${String(open.filter((t) => t.status !== 'blocked').at(-1).title).slice(0, 50)}".` : 'Saya sedang luang.';
+          const hint = prev.some((p) => p.includes('beri tugas')) ? '' : ' Beri saya tugas ("buat …"), ajak rapat ("rapat dengan …"), atau tanya status. _(mode simulasi: tanpa AI)_';
+          reply(`${head} ${state}${r.length && String(text).split(/\s+/).length >= 3 ? `\nMungkin relevan: ${r.map((x) => `[[${x.title}]]`).join(', ')}` : ''}${hint}`);
+        }
       }
     }
+    if (!quick && String(msg.text || '').trim().split(/\s+/).length >= 6) { try { brain.remember(e, `${/^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : (emp(msg.authorId)?.name || 'Pengguna')} berkata kepadaku: "${String(msg.text).replace(/\s+/g, ' ').slice(0, 110)}"`); } catch { /* memory is best effort */ } }
   } finally {
     const left = (chatBusy.get(e.id) || 1) - 1; chatBusy.set(e.id, left);
     if (left === 0 && e.status === 'chatting') setStatus(e, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);
@@ -1112,28 +1231,34 @@ export function namesIn(text) {
   for (const [first, e] of firsts) if (first.length >= 3 && t.includes(' ' + first + ' ')) out.add(e.id);
   return [...out];
 }
-const activeChatMeeting = () => db().meetings.find((m) => m.fromChat && (m.status === 'running' || m.status === 'waiting_owner') && Date.now() - m.createdAt < 15 * 60000);
-/** 'new' | 'replace' | 'cancel' | null */
-export function meetingIntent(text, ids = []) {
+/** The meeting the Owner sits in right now. Only a meeting whose loop is alive in THIS process counts: a saved-but-dead meeting must never swallow messages or keep people "busy". */
+export const activeLiveMeeting = (userId) => db().meetings.find((m) => (m.status === 'waiting_owner' || m.status === 'running') && collab.liveLoops.has(m.id) && m.ownerLed && (!userId || m.ownerId === userId));
+const REPLACE_MEETING_RE = /\b(?:rapat|meeting)\s+baru\b|\b(?:undang|ajak|panggil|tambah(?:kan)?)\b/i;
+/** THE one place that decides what a message means for meetings: 'new' | 'replace' | 'cancel' | 'say' | null.
+ *  While the Owner is in a live meeting EVERYTHING is said in the room ("kita mulai rapat kita" included) unless it clearly cancels, or invites/replaces people. */
+export function meetingIntent(text, ids = [], userId = 'owner') {
   const t = String(text || '').trim();
-  if (!t || /\?\s*$|^\s*(?:apa|apakah|siapa|kenapa|mengapa|bagaimana|gimana|berapa|kapan|dimana|mana|bisakah)\b/i.test(t) || PAST_MEETING_RE.test(t)) return null;   // questions about meetings are chat, not a request to hold one
-  const active = activeChatMeeting();
-  if (active && CANCEL_MEETING_RE.test(t)) return 'cancel';
-  if (active) return /\b(?:rapat|meeting)\s+baru\b/i.test(t) || (INVITE_RE.test(t) && (ids.length || namesIn(t).length)) ? 'replace' : null;   // "udah cuma undang maya aja" swaps the guests; anything else is just talk inside the running meeting
+  if (!t) return null;
+  const live = activeLiveMeeting(userId);
+  if (live) {
+    if (CANCEL_MEETING_RE.test(t)) return 'cancel';
+    if (REPLACE_MEETING_RE.test(t) && (ids.length || namesIn(t).some((id) => !(live.participants || []).includes(id)))) return 'replace';
+    return 'say';
+  }
+  if (/\?\s*$|^\s*(?:apa|apakah|siapa|kenapa|mengapa|bagaimana|gimana|berapa|kapan|dimana|mana|bisakah)\b/i.test(t) || PAST_MEETING_RE.test(t)) return null;   // questions about meetings are chat, not a request to hold one
   return MEETING_RE.test(t) ? 'new' : null;
 }
-export const activeLiveMeeting = (userId) => db().meetings.find((m) => m.status === 'waiting_owner' && (!userId || m.ownerId === userId));   // any meeting the Owner sits in (chat-started or from the Rapat form)
 export function startChatMeeting({ text, userId = 'owner', channelId, ids = [], intent = 'new' }) {
   const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
   const say = (msg, extra = {}) => postMessage(channelId, pa.id, msg, extra);
-  const active = activeChatMeeting();
+  const active = activeLiveMeeting(userId);
   if (intent === 'cancel') { if (active && collab.cancelMeeting(active.id)) say('Rapat dibatalkan. Semua kembali ke pekerjaan masing-masing.'); else say('Tidak ada rapat yang sedang berjalan.'); return { action: 'meeting', cancelled: true }; }
   const named = namesIn(text).filter((id) => id !== pa.id);
   let invited = [...new Set([...ids, ...named])].filter((id) => emp(id)?.type === 'ai' && id !== pa.id);
   if (/\b(semua|seluruh)\b/i.test(text) && !invited.length) invited = db().divisions.map((d) => d.leadId).filter((id) => emp(id)?.type === 'ai' && id !== pa.id);
   if (!invited.length) { const m = db().employees.find((x) => x.isMaster && x.id !== pa.id); invited = [m?.id || db().divisions.map((d) => d.leadId).find((id) => id && id !== pa.id)].filter(Boolean); }
-  const nameSet = new Set(invited.flatMap((id) => [String(emp(id)?.name || '').toLowerCase().split(/\s+/)[0], String(id).toLowerCase()]));
-  const rest = String(text).replace(/@[\w-]+/g, ' ').replace(/\b(ayo|yuk|ya|tolong|coba|kita|ke|di|ruang|rapat|meeting|conference|hall|kumpul|berkumpul|ngumpul|diskusi|undang|ajak|dengan|bareng|saja|aja|cuma|hanya|udah|sudah|sebisa|mungkin|hemat|token|loh|semua|seluruh|dan)\b/gi, ' ').split(/\s+/).map((w) => w.replace(/^[,;:.!]+|[,;:.!]+$/g, '')).filter((w) => w && !nameSet.has(w.toLowerCase())).join(' ').replace(/^(?:soal|tentang|mengenai|untuk)\s+/i, '').trim();
+  const nameSet = new Set([...invited, pa.id].flatMap((id) => [String(emp(id)?.name || '').toLowerCase().split(/\s+/)[0], String(id).toLowerCase()]));
+  const rest = String(text).replace(/@[\w-]+/g, ' ').replace(/\b(ayo|yuk|ya|tolong|coba|kita|ke|di|ruang|ruangan|rapat|meeting|conference|hall|kumpul|berkumpul|ngumpul|diskusi|undang|ajak|dengan|bareng|saja|aja|cuma|hanya|udah|sudah|sebisa|mungkin|hemat|token|loh|semua|semuanya|seluruh|dan|pergi|datang|masuk|segera|sekarang|skrg|sekarng|now|kalian|langsung)\b/gi, ' ').split(/\s+/).map((w) => w.replace(/^[,;:.!]+|[,;:.!]+$/g, '')).filter((w) => w && !nameSet.has(w.toLowerCase())).join(' ').replace(/^(?:soal|tentang|mengenai|untuk)\s+/i, '').trim();
   const names = invited.map((id) => emp(id).name);
   const topic = rest.length >= 8 ? rest.slice(0, 140) : 'Diskusi Owner dengan ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ` dan ${names.length - 3} lainnya` : '');
   if (active && intent === 'replace') collab.cancelMeeting(active.id);   // "undang Maya saja" replaces the meeting that was just opened with default guests
@@ -1154,57 +1279,97 @@ function chatSystem(e) {
   const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status) && t.status !== 'blocked').slice(0, 5);
   const where = e.status === 'meeting' ? 'sedang di rapat' : e.status === 'working' ? 'sedang bekerja' : e.status === 'chatting' ? 'sedang mengobrol' : 'sedang luang';
   const c = db().company;
-  return `Kamu ${e.name}, ${e.title} di divisi ${div(e.divisionId)?.name || '-'} ${c.name}. ${String(e.about || e.persona || '').slice(0, 280)}
+  const memNote = brain.findNote(`Memori ${e.name}`), memLines = memNote ? memNote.content.split('\n').slice(2).filter(Boolean).slice(-4).map((l) => l.replace(/^- /, '- ').slice(0, 160)).join('\n') : '';
+  return `Kamu ${e.name}, ${String(e.title || '').replace(/\s*[·\-–]\s*Anda \(Owner\)\s*$/i, '')} di divisi ${div(e.divisionId)?.name || '-'} ${c.name}. ${String(e.about || e.persona || '').slice(0, 280)}
 Keahlian: ${(e.skills || []).slice(0, 4).join(', ') || '-'}.
 
 # KEADAAN NYATA SAAT INI (satu-satunya sumber kebenaran tentang dirimu)
 - Status: ${where}${e.statusText ? ` (${String(e.statusText).slice(0, 60)})` : ''}
 - Tugas aktif: ${open.length ? open.map((t) => `"${String(t.title).slice(0, 60)}" [${t.status}]`).join('; ') : 'TIDAK ADA'}
 
-# ATURAN
+${memLines ? `# INGATANMU (kejadian nyata yang kamu alami; bukan berarti masih kamu kerjakan)\n${memLines}\n\n` : ''}# ATURAN
 - Jawab 1-3 kalimat, natural, ${c.language}, seperti rekan kerja.
 - JANGAN mengarang pekerjaan, proyek, angka, atau status yang tidak tertulis di atas. Bila ditanya sedang apa atau di mana, jawab sesuai keadaan nyata; bila tidak ada tugas, katakan sedang luang.
+- Bila tidak tahu atau datanya tidak ada, katakan terus terang dan sebutkan cara mendapatkannya (cari di Brain, tanya rekan, riset). Jangan pura-pura sudah mengerjakan sesuatu.
+- Kritis, bukan penurut: bila permintaan kabur, tanyakan SATU hal yang paling penting dulu; bila ada risiko atau asumsi lemah, sebutkan singkat beserta alasannya.
+- Ditanya tentang rekan: jawab hanya dari blok "KEADAAN NYATA rekan" bila ada; jangan menceritakan dirimu sebagai gantinya.
 - Jangan menyebut nama tool atau istilah teknis.
 - Bila diminta pekerjaan besar, panggil create_task lalu konfirmasi singkat apa yang dibuat dan siapa pengerjanya.`;
 }
 
+/** one true sentence about a colleague, from the database (never invented) */
+function colleagueState(x) {
+  const open = db().tasks.filter((t) => t.assigneeId === x.id && OPEN.has(t.status) && t.status !== 'blocked');
+  const mtg = db().meetings.find((m) => (m.status === 'running' || m.status === 'waiting_owner') && (m.participants || []).includes(x.id));
+  if (x.status === 'offline') return 'sedang offline.';
+  if (x.status === 'meeting') return mtg ? `sedang rapat "${String(mtg.topic).slice(0, 50)}".` : 'sedang rapat singkat.';
+  if (x.status === 'working' || open.length) return open.length ? `sedang mengerjakan "${String(open[0].title).slice(0, 60)}"${open.length > 1 ? ` (+${open.length - 1} tugas lain)` : ''}.` : 'sedang bekerja.';
+  if (x.status === 'chatting') return 'sedang mengobrol dengan seseorang.';
+  return 'sedang luang, tidak ada tugas aktif.';
+}
 const GREET_WORDS = new Set(['hai', 'halo', 'hi', 'hello', 'hey', 'p', 'tes', 'test', 'pagi', 'siang', 'sore', 'malam', 'oi', 'woi', 'assalamualaikum', 'selamat', 'ya', 'owner']);
 /** zero-token answers for greetings and "what can you do": the model adds nothing there, and it kept parroting tool names */
-function quickReply(e, msg) {
+function quickReply(e, msg, ch) {
   const raw = String(msg.text || '').replace(/@[\w-]+/g, ' ').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
   const who = /^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : String(emp(msg.authorId)?.name || 'Owner').split(' ')[0];
   const words = raw.split(' ').filter(Boolean);
   const first = String(e.name || '').toLowerCase().split(' ')[0];
-  if (words.length && words.length <= 3 && words.every((w) => GREET_WORDS.has(w) || w === first)) return `Halo ${who}! Saya ${e.name}, ${e.title}. Beri saya tugas ("buat rencana promo"), ajak rapat ("rapat dengan Maya"), atau minta saya mendekat ("ikuti saya").`;
-  if (/\b(bisa\s+apa|apa\s+(?:saja|aja)\s+(?:yang\s+)?bisa|bantuan|help|fitur)\b/.test(raw)) return 'Yang bisa kita lakukan lewat kotak ini: (1) beri tugas/goal, mis. "buat rencana promo akhir tahun", akan dipecah ke tim; (2) ajak rapat, mis. "rapat dengan Maya soal promo", mereka benar-benar berkumpul di Conference Hall; (3) tanya status atau isi Brain; (4) "ikuti saya" agar saya berjalan bersamamu. Tambah beberapa agen lewat "+ Agen" untuk diskusi grup.';
+  const title = String(e.title || '').replace(/\s*[·\-–]\s*Anda \(Owner\)\s*$/i, '').trim();
+  const mine = db().messages.filter((m) => m.channelId === ch.id && m.authorId === e.id);
+  const lastMine = new Set(mine.slice(-4).map((m) => m.text));
+  const pick = (arr) => arr.find((t) => !lastMine.has(t)) || arr[Math.floor(Date.now() / 1000) % arr.length];   // never repeat what was just said
+  const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status) && t.status !== 'blocked');
+  const state = e.status === 'meeting' ? 'Saya sedang di rapat.' : open.length ? `Saya sedang menangani "${String(open[0].title).slice(0, 50)}".` : 'Saya sedang luang.';
+  if (words.length && words.length <= 3 && words.every((w) => GREET_WORDS.has(w) || w === first)) {
+    const spokeRecently = mine.some((m) => Date.now() - (m.t || 0) < 6 * 3600e3);
+    if (!spokeRecently) return `Halo ${who}! Saya ${e.name}, ${title}. ${state} Mau beri tugas, ajak rapat, atau sekadar tanya?`;
+    if (words.length === 1 && words[0] === first) return pick([`Ya, ${who}? Saya di sini.`, `Iya ${who}, saya dengar.`, `Siap, ${who}. Ada yang bisa saya bantu?`]);
+    return pick([`Halo lagi, ${who}. ${state}`, `Hai ${who}! Ada yang bisa saya bantu?`, `Siap ${who}. Mau mulai dari mana?`, `Hai! ${state} Silakan beri arahan.`]);
+  }
+  // "progresnya gimana?": answered straight from the task tree, zero tokens, nothing invented
+  if (/\b(progres\w*|progress\w*|status\w*|sampai\s+mana|sudah\s+sampai|update\w*|perkembangan\w*|kabar\w*)\b/.test(raw) && words.length <= 8) {
+    const root = ch.goalId ? task(ch.goalId) : (e.isPA ? db().tasks.filter((x) => x.kind === 'goal' && !x.parentId && x.createdBy === msg.authorId).at(-1) : null);
+    if (root) return goalStatus(root) + (root.status === 'review' ? '\nHasil akhirnya menunggu review-mu di **Butuh kamu**.' : '');
+  }
+  // "taufik lagi apa?", "sora?" asked to someone else: answer with the colleague's REAL state instead of the replier's own (it used to describe itself)
+  const others = namesIn(raw).filter((id) => id !== e.id && !(ch.members || []).includes(id)).map(emp).filter(Boolean);   // people in this thread answer for themselves
+  if (others.length && others.length <= 3 && (/\b(lagi|sedang|lg)\s+(apa|ngapain|dimana|di\s+mana|kerja\s+apa)\b|\bngapain\b|\b(dimana|di\s+mana|kemana|ke\s+mana)\b|\bstatus\b/.test(raw) || words.length <= 2)) {
+    return others.map((x) => `${x.name} ${colleagueState(x)}`).join(' ') + (words.length <= 2 ? ` Mau saya sampaikan sesuatu ke ${others[0].name}, atau kamu ajak bicara langsung lewat "+ Agen"?` : '');
+  }
+  if (/\b(bisa\s+apa|apa\s+(?:saja|aja)\s+(?:yang\s+)?bisa|bantuan|help|fitur)\b/.test(raw)) return pick(['Lewat kotak ini kamu bisa: beri tugas atau goal ("buat rencana promo akhir tahun") yang saya pecah ke tim; ajak rapat ("rapat dengan Maya soal promo") dan mereka berkumpul di Conference Hall; tanya status atau isi Brain; atau minta saya mendekat ("ikuti saya"). Beberapa agen sekaligus lewat "+ Agen".', 'Singkatnya: kasih saya tugas, ajak rapat, tanya status, atau minta saya mendekat. Contoh: "tolong rangkum laporan penjualan" atau "rapat dengan Maya".']);
   return null;
 }
 
 // ───────────────────────── orchestrator entry point (one chat box for everything) ─────────────────────────
 /** One message from the Owner. mode: 'auto' | 'chat' | 'goal'. auto = goal when it reads like work and nobody was addressed, otherwise a chat (DM with one agent, group with several). */
-export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto' }) {
+export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto', channelId = null }) {
   text = String(text || '').trim().slice(0, 8000);
   if (!text) throw new Error('Pesan kosong');
+  // replying inside a goal thread: the message stays in that thread (PA answers, named heads join), it is not a new goal
+  const thread = channelId && db().channels.find((c) => c.id === channelId && c.goalId && c.members.includes(userId));
+  if (thread && !(Array.isArray(to) && to.length)) {
+    const m = postMessage(thread.id, userId, text);
+    onHumanMessage(m).catch((err) => { console.error('[orchestrate] goal thread', err); postMessage(thread.id, task(thread.goalId)?.assigneeId || userId, '⚠️ Maaf, ada galat: ' + err.message); });
+    return { action: 'chat', channelId: thread.id, members: thread.members.filter((x) => x !== userId), orchestrator: task(thread.goalId)?.assigneeId };
+  }
   const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
   const mentioned = [...text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase()).map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter(Boolean).map((e) => e.id);
   const ids = [...new Set([...(Array.isArray(to) ? to : []), ...mentioned])].filter((id) => emp(id)?.type === 'ai');
-  if (mode !== 'goal') {
-    const live = activeLiveMeeting(userId);
-    let intent = meetingIntent(text, ids); if (live && collab.isMeetingEnd(text)) intent = null;
-    if (live && !intent) { const chId = ensureDM(userId, pa.id); postMessage(chId, userId, text); postMessage(`mtg-${live.id}`, userId, text); collab.ownerSpeaks(live.id, text, userId); return { action: 'meeting-say', channelId: chId, meetingId: live.id, orchestrator: pa.id }; }   // inside a live meeting every message is said to the room
-    if (intent) { const chId = ensureDM(userId, pa.id); postMessage(chId, userId, text); return startChatMeeting({ text, userId, channelId: chId, ids, intent }); }
-  }
-  const action = mode === 'goal' ? 'goal' : mode === 'chat' ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
+  // a goal only when nobody was addressed, no meeting is going on or asked for, and the sentence reads like work (or the Owner picked "Goal")
+  const meet = mode === 'goal' ? null : meetingIntent(text, ids, userId);
+  const action = mode === 'goal' ? 'goal' : mode === 'chat' || meet ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
   if (action === 'goal') {
-    const chId = ensureDM(userId, pa.id);
-    postMessage(chId, userId, text);
     const t = submitGoal({ title: text.replace(/@[\w-]+/g, '').trim().slice(0, 150) || 'Goal dari Owner', description: text, userId });
-    postMessage(chId, pa.id, `🎯 **Goal diterima.** Saya pecah ke tim yang tepat dan kabari kalau ada kemajuan atau butuh keputusanmu.`, { taskId: t.id, goal: true });
+    const chId = ensureGoalThread(t) || ensureDM(userId, pa.id);
+    postMessage(chId, userId, text);
+    postMessage(chId, pa.id, `🎯 **Goal diterima** dan punya thread sendiri ini.\n_Definisi selesai:_ ${t.expected}\nKemajuan tiap bagian muncul di sini. Tanya "progresnya?" kapan saja, sebut nama kepala divisi untuk mengajaknya bicara, dan hasil akhirnya kamu review di **Butuh kamu** sebelum dianggap selesai.`, { taskId: t.id, goal: true });
+    postMessage(ensureDM(userId, pa.id), pa.id, `🎯 Goal baru: **${t.title.slice(0, 90)}**. Diskusinya pindah ke thread goal itu.`, { taskId: t.id, goal: true, channelRef: chId });
     return { action: 'goal', channelId: chId, taskId: t.id, orchestrator: pa.id };
   }
+  // everything else is a message in a conversation; onHumanMessage decides meeting / broadcast / reply in ONE place
   const members = ids.length ? ids : [pa.id];
   const chId = members.length === 1 ? ensureDM(userId, members[0]) : ensureGroup(userId, members);
   const m = postMessage(chId, userId, text);
   onHumanMessage(m).catch((err) => { console.error('[orchestrate] chat error', err); postMessage(chId, pa.id, '⚠️ Maaf, ada galat saat memproses pesan: ' + err.message); });
-  return { action: 'chat', channelId: chId, members, orchestrator: pa.id };
+  return { action: meet && (meet !== 'say' || !ids.length) ? 'meeting' : 'chat', channelId: chId, members, orchestrator: pa.id };
 }

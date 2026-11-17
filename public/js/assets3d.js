@@ -476,11 +476,23 @@ export function buildFbxRig(e, divisionHex) {
     aim(mid, tip, F.clone().sub(K));
   };
   // seated legs: each ankle at its height above the floor, ahead of the hip, knee bent forward over the seat
+  const DOWN = new THREE.Vector3(0, -1, 0);
+  let seatFwdApplied = 0, thighLen = 0.13;   // how far the body was slid forward on the seat, and the measured hip->knee length
   const seatLegs = () => {
     const fwd = g.getWorldDirection(V()); fwd.y = 0; fwd.normalize();
     const floor = g.getWorldPosition(V()).y + soleLift;
     for (const [th, sh, ft] of [[bones[BONE.thighL], bones[BONE.shinL], bones[BONE.footL]], [bones[BONE.thighR], bones[BONE.shinR], bones[BONE.footR]]]) {
       th.updateMatrixWorld(true);
+      if (chibi) {
+        // The old target put the ankle on the FLOOR, which a chibi's short legs cannot reach, so both legs stayed nearly straight down and went through the seat plank/cushion.
+        // Seated pose: thigh almost horizontal over the seat, shin hanging down in front of the seat edge (the body is slid forward below so the knee clears the edge).
+        sh.updateMatrixWorld(true); ft.updateMatrixWorld(true);
+        thighLen = th.getWorldPosition(V()).distanceTo(sh.getWorldPosition(V())) || thighLen;
+        aim(th, sh, fwd.clone().multiplyScalar(0.995).addScaledVector(DOWN, 0.1).normalize());
+        sh.updateMatrixWorld(true); ft.updateMatrixWorld(true);
+        aim(sh, ft, fwd.clone().multiplyScalar(0.12).add(DOWN).normalize());
+        continue;
+      }
       const F = th.getWorldPosition(V()).addScaledVector(fwd, chibi ? 0.11 * scale : 0.44); F.y = floor;
       twoBone(th, sh, ft, F, fwd);
     }
@@ -526,7 +538,7 @@ export function buildFbxRig(e, divisionHex) {
     /** something to carry in the right hand (a small mesh); it follows the hand and stays upright */
     setProp(mesh) { if (prop) g.remove(prop); prop = mesh; if (mesh) { mesh.visible = false; g.add(mesh); } },
     /** slide the body back with its chair: horizontal only, the height is set by ground() / seat() */
-    setSeatShift(k, dir) { if (dir) { clone.position.x = dir.x * k; clone.position.z = dir.z * k; } },
+    setSeatShift(k, dir) { if (dir) { clone.position.x = dir.x * k; clone.position.z = dir.z * k; seatFwdApplied = 0; } },
     /** distance level of detail (set from the office loop): only near agents cast shadows, far ones use the light mesh */
     /** choose the expression cell (0..15) of the 4x4 face sheet */
     setFace(i) { if (mat.userData.cell) mat.userData.cell.value.set(i % 4, Math.floor(i / 4)); },
@@ -554,9 +566,11 @@ export function buildFbxRig(e, divisionHex) {
       applyJoints([neck, head]);
       if (sitting) {
         seat(a); seatLegs();
+        // slide the body forward so the knees sit just past the front edge of the seat (edge ~0.225 m from the seat centre + clearance): shins then hang in front of it, not inside it
+        { const want = chibi ? Math.max(0, 0.275 - thighLen) : 0; if (Math.abs(want - seatFwdApplied) > 1e-4) { clone.position.z += want - seatFwdApplied; seatFwdApplied = want; clone.updateMatrixWorld(true); } }
         // the cape falls behind the chair back instead of through the seat
         if (bones.Cape1 && bones.Cape2) { const back = g.getWorldDirection(V()).multiplyScalar(-0.55); back.y = -1; aim(bones.Cape1, bones.Cape2, back); }
-      } else ground();
+      } else { if (seatFwdApplied) { clone.position.z -= seatFwdApplied; seatFwdApplied = 0; } ground(); }
       // gesture clips move the arms themselves; everywhere else IK places the hands (rest, swing, lap, keyboard, talk)
       const typing = sitting && a && a.e.status === 'working' && a.mode === 'desk' && !a.gest;
       const gestNow = a && a.gest && now < a.gest.until ? a.gest.type : null;

@@ -78,6 +78,23 @@ export function buildLife({ world, center, R, renderer, camera }) {
     w.scale.setScalar(s); w.userData = { tail, r: R + 110 + i * 40, y: 38 + i * 22, a: rnd() * 6.28, sp: 0.012 + i * 0.002 }; whales.push(w); g.add(w);
   }
 
+  // ── fireflies: warm white glowing dots hovering in clusters around the central plaza (ambience, by day and night). One Points draw call; each dot twinkles in the shader.
+  const FN = 84, fbase = new Float32Array(FN * 3), fpos = new Float32Array(FN * 3), fph = new Float32Array(FN), fsz = new Float32Array(FN), fsp = new Float32Array(FN);
+  let fcount = 0;
+  { const spots = 8, per = Math.ceil(FN / spots); for (let sp0 = 0; sp0 < spots && fcount < FN; sp0++) { const a = (sp0 / spots) * Math.PI * 2 + rnd() * 0.5, r = 6 + rnd() * 17, cx = center.x + Math.cos(a) * r, cz = center.z + Math.sin(a) * r;
+    for (let k = 0; k < per && fcount < FN; k++, fcount++) { const i = fcount; fbase[i * 3] = cx + (rnd() - 0.5) * 6; fbase[i * 3 + 1] = 0.5 + rnd() * 2.1; fbase[i * 3 + 2] = cz + (rnd() - 0.5) * 6; fph[i] = rnd() * 6.28; fsz[i] = 0.55 + rnd() * 0.7; fsp[i] = 0.25 + rnd() * 0.5; } } }
+  const fireN = fcount; fpos.set(fbase);
+  const fGeo = new THREE.BufferGeometry(); fGeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3)); fGeo.setAttribute('aPh', new THREE.BufferAttribute(fph, 1)); fGeo.setAttribute('aSz', new THREE.BufferAttribute(fsz, 1));
+  const fMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    uniforms: { uT: { value: 0 }, uScale: { value: 500 }, uK: { value: 0.8 } },
+    vertexShader: 'attribute float aPh; attribute float aSz; uniform float uT; uniform float uScale; uniform float uK; varying float vA; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; float tw = 0.55 + 0.45 * sin(uT * 1.8 + aPh * 3.0); vA = tw * uK; gl_PointSize = clamp(0.4 * aSz * uScale / max(0.5, -mv.z), 3.5, 44.0); }',
+    fragmentShader: 'varying float vA; void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; float core = smoothstep(1.0, 0.0, d); float a = pow(core, 1.5) * vA; if (a < 0.01) discard; gl_FragColor = vec4(vec3(1.0, 0.96, 0.72) * (0.65 + core * 0.9), a); }',
+  });
+  const fireflies = new THREE.Points(fGeo, fMat); fireflies.frustumCulled = false; fireflies.renderOrder = 4; g.add(fireflies); fGeo.setDrawRange(0, Math.min(fireN, 84));
+  let fireShow = 84, fireK = 0.8;
+  const setFireflies = (n) => { fireShow = Math.max(0, Math.min(fireN, Math.round(n))); fGeo.setDrawRange(0, fireShow); fireflies.visible = fireShow > 0; };
+
   // ── spores / fireflies drifting over the plaza and the promenade
   const SN = 110, sp = new Float32Array(SN * 3), sd = [];
   for (let i = 0; i < SN; i++) { const a = rnd() * 6.28, r = rnd() * (R + 10); sd.push({ a, r, y: 0.6 + rnd() * 9, ph: rnd() * 6.28, sp: 0.02 + rnd() * 0.05 }); }
@@ -131,6 +148,13 @@ export function buildLife({ world, center, R, renderer, camera }) {
   const rot = new THREE.Quaternion(), yAxis = new THREE.Vector3(0, 1, 0);
   const update = (dt, t) => {
     updateDream(t);
+    if (fireShow > 0) {
+      const cd = Math.hypot(camera.position.x - center.x, camera.position.z - center.z); fireflies.visible = cd < 95 && camera.position.y < 70;   /* center is a plain {x,z}, not a Vector3 */
+      if (fireflies.visible) {
+        for (let i = 0; i < fireShow; i++) { const sp1 = fsp[i], ph = fph[i]; fpos[i * 3] = fbase[i * 3] + Math.sin(t * sp1 + ph) * 0.9; fpos[i * 3 + 1] = fbase[i * 3 + 1] + Math.sin(t * 0.7 * sp1 + ph * 1.7) * 0.35; fpos[i * 3 + 2] = fbase[i * 3 + 2] + Math.cos(t * sp1 * 0.8 + ph) * 0.9; }
+        fGeo.attributes.position.needsUpdate = true; fMat.uniforms.uT.value = t; fMat.uniforms.uK.value = fireK; fMat.uniforms.uScale.value = (renderer.domElement.height / 2) * camera.projectionMatrix.elements[5];
+      }
+    }
     cloudMat.uniforms.uScale.value = (renderer.domElement.height / 2) * camera.projectionMatrix.elements[5]; drift += dt * 0.0016; clouds.rotation.y = drift + lonRot; for (const tr of trails) { if (!tr.visible) continue; tr.position.addScaledVector(tr.userData.dir, dt * 14); if (Math.hypot(tr.position.x - center.x, tr.position.z - center.z) > 560) { tr.position.set(center.x - tr.userData.dir.x * 500 + (rnd() - 0.5) * 300, tr.position.y, center.z - tr.userData.dir.z * 500 + (rnd() - 0.5) * 300); } }
     for (let i = 0; i < BN; i++) {
       const b = bd[i]; b.a += b.sp * dt; const x = center.x + Math.cos(b.a) * b.r, z = center.z + Math.sin(b.a) * b.r, y = b.y + Math.sin(t * 0.8 + b.ph) * 1.4;
@@ -155,6 +179,7 @@ export function buildLife({ world, center, R, renderer, camera }) {
     u.uShadow.value.copy(C(0x1c2147)).lerp(C(0x8f7aa8), 1 - night).lerp(C(0xaebbd8), day * (1 - dusk * 0.5));
     u.uFog.value.copy(hor); u.uGain.value = 0.55 + day * 0.2;
     mistCol.copy(hor).lerp(C(0x9fd9e6), 0.4).lerp(C(0xffffff), 0.15 * day);
+    fireK = Math.max(0.75, Math.min(1.25, 0.75 + 0.5 * Math.max(night, dusk, 1 - day)));   /* softer in bright daylight, glowing at dusk and night */
     spores.visible = night > 0.3 || dusk > 0.6; auroras.forEach((m) => (m.visible = night > 0.55));
   };
   /** density, variety, cirrus, lon, lat are 0..1; contrails is a count 0..6 */
@@ -168,5 +193,5 @@ export function buildLife({ world, center, R, renderer, camera }) {
     if (o.lat != null) clouds.scale.setScalar(0.7 + o.lat * 0.6);
   };
   const setDreamLite = (on) => { dreamLite = !!on; };
-  return { update, setSky, setClouds, setDream, setDreamLite, group: g };
+  return { update, setSky, setClouds, setDream, setDreamLite, setFireflies, group: g };
 }

@@ -70,31 +70,120 @@ export function ownerSpeaks(meetingId, text, authorId) {
   const m = db().meetings.find((x) => x.id === meetingId); if (!m || !(m.status === 'waiting_owner' || m.status === 'running')) return false;
   m.transcript = m.transcript || []; m.transcript.push({ t: Date.now(), speakerId: authorId || m.ownerId, text: String(text) });
   if (m.status === 'waiting_owner') { m.pending = [...(m.pending || []), { t: Date.now(), text: String(text) }]; m.lastOwnerAt = Date.now(); if (isMeetingEnd(text)) m.ownerFinishedAt = Date.now(); }
-  store.upsert('meetings', m); return true;
+  store.upsert('meetings', m);
+  engine.event('meeting_say', authorId || m.ownerId, clip(text, 200), { meetingId });   // the room hears the Owner too: bubble in 3D, participants turn to look
+  return true;
 }
+/** what is TRUE about a participant right now (open tasks from the database), so the model cannot invent work */
+function stateLine(p) {
+  const open = db().tasks.filter((t) => t.assigneeId === p.id && !['done', 'cancelled', 'failed', 'blocked'].includes(t.status)).slice(0, 2);
+  return open.length ? 'mengerjakan ' + open.map((t) => `"${clip(t.title, 50)}"`).join(', ') : 'tidak ada tugas aktif';
+}
+const GENERIC_TOPIC_RE = /^diskusi owner dengan\b/i;
+// small talk and room logistics never cost a model call: "halo selamat datang", "masuk ke ruang rapat", "ok", "siap"
+const SMALLTALK_RE = /^(?:halo|hai|hi|hello|hey|selamat\s+(?:pagi|siang|sore|malam|datang)|terima\s*kasih|makasih|thanks?|ok(?:e|ay)?|oke+|sip|baik(?:lah)?|siap|mantap|good|ya|iya|ayo|yuk|masuk|duduk|semua(?:nya)?\s+(?:sudah\s+)?(?:hadir|datang|kumpul))\b/i;
+const CONTENT_RE = /\?|\b(?:apa|apakah|bagaimana|gimana|kenapa|mengapa|berapa|kapan|siapa|mana|tolong|buat|bikin|rencana|strategi|target|bahas|diskusi(?:kan)?|usul|ide|masalah|risiko|anggaran|budget|harga|jual|penjualan|promo|kampanye|produk|laporan|data|evaluasi|putus(?:kan)?|setuju|tidak\s+setuju|lanjut(?:kan)?|jalankan|prioritas|deadline|jadwal)\b/i;
+const isSmallTalk = (t) => { const s = String(t || '').trim(); return s.split(/\s+/).length <= 8 && SMALLTALK_RE.test(s) && !CONTENT_RE.test(s); };
+const pickFresh = (arr, transcript) => { const said = new Set((transcript || []).slice(-10).map((x) => x.text)); return arr.find((x) => !said.has(x)) || arr[0]; };
+
 async function liveTurn({ topic, agenda, people, chair, transcript, ownerText, open }) {
-  const speakers = pickSpeakers(people, chair);
-  if (llm.isLive() && llm.budgetLeft() > 0) {
-    try {
-      const tail = (transcript || []).slice(-8).map((x) => `${emp(x.speakerId)?.name}: ${clip(x.text, 200)}`).join('\n');
-      const roster = speakers.map((p) => `${p.id} | ${p.name} | ${p.title}`).join('\n');
-      const prompt = open
-        ? `Rapat: ${topic}\nAgenda: ${agenda || '-'}\nPeserta (id | nama | jabatan):\n${roster}\n\nKetua ${chair.name} membuka rapat dan mengusulkan 3 poin agenda singkat sesuai topik, lalu mempersilakan Owner. Tulis 1-2 giliran (maks 45 kata masing-masing), mulai dari ketua. Jangan mengarang data atau pekerjaan yang tidak ada.`
-        : `Rapat: ${topic}\nPeserta (id | nama | jabatan):\n${roster}\n\nPercakapan terakhir:\n${tail}\n\nOwner berkata: "${clip(ownerText, 600)}"\nTulis 1-3 giliran jawaban dari peserta yang paling relevan (maks 40 kata masing-masing, menjawab Owner langsung). Jangan mengarang data atau pekerjaan; bila belum tahu, katakan akan dicek. Ketua boleh merangkum.`;
-      const out = await llm.json({
-        system: `Kamu juru tulis rapat ${db().company.name}. Bahasa ${db().company.language}, ringkas, konkret.`, prompt,
-        schema: { type: 'object', additionalProperties: false, required: ['lines'], properties: { lines: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['speaker_id', 'text'], properties: { speaker_id: { type: 'string', enum: speakers.map((p) => p.id) }, text: { type: 'string' } } } } } },
-        employee: chair, effort: 'low', model: llm.defaultModels().small, maxTokens: 1200,
-      });
-      const lines = (out?.lines || []).filter((l) => speakers.some((s) => s.id === l.speaker_id) && String(l.text || '').trim()).slice(0, 3).map((l) => ({ speaker_id: l.speaker_id, text: clip(String(l.text).trim(), 300) }));
-      if (lines.length) return lines;
-    } catch (err) { console.warn('[meeting] giliran AI gagal, memakai template gratis:', err.message); }
+  const speakers = pickSpeakers(people, chair), owner = 'Owner';
+  const others = speakers.filter((p) => p !== chair);
+  // 1) opening: zero tokens and nothing invented. Who is here, what each one really works on, and one question to the Owner.
+  if (open) {
+    const who = others.map((p) => `${p.name} (${p.title}; ${stateLine(p)})`).join(', ');
+    const ask = GENERIC_TOPIC_RE.test(topic) || !String(topic).trim()
+      ? `Apa yang ingin ${owner} bahas atau putuskan? Sebutkan tujuannya; sebut nama bila ingin jawaban dari orang tertentu.`
+      : `Topik: ${clip(topic, 90)}. Agar efisien: hasil apa yang ${owner} harapkan dari rapat ini?`;
+    return [{ speaker_id: chair.id, text: `Rapat dibuka. Hadir: ${who || '-'}. ${ask}` }];
   }
-  const tp = clip(topic, 60), other = speakers.find((p) => p !== chair);
-  if (open) return [{ speaker_id: chair.id, text: `Rapat dimulai. Topik: ${tp}. Usulan agenda: (1) tujuan dan hasil yang diharapkan, (2) pandangan tiap divisi, (3) keputusan dan tindak lanjut. Silakan Owner mengarahkan.` }];
-  const lines = [{ speaker_id: chair.id, text: `Dicatat: "${clip(ownerText, 90)}". Saya teruskan ke yang paling relevan.` }];
-  if (other) lines.push({ speaker_id: other.id, text: TPL[Math.floor(Math.random() * TPL.length)](div(other.divisionId)?.name || 'tim saya', other.title || 'perwakilan', tp) });
-  return lines;
+  // 2) greetings / logistics: the chair answers alone, without a model call, and never with fake opinions
+  if (isSmallTalk(ownerText)) {
+    return [{ speaker_id: chair.id, text: pickFresh([
+      `Halo, ${owner}. Semua sudah di ruangan. Silakan sampaikan topik atau pertanyaan pertama.`,
+      `Siap, ${owner}. Kami mendengarkan: apa yang mau dibahas dulu?`,
+      `Baik. Sebut nama bila ingin jawaban dari orang tertentu, atau sampaikan masalahnya dan saya arahkan ke yang paling relevan.`,
+    ], transcript) }];
+  }
+  const low = String(ownerText || '').toLowerCase();
+  const addressed = (engine.namesIn?.(ownerText) || []).filter((id) => speakers.some((s) => s.id === id));
+  const asked = addressed.length ? addressed.map(emp) : others.slice(0, 3);
+  // 3) "apa ingatan kalian?": read the REAL memory notes aloud; never improvise a memory
+  if (/\b(ingatan\w*|ingat\s+apa|memori\w*|isi\s+otak|yang\s+kalian\s+ingat|yang\s+kamu\s+ingat)\b/.test(low)) {
+    return asked.slice(0, 3).map((p) => {
+      const n = brain.findNote(`Memori ${p.name}`);
+      const items = n ? n.content.split('\n').filter((l) => l.startsWith('- ')).slice(-3).map((l) => clip(l.replace(/^- [^:]+:\s*/, ''), 110)) : [];
+      return { speaker_id: p.id, text: items.length ? `Ini isi catatan ingatan saya apa adanya (3 terakhir): ${items.map((x, i) => `(${i + 1}) ${x}`).join(' ')} Sebagian berasal dari rapat yang isinya belum terverifikasi.` : 'Catatan ingatan saya masih kosong.' };
+    });
+  }
+  // 4) the Owner corrects us ("kalian halu", "belum ada brief"): take it back plainly, once, without new promises
+  if (/\b(halu\w*|halusinasi|ngaco|ngawur|ngarang|mengarang|keliru|aneh\s+kalian|belum\s+(?:ada|ngasih|kasih|memberi|kasi)\s+(?:brief|arahan|target|instruksi|tugas)|(?:tidak|ga|gak|nggak)\s+(?:lagi\s+)?ada\s+(?:brief|target|arahan))\b/.test(low)) {
+    return [{ speaker_id: chair.id, text: `Kamu benar, ${owner}. Belum ada brief, target, atau data dari kamu, jadi angka dan rencana yang tadi disebut tidak berdasar dan saya tarik. Tidak ada yang akan dikerjakan sampai kamu memberi arahan. Apa yang mau dibahas?` }];
+  }
+  // 5) "kalian lagi ngerjain apa?": the task board answers, not the model
+  if (/\b(?:lagi|sedang|lg)\s+(?:ngerja\w*|kerja\w*|mengerjakan|ngapain|apa)\b|\bngapain\b|\bkerjaan\s+(?:kalian|kamu)\b/.test(low)) {
+    return asked.slice(0, 3).map((p) => ({ speaker_id: p.id, text: `Menurut papan tugas: saya ${stateLine(p)}.` }));
+  }
+  // 6) real content: ONE small model call answers for the relevant people, grounded in facts and told to be critical
+  const failMsg = (why) => [{ speaker_id: chair.id, text: `Maaf, ${owner}, mesin AI sedang bermasalah (${clip(why, 70)}), jadi peserta belum bisa menjawab dengan benar. Arahanmu sudah tercatat di notulen; kirim ulang sebentar lagi.` }];
+  if (!llm.isLive()) return [{ speaker_id: chair.id, text: `Arahan dicatat di notulen. Mode simulasi (tanpa AI) aktif, jadi peserta tidak memberi pendapat karangan. Aktifkan Groq di Pengaturan agar diskusi berjalan.` }];
+  if (llm.budgetLeft() <= 0) return failMsg('anggaran harian habis');
+  const tail = (transcript || []).slice(-8).map((x) => `${x.speakerId === chair.id ? chair.name : emp(x.speakerId)?.type === 'human' ? owner : emp(x.speakerId)?.name || x.speakerId}: ${clip(x.text, 220)}`).join('\n');
+  const notes = brain.search(`${topic} ${ownerText}`, { limit: 6 }).filter((n) => !/^(Memori|Playbooks?|Meetings)\b/.test(n.folder)).slice(0, 2).map((n) => `- [${n.folder}] ${n.title}: ${clip(n.snippet, 200)}`).join('\n');
+  const roster = speakers.map((p) => `${p.id} | ${p.name} | ${p.title} | ${div(p.divisionId)?.name || '-'} | ${stateLine(p)}`).join('\n');
+  const prompt = `RAPAT: ${clip(topic, 120)}${agenda ? `\nAgenda: ${clip(agenda, 200)}` : ''}
+PESERTA (id | nama | jabatan | divisi | keadaan nyata):
+${roster}
+Ketua: ${chair.name}${addressed.length ? `\nOwner menyapa langsung: ${addressed.map((id) => emp(id)?.name).join(', ')} (dia yang menjawab pertama)` : ''}
+
+FAKTA DARI BRAIN PERUSAHAAN (satu-satunya data yang boleh dikutip):
+${notes || '- (tidak ada catatan relevan)'}
+
+PERCAKAPAN TERAKHIR:
+${tail || '-'}
+
+OWNER BARU SAJA BERKATA: "${clip(ownerText, 700)}"
+
+Tulis giliran bicara berikutnya. ATURAN:
+1. Jawab yang benar-benar ditanyakan Owner, bukan topik lain. Hanya peserta yang relevan bicara (1-3 orang); yang tidak punya kontribusi baru DIAM.
+2. Bersikap kritis: sebut risiko, asumsi yang lemah, atau informasi yang kurang; boleh tidak setuju dengan Owner atau rekan, dengan alasan singkat. Tidak ada basa-basi, tidak mengulang poin yang sudah diucapkan.
+3. DILARANG mengarang angka, data historis, kampanye, hasil, atau pekerjaan. Fakta hanya dari blok FAKTA dan keadaan nyata peserta; isi transkrip sebelumnya BUKAN fakta. Bila data tidak ada, katakan "datanya belum ada" dan usulkan cara mendapatkannya.
+3b. DILARANG berjanji ("saya akan segera memeriksa/menyusun...") kecuali Owner baru saja memberi perintah itu. Bila Owner belum memberi brief/target, katakan terus terang dan tanyakan arahannya.
+3c. Bila Owner mengoreksi atau membantah, terima koreksinya, tarik klaim yang salah, dan JANGAN mengulang klaim itu dalam bentuk lain.
+4. Bila arahan Owner kabur, cukup ketua yang bertanya SATU pertanyaan klarifikasi.
+5. Maks 45 kata per giliran, bahasa ${db().company.language} santai-profesional, tanpa menulis nama sendiri di awal.
+6. "decision": isi satu kalimat bila Owner baru saja memutuskan/menyetujui sesuatu; selain itu string kosong.`;
+  const schema = { type: 'object', additionalProperties: false, required: ['lines', 'decision'], properties: { lines: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['speaker_id', 'text'], properties: { speaker_id: { type: 'string', enum: speakers.map((p) => p.id) }, text: { type: 'string' } } } }, decision: { type: 'string' } } };
+  const system = `Kamu menulis giliran bicara rapat ${db().company.name} yang jujur dan kritis. Keluarkan JSON sesuai skema.`;
+  let lastErr = null;
+  for (const model of [llm.defaultModels().small, llm.defaultModels().worker]) {   // the small model first; one retry on the larger one (it truncates JSON less often)
+    try {
+      const out = await llm.json({ system, prompt, schema, employee: chair, effort: 'low', model, maxTokens: 1800 });
+      const lines = (out?.lines || []).filter((l) => speakers.some((s) => s.id === l.speaker_id) && String(l.text || '').trim()).slice(0, 3).map((l) => ({ speaker_id: l.speaker_id, text: clip(String(l.text).trim(), 320) }));
+      if (!lines.length) throw new Error('jawaban kosong');
+      lines.decision = clip(String(out.decision || '').trim(), 200);
+      return lines;
+    } catch (err) { lastErr = err; console.warn('[meeting] giliran AI gagal (' + model + '):', err.message); }
+  }
+  return failMsg(lastErr?.message || 'tidak diketahui');
+}
+/** Meetings whose loop is alive in THIS process. A meeting saved as running/waiting_owner without a loop (the server restarted, or an older build crashed)
+ *  can never finish: it kept agents in status "meeting" forever and swallowed every Owner chat message into a dead room. */
+export const liveLoops = new Set();
+export function sweepOrphanMeetings() {
+  const now = Date.now();
+  for (const m of db().meetings) {
+    if (!(m.status === 'running' || m.status === 'waiting_owner') || liveLoops.has(m.id) || now - (m.createdAt || 0) < 5000) continue;
+    m.status = 'interrupted'; m.endedAt = now; m.error = 'Rapat terputus (server dimulai ulang)'; store.upsert('meetings', m);
+    for (const pid of m.participants || []) { const p = emp(pid); if (p) delete p.meetingUntil; }
+  }
+  // anyone still marked "meeting" while sitting in no live meeting goes back to work
+  const inLive = new Set(db().meetings.filter((x) => (x.status === 'running' || x.status === 'waiting_owner') && liveLoops.has(x.id)).flatMap((x) => x.participants || []));
+  for (const p of db().employees) {
+    if (p.type !== 'ai' || p.status !== 'meeting' || inLive.has(p.id)) continue;
+    if (p.meetingUntil && p.meetingUntil > now && p.kickoff) continue;   // short goal kickoff huddles have no meeting record
+    delete p.meetingUntil; delete p.kickoff; engine.setStatus(p, p.currentTaskId ? 'working' : 'idle', p.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja', p.currentTaskId);
+  }
 }
 /** Stop a running meeting right away (its participants are free for a new one); the running loop notices and winds down. */
 export function cancelMeeting(id) {
@@ -109,14 +198,14 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
   if (mode === 'deep' && !llm.isLive()) throw new Error('Rapat mode mendalam membutuhkan provider AI aktif (Groq/Claude)');
   const chair = emp(chairId) || emp(participantIds[0]) || emp('aria');
   // an agent sits in one meeting at a time (otherwise the first meeting to end would release them from the second)
-  const busyIds = new Set(db().meetings.filter((x) => x.status === 'running' || x.status === 'waiting_owner').flatMap((x) => x.participants || []));
+  const busyIds = new Set(db().meetings.filter((x) => (x.status === 'running' || x.status === 'waiting_owner') && liveLoops.has(x.id)).flatMap((x) => x.participants || []));   // only meetings that are really running count; a dead record never blocks anyone
   const people = [...new Set([chair.id, ...participantIds])].map(emp).filter((e) => e && e.type === 'ai' && !busyIds.has(e.id)).slice(0, 25);
   if (!people.includes(chair)) throw new Error(`${chair.name} sedang ikut rapat lain. Tunggu rapat itu selesai.`);
   if (people.length < 2) throw new Error('Rapat butuh minimal 2 peserta AI');
   const id = store.uid('mtg');
   const represented = [...new Set(representedParticipantIds.length ? representedParticipantIds : people.map((p) => p.id))].filter((x) => emp(x)?.type === 'ai');
   const m = store.upsert('meetings', { id, topic: clip(topic, 160), agenda: clip(agenda, 2000), chairId: chair.id, participants: people.map((p) => p.id), representedParticipants: represented, ownerLed: !!ownerLed, ownerId, status: ownerLed ? 'waiting_owner' : 'running', transcript: [], minutes: '', actionItems: [], originTaskId, fromChat, mode, createdAt: Date.now() });
-  const meetingId = id; const isCancelled = () => !!db().meetings.find((x) => x.id === meetingId)?.cancelled;
+  const meetingId = id; liveLoops.add(id); const isCancelled = () => !!db().meetings.find((x) => x.id === meetingId)?.cancelled;
   if (onStart) { try { onStart(m); } catch (err) { console.warn('[meeting] onStart:', err.message); } }
   store.upsert('channels', { id: `mtg-${id}`, kind: 'meeting', name: `Rapat: ${clip(topic, 60)}`, members: [...new Set([ownerId, ...m.participants])], meetingId: id, topic: agenda });
   for (const p of people) { p.meetingUntil = Date.now() + (ownerLed ? 125 : 10) * 60000; engine.setStatus(p, 'meeting', ownerLed ? 'Mendengarkan Owner' : `Rapat: ${clip(topic, 40)}`, p.currentTaskId); }
@@ -135,8 +224,9 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
     await wait(db().settings.meetingGatherMs ?? 14000); // let everyone walk to the Conference Hall
     if (isCancelled()) throw new Error('Rapat dibatalkan');
     const playLines = async (lines) => {
-      for (const line of lines) {
+      for (const [i, line] of lines.entries()) {
         if (isCancelled()) throw new Error('Rapat dibatalkan');
+        if (i > 0 && m.pending?.length) break;   // the Owner spoke again: the rest of this (now stale) turn is dropped, the room answers the new message instead
         const p = emp(line.speaker_id); if (!p) continue;
         engine.setStatus(p, 'meeting', 'Sedang bicara di rapat', p.currentTaskId);
         say(p, line.text);
@@ -156,7 +246,9 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
           const texts = m.pending.splice(0).map((x) => x.text); store.upsert('meetings', m); lastActivity = Date.now();
           if (m.ownerFinishedAt) break;
           if (HOLD_RE.test(texts.join(' '))) continue;
-          await playLines(await liveTurn({ topic, agenda, people, chair, transcript: m.transcript, ownerText: texts.join('\n') }));
+          const turn = await liveTurn({ topic, agenda, people, chair, transcript: m.transcript, ownerText: texts.join('\n') });
+          if (turn.decision) { m.decisions = [...(m.decisions || []), turn.decision]; store.upsert('meetings', m); }   // the Owner's decisions go straight into the minutes
+          await playLines(turn);
           lastActivity = Date.now(); continue;
         }
         if (Date.now() - lastActivity > idleMs) { m.idleClosed = true; break; }
@@ -204,7 +296,7 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
     const ids = people.map((p) => p.id);   // action items go to people in the meeting (a 170-id enum in the schema cost ~700 tokens per call)
     let out = scripted ? scripted.minutes : await llm.json({
       system: briefPrompt(chair) + '\nKamu memimpin rapat ini dan menulis notulen resmi.',
-      prompt: `Transkrip rapat "${topic}":\n${m.transcript.map((x) => `${emp(x.speakerId)?.name}: ${x.text}`).join('\n')}\n\nTulis notulen: ringkasan, keputusan, dan action item (maks 3, hanya yang benar-benar perlu dan sesuai topik; jangan menciptakan proyek baru) dengan penanggung jawab dari peserta rapat atau karyawan lain yang paling cocok.`,
+      prompt: `Transkrip rapat "${topic}":\n${m.transcript.slice(-40).map((x) => `${emp(x.speakerId)?.name}: ${clip(x.text, 300)}`).join('\n')}\n\n${m.decisions?.length ? `Keputusan Owner yang tercatat selama rapat (wajib masuk "decisions"):\n${m.decisions.map((d) => '- ' + d).join('\n')}\n\n` : ''}Hanya tulis hal yang benar-benar diucapkan di transkrip; jangan menambah angka atau rencana baru. Bila rapat hanya berisi sapaan tanpa isi, tulis itu apa adanya dan kosongkan action item.\nTulis notulen: ringkasan, keputusan, dan action item (maks 3, hanya yang benar-benar perlu dan sesuai topik; jangan menciptakan proyek baru) dengan penanggung jawab dari peserta rapat atau karyawan lain yang paling cocok.`,
       schema: { type: 'object', additionalProperties: false, required: ['summary', 'decisions', 'action_items'], properties: {
         summary: { type: 'string' }, decisions: { type: 'array', items: { type: 'string' } },
         action_items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'description', 'assignee_id', 'priority'], properties: { title: { type: 'string', minLength: 3 }, description: { type: 'string' }, assignee_id: { type: 'string', enum: ids }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } } } },
@@ -230,7 +322,9 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
     engine.postMessage(`mtg-${id}`, chair.id, `📝 **Notulen**\n${m.minutes}`, { meetingId: id });
     engine.event('meeting_done', chair.id, `Rapat "${clip(topic, 60)}" selesai: ${created.length} action item dibagikan`, { meetingId: id, noteId: note.id });
     await wait(3000);
-    for (const p of people) brain.remember(p, `Ikut rapat "${clip(topic, 60)}": ${clip(out.summary, 140)}`);
+    // memory keeps only what was DECIDED, not the model's summary (summaries of chatter turned into "facts" like "ROAS naik 12%" in the next meeting)
+    const decided = [...(m.decisions || []), ...(out.decisions || [])].filter(Boolean).slice(0, 3);
+    for (const p of people) brain.remember(p, `Ikut rapat "${clip(topic, 60)}"; ${decided.length ? 'keputusan: ' + clip(decided.join('; '), 160) : 'tanpa keputusan (belum ada brief/data yang diputuskan)'}`);
     return m;
   } catch (err) {
     if (err.message === 'Rapat dibatalkan') { m.status = 'cancelled'; store.upsert('meetings', m); return m; }
@@ -238,6 +332,7 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
     engine.event('alert', chair.id, `Rapat "${clip(topic, 50)}" gagal: ${clip(err.message, 120)}`, { meetingId: id });
     throw err;
   } finally {
+    liveLoops.delete(id);
     // people who already sit in a newer meeting (e.g. this one was replaced by "undang Maya saja") must not be released from it
     const inNewer = new Set(db().meetings.filter((x) => x.id !== id && (x.status === 'running' || x.status === 'waiting_owner')).flatMap((x) => x.participants || []));
     for (const p of people) { if (inNewer.has(p.id)) continue; delete p.meetingUntil; engine.setStatus(p, p.currentTaskId ? 'working' : 'idle', p.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja', p.currentTaskId); }

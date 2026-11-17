@@ -77,6 +77,7 @@ const FX = {
   task: () => { tone(N.E5, 0.35, 'sine', 0.13); tone(N.B5, 0.5, 'sine', 0.12, 0, 0.1); tone(N.E6, 0.7, 'triangle', 0.05, 0, 0.2); },
   brain: () => { tone(110, 1.1, 'sine', 0.07, 3.2); tone(N.E6, 1.0, 'sine', 0.025, 0, 0.12); tone(N.B5, 0.8, 'triangle', 0.03, 0, 0.18); air(0.9, 200, 2600, 0.03); },
   absorb: () => { tone(330, 0.5, 'sine', 0.1, 2); tone(N.A5, 0.6, 'sine', 0.07, 0, 0.08); },
+  tele: () => { tone(N.C5, 0.16, 'sine', 0.04); tone(N.G5, 0.18, 'sine', 0.04, 0, 0.07); tone(N.C6, 0.3, 'triangle', 0.035, 0, 0.14); air(0.35, 900, 5200, 0.015); },
   done: () => { [N.C5, N.E5, N.G5, N.C6].forEach((f, i) => tone(f, 0.4, 'triangle', 0.1, 0, i * 0.075)); },
   ask: () => { tone(N.A5, 0.18, 'sine', 0.1); tone(N.A5, 0.25, 'sine', 0.1, 0, 0.2); },
   approved: () => { [N.G5, N.B5, N.D5 * 2].forEach((f, i) => tone(f, 0.45, 'sine', 0.1, 0, i * 0.09)); },

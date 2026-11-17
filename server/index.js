@@ -106,7 +106,7 @@ on('POST', '/api/messages', (b) => {
   engine.onHumanMessage(m).catch((err) => console.error('[onHumanMessage]', err));
   return m;
 });
-on('POST', '/api/orchestrate', (b) => engine.orchestrate({ text: need(b.text, 'Pesan kosong'), userId: b.userId || db().settings.currentUserId, to: b.to || [], mode: b.mode || 'auto' }));
+on('POST', '/api/orchestrate', (b) => engine.orchestrate({ text: need(b.text, 'Pesan kosong'), userId: b.userId || db().settings.currentUserId, to: b.to || [], mode: b.mode || 'auto', channelId: b.channelId || null }));
 on('POST', '/api/dm', (b) => ({ id: engine.ensureDM(b.userId || db().settings.currentUserId, need(b.with, 'with wajib')) }));
 on('POST', '/api/channels', (b) => store.upsert('channels', { id: slug(need(b.name, 'Nama wajib')), name: slug(b.name), kind: 'channel', divisionId: b.divisionId || null, topic: b.topic || '' }));
 
