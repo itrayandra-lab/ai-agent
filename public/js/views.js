@@ -255,8 +255,8 @@ export const OfficeView = {
     if (colls.has('*') || colls.has('messages') || colls.has('employees') || colls.has('channels') || colls.has('tasks')) this.dockRender();
     const k = kpis(); const d = D(); const h = d.host || {};
     ov.querySelector('#okpi').innerHTML = [
-      [k.working, 'aktif'], [k.active, 'tugas'], [k.doneToday, 'selesai'], [k.approvals, 'approval'],
-    ].map(([v, l], idx) => `<div class="glass kpi-mini" ${idx === 3 && v ? 'style="border-color:var(--warn);cursor:pointer" data-go="approvals"' : ''}><b>${v}</b><span>${l}</span></div>`).join('');
+      [k.working, 'agen bekerja'], ...(k.approvals ? [[k.approvals, 'perlu keputusan']] : []),
+    ].map(([v, l], idx) => `<div class="glass kpi-mini" ${idx === 1 && v ? 'style="border-color:var(--warn);cursor:pointer" data-go="approvals"' : ''}><b>${v}</b><span>${l}</span></div>`).join('');
     ov.querySelector('[data-go]')?.addEventListener('click', () => navigate('approvals'));
     const s = d.settings;
     const ai = d.employees.filter((e) => e.type === 'ai');
@@ -403,7 +403,7 @@ export const OfficeView = {
     const el = ov.querySelector('#odmsgs'), sig = msgs.map((m) => m.id).join(',');
     if (el && sig !== this._odSig) {
       this._odSig = sig; const near = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-      el.innerHTML = msgs.map((m) => { const a = emp(m.authorId), me = m.authorId === S.me; return `<div class="od-m ${me ? 'me' : ''}">${me ? '' : avatar(a)}<div class="od-b"><div class="od-w">${me ? 'Anda' : esc(a?.name || m.authorId)}</div><div class="md">${md(String(m.text).slice(0, 700))}</div></div></div>`; }).join('');
+      el.innerHTML = msgs.map((m) => { const a = emp(m.authorId), me = m.authorId === S.me; return `<div class="od-m ${me ? 'me' : ''}">${me ? '' : avatar(a)}<div class="od-b"><div class="od-w">${me ? 'Anda' : esc(a?.name || m.authorId)}</div><div class="md">${md(String(m.text).slice(0, 4000))}</div></div></div>`; }).join('');
       if (near || !this._odInit) el.scrollTop = el.scrollHeight; this._odInit = true;
     }
     /* who is busy right now: chips + spotlight in the 3D world */
@@ -772,71 +772,51 @@ export const OfficeView = {
 // ═════════════════════ DASHBOARD ═════════════════════
 export const DashboardView = {
   mount(root) {
-    root.innerHTML = `<div class="page">
-      <div class="hero"><div><div class="hero-k">${esc(D().company.name)}</div><h2>Halo, ${esc(me().name.split(' ')[0])} 👋</h2><div class="hero-s" id="dhs"></div></div><div class="hero-a"><button class="btn primary" id="hgo">▶ Masuk Kantor 3D</button><button class="btn" id="hgoal">🎯 Goal baru</button></div></div>
-      <div class="kpi-grid" id="dk"></div>
-      <div class="dash">
-        <div style="display:grid;gap:16px">
-          <div class="card"><div class="card-h">🎯 Goal Perusahaan<span style="flex:1"></span><span class="muted small">AI Chief of Staff memecahnya ke divisi</span></div>
-            <div class="card-b" style="display:grid;gap:10px">
-              <input class="input" id="gt" placeholder="Apa yang ingin dicapai? mis. Tingkatkan penjualan paket Growth 30% bulan ini">
-              <textarea class="input" id="gd" rows="2" placeholder="Konteks tambahan, batasan, target, deadline (opsional)"></textarea>
-              <div class="row"><select class="input" id="gp" style="width:auto">${opt('high', PRIO.high, 'high')}${opt('medium', PRIO.medium)}${opt('low', PRIO.low)}</select><span style="flex:1"></span><button class="btn primary" id="gsend">🚀 Jalankan goal</button></div>
-              <div id="goals" style="display:grid;gap:8px"></div>
-            </div></div>
-          <div class="card"><div class="card-h">🏢 Divisi<span style="flex:1"></span><button class="btn sm" data-nav="team">Kelola tim</button></div><div class="card-b"><div class="div-grid" id="dd"></div></div></div>
-        </div>
-        <div style="display:grid;gap:16px">
-          <div class="card"><div class="card-h">🛑 Menunggu persetujuan <span class="badge" id="apc">0</span></div><div class="card-b" id="dap" style="display:grid;gap:8px"></div></div>
-          <div class="card"><div class="card-h">📈 Throughput 12 jam</div><div class="card-b"><div class="spark" id="spark"></div><div class="row small muted" style="justify-content:space-between;margin-top:6px"><span>-12j</span><span>sekarang</span></div></div></div>
-          <div class="card"><div class="card-h">📡 Aktivitas</div><div class="feed" id="dfeed" style="max-height:420px"></div></div>
-        </div>
-      </div></div>`;
+    root.innerHTML = `<div class="page simple">
+      <div class="hero"><div><div class="hero-k">${esc(D().company.name)}</div><h2>Halo, ${esc(me().name.split(' ')[0])} 👋</h2><div class="hero-s" id="dhs"></div></div><div class="hero-a"><button class="btn primary" id="hgo">▶ Masuk Kantor 3D</button></div></div>
+      <div class="card ask"><div class="card-b" style="display:grid;gap:10px">
+        <div class="row"><input class="input big" id="gt" placeholder="Mau dikerjakan apa hari ini? mis. Naikkan penjualan paket Growth 30%" style="flex:1"><button class="btn primary" id="gsend">🚀 Jalankan</button></div>
+        <details class="more"><summary>Tambah detail (opsional)</summary><div style="display:grid;gap:8px;margin-top:8px"><textarea class="input" id="gd" rows="2" placeholder="Konteks, batasan, target, tenggat"></textarea><select class="input" id="gp" style="width:auto">${opt('high', PRIO.high, 'high')}${opt('medium', PRIO.medium)}${opt('low', PRIO.low)}</select></div></details>
+      </div></div>
+      <div id="dapw"></div>
+      <div class="card"><div class="card-h">🎯 Pekerjaan terbaru<span style="flex:1"></span><button class="btn sm ghost" data-nav="tasks">Semua tugas →</button></div><div class="card-b" id="goals" style="display:grid;gap:8px"></div></div>
+      <details class="card acc"><summary class="card-h">📡 Aktivitas terbaru</summary><div class="feed" id="dfeed" style="max-height:360px"></div></details>
+      <details class="card acc"><summary class="card-h">🏢 Divisi <span class="muted small" id="dvn"></span></summary><div class="card-b"><div class="div-grid compact" id="dd"></div></div></details>
+    </div>`;
     root.querySelector('#gsend').onclick = async () => {
       const title = root.querySelector('#gt').value.trim();
       if (!title) return root.querySelector('#gt').focus();
       await api('POST', '/api/goals', { title, description: root.querySelector('#gd').value, priority: root.querySelector('#gp').value, userId: S.me });
       root.querySelector('#gt').value = ''; root.querySelector('#gd').value = '';
-      toast('🎯 Goal diterima. Tim mulai bekerja.', 'ok');
+      toast('🎯 Diterima. Tim mulai bekerja.', 'ok');
     };
-    root.querySelector('[data-nav]').onclick = () => navigate('team');
+    root.querySelector('#gt').onkeydown = (e) => { if (e.key === 'Enter') root.querySelector('#gsend').click(); };
+    root.querySelector('[data-nav]').onclick = () => navigate('tasks');
     root.querySelector('#hgo').onclick = () => navigate('office');
-    root.querySelector('#hgoal').onclick = () => root.querySelector('#gt').focus();
     bindCommon(root);
     this.root = root; this.update();
   },
   update() {
-    const r = this.root; const k = kpis(); const d = D();
-    { const ai = d.employees.filter((e) => e.type === 'ai'); const busy = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length; const open = d.tasks.filter((t) => t.status !== 'done').length; const hs = r.querySelector('#dhs'); if (hs) hs.innerHTML = `<span class="dot ok"></span>${ai.length} agen AI · <b>${busy}</b> sedang bekerja · <b>${open}</b> tugas berjalan · ${d.divisions.length} divisi`; }
-    r.querySelector('#dk').innerHTML = [
-      ['Karyawan AI', k.ai, `${k.humans} manusia`], ['Sedang aktif', k.working, 'bekerja / rapat'], ['Tugas aktif', k.active, `${d.tasks.filter((t) => t.status === 'in_progress').length} dikerjakan`],
-      ['Selesai hari ini', k.doneToday, `${d.tasks.filter((t) => t.status === 'done').length} total`], ['Approval', k.approvals, 'butuh keputusan manusia'],
-      ['Biaya AI hari ini', usd(k.cost), `budget ${usd(d.settings.dailyBudgetUSD)} · ${num(d.usage.tokensIn + d.usage.tokensOut)} token`],
-    ].map(([l, v, s]) => `<div class="card kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+    const r = this.root; const d = D();
+    const ai = d.employees.filter((e) => e.type === 'ai'); const busy = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length; const open = d.tasks.filter((t) => t.status !== 'done' && t.kind !== 'routine').length;
+    const hs = r.querySelector('#dhs'); if (hs) hs.innerHTML = `<span class="dot ok"></span><b>${busy}</b> dari ${ai.length} agen sedang bekerja · <b>${open}</b> tugas berjalan · biaya hari ini <b>${usd(d.usage.costToday)}</b>`;
+    const aps = d.approvals.filter((a) => a.status === 'pending');
+    r.querySelector('#dapw').innerHTML = aps.length ? `<div class="card need"><div class="card-h">🛑 Perlu keputusanmu <span class="badge">${aps.length}</span></div><div class="card-b" id="dap" style="display:grid;gap:8px">${aps.slice(0, 4).map(approvalCard).join('')}</div></div>` : '';
+    if (aps.length) bindApprovalButtons(r.querySelector('#dap'));
     const goals = d.tasks.filter((t) => t.kind === 'goal' && !/^\s*(\/|saya selesai\s*$)/i.test(t.title)).slice(-4).reverse();
     r.querySelector('#goals').innerHTML = goals.map((g) => {
       const all = descendants(g.id); const done = all.filter((t) => t.status === 'done').length;
       const pct = g.status === 'done' ? 100 : all.length ? Math.round((done / all.length) * 90) : 5;
-      return `<div class="tcard" data-task="${g.id}" style="--c:var(--accent)"><div class="row"><div class="tt" style="flex:1">${esc(g.title)}</div>${statusChip(g.status)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="meta">${done}/${all.length} subtugas · ${[...new Set(all.map((t) => t.divisionId))].map((x) => div(x)?.icon).join(' ')} · ${ago(g.createdAt)}</div></div>`;
-    }).join('') || '<div class="muted small">Belum ada goal. Coba: “Siapkan peluncuran fitur integrasi WhatsApp”.</div>';
+      return `<div class="tcard" data-task="${g.id}" style="--c:var(--accent)"><div class="row"><div class="tt" style="flex:1">${esc(g.title)}</div>${statusChip(g.status)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="meta">${all.length ? `${done}/${all.length} langkah · ` : ''}${ago(g.createdAt)}</div></div>`;
+    }).join('') || '<div class="muted small">Belum ada. Ketik di atas, mis. “Siapkan peluncuran fitur integrasi WhatsApp”.</div>';
+    r.querySelector('#dvn').textContent = `· ${d.divisions.length}`;
     r.querySelector('#dd').innerHTML = d.divisions.map((x) => {
       const members = d.employees.filter((e) => e.divisionId === x.id);
-      const ts = d.tasks.filter((t) => t.divisionId === x.id);
-      const done = ts.filter((t) => t.status === 'done').length;
-      return `<div class="div-card" style="--c:${x.color}" data-div="${x.id}"><div class="row"><b>${x.icon} ${esc(x.name)}</b><span style="flex:1"></span><span class="chip">${members.filter((e) => e.status === 'working').length}/${members.length} aktif</span></div>
-        <div class="faces">${members.slice(0, 8).map((e) => avatar(e)).join('')}</div>
-        <div class="bar"><i style="width:${ts.length ? (done / ts.length) * 100 : 0}%"></i></div><div class="small muted">${ts.length - done} aktif · ${done} selesai</div></div>`;
+      const act = members.filter((e) => e.status === 'working').length;
+      return `<button class="div-chip" style="--c:${x.color}" data-div="${x.id}"><span>${x.icon} ${esc(x.name)}</span><em>${act ? act + ' aktif' : members.length + ' agen'}</em></button>`;
     }).join('');
     r.querySelectorAll('[data-div]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.div)));
-    const aps = d.approvals.filter((a) => a.status === 'pending');
-    r.querySelector('#apc').textContent = aps.length;
-    r.querySelector('#dap').innerHTML = aps.slice(0, 6).map(approvalCard).join('') || '<div class="muted small">Tidak ada yang menunggu. 👌</div>';
-    bindApprovalButtons(r.querySelector('#dap'));
-    const now = Date.now(); const buckets = Array(12).fill(0);
-    for (const t of d.tasks) if (t.completedAt && now - t.completedAt < 12 * 3600e3) buckets[11 - Math.floor((now - t.completedAt) / 3600e3)]++;
-    const max = Math.max(1, ...buckets);
-    r.querySelector('#spark').innerHTML = buckets.map((b) => `<i style="height:${(b / max) * 100}%" title="${b} tugas"></i>`).join('');
-    r.querySelector('#dfeed').innerHTML = d.events.slice(-60).reverse().map((e) => feedItem(e)).join('') || '<div class="empty">Belum ada aktivitas</div>';
+    r.querySelector('#dfeed').innerHTML = d.events.slice(-12).reverse().map((e) => feedItem(e)).join('') || '<div class="empty">Belum ada aktivitas</div>';
   },
 };
 const descendants = (id) => { const out = []; const walk = (p) => { for (const t of D().tasks) if (t.parentId === p) { out.push(t); walk(t.id); } }; walk(id); return out; };
@@ -872,17 +852,18 @@ function rejectModal(id) {
 export const TasksView = {
   mount(root) {
     this.f = this.f || { q: '', div: '', who: '', top: false, lens: '', view: 'kanban', month: Date.now(), sort: 'due' };
-    root.innerHTML = `<div class="toolbar">
-        <input class="input" id="tq" placeholder="🔎 Cari tugas…" style="min-width:180px;flex:1;max-width:320px" value="${esc(this.f.q)}">
+    root.innerHTML = `<div class="page simple wide"><div class="toolbar">
+        <input class="input" id="tq" placeholder="🔎 Cari tugas…" style="min-width:160px;flex:1;max-width:360px" value="${esc(this.f.q)}">
+        <div class="view-switch" id="tview">${[['kanban', '▥ Papan'], ['list', '☰ Daftar'], ['calendar', '📅 Kalender']].map(([v, l]) => `<button data-v="${v}" class="${this.f.view === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <span style="flex:1"></span>
+        <button class="btn primary" id="tnew">＋ Tugas</button>
+      </div>
+      <details class="more" ${this.f.div || this.f.who || this.f.top ? 'open' : ''}><summary>Filter</summary><div class="toolbar" style="margin-top:8px">
         <select class="input" id="tdiv"><option value="">Semua divisi</option>${D().divisions.map((d) => opt(d.id, d.icon + ' ' + d.name, this.f.div)).join('')}</select>
         <select class="input" id="twho"><option value="">Semua orang</option>${opt('__me', '👤 Tugas saya', this.f.who)}${empOptions(this.f.who)}</select>
         <label class="row small muted" style="gap:6px"><input type="checkbox" id="ttop" ${this.f.top ? 'checked' : ''}> Hanya tugas utama</label>
-        <span style="flex:1"></span>
-        <div class="view-switch" id="tview">${[['kanban', '▥ Kanban'], ['calendar', '📅 Kalender'], ['timeline', '⏱ Timeline'], ['list', '☰ Daftar']].map(([v, l]) => `<button data-v="${v}" class="${this.f.view === v ? 'on' : ''}">${l}</button>`).join('')}</div>
-        <button class="btn" id="tgoal2">🎯 Goal</button>
-        <button class="btn primary" id="tnew">＋ Tugas</button>
-      </div><div class="insight" id="tins"></div><div class="kanban" id="kb"></div>`;
-    root.querySelector('#tgoal2').onclick = () => goalModal();
+      </div></details>
+      <div class="insight" id="tins"></div><div class="kanban" id="kb"></div></div>`;
     root.querySelectorAll('#tview [data-v]').forEach((b) => (b.onclick = () => { this.f.view = b.dataset.v; root.querySelectorAll('#tview [data-v]').forEach((x) => x.classList.toggle('on', x === b)); this.update(); }));
     const set = (k, v) => { this.f[k] = v; this.update(); };
     root.querySelector('#tq').oninput = (e) => set('q', e.target.value);
@@ -910,18 +891,23 @@ export const TasksView = {
     const done = base.filter((t) => t.status === 'done' && t.completedAt && t.createdAt);
     const cycle = done.length ? done.slice(-40).reduce((a, t) => a + (t.completedAt - t.createdAt), 0) / Math.min(40, done.length) / 60000 : 0;
     const cost = base.reduce((a, t) => a + (t.cost || 0), 0);
-    this.root.querySelector('#tins').innerHTML = Object.entries(LENS).map(([k, [l, fn]]) => `<button class="lens ${f.lens === k ? 'on' : ''}" data-lens="${k}"><b>${base.filter(fn).length}</b><span>${l}</span></button>`).join('') + `<div class="lens static"><b>${cycle ? (cycle < 60 ? cycle.toFixed(0) + ' mnt' : (cycle / 60).toFixed(1) + ' jam') : '–'}</b><span>⏱ Rata-rata selesai</span></div><div class="lens static"><b>${usd(cost)}</b><span>💰 Biaya AI</span></div>`;
+    // hanya yang ada isinya (atau sedang dipilih): tidak ada deretan "0" yang membingungkan
+    this.root.querySelector('#tins').innerHTML = Object.entries(LENS).filter(([k, [, fn]]) => f.lens === k || (k !== 'today' && k !== 'ai' && base.filter(fn).length)).map(([k, [l, fn]]) => `<button class="lens ${f.lens === k ? 'on' : ''}" data-lens="${k}"><b>${base.filter(fn).length}</b><span>${l}</span></button>`).join('');
     this.root.querySelectorAll('[data-lens]').forEach((b) => (b.onclick = () => { this.f.lens = this.f.lens === b.dataset.lens ? '' : b.dataset.lens; this.update(); }));
     const kb = this.root.querySelector('#kb');
     if (f.view !== 'kanban') { kb.className = { calendar: 'cal', timeline: 'tl', list: 'tlist' }[f.view]; return this[f.view](kb, list); }
     kb.className = 'kanban';
     const scrolls = [...kb.querySelectorAll('.col-b')].map((c) => c.scrollTop);
-    kb.innerHTML = TASK_COLS.map((c) => {
+    const colsShown = TASK_COLS.filter((c) => c.id === 'done' || list.some((t) => t.status === c.id || c.also?.includes(t.status)));
+    const noActive = !list.some((t) => t.status !== 'done' && t.status !== 'cancelled');
+    kb.innerHTML = (noActive ? '<div class="card calm"><div class="card-b" style="text-align:center"><div style="font-size:28px">🎉</div><b>Semua beres</b><div class="small muted">Tidak ada tugas berjalan. Buat yang baru dengan tombol “＋ Tugas”, atau ketik perintah di Beranda.</div></div></div>' : '') + colsShown.map((c) => {
       let items = list.filter((t) => t.status === c.id || c.also?.includes(t.status));
       items.sort((a, b) => (c.id === 'done' ? (b.completedAt || 0) - (a.completedAt || 0) : b.updatedAt - a.updatedAt));
-      const more = items.length > 80 ? items.length - 80 : 0; items = items.slice(0, 80);
-      return `<div class="col" data-col="${c.id}"><div class="col-h">${c.icon} ${c.label}<span class="badge soft">${list.filter((t) => t.status === c.id || c.also?.includes(t.status)).length}</span></div><div class="col-b">${items.map((t) => taskCard(t, running.has(t.id) || t.status === 'in_progress')).join('') || '<div class="empty small">Kosong</div>'}${more ? `<div class="muted small" style="text-align:center">+${more} lagi</div>` : ''}</div></div>`;
+      const cap = c.id === 'done' ? 8 : 40;
+      const more = items.length > cap ? items.length - cap : 0; items = items.slice(0, cap);
+      return `<div class="col" data-col="${c.id}"><div class="col-h">${c.icon} ${c.label}<span class="badge soft">${list.filter((t) => t.status === c.id || c.also?.includes(t.status)).length}</span></div><div class="col-b">${items.map((t) => taskCard(t, running.has(t.id) || t.status === 'in_progress')).join('') || '<div class="empty small">Kosong</div>'}${more ? `<button class="btn sm ghost" data-showall="${c.id}" style="justify-self:center">+${more} lagi · lihat di Daftar</button>` : ''}</div></div>`;
     }).join('');
+    kb.querySelectorAll('[data-showall]').forEach((b) => (b.onclick = () => { this.f.view = 'list'; this.root.querySelectorAll('#tview [data-v]').forEach((x) => x.classList.toggle('on', x.dataset.v === 'list')); this.update(); }));
     kb.querySelectorAll('.col-b').forEach((c, i) => (c.scrollTop = scrolls[i] || 0));
     // drag & drop status change
     kb.querySelectorAll('.tcard').forEach((el) => { el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/plain', el.dataset.task); });
@@ -1135,9 +1121,9 @@ export const ChatView = {
     this.ch = S.params.ch || this.ch || 'general';
     root.style.overflow = 'hidden';
     root.innerHTML = `<div class="chat has-sel" id="chat"><div class="chat-list" id="cl"></div><div class="chat-main"><div class="chat-h" id="chh"></div><div class="msgs" id="msgs"></div>
-      <div class="quick" id="cquick">${[['@all ', '📣 Semua agen'], ['@kepala ', '👑 Semua kepala'], ['@staff ', '🤖 Semua staf'], ['/goal ', '🎯 Goal'], ['/tugas @', '📋 Tugas'], ['/rapat ', '👥 Rapat'], ['/cari ', '🔎 Cari Brain'], ['/status', '📊 Status']].map(([c, l]) => `<button class="chip" data-cmd="${c}">${l}</button>`).join('')}<span class="small faint hide-m" style="margin-left:auto">@all · @kepala · @staff · #divisi</span></div>
+      <div class="quick" id="cquick">${[['/goal ', '🎯 Goal'], ['/rapat ', '👥 Rapat'], ['/tugas @', '📋 Tugas'], ['@all ', '📣 Semua agen'], ['/status', '📊 Status']].map(([c, l]) => `<button class="chip" data-cmd="${c}">${l}</button>`).join('')}</div>
       <div class="mention-pop" id="cpop" hidden></div>
-      <div class="composer"><textarea class="input" id="cin" rows="1" placeholder="Tulis pesan… gunakan @all, @kepala, @staff, #divisi, atau @nama"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
+      <div class="composer"><textarea class="input" id="cin" rows="1" placeholder="Tulis pesan… (@nama untuk menyebut seseorang)"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
     const send = async () => {
       const i = root.querySelector('#cin'); const text = i.value.trim(); if (!text) return;
       i.value = ''; i.style.height = ''; root.querySelector('#cpop').hidden = true;
@@ -1188,12 +1174,23 @@ export const ChatView = {
     const meetings = d.channels.filter((c) => c.kind === 'meeting').slice(-12).reverse();
     const groups = d.channels.filter((c) => c.kind === 'group' && c.members.includes(S.me)).sort((a, b) => (last(b.id)?.t || 0) - (last(a.id)?.t || 0)).slice(0, 15);   /* goal threads + group discussions from the dock */
     const listKey = [this.ch, ...groups.map((c) => c.id + (last(c.id)?.id || '')), ...d.channels.filter((c) => c.kind === 'channel').map((c) => c.id), ...sortedDMs.map((c) => c.id), ...agentDMs.map((c) => c.id), ...meetings.map((c) => c.id + (d.meetings?.find((m) => m.id === c.meetingId)?.status || ''))].join('|');
-    if (listChanged && listKey !== this.listKey) { this.listKey = listKey; r.querySelector('#cl').innerHTML = `<button class="btn sm" id="newdm" style="width:100%">＋ Chat dengan karyawan</button>
-      <h4>Channel</h4>${d.channels.filter((c) => c.kind === 'channel').map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>#</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span></div>`).join('')}
-      <h4>Pesan langsung</h4>${sortedDMs.map((c) => { const o = emp(c.members.find((m) => m !== S.me)); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}">${avatar(o)}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o?.name)}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
-      <h4>Goal & diskusi grup</h4>${groups.map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}" title="${esc(c.members.map((m) => emp(m)?.name || m).join(', '))}"><span>${c.goalId ? '🎯' : '💬'}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(String(c.name).replace(/^🎯s*|^Diskusi:s*/, ''))}</span></div>`).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
-      <h4>Rapat</h4>${meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>${m?.status === 'waiting_owner' ? '🎙️' : m?.status === 'running' ? '🔴' : '👥'}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name.replace(/^Rapat: /, ''))}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
-      <h4>Antar agen (pantau)</h4>${agentDMs.map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>👀</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name)}</span></div>`).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}`;
+    if (listChanged && listKey !== this.listKey) { this.listKey = listKey; {
+      this.gopen = this.gopen || new Set(['dm']);
+      const cur = d.channels.find((c) => c.id === this.ch);
+      const curG = !cur ? 'dm' : cur.kind === 'channel' ? 'ch' : cur.kind === 'dm' ? (cur.members.includes(S.me) ? 'dm' : 'ag') : cur.kind === 'meeting' ? 'mt' : 'gr';
+      this.gopen.add(curG);
+      const row = (c, ic, label, small) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}">${ic}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" ${small ? 'class="small"' : ''}>${label}</span></div>`;
+      const grp = (key, title, rows, n) => `<details class="chg" data-g="${key}" ${this.gopen.has(key) ? 'open' : ''}><summary>${title}<em>${n}</em></summary>${rows.join('') || '<div class="small faint" style="padding:0 9px 6px">Belum ada</div>'}</details>`;
+      const chans = d.channels.filter((c) => c.kind === 'channel');
+      r.querySelector('#cl').innerHTML = `<button class="btn sm primary" id="newdm" style="width:100%">＋ Chat baru</button><input class="input" id="clq" placeholder="🔎 Cari percakapan…" style="width:100%">
+      ${grp('dm', '💬 Karyawan', sortedDMs.map((c) => { const o = emp(c.members.find((m) => m !== S.me)); return row(c, avatar(o), esc(o?.name || '')); }), sortedDMs.length)}
+      ${grp('gr', '🎯 Goal & grup', groups.map((c) => row(c, '<span>' + (c.goalId ? '🎯' : '💬') + '</span>', esc(String(c.name).replace(/^🎯\s*|^Diskusi:\s*/, '')), true)), groups.length)}
+      ${grp('mt', '👥 Rapat', meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return row(c, '<span>' + (m?.status === 'waiting_owner' ? '🎙️' : m?.status === 'running' ? '🔴' : '👥') + '</span>', esc(c.name.replace(/^Rapat: /, '')), true); }), meetings.length)}
+      ${grp('ch', '# Channel divisi', chans.map((c) => row(c, '<span>#</span>', esc(c.name))), chans.length)}
+      ${grp('ag', '👀 Antar agen (pantau)', agentDMs.map((c) => row(c, '<span>👀</span>', esc(c.name), true)), agentDMs.length)}`;
+      r.querySelectorAll('#cl details.chg').forEach((x) => (x.ontoggle = () => { x.open ? this.gopen.add(x.dataset.g) : this.gopen.delete(x.dataset.g); }));
+      r.querySelector('#clq').oninput = (e) => { const q = e.target.value.toLowerCase().trim(); r.querySelectorAll('#cl details.chg').forEach((g) => { let any = false; g.querySelectorAll('.ch-item').forEach((it) => { const ok = !q || it.textContent.toLowerCase().includes(q); it.style.display = ok ? '' : 'none'; any = any || ok; }); if (q) g.open = any; else g.open = this.gopen.has(g.dataset.g); g.style.display = !q || any ? '' : 'none'; }); };
+    }
     r.querySelectorAll('[data-ch]').forEach((x) => (x.onclick = () => { this.ch = x.dataset.ch; r.querySelector('#chat').classList.add('has-sel'); this.lastCount = -1; this.update(); }));
     }
     r.querySelector('#newdm').onclick = () => modal('Chat dengan siapa?', `<select class="input" name="w">${empOptions('', { aiOnly: false })}</select>`, { actions: [{ label: 'Batal' }, { label: 'Mulai chat', kind: 'primary', run: async (b) => { const res = await api('POST', '/api/dm', { with: formData(b).w, userId: S.me }); this.ch = res.id; this.lastCount = -1; setTimeout(() => this.update(), 50); } }] });
@@ -1231,6 +1228,13 @@ export const ChatView = {
 const CMDS = [['/goal', 'Kirim goal', 'Asisten pribadimu memecahnya ke seluruh perusahaan'], ['/tugas', 'Buat tugas', '/tugas @nama judul tugas'], ['/rapat', 'Adakan rapat', 'Rapat multi-agen dengan notulen'], ['/cari', 'Cari di Brain', 'Buka Brain dengan pencarian'], ['/status', 'Status perusahaan', 'Siapa sedang mengerjakan apa']];
 
 // ═════════════════════ BRAIN (Obsidian-like) ═════════════════════
+/** 31 folder → 3 kelompok: inti perusahaan (langsung), per divisi, dan lainnya (terlipat) */
+function bucketize(tops, SYS, fn, searching, open) {
+  const dvNames = new Set(D().divisions.map((x) => x.name));
+  const core = tops.filter((t) => SYS.includes(t)); const divs = tops.filter((t) => dvNames.has(t)); const rest = tops.filter((t) => !SYS.includes(t) && !dvNames.has(t));
+  const grp = (key, title, list) => (list.length ? `<details class="folder grp" ${open.has(key) || searching ? 'open' : ''} data-f="${key}"><summary>${title} <span class="faint small" style="margin-left:auto">${list.length}</span></summary>${list.map(fn).join('')}</details>` : '');
+  return core.map(fn).join('') + grp('__div', '🏢 Per divisi', divs) + grp('__rest', '📚 Pustaka & lainnya', rest);
+}
 export const BrainView = {
   mount(root) {
     root.style.overflow = 'hidden';
@@ -1269,13 +1273,13 @@ export const BrainView = {
     const item = (n) => `<div class="note-item ${n.id === this.sel && this.mode === 'note' ? 'active' : ''}" data-open="${n.id}" title="${esc(n.title)}">${esc(n.title)}</div>`;
     const byRecent = (a, b) => b.updatedAt - a.updatedAt;
     tree.innerHTML = `<div class="row" style="gap:6px;margin-bottom:6px"><div class="note-item ${this.mode === 'graph' ? 'active' : ''}" style="padding-left:8px;flex:1" id="bgraph">🕸️ Graph view</div><button class="btn sm" id="borg" title="Klasifikasikan & rapikan semua catatan">🗂️ Rapikan${loose ? ` <span class="badge">${loose}</span>` : ''}</button></div>
-      <div class="small faint" style="margin:0 6px 8px">${D().notes.length} catatan · ${tops.length} folder · disusun otomatis per Divisi/Jenis</div>` + tops.map((top) => {
+      <div class="small faint" style="margin:0 6px 8px">${D().notes.length} catatan · ${tops.length} folder · disusun otomatis per Divisi/Jenis</div>` + bucketize(tops, SYS, (top) => {
       const inTop = notes.filter((n) => n.folder.split('/')[0] === top);
       const direct = inTop.filter((n) => !n.folder.includes('/')).sort(byRecent);
       const subs = [...new Set(inTop.filter((n) => n.folder.includes('/')).map((n) => n.folder.split('/').slice(1).join('/')))].sort();
       const dv = D().divisions.find((x) => x.name === top);
       return `<details class="folder" ${open.has(top) || q ? 'open' : ''} data-f="${esc(top)}"><summary><span style="color:${dv?.color || folderColor(top)}">${dv ? dv.icon : '●'}</span> ${esc(top)} <span class="faint small" style="margin-left:auto">${inTop.length}</span></summary>${direct.map(item).join('')}${subs.map((sub) => { const key = top + '/' + sub; const l = inTop.filter((n) => n.folder === key).sort(byRecent); return `<details class="folder sub" ${open.has(key) || q ? 'open' : ''} data-f="${esc(key)}"><summary>${esc(sub)} <span class="faint small" style="margin-left:auto">${l.length}</span></summary>${l.map(item).join('')}</details>`; }).join('')}</details>`;
-    }).join('');
+    }, !!q, open);
     tree.querySelector('#borg').onclick = async (ev) => { ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`🗂️ Brain dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
     tree.querySelectorAll('details').forEach((dt) => (dt.ontoggle = () => (dt.open ? open.add(dt.dataset.f) : open.delete(dt.dataset.f))));
     tree.querySelectorAll('[data-open]').forEach((x) => (x.onclick = () => { this.open(x.dataset.open); this.root.querySelector('#brain').classList.remove('show-tree'); }));
@@ -1301,7 +1305,8 @@ export const BrainView = {
     h.innerHTML = `${treeBtn}<input class="title" id="nt" value="${esc(n.title)}" ${this.edit ? '' : 'readonly'}>
       <span class="chip" style="color:${folderColor(n.folder)}">${esc(n.folder)}</span>
       <div class="tabs"><button class="${this.edit ? '' : 'active'}" data-m="0">👁 Baca</button><button class="${this.edit ? 'active' : ''}" data-m="1">✎ Edit</button></div>
-      <button class="btn icon ghost" id="nmore" title="Lainnya">⋯</button>`;
+      <button class="btn icon ghost" id="bside" title="Tautan terkait & graph">🔗</button><button class="btn icon ghost" id="nmore" title="Lainnya">⋯</button>`;
+    h.querySelector('#bside').onclick = () => this.root.querySelector('#brain').classList.toggle('show-side');
     b.innerHTML = this.edit
       ? `<textarea id="nc" spellcheck="false">${esc(n.content)}</textarea>`
       : `<div class="small muted" style="margin-bottom:12px">${author ? `${avatar(author)} ` : ''}${esc(author?.name || '')} · diperbarui ${ago(n.updatedAt)}${n.lastEditorId && n.lastEditorId !== n.authorId ? ` oleh ${esc(emp(n.lastEditorId)?.name || '')}` : ''}</div><div class="md" style="max-width:820px">${md(n.content)}</div>`;
@@ -1347,9 +1352,9 @@ export const BrainView = {
 export const TeamView = {
   mount(root) {
     root.innerHTML = `<div class="page"><div class="row wrap"><h2 style="margin:0;flex:1">👥 Organisasi</h2><button class="btn" id="ndiv">＋ Divisi</button><button class="btn" id="nhum">＋ Manusia</button><button class="btn primary" id="nai">＋ Rekrut karyawan AI</button></div>
-      <div class="card" id="hier"></div>
+      <details class="card acc" id="hier"></details>
       <div class="org" id="org"></div>
-      <div class="card"><div class="card-h">🔁 Rutinitas otomatis<span style="flex:1"></span><button class="btn sm" id="nrt">＋ Rutinitas</button></div><div class="card-b" id="rts" style="display:grid;gap:8px"></div></div></div>`;
+      <details class="card acc"><summary class="card-h">🔁 Rutinitas otomatis <span class="muted small" id="rtn"></span></summary><div class="card-b" style="display:grid;gap:8px"><div class="row"><button class="btn sm" id="nrt">＋ Rutinitas</button></div><div id="rts" style="display:grid;gap:8px"></div></div></details></div>`;
     root.querySelector('#nai').onclick = () => navigate('studio', { emp: 'new', tab: 'agents' });
     root.querySelector('#nhum').onclick = () => employeeModal(null, { type: 'human' });
     root.querySelector('#ndiv').onclick = () => modal('＋ Divisi baru', `<div class="grid2"><label class="f">Nama<input class="input" name="name" placeholder="mis. Design"></label><label class="f">Ikon<input class="input" name="icon" value="🎨"></label></div><label class="f">Misi<input class="input" name="mission"></label><label class="f">Warna<input type="color" class="input" name="color" value="#7aa2ff" style="height:40px"></label>`, { actions: [{ label: 'Batal' }, { label: 'Buat', kind: 'primary', run: async (b) => { await api('POST', '/api/divisions', formData(b)); } }] });
@@ -1362,7 +1367,7 @@ export const TeamView = {
     const humans = d.employees.filter((e) => e.type === 'human');
     const master = d.employees.find((e) => e.isMaster);
     const node = (e, extra = '') => e ? `<div class="hnode" data-agent="${e.id}">${avatar(e)}<div><b>${esc(e.name)}</b><div class="small muted">${esc(e.title)}${extra}</div></div></div>` : '';
-    this.root.querySelector('#hier').innerHTML = `<div class="card-h">hierarki komando<span style="flex:1"></span><span class="small" style="text-transform:none;letter-spacing:0">setiap manusia punya asisten AI pribadi yang menggerakkan seluruh perusahaan</span></div>
+    this.root.querySelector('#hier').innerHTML = `<summary class="card-h">🧭 Struktur komando</summary>
       <div class="card-b hier">
         <div class="hrow">${humans.map((h) => node(h, ' · manusia')).join('')}</div><div class="harrow">↓</div>
         <div class="hrow">${humans.map((h) => node(d.employees.find((e) => e.isPA && e.ownerId === h.id), ' · asisten pribadi')).join('')}</div><div class="harrow">↓</div>
@@ -1376,14 +1381,18 @@ export const TeamView = {
       const teams = x.teams || [];
       const lead = members.filter((m) => m.isLead || !m.team || !teams.includes(m.team));
       const groups = teams.map((tn) => [tn, members.filter((m) => !m.isLead && m.team === tn)]).filter(([, l]) => l.length);
-      return `<div class="card" style="border-top:3px solid ${x.color}"><div class="card-h" style="cursor:pointer" data-divd="${x.id}">${x.icon} ${esc(x.name)}<span style="flex:1"></span><span class="chip">${teams.length} tim</span><span class="chip">${members.length}</span></div><div class="card-b" style="padding:6px">${lead.map(row).join('')}${groups.map(([tn, l]) => `<div class="team-h"><span style="background:${x.color}"></span>${esc(tn)}<em>${l.length}</em></div>${l.map(row).join('')}`).join('')}${members.length ? '' : '<div class="empty small">Belum ada anggota</div>'}</div></div>`;
+      return `<details class="card acc" style="border-top:3px solid ${x.color}"><summary class="card-h">${x.icon} ${esc(x.name)}<span style="flex:1"></span><span class="chip">${members.length} orang</span><button class="btn sm ghost" data-divd="${x.id}">Detail</button></summary><div class="card-b" style="padding:6px">${lead.map(row).join('')}${groups.map(([tn, l]) => `<div class="team-h"><span style="background:${x.color}"></span>${esc(tn)}<em>${l.length}</em></div>${l.map(row).join('')}`).join('')}${members.length ? '' : '<div class="empty small">Belum ada anggota</div>'}</div></details>`;
     }).join('');
-    this.root.querySelectorAll('[data-divd]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.divd)));
+    this.root.querySelectorAll('[data-divd]').forEach((c) => (c.onclick = (e) => { e.preventDefault(); e.stopPropagation(); divisionDrawer(c.dataset.divd); }));
     const rts = this.root.querySelector('#rts');
-    rts.innerHTML = d.routines.map((r) => { const e = emp(r.employeeId); const cadence = r.cron ? `cron ${r.cron}` : `tiap ${r.everyMinutes || 60} menit`; return `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:10px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(r.title)}</b><div class="small muted">🎯 ${esc(routineTargetLabel(r))} · ${esc(cadence)} · terakhir ${ago(r.lastRunAt)}</div></div><button class="btn sm" data-run="${r.id}" title="Jalankan sekarang">▶</button><button class="btn sm ghost" data-edit="${r.id}">✎</button><label class="switch"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label></div>`; }).join('') || '<div class="muted small">Belum ada rutinitas</div>';
+    const rsort = [...d.routines].sort((a, b) => (b.enabled !== false) - (a.enabled !== false));
+    const rshow = this.rtAll ? rsort : rsort.slice(0, 10);
+    this.root.querySelector('#rtn').textContent = `· ${d.routines.filter((r) => r.enabled !== false).length} aktif dari ${d.routines.length}`;
+    rts.innerHTML = rshow.map((r) => { const e = emp(r.employeeId); const cadence = r.cron ? `cron ${r.cron}` : `tiap ${r.everyMinutes || 60} menit`; return `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:10px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(r.title)}</b><div class="small muted">🎯 ${esc(routineTargetLabel(r))} · ${esc(cadence)} · terakhir ${ago(r.lastRunAt)}</div></div><button class="btn sm" data-run="${r.id}" title="Jalankan sekarang">▶</button><button class="btn sm ghost" data-edit="${r.id}">✎</button><label class="switch"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label></div>`; }).join('') || '<div class="muted small">Belum ada rutinitas</div>';
     rts.querySelectorAll('[data-tog]').forEach((c) => (c.onchange = () => api('PATCH', `/api/routines/${c.dataset.tog}`, { enabled: c.checked })));
     rts.querySelectorAll('[data-run]').forEach((c) => (c.onclick = async () => { await api('POST', `/api/routines/${c.dataset.run}/run`); toast('Rutinitas dijalankan', 'ok'); }));
     rts.querySelectorAll('[data-edit]').forEach((c) => (c.onclick = () => routineModal(d.routines.find((r) => r.id === c.dataset.edit))));
+    if (rsort.length > 10) { rts.insertAdjacentHTML('beforeend', '<button class="btn sm ghost" id="rtall">' + (this.rtAll ? 'Ringkas' : 'Tampilkan semua ' + rsort.length) + '</button>'); rts.querySelector('#rtall').onclick = () => { this.rtAll = !this.rtAll; this.update(); }; }
   },
 };
 
@@ -1448,14 +1457,14 @@ function routineModal(r) {
 
 // ═════════════════════ APPROVALS ═════════════════════
 export const ApprovalsView = {
-  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Persetujuan</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif: keputusan dicatat sebagai audit trail dan pekerjaan langsung berlanjut.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Persetujuan">Kebijakan Persetujuan</a></p><div id="ap" style="display:grid;gap:10px"></div><h3 style="margin:10px 0 0">Riwayat</h3><div id="aph" style="display:grid;gap:6px"></div></div>`; bindCommon(root); this.root = root; this.update(); },
+  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Persetujuan</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif — semua langsung jalan, hanya dicatat.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Persetujuan">Kebijakan Persetujuan</a></p><div id="ap" style="display:grid;gap:10px"></div><details class="card acc"><summary class="card-h">🕘 Riwayat keputusan</summary><div id="aph" class="card-b" style="display:grid;gap:6px"></div></details></div>`; bindCommon(root); this.root = root; this.update(); },
   update() {
     const aps = D().approvals;
     const pend = aps.filter((a) => a.status === 'pending').reverse();
     const r = this.root;
     r.querySelector('#ap').innerHTML = pend.map((a) => { const t = task(a.taskId); return approvalCard(a) + (t?.output ? `<details class="card" style="margin-top:-6px"><summary class="card-h" style="cursor:pointer;font-weight:550">📄 Pratinjau hasil</summary><div class="card-b md">${md(t.output.slice(0, 5000))}</div></details>` : ''); }).join('') || '<div class="card empty">Tidak ada yang menunggu persetujuan 🎉</div>';
     bindApprovalButtons(r.querySelector('#ap'));
-    r.querySelector('#aph').innerHTML = aps.filter((a) => a.status !== 'pending').slice(-30).reverse().map((a) => `<div class="bl row" data-task="${a.taskId}"><span>${a.status === 'approved' ? '✅' : '✏️'}</span><span style="flex:1;min-width:0">${esc(a.title)}</span><span class="small muted">${esc(emp(a.decidedBy)?.name || '')} · ${ago(a.decidedAt)}</span></div>`).join('') || '<div class="muted small">Belum ada</div>';
+    r.querySelector('#aph').innerHTML = aps.filter((a) => a.status !== 'pending').slice(-12).reverse().map((a) => `<div class="bl row" data-task="${a.taskId}"><span>${a.status === 'approved' ? '✅' : '✏️'}</span><span style="flex:1;min-width:0">${esc(a.title)}</span><span class="small muted">${esc(emp(a.decidedBy)?.name || '')} · ${ago(a.decidedAt)}</span></div>`).join('') || '<div class="muted small">Belum ada</div>';
   },
 };
 
@@ -1471,6 +1480,7 @@ export const SettingsView = {
           <label class="f">Effort penalaran<select class="input" name="effort">${['low', 'medium', 'high'].map((x) => opt(x, x + (x === 'low' ? ' (hemat, cepat)' : ''), s.effort)).join('')}</select></label></div>
         <div class="grid2"><label class="f">Groq API key ${s.hasGroqKey ? '<span class="chip" style="color:var(--ok)">terpasang</span>' : ''}<input class="input" name="groqApiKey" type="password" autocomplete="off" placeholder="${s.hasGroqKey && !s.groqApiKey ? 'dari .env' : 'gsk_…'}" value="${esc(s.groqApiKey)}"></label>
           <label class="f">Anthropic API key ${s.hasApiKey ? '<span class="chip" style="color:var(--ok)">terpasang</span>' : ''}<input class="input" name="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(s.apiKey)}"></label></div>
+        <details class="more"><summary>Pengaturan lanjutan (model, paralel, budget)</summary><div style="display:grid;gap:12px;margin-top:10px">
         <div class="grid2"><label class="f">Groq · model Head/Lead<select class="input" name="groqModel">${(D().groqModels || []).map((m) => opt(m, m, s.groqModel)).join('')}</select></label>
           <label class="f">Groq · model staf<select class="input" name="groqWorkerModel">${(D().groqModels || []).map((m) => opt(m, m, s.groqWorkerModel)).join('')}</select></label></div>
         <div class="small muted">${(D().groqModels || []).length} model chat aktif untuk akun Groq ini. Daftar disinkronkan otomatis; model audio, TTS, dan guard tidak ditampilkan karena tidak dapat menjalankan agen chat.</div>
@@ -1478,6 +1488,7 @@ export const SettingsView = {
           <label class="f">Claude · model staf<select class="input" name="workerModel">${(D().claudeModels || []).map((m) => opt(m, m, s.workerModel)).join('')}</select></label></div>
         <div class="grid2"><label class="f">Agen live paralel (maks)<input class="input" type="number" min="1" max="20" name="maxConcurrent" value="${s.maxConcurrent}"></label>
           <label class="f">Budget harian (USD)<input class="input" type="number" min="0" step="0.5" name="dailyBudgetUSD" value="${s.dailyBudgetUSD}"></label></div>
+        </div></details>
         <div class="row small muted">Hari ini: ${usd(u.costToday)} · total ${usd(u.costTotal)} · ${num(u.tokensIn)} in / ${num(u.tokensOut)} out · ${u.calls} panggilan</div>
         <div class="row"><button class="btn primary" id="saveai">Simpan</button><button class="btn" id="testkey">🔌 Tes koneksi</button><button class="btn" id="refreshgroq">↻ Verifikasi semua model Groq</button></div>
       </div></div>

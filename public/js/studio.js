@@ -51,7 +51,7 @@ export const StudioView = {
         D().divisions.map((d) => {
           const list = D().employees.filter((e) => e.divisionId === d.id && (!q || `${e.name} ${e.title}`.toLowerCase().includes(q)));
           if (!list.length) return '';
-          return `<div class="eyebrow" style="margin:10px 4px 4px">${esc(d.name)}</div>${list.map((e) => `<div class="member ${this.sel === e.id ? 'active' : ''}" data-sel="${e.id}" style="${this.sel === e.id ? 'background:var(--panel2)' : ''}">${avatar(e)}<div style="min-width:0;flex:1"><div class="nm">${esc(e.name)} ${e.isLead ? '👑' : ''}</div><div class="rl">${esc(e.title)}${e.type === 'ai' ? ` · ${(e.skillRefs || []).length} skill` : ' · manusia'}</div></div></div>`).join('')}`;
+          return `<details class="chg" data-sg="${d.id}" ${(this.sopen ||= new Set()).has(d.id) || q || list.some((e) => e.id === this.sel) ? 'open' : ''}><summary>${d.icon} ${esc(d.name)}<em>${list.length}</em></summary>${list.map((e) => `<div class="member ${this.sel === e.id ? 'active' : ''}" data-sel="${e.id}" style="${this.sel === e.id ? 'background:var(--panel2)' : ''}">${avatar(e)}<div style="min-width:0;flex:1"><div class="nm">${esc(e.name)} ${e.isLead ? '👑' : ''}</div><div class="rl">${esc(e.title)}${e.type === 'ai' ? ` · ${(e.skillRefs || []).length} skill` : ' · manusia'}</div></div></div>`).join('')}</details>`;
         }).join('');
     } else if (this.tab === 'skills') {
       const sk = (D().skills || []).filter((s) => !q || `${s.name} ${s.category} ${s.description}`.toLowerCase().includes(q));
@@ -64,6 +64,7 @@ export const StudioView = {
     el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { this.tab = b.dataset.tab; this.renderList(); this.renderMain(); }));
     const sq = el.querySelector('#sq');
     sq.oninput = () => { this.q = sq.value; const pos = sq.selectionStart; this.renderList(); const n = this.root.querySelector('#sq'); n.focus(); n.setSelectionRange(pos, pos); };
+    el.querySelectorAll('details[data-sg]').forEach((x) => (x.ontoggle = () => { x.open ? this.sopen.add(x.dataset.sg) : this.sopen.delete(x.dataset.sg); }));
     el.querySelectorAll('[data-sel]').forEach((x) => (x.onclick = () => this.select(x.dataset.sel)));
     el.querySelectorAll('[data-skill]').forEach((x) => (x.onclick = () => { this.skillSel = x.dataset.skill; this.root.querySelector('#studio').classList.add('has-sel'); this.renderList(); this.renderMain(); }));
     el.querySelector('#snew')?.addEventListener('click', () => this.select('new'));

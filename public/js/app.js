@@ -21,59 +21,52 @@ function badges() {
   return { approvals: ap, tasks: myTasks };
 }
 
-const NAV = [
-  { group: 'Workspace', items: ['office', 'dashboard', 'tasks', 'chat', 'brain'] },
-  { group: 'Organisasi', items: ['studio', 'team', 'knowledge', 'approvals'] },
-  { group: 'Sistem', items: ['settings'] },
-];
-const SUB = { office: 'Pantau & masuk ke kantor', dashboard: 'Ringkasan perusahaan', tasks: 'Kanban & jejak kerja', chat: 'Percakapan & rapat', brain: 'Knowledge graph', studio: 'Rancang karyawan AI', studio: 'Rancang karyawan AI', knowledge: 'Knowledge, pelatihan & dataset', team: 'Hierarki & divisi', approvals: 'Keputusan manusia', settings: 'Mesin AI & sistem' };
+const CORE = ['office', 'dashboard', 'tasks', 'chat', 'brain'];
+const MORE = ['approvals', 'team', 'studio', 'knowledge', 'settings'];
+let moreOpen = false;
+try { moreOpen = localStorage.getItem('navMore') === '1'; } catch { /* ignore */ }
+const SUB = { };
+const SUB_OLD = { office: 'Pantau & masuk ke kantor', dashboard: 'Ringkasan perusahaan', tasks: 'Kanban & jejak kerja', chat: 'Percakapan & rapat', brain: 'Knowledge graph', studio: 'Rancang karyawan AI', studio: 'Rancang karyawan AI', knowledge: 'Knowledge, pelatihan & dataset', team: 'Hierarki & divisi', approvals: 'Keputusan manusia', settings: 'Mesin AI & sistem' };
 let collapsed = false;
 try { collapsed = localStorage.getItem('navCollapsed') === '1'; } catch { /* ignore */ }
 
 function renderNav() {
   const b = badges();
   const d = S.data;
-  const item = (id) => { const v = VIEWS[id]; const n = b[id] || 0; return `<button class="nav-item ${S.view === id ? 'active' : ''}" data-nav="${id}" title="${v.title}"><span class="ic">${icon(v.ic || id)}</span><span class="lbl"><b>${v.title}</b><small>${SUB[id] || ''}</small></span>${n ? `<span class="badge">${n}</span>` : ''}</button>`; };
+  const item = (id) => { const v = VIEWS[id]; const n = b[id] || 0; return `<button class="nav-item ${S.view === id ? 'active' : ''}" data-nav="${id}" title="${v.title}"><span class="ic">${icon(v.ic || id)}</span><span class="lbl"><b>${v.title}</b></span>${n ? `<span class="badge">${n}</span>` : ''}</button>`; };
   const ai = d.employees.filter((e) => e.type === 'ai');
   const active = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length;
   const prov = d.provider || (d.live ? 'claude' : 'sim');
   document.getElementById('app').classList.toggle('nav-collapsed', collapsed);
   $('#sidebar').innerHTML = `<div class="brand"><div class="logo">◐</div><span class="lbl"><span class="wordmark">R<b class="ai">AI</b>VERSE <em>AGENT</em></span><small>${esc(d.company.name)}</small></span><button class="btn icon ghost nav-toggle" id="navtg" title="${collapsed ? 'Perluas' : 'Ciutkan'} navigasi">${icon(collapsed ? 'expand' : 'collapse', 16)}</button></div>
-    ${NAV.map((g) => `<div class="nav-group"><div class="nav-label">${g.group}</div>${g.items.map(item).join('')}</div>`).join('')}
+    <button class="cmd-btn" id="cmd" title="Cari atau beri perintah (Ctrl K)">${icon('search', 16)}<span class="lbl">Cari atau beri perintah</span><kbd class="lbl">Ctrl K</kbd></button>
+    <div class="nav-group">${CORE.map(item).join('')}</div>
+    <div class="nav-group more ${moreOpen || MORE.includes(S.view) ? 'open' : ''}"><button class="nav-more" id="navmore">${icon('more', 16)}<span class="lbl">Lainnya</span>${b.approvals && !(moreOpen || MORE.includes(S.view)) ? `<span class="badge">${b.approvals}</span>` : ''}<span class="chev lbl">▾</span></button><div class="more-list">${MORE.map(item).join('')}</div></div>
     <div class="side-foot">
-      <div class="engine"><span class="dot ${prov !== 'sim' && d.settings.autonomy ? 'on' : ''}"></span><span class="lbl">${prov === 'groq' ? 'Groq · GPT-OSS' : prov === 'claude' ? 'Claude' : 'Simulasi'} · ${active}/${ai.length} aktif</span></div>
+      <button class="engine" id="modepill" title="Klik untuk jeda / jalankan kantor"><span class="dot ${prov !== 'sim' && d.settings.autonomy ? 'on' : ''}"></span><span class="lbl">${!d.settings.autonomy ? 'Dijeda' : active + '/' + ai.length + ' agen aktif'} · ${usd(d.usage.costToday)}</span></button>
       <div class="me row">${avatar(emp(S.me))}<div class="lbl" style="min-width:0"><b>${esc(emp(S.me)?.name || '')}</b><small>${esc(emp(S.me)?.title || '')}</small></div></div>
     </div>`;
+  $('#cmd').onclick = openPalette;
+  $('#navmore').onclick = () => { moreOpen = !moreOpen; try { localStorage.setItem('navMore', moreOpen ? '1' : '0'); } catch { /* ignore */ } renderNav(); };
+  $('#modepill').onclick = () => api('PATCH', '/api/settings', { autonomy: !S.data.settings.autonomy }).then(() => toast(S.data.settings.autonomy ? '▶ Kantor berjalan' : '⏸ Kantor dijeda', 'ok'));
   $('#navtg').onclick = () => { collapsed = !collapsed; try { localStorage.setItem('navCollapsed', collapsed ? '1' : '0'); } catch { /* ignore */ } renderNav(); setTimeout(() => dispatchEvent(new Event('resize')), 250); };
   $('#bottomnav').innerHTML = ['office', 'dashboard', 'tasks', 'chat', 'brain'].map((id) => `<button class="${S.view === id ? 'active' : ''}" data-nav="${id}"><span class="ic">${icon(VIEWS[id].ic || id, 20)}</span><span>${VIEWS[id].title.split(' ')[0]}</span>${b[id] ? `<span class="badge">${b[id]}</span>` : ''}</button>`).join('');
   document.querySelectorAll('[data-nav]').forEach((x) => (x.onclick = () => navigate(x.dataset.nav)));
 }
 
 function renderTop() {
-  const s = S.data.settings;
-  const live = S.data.live;
-  const ap = badges().approvals;
+  // Desktop: tidak ada topbar (judul sudah ada di sidebar & halaman). Seluler: bilah kecil dengan cari + menu.
   const v = VIEWS[S.view];
-  $('#topbar').innerHTML = `<div class="page-title"><span class="pt-ic">${icon(v.ic || S.view, 18)}</span><div><h1>${v.title}</h1><small class="hide-m">${SUB[S.view] || ''} · ${esc(S.data.company.name)}</small></div></div><span class="spacer"></span>
-    <button class="search-btn" id="pal">${icon('search', 16)}<span class="lbl">Cari karyawan, tugas, catatan…</span><kbd>Ctrl K</kbd></button>
-    <button class="btn sm hide-m" id="tgoal">${icon('goal', 15)} Goal</button>
-    <button class="btn sm hide-m" id="tmeet">${icon('meeting', 15)} Rapat</button>
-    <span class="pill ${!s.autonomy ? 'paused' : live ? 'live' : 'sim'}" id="modepill" title="Klik untuk jeda / jalankan kantor"><span class="dot"></span>${!s.autonomy ? 'Dijeda' : live ? `Live · ${S.data.provider === 'groq' ? 'Groq' : 'Claude'}` : 'Simulasi'}</span>
-    <span class="pill hide-m" title="Biaya AI hari ini">${icon('coin', 13)} ${usd(S.data.usage.costToday)}</span>
-    ${ap ? `<button class="pill warn" id="appill">${icon('approvals', 13)} ${ap}</button>` : ''}
-    <button class="btn icon ghost" id="more" title="Menu">${icon('more', 18)}</button>
-    ${connected ? '' : `<span class="pill" style="color:var(--bad)" title="Koneksi realtime terputus">${icon('wifi', 13)}</span>`}`;
+  $('#topbar').innerHTML = `<div class="page-title"><h1>${v.title}</h1></div><span class="spacer"></span>
+    <button class="btn icon ghost" id="pal">${icon('search', 18)}</button>
+    <button class="btn icon ghost" id="more" title="Menu">${icon('more', 18)}</button>${connected ? '' : `<span class="pill" style="color:var(--bad)" title="Koneksi realtime terputus">${icon('wifi', 13)}</span>`}`;
   $('#pal').onclick = openPalette;
-  $('#tgoal').onclick = () => goalModal();
-  $('#tmeet').onclick = () => meetingModal();
-  $('#modepill').onclick = () => api('PATCH', '/api/settings', { autonomy: !s.autonomy }).then(() => toast(s.autonomy ? '⏸ Kantor dijeda' : '▶ Kantor berjalan', 'ok'));
-  $('#appill')?.addEventListener('click', () => navigate('approvals'));
-  $('#more')?.addEventListener('click', () => {
+  $('#more').onclick = () => {
     const b = badges();
-    modal('Menu', `<div style="display:grid;gap:6px">${Object.entries(VIEWS).map(([id, vv]) => `<button class="nav-item ${S.view === id ? 'active' : ''}" data-go="${id}"><span class="ic">${icon(vv.ic || id)}</span><span class="lbl"><b>${vv.title}</b><small>${SUB[id] || ''}</small></span>${b[id] ? `<span class="badge">${b[id]}</span>` : ''}</button>`).join('')}</div>`, {
+    modal('Menu', `<div style="display:grid;gap:6px">${[...CORE, ...MORE].map((id) => { const vv = VIEWS[id]; return `<button class="nav-item ${S.view === id ? 'active' : ''}" data-go="${id}"><span class="ic">${icon(vv.ic || id)}</span><span class="lbl"><b>${vv.title}</b></span>${b[id] ? `<span class="badge">${b[id]}</span>` : ''}</button>`; }).join('')}</div>`, {
       onMount: (el, close) => el.querySelectorAll('[data-go]').forEach((x) => (x.onclick = () => { close(); navigate(x.dataset.go); })),
     });
-  });
+  };
 }
 
 function route() {
@@ -98,6 +91,7 @@ function openPalette() {
   let items = []; let sel = 0;
   const actions = [
     { icon: '🎯', label: 'Goal baru untuk perusahaan', run: goalModal, k: 'aksi' },
+    { icon: '👥', label: 'Rapat baru', run: () => meetingModal(), k: 'aksi' },
     { icon: '＋', label: 'Tugas baru', run: () => newTaskModal(), k: 'aksi' },
     { icon: '🤖', label: 'Rekrut karyawan AI', run: () => employeeModal(null, { type: 'ai' }), k: 'aksi' },
     { icon: '⏯', label: 'Jeda / jalankan kantor', run: () => api('PATCH', '/api/settings', { autonomy: !S.data.settings.autonomy }), k: 'aksi' },
@@ -131,6 +125,7 @@ function openPalette() {
   render(); input.focus();
 }
 
+document.addEventListener('click', (e) => { const b = e.target.closest?.('[data-copy]'); if (!b) return; const t = b.closest('.codebox')?.querySelector('code')?.textContent || ''; navigator.clipboard?.writeText(t).then(() => { b.textContent = 'Tersalin ✓'; setTimeout(() => (b.textContent = 'Salin'), 1500); }).catch(() => {}); });
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); }
   if (e.key === 'Escape') { if (!$('#palette').hidden) return; if (!$('#modal').hidden) { $('#modal').hidden = true; $('#modal').innerHTML = ''; } else closeDrawer(); }

@@ -8,8 +8,8 @@ export const KnowledgeView = {
     root.style.overflow = 'auto';
     this.tab = S.params.tab || this.tab || 'ruang';
     this.root = root;
-    root.innerHTML = `<div class="page"><div class="page-head"><div><h2 style="margin:0">Ruang Pengetahuan</h2><div class="small muted">Kelola knowledge per divisi, bagikan ke agen, dan latih kemampuan mereka.</div></div></div>
-      <div class="space-tabs" id="ktabs">${[['ruang', '🏛️', 'Ruang Divisi'], ['library', '📚', 'Library'], ['belajar', '🎓', 'Belajar'], ['dataset', '🧬', 'Dataset']].map(([id, ic, l]) => `<button data-kt="${id}" class="${this.tab === id ? 'on' : ''}">${ic} <b>${l}</b></button>`).join('')}</div>
+    root.innerHTML = `<div class="page"><div class="page-head"><div><h2 style="margin:0">Ruang Pengetahuan</h2></div></div>
+      <div class="space-tabs" id="ktabs">${[['ruang', '🏛️', 'Per divisi'], ['library', '📚', 'Pustaka'], ['belajar', '🎓', 'Latih agen'], ['dataset', '🧬', 'Dataset']].map(([id, ic, l]) => `<button data-kt="${id}" class="${this.tab === id ? 'on' : ''}">${ic} <b>${l}</b></button>`).join('')}</div>
       <div id="kbody"></div></div>`;
     root.querySelectorAll('[data-kt]').forEach((b) => (b.onclick = () => { this.tab = b.dataset.kt; root.querySelectorAll('[data-kt]').forEach((x) => x.classList.toggle('on', x === b)); this.render(); }));
     this.render();
@@ -25,12 +25,8 @@ export const KnowledgeView = {
   async spaces(el) {
     const s = await api('GET', '/api/knowledge/spaces');
     const avg = Math.round(s.divisions.reduce((a, d) => a + d.coverage, 0) / Math.max(1, s.divisions.length));
-    el.innerHTML = `<div class="kpi-grid" style="margin-bottom:14px">${[[s.library, 'catatan library'], [Object.keys(s.areas).length, 'area pengetahuan'], [avg + '%', 'rata-rata cakupan'], [s.totalNotes, 'total catatan Brain']].map(([v, l]) => `<div class="card kpi"><span class="kpi-l">${l}</span><div class="v">${v}</div></div>`).join('')}</div>
-      <div class="ks-grid">${s.divisions.map((d) => `<div class="card ks-card" style="border-top:3px solid ${d.color}"><div class="row"><span style="font-size:20px">${d.icon}</span><div style="flex:1;min-width:0"><b>${esc(d.name)}</b><div class="small muted">${d.agents} agen · ${d.teams} tim · ${d.ownNotes} catatan divisi</div></div></div>
-        <div class="ks-bar"><i style="width:${d.coverage}%;background:${d.color}"></i></div>
-        <div class="row small"><span>${d.covered}/${d.agents} agen punya knowledge</span><span style="flex:1"></span><span class="mono">skill ${d.avgSkill}/10</span></div>
-        <button class="btn sm" data-share="${d.id}" style="margin-top:8px">📤 Bagikan knowledge ke divisi</button></div>`).join('')}</div>
-      <div class="small muted" style="margin-top:12px">Setiap agen menerima maksimal 2 knowledge paling relevan di prompt; sisanya bisa dicari lewat search_brain.</div>`;
+    el.innerHTML = `<div class="small muted" style="margin-bottom:10px">${s.library} catatan pustaka · ${s.totalNotes} catatan Brain · rata-rata cakupan <b>${avg}%</b></div>
+      <div class="ks-list">${s.divisions.map((d) => `<div class="ks-row" style="--c:${d.color}"><span class="ks-ic">${d.icon}</span><div class="ks-nm"><b>${esc(d.name)}</b><span class="small muted">${d.agents} agen · ${d.ownNotes} catatan</span></div><div class="ks-bar" title="${d.covered}/${d.agents} agen punya knowledge"><i style="width:${d.coverage}%;background:${d.color}"></i></div><button class="btn sm" data-share="${d.id}">📤 Bagikan</button></div>`).join('')}</div>`;
     el.querySelectorAll('[data-share]').forEach((b) => (b.onclick = () => this.share(b.dataset.share)));
   },
   async share(divisionId) {

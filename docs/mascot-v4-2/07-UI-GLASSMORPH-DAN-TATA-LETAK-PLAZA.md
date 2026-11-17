@@ -268,3 +268,18 @@ Backup: `pass19/` (office3d, views, index sebelum edit).
 - **Mesin sama dengan agen**: pemain mengecil (0,33 dtk) di portal cahaya, muncul di tujuan (0,38 dtk), kamera orang-ketiga langsung dipasang di belakang karakter (tanpa menyapu seluruh kampus), dan chip "⚡ Teleport Anda -> <tujuan>" muncul. Di kamera bebas: kamera terbang ke tujuan dengan portal.
 - **Terbukti** (salinan uji, lewat hotkey nyata dan klik item): menu terbuka dengan V di Play, mouse dilepas, kolom cari terfokus, pencarian "conference" menemukan 2 hasil; teleport ke Conference Hall (38,9; 0; -20), Plaza tengah (0; 0; 12), Sky Deck (5,8; 5; -16) dan ke samping agen Maya (jarak 1,63) semuanya benar, skala turun ke 0,02 lalu pulih, menu tertutup, chip tampil; di kamera bebas target kamera berpindah; tanpa galat konsol.
 - **Belum**: pointer lock sungguhan tidak dapat diuji di panel uji (hanya pelepasan lewat `setBlocking`); layar sentuh/seluler tidak punya tombol V (tombol ⚡ tersedia); Sky Deck lain dan ruangan tertentu belum dicoba satu per satu.
+
+## W. Rombak sederhana semua halaman (kecuali isi Kantor 3D)
+Tujuan: pengguna "malas" — satu langkah, tanpa duplikasi. Rinci:
+- **Topbar dihapus di desktop** (judul sudah ada di sidebar). Seluler: bilah kecil (cari + menu). Aksi global jadi satu tombol "Cari atau beri perintah" (Ctrl K) di sidebar; palet punya Goal/Rapat/Tugas baru.
+- **Sidebar**: 5 menu inti + "Lainnya" (Persetujuan, Tim, Studio, Pengetahuan, Pengaturan) terlipat; status jeda/biaya jadi satu baris di kaki sidebar.
+- **Beranda**: satu kotak "Mau dikerjakan apa hari ini?", kartu "Perlu keputusanmu" hanya bila ada, 4 pekerjaan terbaru; Aktivitas & Divisi terlipat.
+- **Tugas**: filter terlipat, 3 tampilan (Papan/Daftar/Kalender), kolom kosong disembunyikan, lensa hanya yang berisi, keadaan "Semua beres".
+- **Chat**: daftar jadi akordion (Karyawan, Goal & grup, Rapat, Channel, Antar agen) + pencarian; chip cepat 5.
+- **Brain**: 31 folder → inti + "Per divisi" + "Pustaka & lainnya"; panel graph/backlink muncul lewat tombol 🔗.
+- **Tim**: struktur komando, tiap divisi, dan rutinitas semuanya akordion; rutinitas aktif tampil dulu (10).
+- **Studio**: daftar karyawan per divisi terlipat. **Pengetahuan**: baris ringkas per divisi. **Persetujuan**: riwayat terlipat.
+- **Lanjutan W:** Pengaturan AI → model/paralel/budget dalam "Pengaturan lanjutan" (terlipat). Kantor 3D: HUD stat hanya "agen bekerja" + "perlu keputusan" (jika ada); baris penerima dock Orkestrator pindah ke baris sendiri (tidak menimpa tombol). Diuji klik sungguhan: kirim goal, palet, Tugas (papan/daftar/kalender/cari/laci/modal), Chat (akordion/cari/kirim), Brain (grup/cari/🔗/graph), Tim, Studio, Pengetahuan, Persetujuan, Pengaturan.
+
+## X. Render chat yang rapi (daftar, tabel, grafik, kode)
+`public/js/md.js`: kalimat bersambung "(1) a; (2) b" otomatis jadi daftar bernomor, "• x" jadi poin; tabel dengan perataan kolom; blok ` ```chart ` JSON (`bar|line|pie|donut`, `labels`, `data` atau `series`) dirender sebagai SVG; kode punya bilah bahasa + tombol Salin; callout `> [!tip]`; ~~coret~~ dan tautan otomatis. Dock Orkestrator memakai renderer yang sama (batas 4000 karakter). Prompt chat (`server/engine.js` chatSystem) kini meminta agen memakai daftar/tabel/chart Markdown dan hanya angka nyata.
