@@ -19,7 +19,7 @@ function similar(a, b) {
 const recent = []; // timestamps of tasks created by AI without a parent (free-floating initiatives)
 
 /** Validate a task before it exists. Humans and the scheduler are trusted; AI-created work is rate-limited and deduplicated. */
-export function checkCreate({ title, createdBy, parentId, kind }) {
+export function checkCreate({ title, createdBy, parentId, kind, assigneeId }) {
   const t = String(title ?? '').trim();
   if (!t || t === 'undefined' || t === 'null' || t.length < 3) throw new GovernorError('Judul tugas wajib diisi dan jelas.');
   const byAI = emp(createdBy)?.type === 'ai';
@@ -27,7 +27,10 @@ export function checkCreate({ title, createdBy, parentId, kind }) {
   const g = S();
   const open = db().tasks.filter((x) => OPEN.has(x.status));
   if (open.length >= (g.maxActiveTasks || 80)) throw new GovernorError(`Kapasitas kerja penuh (${open.length} tugas aktif). Selesaikan pekerjaan yang ada dulu.`);
-  const dup = open.find((x) => similar(x.title, t) >= 0.8 && (!parentId || x.parentId === parentId || !x.parentId));
+  // a subtask legitimately echoes its parent's title ("[MKT] <goal>"): the task's own ancestors are never "duplicates" of it
+  const ancestors = new Set(); for (let p = parentId, n = 0; p && n++ < 12;) { ancestors.add(p); p = db().tasks.find((x) => x.id === p)?.parentId; }
+  // a fan-out ("[DATA] X", "[MKT] X", "X — riset") gives different people similar titles on purpose: under a parent only the SAME assignee counts as a duplicate
+  const dup = open.find((x) => !ancestors.has(x.id) && similar(x.title, t) >= 0.8 && (parentId ? x.assigneeId === assigneeId && (x.parentId === parentId || !x.parentId) : !x.parentId));
   if (dup) throw new GovernorError(`Tugas serupa sudah ada: ${dup.id} "${dup.title}" (${emp(dup.assigneeId)?.name}). Gunakan itu, jangan duplikasi.`);
   if (!parentId && kind !== 'routine') {
     const hour = Date.now() - 3600e3;

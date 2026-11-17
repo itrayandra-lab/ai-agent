@@ -23,6 +23,7 @@ const P = {
   wifi: '<path d="M2 8.8a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/>',
   spark: '<path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/>',
   check: '<path d="m5 12 4.5 4.5L19 7"/>',
+  knowledge: '<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5z"/><path d="M4 19.5V21h16"/><path d="M9 7h7M9 11h5"/>',
 };
 export function icon(name, size = 18, cls = '') {
   return `<svg class="i ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.dashboard}</svg>`;

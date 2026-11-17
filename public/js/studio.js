@@ -1,5 +1,7 @@
 // Agent Studio: design AI employees (layered instructions, skills, tools, knowledge), the skill library and the tool catalog.
 import { S, api, esc, emp, div, avatar, toast, modal, navigate, opt, formData } from './core.js';
+import { bindAppearance } from './appearance-ui.js';
+import { resolveAppearance } from './assets3d.js';
 
 const D = () => S.data;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -117,6 +119,7 @@ export const StudioView = {
           <label class="f">Keahlian (tag, pisahkan koma)<input class="input" data-f="skills" value="${esc((e.skills || []).join(', '))}"></label>
         </div></div>
         ${ai ? `
+        <div class="card"><div class="card-h">penampilan 3D <span class="small muted" style="text-transform:none;letter-spacing:0">Sims-style · gender, rambut, kulit, baju, aksesori</span></div><div class="card-b" id="apbox"></div></div>
         <div class="card"><div class="card-h">instruksi berlapis</div><div class="card-b" style="display:grid;gap:12px">
           <label class="f">About — siapa dia & kapan tugas diberikan kepadanya (dipakai untuk routing)<textarea class="input" data-f="about" rows="3">${esc(e.about)}</textarea></label>
           <label class="f">Tugas & fungsi<textarea class="input" data-f="taskAndFunction" rows="3">${esc(e.taskAndFunction)}</textarea></label>
@@ -153,6 +156,8 @@ export const StudioView = {
 
   bindMain(el, kbNotes) {
     const e = this.draft;
+    const apBox = el.querySelector('#apbox');
+    if (apBox) bindAppearance(apBox, resolveAppearance(e, div(e.divisionId)?.color), (ap) => { e.appearance = ap; });
     el.querySelector('#sback').onclick = () => { this.root.querySelector('#studio').classList.remove('has-sel'); };
     el.querySelectorAll('[data-f]').forEach((x) => (x.oninput = x.onchange = () => {
       const k = x.dataset.f; let v = x.value;

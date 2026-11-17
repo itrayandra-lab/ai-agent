@@ -27,7 +27,10 @@ ${lessons ? `Pelajaran yang kamu ingat:\n${lessons}\n` : ''}Bicaralah sebagai re
 export async function runMeeting({ topic, agenda = '', participantIds = [], representedParticipantIds = [], chairId, rounds = 2, originTaskId = null, ownerLed = false, ownerId = 'owner' }) {
   if (!llm.isLive()) throw new Error('Rapat multi-agen membutuhkan provider AI aktif (Groq/Claude)');
   const chair = emp(chairId) || emp(participantIds[0]) || emp('aria');
-  const people = [...new Set([chair.id, ...participantIds])].map(emp).filter((e) => e && e.type === 'ai').slice(0, 25);
+  // an agent sits in one meeting at a time (otherwise the first meeting to end would release them from the second)
+  const busyIds = new Set(db().meetings.filter((x) => x.status === 'running' || x.status === 'waiting_owner').flatMap((x) => x.participants || []));
+  const people = [...new Set([chair.id, ...participantIds])].map(emp).filter((e) => e && e.type === 'ai' && !busyIds.has(e.id)).slice(0, 25);
+  if (!people.includes(chair)) throw new Error(`${chair.name} sedang ikut rapat lain. Tunggu rapat itu selesai.`);
   if (people.length < 2) throw new Error('Rapat butuh minimal 2 peserta AI');
   const id = store.uid('mtg');
   const represented = [...new Set(representedParticipantIds.length ? representedParticipantIds : people.map((p) => p.id))].filter((x) => emp(x)?.type === 'ai');
@@ -36,12 +39,14 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
   for (const p of people) { p.meetingUntil = Date.now() + (ownerLed ? 125 : 10) * 60000; engine.setStatus(p, 'meeting', ownerLed ? 'Mendengarkan Owner' : `Rapat: ${clip(topic, 40)}`, p.currentTaskId); }
   engine.event('meeting', chair.id, `${chair.name} memulai rapat "${clip(topic, 70)}" dengan ${people.filter((p) => p !== chair).map((p) => p.name).join(', ')}`, { participants: m.participants, meetingId: id });
   const say = (p, text) => {
-    text = String(text).replace(/^\s*\**\s*[\w .]{2,30}(\([^)]*\))?\s*:\s*\**\s*/, '').trim() || text; // drop "**Name (Role):**" echoes
+    const nm = p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    text = String(text).replace(new RegExp('^\\s*\\**\\s*' + nm + '\\s*(\\([^)]*\\))?\\s*:\\s*\\**\\s*', 'i'), '').trim() || text; // drop only the speaker's own "**Name (Role):**" echo, not any "Usulan saya:" prefix
     m.transcript.push({ t: Date.now(), speakerId: p.id, text });
     store.upsert('meetings', m);
     engine.postMessage(`mtg-${id}`, p.id, text, { meetingId: id });
     engine.event('meeting_say', p.id, text, { meetingId: id });
   };
+  m.originTaskId = originTaskId; m.startedAt = m.startedAt || Date.now(); store.upsert('meetings', m);
   try {
     await wait(db().settings.meetingGatherMs ?? 9000); // let everyone walk to the Conference Hall
     if (ownerLed) {
@@ -57,15 +62,21 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
     }
     say(chair, `Rapat dimulai. Topik: **${topic}**${agenda ? `\nAgenda: ${agenda}` : ''}\nSilakan masing-masing menyampaikan pandangan dari sisi peran kalian.`);
     const effectiveRounds = people.length > 12 ? 1 : Math.min(3, Math.max(1, rounds));
+    let failStreak = 0;
     for (let r = 0; r < effectiveRounds; r++) {
       for (const p of people) {
         if (r === 0 && p === chair) continue;
+        if (failStreak >= 3) throw new Error('Rapat dihentikan: 3 panggilan AI berturut-turut gagal (cek anggaran, kunci, atau batas laju)');
         const transcript = m.transcript.slice(-14).map((x) => `${emp(x.speakerId)?.name}: ${x.text}`).join('\n');
         engine.setStatus(p, 'meeting', 'Sedang bicara di rapat', p.currentTaskId);
-        const res = await llm.call({
+        let res;
+        try { res = await llm.call({
           system: briefPrompt(p), maxTokens: 700, effort: 'low', employee: p, model: llm.defaultModels().small, taskId: originTaskId,
           messages: [{ role: 'user', content: `RAPAT: ${topic}\nAgenda: ${agenda || '-'}\nPeserta: ${people.map((x) => `${x.name} (${x.title})`).join(', ')}\n\nTranskrip:\n${transcript}\n\nGiliranmu, ${p.name}. ${r === 0 ? 'Sampaikan pandangan dan usulan konkret dari peranmu.' : 'Tanggapi poin rekan (setuju/tidak, dengan alasan), lalu tawarkan apa yang akan kamu kerjakan.'} Maksimal 80 kata, langsung ke isi.` }],
-        });
+        }); failStreak = 0; } catch (err) {   // one failed call skips that turn; it must not cancel the whole meeting
+          failStreak++; console.warn('[meeting] giliran', p.name, 'gagal:', err.message);
+          say(p, '(giliran dilewati: ' + clip(err.message, 80) + ')'); engine.setStatus(p, 'meeting', `Rapat: ${clip(topic, 40)}`, p.currentTaskId); continue;
+        }
         say(p, clip(llm.textOf(res) || '(setuju)', 900));
         await wait(db().settings.meetingTurnMs ?? 2500); // time to read the speech bubble
         engine.setStatus(p, 'meeting', `Rapat: ${clip(topic, 40)}`, p.currentTaskId);
@@ -73,7 +84,7 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
     }
     // the chair writes minutes and turns decisions into assigned tasks
     const ids = db().employees.filter((e) => e.type === 'ai').map((e) => e.id);
-    const out = await llm.json({
+    let out = await llm.json({
       system: briefPrompt(chair) + '\nKamu memimpin rapat ini dan menulis notulen resmi.',
       prompt: `Transkrip rapat "${topic}":\n${m.transcript.map((x) => `${emp(x.speakerId)?.name}: ${x.text}`).join('\n')}\n\nTulis notulen: ringkasan, keputusan, dan action item (maks 3, hanya yang benar-benar perlu dan sesuai topik; jangan menciptakan proyek baru) dengan penanggung jawab dari peserta rapat atau karyawan lain yang paling cocok.`,
       schema: { type: 'object', additionalProperties: false, required: ['summary', 'decisions', 'action_items'], properties: {
@@ -81,7 +92,12 @@ export async function runMeeting({ topic, agenda = '', participantIds = [], repr
         action_items: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['title', 'description', 'assignee_id', 'priority'], properties: { title: { type: 'string', minLength: 3 }, description: { type: 'string' }, assignee_id: { type: 'string', enum: ids }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } } } },
       } },
       employee: chair, effort: 'low', maxTokens: 6000,
-    });
+    }).catch((err) => { console.warn('[meeting] notulen AI gagal, memakai ringkasan otomatis:', err.message); return {}; });
+    out = out && typeof out === 'object' ? out : {};
+    const firstLine = (x) => clip(String(x.text || '').replace(/[#*_>]/g, '').split(/(?<=[.!?])\s|\n/).find((l) => l.trim().length > 12) || '', 160);
+    out.summary = String(out.summary || out.ringkasan || '').trim() || m.transcript.slice(1).map((x) => `${emp(x.speakerId)?.name}: ${firstLine(x)}`).filter((l) => l.length > 8).slice(0, 6).join('\n') || `Rapat "${clip(topic, 80)}" selesai tanpa catatan.`;
+    out.decisions = (Array.isArray(out.decisions) ? out.decisions : Array.isArray(out.keputusan) ? out.keputusan : []).map((d) => String(d || '').trim()).filter(Boolean);
+    out.action_items = Array.isArray(out.action_items) ? out.action_items : [];
     const created = [];
     for (const a of (out.action_items || []).filter((x) => String(x?.title || '').trim().length >= 3).slice(0, 3)) {
       try { created.push(engine.createTask({ title: a.title, description: `${a.description}\n\n(Dari rapat: ${topic})`, assigneeId: emp(a.assignee_id) ? a.assignee_id : chair.id, createdBy: originTaskId ? chair.id : 'owner', priority: a.priority || 'medium', parentId: originTaskId || null })); }

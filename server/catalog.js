@@ -2,6 +2,7 @@
 // Skills are reusable know-how injected into prompts; capabilities are tools an employee may call.
 
 import { EXTRA_SKILLS } from './skills-extra.js';
+import { STUDIO_SKILLS } from './roster-studio.js';
 import { DEEP_SKILLS } from './skills-deep.js';
 
 export const SKILL_CATEGORIES = ['Communication', 'Creative', 'Analysis', 'Strategy', 'Technical', 'Management', 'Sales', 'Customer', 'Research', 'Finance', 'People', 'Legal'];
@@ -128,7 +129,7 @@ SEED_SKILLS.push(
     'Untuk dashboard, laporan KPI, dan presentasi data.'),
 );
 
-SEED_SKILLS.push(...EXTRA_SKILLS, ...DEEP_SKILLS);
+SEED_SKILLS.push(...EXTRA_SKILLS, ...DEEP_SKILLS, ...STUDIO_SKILLS);
 
 // Capability catalog: the tools an employee can be granted. `guide` is injected so the model knows how to use each.
 export const CAPABILITIES = [
@@ -239,7 +240,9 @@ export const SOP_OF = { mkt: 'sop-marketing---content-pipeline', sales: 'sop-sal
 export function ensureEmployeeConfig(e, skills, notes = []) {
   if (e.type !== 'ai') return e;
   e.about ??= e.persona || '';
-  e.taskAndFunction ??= `Bertanggung jawab atas pekerjaan ${e.title} di divisi ${e.divisionId}: ${(e.skills || []).join(', ')}.`;
+  if (!String(e.title || '').trim()) e.title = e.type === 'human' ? 'Karyawan' : `Staf ${String(e.divisionId || 'umum').toUpperCase()}`;
+  if (/pekerjaan undefined /.test(e.taskAndFunction || '')) e.taskAndFunction = undefined;
+  e.taskAndFunction ??= `Bertanggung jawab atas pekerjaan ${e.title} di divisi ${e.divisionId}${(e.skills || []).length ? ': ' + e.skills.join(', ') : ''}.`;
   e.instructions ??= '';
   e.escalation ??= 'Eskalasi ke atasan atau minta persetujuan manusia bila menyangkut uang, publikasi, kontrak, data pribadi, atau bila informasi tidak cukup untuk menyelesaikan tugas dengan benar.';
   e.outputFormat ??= 'markdown';

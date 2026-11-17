@@ -1,0 +1,158 @@
+{
+  "id": "nova",
+  "name": "Nova",
+  "height": 1.297,
+  "hips": 0.25,
+  "knee": 0.16,
+  "ankle": 0.08,
+  "seatHip": 0.36,
+  "palmL": [
+    0.343,
+    0.475,
+    -0.0
+  ],
+  "palmR": [
+    -0.343,
+    0.475,
+    -0.0
+  ],
+  "propL": [
+    0.363,
+    0.432,
+    -0.0
+  ],
+  "propR": [
+    -0.363,
+    0.432,
+    -0.0
+  ],
+  "walkStride": 0.34,
+  "clips": [
+    "CH_Standing",
+    "CH_Idle",
+    "CH_Walk",
+    "CH_Run",
+    "CH_Sitting",
+    "CH_SitDown",
+    "CH_StandUp",
+    "CH_Type",
+    "CH_Read",
+    "CH_HoldR",
+    "CH_Carry",
+    "CH_Drink",
+    "CH_Phone",
+    "CH_Talk",
+    "CH_Nod",
+    "CH_Shrug",
+    "CH_Wave",
+    "CH_Clapping",
+    "CH_Cheer",
+    "CH_Think"
+  ],
+  "expressions": [
+    "neutral",
+    "blink",
+    "smile",
+    "laugh",
+    "wow",
+    "love",
+    "angry",
+    "sad",
+    "cry",
+    "sleepy",
+    "wink",
+    "think",
+    "talk1",
+    "talk2",
+    "focus",
+    "error"
+  ],
+  "tris": {
+    "lod0": 3084,
+    "lod1": 1260
+  },
+  "files": {
+    "lod0": "nova.glb",
+    "lod1": "lod/nova.glb",
+    "face": "nova.face.png"
+  },
+  "faceStyle": "screen",
+  "faceTint": "#d8f2ff",
+  "springs": [
+    "Spring1"
+  ],
+  "materials": {
+    "role_top|Suit": "main shell colour",
+    "role_bottom|Under": "accent parts",
+    "role_skin|Skin": "skin (clay figures)",
+    "Eye": "dark screen behind the Face glass",
+    "Face": "expression glass, UV 0..1"
+  },
+  "designColors": {
+    "role_top|Suit": [
+      0.93,
+      0.9,
+      0.84
+    ],
+    "role_bottom|Under": [
+      0.06,
+      0.09,
+      0.26
+    ],
+    "role_skin|Skin": [
+      0.93,
+      0.9,
+      0.84
+    ],
+    "role_hair|Hair": [
+      0.2,
+      0.15,
+      0.1
+    ],
+    "Frame": [
+      0.3,
+      0.3,
+      0.32
+    ],
+    "Eye": [
+      0.03,
+      0.05,
+      0.16
+    ],
+    "Trim": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "Glove": [
+      0.95,
+      0.95,
+      0.95
+    ],
+    "Belt": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "role_glow|Glow": [
+      0.7,
+      0.85,
+      1.0
+    ],
+    "Face": [
+      1,
+      1,
+      1
+    ]
+  },
+  "seat": {
+    "hipHeight": 0.36,
+    "thighLow": 0.255,
+    "feetFlat": false
+  },
+  "notes": [
+    "Proportions follow the reference design: hips 0.25, knee 0.16, ankle 0.08 (measured from the exported GLB).",
+    "Legs are too short to reach the floor from a 0.255 m seat: in CH_Sitting the feet dangle (thighs horizontal, knees 90 deg).",
+    "Short legs: walk stride 0.34 m per cycle (cycle 0.54 s); scale walk speed to stride/0.54 m/s so the feet do not slide."
+  ]
+}

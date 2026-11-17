@@ -1,0 +1,155 @@
+{
+  "id": "neko",
+  "name": "Neko",
+  "height": 1.279,
+  "hips": 0.4,
+  "knee": 0.235,
+  "ankle": 0.09,
+  "seatHip": 0.379,
+  "palmL": [
+    0.418,
+    0.72,
+    -0.0
+  ],
+  "palmR": [
+    -0.418,
+    0.72,
+    -0.0
+  ],
+  "propL": [
+    0.437,
+    0.678,
+    -0.0
+  ],
+  "propR": [
+    -0.437,
+    0.678,
+    -0.0
+  ],
+  "walkStride": 0.55,
+  "clips": [
+    "CH_Standing",
+    "CH_Idle",
+    "CH_Walk",
+    "CH_Run",
+    "CH_Sitting",
+    "CH_SitDown",
+    "CH_StandUp",
+    "CH_Type",
+    "CH_Read",
+    "CH_HoldR",
+    "CH_Carry",
+    "CH_Drink",
+    "CH_Phone",
+    "CH_Talk",
+    "CH_Nod",
+    "CH_Shrug",
+    "CH_Wave",
+    "CH_Clapping",
+    "CH_Cheer",
+    "CH_Think"
+  ],
+  "expressions": [
+    "neutral",
+    "blink",
+    "smile",
+    "laugh",
+    "wow",
+    "love",
+    "angry",
+    "sad",
+    "cry",
+    "sleepy",
+    "wink",
+    "think",
+    "talk1",
+    "talk2",
+    "focus",
+    "error"
+  ],
+  "tris": {
+    "lod0": 3856,
+    "lod1": 1226
+  },
+  "files": {
+    "lod0": "neko.glb",
+    "lod1": "lod/neko.glb",
+    "face": "neko.face.png"
+  },
+  "faceStyle": "screen",
+  "faceTint": "#66ff72",
+  "springs": [
+    "Spring1",
+    "Spring2"
+  ],
+  "materials": {
+    "role_top|Suit": "main shell colour",
+    "role_bottom|Under": "accent parts",
+    "role_skin|Skin": "skin (clay figures)",
+    "Eye": "dark screen behind the Face glass",
+    "Face": "expression glass, UV 0..1"
+  },
+  "designColors": {
+    "role_top|Suit": [
+      0.05,
+      0.08,
+      0.25
+    ],
+    "role_bottom|Under": [
+      0.94,
+      0.94,
+      0.95
+    ],
+    "role_skin|Skin": [
+      0.05,
+      0.08,
+      0.25
+    ],
+    "role_hair|Hair": [
+      0.2,
+      0.15,
+      0.1
+    ],
+    "Frame": [
+      0.3,
+      0.3,
+      0.32
+    ],
+    "Eye": [
+      0.01,
+      0.02,
+      0.015
+    ],
+    "Trim": [
+      0.97,
+      0.97,
+      0.97
+    ],
+    "Glove": [
+      0.96,
+      0.96,
+      0.97
+    ],
+    "Belt": [
+      0.2,
+      0.75,
+      0.25
+    ],
+    "role_glow|Glow": [
+      0.3,
+      1,
+      0.4
+    ],
+    "Face": [
+      1,
+      1,
+      1
+    ]
+  },
+  "seat": {
+    "hipHeight": 0.379,
+    "thighLow": 0.255,
+    "feetFlat": true
+  },
+  "notes": []
+}

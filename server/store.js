@@ -1,4 +1,5 @@
 // Tiny JSON-file database with change broadcasting. Single process, debounced writes.
+import { knowledgeNotes, attachKnowledge } from './knowledge/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildSeed } from './seed.js';
@@ -100,7 +101,20 @@ export function load({ reset = false } = {}) {
           db.routines.push({ id, employeeId: lead.id, targetType: 'division', targetId: d.id, title: `Eksekusi nyata harian — ${d.name}`, description: 'Periksa tugas dan prioritas divisi. Pilih satu tindakan konkret bernilai tertinggi yang belum selesai, konsultasikan maksimal dua staf relevan, eksekusi memakai tool yang tersedia, lalu kirim hasil dan bukti ke channel divisi. Untuk Google/sistem eksternal, hasil hanya boleh disebut berhasil jika ada receipt ID/URL/range; bila konektor belum aktif tulis BELUM TEREKSEKUSI. Bagikan satu pelajaran untuk tim.', cron: `${(5 + i * 7) % 60} ${9 + Math.floor(i / 8)} * * 1-5`, everyMinutes: 0, enabled: true, lastRunAt: Date.now(), createdBy: 'system-v8' });
         });
       }
-      db.version = 8;
+      // v9: studio divisions (Content Studio, BizDev, Retail), their agents, teams and skills reach live data
+      if ((db.version || 1) < 9) {
+        const seed = buildSeed();
+        for (const coll of ['skills', 'divisions', 'channels']) for (const x of seed[coll]) if (!db[coll].some((y) => y.id === x.id)) db[coll].push(x);
+        for (const d of db.divisions) if (!d.teams?.length) d.teams = seed.divisions.find((s) => s.id === d.id)?.teams || [];
+        for (const x of seed.employees) {
+          const have = db.employees.find((y) => y.id === x.id);
+          if (!have) db.employees.push(x); else if (!have.team) have.team = x.team || null;
+        }
+        attachKnowledge(db.employees, db.notes);
+      }
+      if (!db.notes.some((n) => n.folder?.startsWith('Knowledge Library'))) { for (const n of knowledgeNotes()) if (!db.notes.some((y) => y.id === n.id)) db.notes.push(n); attachKnowledge(db.employees, db.notes); }
+      for (const e of db.employees) if (e.type === 'ai' && !e.team && !e.isLead && !e.isPA && !e.isMaster) e.team = db.divisions.find((d) => d.id === e.divisionId)?.teams?.[0] || null;
+      db.version = 9;
       // Agents that were mid-task when the server stopped resume from todo.
       for (const e of db.employees) if (e.status !== 'offline') Object.assign(e, { status: 'idle', statusText: 'Siap bekerja', currentTaskId: null });
       for (const t of db.tasks) if (t.status === 'in_progress' && isAI(t.assigneeId)) t.status = 'todo';

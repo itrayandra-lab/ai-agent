@@ -1,0 +1,156 @@
+{
+  "id": "orbi",
+  "name": "Orbi",
+  "height": 1.282,
+  "hips": 0.25,
+  "knee": 0.16,
+  "ankle": 0.075,
+  "seatHip": 0.383,
+  "palmL": [
+    0.349,
+    0.5,
+    -0.0
+  ],
+  "palmR": [
+    -0.349,
+    0.5,
+    -0.0
+  ],
+  "propL": [
+    0.365,
+    0.452,
+    -0.0
+  ],
+  "propR": [
+    -0.365,
+    0.452,
+    -0.0
+  ],
+  "walkStride": 0.35,
+  "clips": [
+    "CH_Standing",
+    "CH_Idle",
+    "CH_Walk",
+    "CH_Run",
+    "CH_Sitting",
+    "CH_SitDown",
+    "CH_StandUp",
+    "CH_Type",
+    "CH_Read",
+    "CH_HoldR",
+    "CH_Carry",
+    "CH_Drink",
+    "CH_Phone",
+    "CH_Talk",
+    "CH_Nod",
+    "CH_Shrug",
+    "CH_Wave",
+    "CH_Clapping",
+    "CH_Cheer",
+    "CH_Think"
+  ],
+  "expressions": [
+    "neutral",
+    "blink",
+    "smile",
+    "laugh",
+    "wow",
+    "love",
+    "angry",
+    "sad",
+    "cry",
+    "sleepy",
+    "wink",
+    "think",
+    "talk1",
+    "talk2",
+    "focus",
+    "error"
+  ],
+  "tris": {
+    "lod0": 2680,
+    "lod1": 1284
+  },
+  "files": {
+    "lod0": "orbi.glb",
+    "lod1": "lod/orbi.glb",
+    "face": "orbi.face.png"
+  },
+  "faceStyle": "screen",
+  "faceTint": "#8cb2ff",
+  "springs": [],
+  "materials": {
+    "role_top|Suit": "main shell colour",
+    "role_bottom|Under": "accent parts",
+    "role_skin|Skin": "skin (clay figures)",
+    "Eye": "dark screen behind the Face glass",
+    "Face": "expression glass, UV 0..1"
+  },
+  "designColors": {
+    "role_top|Suit": [
+      0.94,
+      0.94,
+      0.96
+    ],
+    "role_bottom|Under": [
+      0.94,
+      0.94,
+      0.96
+    ],
+    "role_skin|Skin": [
+      0.94,
+      0.94,
+      0.96
+    ],
+    "role_hair|Hair": [
+      0.2,
+      0.15,
+      0.1
+    ],
+    "Frame": [
+      0.3,
+      0.3,
+      0.32
+    ],
+    "Eye": [
+      0.008,
+      0.008,
+      0.012
+    ],
+    "Trim": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "Glove": [
+      0.95,
+      0.95,
+      0.95
+    ],
+    "Belt": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "role_glow|Glow": [
+      0.55,
+      0.55,
+      1.0
+    ],
+    "Face": [
+      1,
+      1,
+      1
+    ]
+  },
+  "seat": {
+    "hipHeight": 0.383,
+    "thighLow": 0.255,
+    "feetFlat": false
+  },
+  "notes": [
+    "Proportions follow the reference design: hips 0.25, knee 0.16, ankle 0.075 (measured from the exported GLB).",
+    "Legs are too short to reach the floor from a 0.255 m seat: in CH_Sitting the feet dangle (thighs horizontal, knees 90 deg).",
+    "Short legs: walk stride 0.35 m per cycle (cycle 0.54 s); scale walk speed to stride/0.54 m/s so the feet do not slide."
+  ]
+}

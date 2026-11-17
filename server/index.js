@@ -64,9 +64,12 @@ async function body(req) {
 const routes = [];
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
 
-on('GET', '/api/state', () => ({ ...store.snapshot(), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats() }));
+on('GET', '/api/state', async () => {
+  if (llm.hasGroq()) try { await llm.refreshGroqModels(); } catch (err) { console.warn(`Daftar model Groq memakai cache: ${err.message}`); }
+  return { ...store.snapshot(), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats() };
+});
 
-on('POST', '/api/goals', (b) => engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }));
+on('POST', '/api/goals', (b) => { if (/^\s*(\/\w+|saya selesai)\s*$/i.test(String(b.title || ''))) throw new Error('Itu perintah chat rapat, bukan goal. Ketik di chat rapatnya.'); return engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }); });
 
 on('POST', '/api/tasks', (b) => engine.createTask({ ...pick(b, ['title', 'description', 'assigneeId', 'priority', 'dueAt', 'parentId']), title: need(b.title, 'Judul wajib'), createdBy: b.userId || db().settings.currentUserId }));
 on('PATCH', '/api/tasks/:id', (b, p) => {
@@ -97,9 +100,10 @@ on('POST', '/api/approvals/:id', (b, p) => engine.decideApproval(p.id, { decisio
 
 on('POST', '/api/messages', (b) => {
   const m = engine.postMessage(need(b.channelId, 'channelId wajib'), b.userId || db().settings.currentUserId, need(b.text, 'Pesan kosong').slice(0, 8000));
-  engine.onHumanMessage(m);
+  engine.onHumanMessage(m).catch((err) => console.error('[onHumanMessage]', err));
   return m;
 });
+on('POST', '/api/orchestrate', (b) => engine.orchestrate({ text: need(b.text, 'Pesan kosong'), userId: b.userId || db().settings.currentUserId, to: b.to || [], mode: b.mode || 'auto' }));
 on('POST', '/api/dm', (b) => ({ id: engine.ensureDM(b.userId || db().settings.currentUserId, need(b.with, 'with wajib')) }));
 on('POST', '/api/channels', (b) => store.upsert('channels', { id: slug(need(b.name, 'Nama wajib')), name: slug(b.name), kind: 'channel', divisionId: b.divisionId || null, topic: b.topic || '' }));
 
@@ -168,6 +172,55 @@ on('GET', '/api/training/:id', (b, p) => {
 });
 on('GET', '/api/capabilities', () => CAPABILITIES.map((c) => ({ ...c, users: db().employees.filter((e) => (e.tools || []).includes(c.id)).length, skills: db().skills.filter((s) => skillTools(s).includes(c.id)).map((s) => s.id) })));
 on('GET', '/api/brain/audit', () => lib.audit(40));
+// ───── Knowledge spaces: per-division knowledge coverage, library assignments, learning overview
+on('GET', '/api/knowledge/spaces', () => {
+  const notes = db().notes, emps = db().employees.filter((e) => e.type === 'ai');
+  const lib2 = notes.filter((n) => n.folder?.startsWith('Knowledge Library/'));
+  const areas = {};
+  for (const n of lib2) { const a = n.folder.split('/')[1]; areas[a] = (areas[a] || 0) + 1; }
+  const divisions = db().divisions.map((d) => {
+    const mem = emps.filter((e) => e.divisionId === d.id);
+    const withKb = mem.filter((e) => (e.knowledgeIds || []).some((k) => lib2.some((n) => n.id === k))).length;
+    const ownNotes = notes.filter((n) => n.folder?.split('/')[0] === d.name).length;
+    const avgSkill = mem.length ? mem.reduce((a, e) => a + (e.skillRefs || []).reduce((x, r) => x + r.proficiency, 0) / Math.max(1, (e.skillRefs || []).length), 0) / mem.length : 0;
+    return { id: d.id, name: d.name, icon: d.icon, color: d.color, agents: mem.length, covered: withKb, coverage: mem.length ? Math.round((withKb / mem.length) * 100) : 0, ownNotes, avgSkill: Math.round(avgSkill * 10) / 10, teams: (d.teams || []).length };
+  });
+  return { library: lib2.length, areas, divisions, totalNotes: notes.length, agents: emps.length };
+});
+on('GET', '/api/knowledge/library', () => db().notes.filter((n) => n.folder?.startsWith('Knowledge Library/')).map((n) => ({ id: n.id, title: n.title, folder: n.folder, tags: n.tags, words: n.content.split(/\s+/).length, attached: db().employees.filter((e) => e.type === 'ai' && (e.knowledgeIds || []).includes(n.id)).length })));
+on('POST', '/api/knowledge/assign', (b) => {
+  const n = db().notes.find((x) => x.id === b.noteId); if (!n) throw bad('Catatan tidak ditemukan', 404);
+  const ids = b.divisionId ? db().employees.filter((e) => e.type === 'ai' && e.divisionId === b.divisionId).map((e) => e.id) : (b.employeeIds || []);
+  let n2 = 0;
+  for (const id of ids) {
+    const e = db().employees.find((x) => x.id === id); if (!e || e.type !== 'ai') continue;
+    const has = (e.knowledgeIds || []).includes(n.id);
+    if (b.mode === 'remove' && has) { e.knowledgeIds = e.knowledgeIds.filter((k) => k !== n.id); n2++; }
+    if ((b.mode || 'add') === 'add' && !has) { e.knowledgeIds = [...(e.knowledgeIds || []), n.id]; n2++; }
+    store.upsert('employees', e);
+  }
+  engine.event('learned', b.userId || 'owner', `${n.title} dibagikan ke ${n2} agen`, { targetId: ids[0] });
+  return { changed: n2 };
+});
+on('GET', '/api/learning', () => db().employees.filter((e) => e.type === 'ai').map((e) => ({
+  id: e.id, name: e.name, divisionId: e.divisionId, team: e.team || null, title: e.title, status: e.status,
+  quality: e.stats?.qualityN ? Math.round((e.stats.qualitySum / e.stats.qualityN) * 10) / 10 : null,
+  tasks: e.stats?.tasksDone || 0, examples: e.stats?.trainingExamples || 0, mood: e.mind?.mood || null, confidence: e.mind?.confidence ?? null,
+  skills: (e.skillRefs || []).slice().sort((a, b2) => b2.proficiency - a.proficiency).slice(0, 4).map((r) => ({ id: r.id, name: db().skills.find((s) => s.id === r.id)?.name || r.id, proficiency: r.proficiency })),
+  lessons: (e.lessons || []).slice(-3).map((l) => ({ t: l.t, lesson: l.lesson, quality: l.quality })),
+})));
+on('POST', '/api/learning/train', (b) => {
+  const e = db().employees.find((x) => x.id === b.employeeId && x.type === 'ai'); if (!e) throw bad('Agen tidak ditemukan', 404);
+  const sk = db().skills.find((s) => s.id === b.skillId); if (!sk) throw bad('Skill tidak ditemukan', 404);
+  const lesson = String(b.lesson || '').trim().slice(0, 300); if (!lesson) throw bad('Isi pelajaran wajib');
+  const ref = (e.skillRefs ||= []).find((r) => r.id === sk.id);
+  if (ref) ref.proficiency = Math.min(10, Math.round((ref.proficiency + 0.5) * 10) / 10); else e.skillRefs.push({ id: sk.id, proficiency: 5 });
+  e.lessons = [...(e.lessons || []), { t: Date.now(), taskId: null, lesson, quality: 8, by: b.userId || 'owner' }].slice(-25);
+  brain.remember(e, `Dilatih ${sk.name}: ${lesson}`);
+  store.upsert('employees', e);
+  engine.event('learned', e.id, `${e.name} belajar: ${sk.name} — ${lesson.slice(0, 120)}`, { targetId: e.id });
+  return { ok: true, proficiency: (e.skillRefs.find((r) => r.id === sk.id) || {}).proficiency };
+});
 // Calendar: expand cron/interval routines into concrete occurrences for a date range (max 62 days, 800 items)
 on('GET', '/api/calendar', (b, p, url) => {
   const from = Number(url.searchParams.get('from')) || Date.now();
@@ -217,12 +270,13 @@ on('PATCH', '/api/routines/:id', (b, p) => store.patch('routines', p.id, pick(b,
 on('DELETE', '/api/routines/:id', (b, p) => ({ ok: store.remove('routines', p.id) }));
 on('POST', '/api/routines/:id/run', (b, p) => engine.runRoutine(db().routines.find((x) => x.id === p.id), { priority: 'medium' }));
 
-on('PATCH', '/api/settings', (b) => {
+on('PATCH', '/api/settings', async (b) => {
   const s = db().settings;
-  const ch = pick(b, ['mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize']);
+  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize']);
   if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = b.apiKey.trim();
   if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = b.groqApiKey.trim();
   for (const k of ['tickMs', 'maxConcurrent', 'dailyBudgetUSD']) if (k in ch) ch[k] = Number(ch[k]);
+  if ('uiKeys' in ch) { const u = ch.uiKeys || {}, clean = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).slice(0, 60).filter(([a, v]) => typeof v === 'string' && v.length < 24).map(([a, v]) => [String(a).slice(0, 32), v])); ch.uiKeys = { free: clean(u.free), play: clean(u.play), invert: !!u.invert }; }
   if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); collab.resetMcp(); }
   if (ch.googleAppsScript) {
     const prev = s.googleAppsScript || {};
@@ -236,12 +290,26 @@ on('PATCH', '/api/settings', (b) => {
   if (ch.autoApprove === true) engine.autoApprovePending();
   store.broadcast({ kind: 'root', key: 'live', value: llm.isLive() });
   store.broadcast({ kind: 'root', key: 'provider', value: llm.provider() });
+  if (llm.hasGroq() && ('groqApiKey' in ch || ch.provider === 'groq' || ch.provider === 'auto')) {
+    try {
+      await llm.refreshGroqModels({ force: 'groqApiKey' in ch });
+      store.broadcast({ kind: 'root', key: 'groqModels', value: llm.GROQ_MODELS });
+      store.broadcast({ kind: 'root', key: 'models', value: llm.MODELS });
+    } catch (err) { console.warn(`Daftar model Groq tidak diperbarui: ${err.message}`); }
+  }
   return store.publicSettings();
+});
+on('POST', '/api/groq-models/refresh', async () => {
+  if (!llm.hasGroq()) throw bad('Groq API key belum terpasang');
+  const result = await llm.verifyGroqModels();
+  store.broadcast({ kind: 'root', key: 'groqModels', value: result.models });
+  store.broadcast({ kind: 'root', key: 'models', value: llm.MODELS });
+  return result;
 });
 on('PATCH', '/api/company', (b) => { const c = Object.assign(db().company, pick(b, ['name', 'tagline', 'language'])); store.setRoot('company', c); return c; });
 on('POST', '/api/test-key', async () => {
   if (!llm.isLive()) throw bad('Belum ada API key / mode simulasi aktif');
-  const res = await llm.call({ system: 'Balas satu kata.', messages: [{ role: 'user', content: 'ping' }], maxTokens: 2000 });
+  const res = await llm.call({ system: 'Balas satu kata.', messages: [{ role: 'user', content: 'ping' }], maxTokens: 32 });
   return { ok: true, provider: llm.provider(), model: res.usedModel, reply: llm.textOf(res), usage: res.usage };
 });
 on('GET', '/api/export', () => ({ ...db(), settings: { ...db().settings, apiKey: '' } }));
@@ -302,8 +370,14 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { error: 'Endpoint tidak ada' });
 });
 
+// a rejected promise anywhere in a background chat/meeting/job must not take the whole office down
+process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
+// meetings are in-memory loops: after a restart any meeting still marked running/waiting_owner is dead and would block its participants from new meetings
+for (const m of store.get().meetings || []) if (m.status === 'running' || m.status === 'waiting_owner') { m.status = 'failed'; m.error = 'Terputus karena server dimulai ulang'; store.upsert('meetings', m); }
+
 server.listen(PORT, HOST, () => {
-  console.log(`\n  🏢 Ray Agent Office berjalan di http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  console.log(`\n  🏢 RAIVERSE AGENT berjalan di http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`  Mesin AI: ${{ groq: 'LIVE · Groq', claude: 'LIVE · Claude', sim: 'SIMULASI (isi GROQ_API_KEY atau ANTHROPIC_API_KEY di .env / Pengaturan)' }[llm.provider()]}`);
   if (HOST === '127.0.0.1') console.log('  Akses dari HP di jaringan yang sama: jalankan dengan HOST=0.0.0.0\n');
 });

@@ -1,5 +1,6 @@
 import { EXTRA_DIVISIONS, EXTRA_ROSTER } from './roster-extra.js';
-import { TEAM_DIVISIONS, TEAM_ROSTER, teamOf } from './roster-teams.js';
+import { TEAM_DIVISIONS, TEAM_ROSTER, TEAMS, teamOf } from './roster-teams.js';
+import { STUDIO_DIVISIONS, STUDIO_ROSTER, STUDIO_TEAMS } from './roster-studio.js';
 // Company roster: divisions and fully specified AI employees (role, responsibilities, KPIs, rules, skills, starters).
 // buildInstructions() turns a spec into the structured system instruction each agent works from.
 
@@ -285,6 +286,9 @@ DIVISIONS.push(...EXTRA_DIVISIONS);
 ROSTER.push(...EXTRA_ROSTER);
 DIVISIONS.push(...TEAM_DIVISIONS);
 ROSTER.push(...TEAM_ROSTER);
+DIVISIONS.push(...STUDIO_DIVISIONS);
+ROSTER.push(...STUDIO_ROSTER);
+Object.assign(TEAMS, STUDIO_TEAMS);
 
 const AVATARS = ['bot', 'cat', 'bear', 'bunny', 'fox'];
 

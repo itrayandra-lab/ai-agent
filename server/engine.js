@@ -51,7 +51,7 @@ export function postMessage(channelId, authorId, text, extra = {}) {
 const depthOf = (t) => { let d = 0; let p = t; while (p?.parentId && d < 10) { p = task(p.parentId); d++; } return d; };
 
 export function createTask({ title, description = '', assigneeId, createdBy = 'owner', parentId = null, priority = 'medium', kind = 'task', routineId = null, dueAt = null }) {
-  gov.checkCreate({ title, createdBy, parentId, kind });
+  gov.checkCreate({ title, createdBy, parentId, kind, assigneeId });
   const a = emp(assigneeId) || emp('aria');
   const t = {
     id: uid('t'), title: String(title).slice(0, 160), description: String(description).slice(0, 6000),
@@ -138,6 +138,14 @@ async function tick() {
     if (cs.length && cs.every((c) => c.status === 'done')) {
       t.status = 'todo'; t.synth = true;
       logTask(t, 'system', 'resumed', 'Semua subtugas selesai — kembali ke assignee untuk sintesis');
+    } else if (cs.length && cs.every((c) => c.status === 'done' || c.status === 'blocked')) {
+      // a blocked child must not leave the parent waiting forever: synthesize from what finished, or block when nothing did
+      if (cs.some((c) => c.status === 'done')) { t.status = 'todo'; t.synth = true; logTask(t, 'system', 'resumed', `${cs.filter((c) => c.status === 'blocked').length} subtugas diblokir — sintesis dari yang selesai`); }
+      else { t.status = 'blocked'; logTask(t, 'system', 'error', 'Semua subtugas diblokir — tugas induk ikut diblokir'); event('alert', 'system', `"${t.title}" diblokir karena semua subtugasnya gagal`, { taskId: t.id }); }
+    } else if (!cs.length && !jobs.has(t.id) && now - (t.waitingSince || (t.waitingSince = now)) > 30000) {
+      // orphan: waiting for subtasks that were never created — put it back to work instead of hanging
+      t.status = 'todo'; delete t.synth; delete t.waitingSince; t.noDelegate = true;
+      logTask(t, 'system', 'resumed', 'Tidak ada subtugas yang dibuat — tugas dikerjakan langsung oleh assignee');
     }
   }
 
@@ -152,6 +160,7 @@ async function tick() {
     const e = emp(t.assigneeId);
     if (!e || e.type !== 'ai' || e.status === 'offline') continue;
     if ([...jobs.values()].some((j) => j.empId === e.id)) continue;
+    if (e.status === 'meeting' && e.meetingUntil && e.meetingUntil > now) continue;   // an agent in a meeting does not start a job in the middle of it
     if (live && llm.budgetLeft() <= 0) {
       if (!budgetWarned) { budgetWarned = true; event('alert', 'system', `Budget harian $${settings.dailyBudgetUSD} habis — agen live dijeda. Naikkan budget di Pengaturan.`); }
       break;
@@ -171,7 +180,11 @@ async function tick() {
       if (!step) { jobs.delete(taskId); continue; }
       const done = step();
       if (done || j.i >= j.steps.length) endJob(taskId);
-    } catch (err) { console.error(err); endJob(taskId); }
+    } catch (err) {
+      // a crashing step used to leave the task "in_progress" forever with no job: route it through the normal failure/retry/recovery path
+      console.error(err); const jt = task(taskId), je = emp(j.empId); endJob(taskId);
+      if (jt && je && jt.status === 'in_progress') failTask(je, jt, err);
+    }
     finally { j.busy = false; }
   }
 }
@@ -229,7 +242,7 @@ function failTask(e, t, err) {
       const previous = e; t.assigneeId = backup.id; t.divisionId = backup.divisionId; t.failures = 0; t.recoveryCount = (t.recoveryCount || 0) + 1; t.retryAt = Date.now() + 2000;
       logTask(t, 'system', 'resumed', `Recovery handoff: ${previous.name} → ${backup.name}. Pelajaran: ${lesson}`);
       event('handoff', previous.id, `${previous.name} menyerahkan failure case "${t.title}" ke ${backup.name}`, { targetId: backup.id, taskId: t.id });
-    } else if ((t.recoveryCount || 0) >= 2) t.status = 'blocked';
+    } else if ((t.recoveryCount || 0) >= 2 || t.failures >= 5) t.status = 'blocked';   // nobody to hand over to: stop after 5 failures instead of retrying forever
   }
   logTask(t, e.id, 'error', `Error: ${msg.slice(0, 400)}${t.status === 'blocked' ? ' — diblokir setelah recovery lintas agen' : ' — retry adaptif dijadwalkan'}`);
   event('alert', e.id, `${e.name} gagal mengerjakan "${t.title}": ${msg.slice(0, 160)}`, { taskId: t.id });
@@ -392,15 +405,16 @@ export function systemPrompt(e, currentTask = null) {
   const { company } = db();
   const d = div(e.divisionId);
   const team = teamOf(e).map((x) => `- ${x.id}: ${x.name}, ${x.title} (${x.type === 'ai' ? 'AI' : 'MANUSIA'})`).join('\n') || '- (tidak ada)';
-  const heads = leads().filter((x) => x.id !== e.id).map((x) => `- ${x.id}: ${x.name}, ${x.title} — ${div(x.divisionId).name}`).join('\n');
+  const ownLead = leads().find((x) => x.divisionId === e.divisionId && x.id !== e.id);
+  const heads = (e.isLead || e.isPA || e.isMaster ? leads().filter((x) => x.id !== e.id) : [ownLead].filter(Boolean)).map((x) => `- ${x.id}: ${x.name}, ${x.title} — ${div(x.divisionId).name}`).join('\n');
   const orchestrator = e.isPA || e.isMaster;
   const everyone = orchestrator ? db().employees.filter((x) => x.type === 'ai' && x.id !== e.id && !x.isPA).map((x) => `- ${x.id}: ${x.name} · ${x.title} · ${div(x.divisionId)?.short}${x.isLead ? ' · ORKESTRATOR DIVISI' : ''}${x.isMaster ? ' · MASTER ORCHESTRATOR' : ''}`).join('\n') : '';
   const chans = db().channels.filter((c) => c.kind === 'channel').map((c) => `#${c.id}`).join(', ');
   const skills = promptSkills(e, currentTask);
   const caps = CAPABILITIES.filter((c) => (c.required || (e.tools || CAP_IDS).includes(c.id)) && !(currentTask?.kind === 'routine' && ROUTINE_BLOCK.has(c.id)) && !(currentTask?.massMode && MASS_BLOCK.has(c.id)));
   const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter(Boolean);
-  let kbBudget = 14000;
-  const kbText = kb.map((n) => { const body = n.content.slice(0, Math.max(0, Math.min(5000, kbBudget))).replace(/^#{1,6}\s+/gm, '### '); kbBudget -= body.length; return body ? `## ${n.title}\n${body}` : ''; }).filter(Boolean).join('\n\n');
+  let kbBudget = orchestrator ? 9000 : 6000; // characters; the rest of a note is one Brain search away
+  const kbText = kb.map((n) => { const body = n.content.slice(0, Math.max(0, Math.min(2400, kbBudget))).replace(/^#{1,6}\s+/gm, '### '); kbBudget -= body.length; return body ? `## ${n.title}\n${body}` : ''; }).filter(Boolean).join('\n\n');
   const canDelegate = caps.some((c) => c.id === 'create_subtask');
   const sections = [
     `# IDENTITAS\nKamu adalah ${e.name}, ${e.title} di divisi ${d.name}${e.team ? ` (tim ${e.team}: ${db().employees.filter((x) => x.team === e.team && x.id !== e.id && x.divisionId === e.divisionId).map((x) => x.name).join(", ") || "-"})` : ""} perusahaan ${company.name} ("${company.tagline}"). Kamu karyawan AI otonom di kantor yang dipantau dan diawasi manusia. Jangan menyebut dirimu model AI generik; kamu ${e.name}.`,
@@ -433,7 +447,7 @@ function retrievedContext(e, t) {
   ].filter(Boolean).join('\n\n');
 }
 
-const toolsFor = (e, task) => TOOLS.filter((t) => t.name === 'complete_task' || ((e.tools || CAP_IDS).includes(t.name) && !(task?.kind === 'routine' && ROUTINE_BLOCK.has(t.name)) && !(task?.massMode && MASS_BLOCK.has(t.name))));
+const toolsFor = (e, task) => TOOLS.filter((t) => t.name === 'complete_task' || (!(t.name.startsWith('google_') && !collab.googleWorkspaceConfigured()) && (e.tools || CAP_IDS).includes(t.name) && !(task?.kind === 'routine' && ROUTINE_BLOCK.has(t.name)) && !(task?.massMode && MASS_BLOCK.has(t.name))));
 
 // ───────────────────────── live (Claude) agent ─────────────────────────
 const TOOLS = [
@@ -622,6 +636,11 @@ async function runTool(e, t, name, input, state) {
     }
     case 'convene_meeting': {
       const ids = (input.participant_ids || []).filter((id) => emp(id));
+      const prev = (db().meetings || []).filter((x) => x.originTaskId === t.id).at(-1);
+      if (prev && Date.now() - (prev.endedAt || prev.startedAt || 0) < 45 * 60000) {
+        logTask(t, e.id, 'tool', '👥 rapat untuk tugas ini sudah ada — tidak diulang');
+        return prev.status === 'done' ? `Rapat untuk tugas ini SUDAH selesai, jangan adakan lagi. Lanjutkan dari notulen ini:\n${prev.minutes}` : 'Rapat untuk tugas ini sedang berlangsung. Jangan adakan rapat baru; selesaikan tugas setelah notulen keluar.';
+      }
       logTask(t, e.id, 'tool', `👥 convene_meeting("${String(input.topic).slice(0, 80)}") dengan ${ids.map((id) => emp(id).name).join(', ')}`);
       return collab.runMeeting({ topic: input.topic, agenda: input.agenda, participantIds: ids, chairId: e.id, rounds: input.rounds || 2, originTaskId: t.id })
         .then((m) => { logTask(t, e.id, 'tool', `👥 notulen: ${m.minutes.slice(0, 200)}`); return `Rapat selesai.\n${m.minutes}`; })
@@ -779,7 +798,7 @@ function simSteps(e, t) {
   const say = (text, status = 'working') => () => { setStatus(e, status, text, t.id); };
   const isGoal = t.kind === 'goal' && !t.synth;
   const team = teamOf(e).filter((x) => x.type === 'ai');
-  const canDelegate = e.isLead && !t.synth && t.kind !== 'routine' && depthOf(t) < 2 && team.length > 0 && !t.feedback;
+  const canDelegate = e.isLead && !t.noDelegate && !t.synth && t.kind !== 'routine' && depthOf(t) < 2 && team.length > 0 && !t.feedback;
 
   steps.push(say('Membaca brief'));
   let refs = [];
@@ -796,11 +815,13 @@ function simSteps(e, t) {
       if (!divs.length) divs = ['data', 'mkt', 'ops'];
       divs = divs.slice(0, 5);
       const heads = divs.map((d) => emp(div(d)?.leadId)).filter((x) => x && x.id !== e.id);
+      if (!heads.length) { finishTask(e, t, { summary: `Goal "${t.title.slice(0, 80)}" dikerjakan langsung (tidak ada divisi lain yang relevan).`, output: simDeliverable(e, t, refs), needsApproval: false }); return true; }
       const until = Date.now() + 9000;
       for (const h of [e, ...heads]) if (h.status !== 'working' || h.id === e.id) { h.meetingUntil = until; setStatus(h, 'meeting', 'Rapat kickoff goal', h.currentTaskId); }
       event('meeting', e.id, `${e.name} memimpin rapat kickoff dengan ${heads.map((h) => h.name).join(', ')}`, { participants: heads.map((h) => h.id), taskId: t.id });
       logTask(t, e.id, 'thought', `Goal ini menyentuh divisi: ${divs.map((d) => div(d).name).join(', ')}. Saya pecah per divisi.`);
       for (const h of heads) {
+        if (children(t).some((x) => x.assigneeId === h.id)) continue;   // a retried step must not create the same part twice
         const d = div(h.divisionId);
         const c = createTask({ title: `[${d.short}] ${t.title}`, description: `Bagian ${d.name} dari goal: "${t.title}".\n${t.description}\n\nFokus: ${d.mission}\nOutput: rencana & deliverable konkret untuk divisi ${d.name}.`, assigneeId: h.id, createdBy: e.id, parentId: t.id, priority: t.priority });
         logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${h.name}: ${c.title}`, { childId: c.id });
@@ -824,6 +845,7 @@ function simSteps(e, t) {
       const pick = [...team].sort(order).slice(0, count);
       logTask(t, e.id, 'thought', `Strategi delegasi ${strat}: ${pick.map((m) => m.name).join(', ')}`);
       for (const m of pick) {
+        if (children(t).some((x) => x.assigneeId === m.id)) continue;
         const c = createTask({ title: `${t.title.replace(/^\[[A-Z]+\]\s*/, '')} — ${m.skills[0]}`, description: `Dari ${e.name}: kerjakan bagian ${m.skills.join(', ')} untuk "${t.title}".\n${t.description.slice(0, 800)}`, assigneeId: m.id, createdBy: e.id, parentId: t.id, priority: t.priority });
         logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${m.name}: ${c.title}`, { childId: c.id });
       }
@@ -904,7 +926,25 @@ export function ensureDM(a, b) {
   return id;
 }
 
+/** a group discussion: Owner + several agents in one channel; replies are taken in turns so each speaker sees the previous ones */
+export function ensureGroup(ownerId, memberIds) {
+  const members = [...new Set([ownerId, ...memberIds])].sort();
+  const id = 'grp-' + members.join('--').slice(0, 120);
+  if (!db().channels.some((c) => c.id === id)) store.upsert('channels', { id, kind: 'group', members, name: 'Diskusi: ' + members.filter((m) => m !== ownerId).map((m) => emp(m)?.name || m).join(', ') });
+  return id;
+}
+
 const WORK_RE = /\b(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tulis|cari|riset|rancang|lakukan|jalankan|pastikan|pelajari|harus|please|create|make|write|draft|prepare)\b/i;
+
+/** Does this sound like an instruction (goal) rather than a question or small talk? Questions are always chat; imperatives (-kan verbs, known work verbs) are goals. */
+const QUESTION_RE = /\?\s*$|^\s*(?:apa|apakah|siapa|kenapa|mengapa|bagaimana|gimana|berapa|kapan|dimana|di mana|mana|bisakah|boleh|hi|hai|halo|hello|hey|pagi|siang|sore|malam|terima kasih|makasih|thanks?)\b/i;
+const WORK_VERBS = /^(?:tolong\s+|coba\s+|segera\s+|mohon\s+)?(?:buat|bikin|susun|siapkan|kerjakan|analisis|analisa|tulis|cari|riset|rancang|lakukan|jalankan|pastikan|pelajari|evaluasi|tingkatkan|optimalkan|kirim|jadwalkan|ubah|perbarui|update|review|periksa|cek|hitung|bandingkan|rangkum|ringkas|terjemahkan|launch|plan|build|prepare|draft|write|create|make|analy[sz]e|research|\w{3,}kan)\b/i;
+export function looksLikeWork(text) {
+  const t = String(text || '').trim();
+  if (!t || QUESTION_RE.test(t)) return false;
+  if (WORK_VERBS.test(t)) return t.split(/\s+/).length >= 3;
+  return WORK_RE.test(t) && t.split(/\s+/).length >= 4;
+}
 
 function broadcastScope(ch, text) {
   if (/@(?:all|semua)\b|#(?:all|semua)\b|\b(?:semua|seluruh)\s+(?:ai\s+)?agen/i.test(text)) return { type: 'all' };
@@ -955,7 +995,8 @@ export async function onHumanMessage(msg) {
   // only releases them after the owner explicitly says "selesai".
   if (ch.kind === 'meeting' && collab.handleOwnerMeetingMessage(msg)) return;
   let targets = [];
-  if (ch.kind === 'dm') targets = ch.members.filter((m) => m !== msg.authorId).map(emp);
+  const closed = ch.kind === 'dm' || ch.kind === 'group';   // only the members of a DM/group may answer in it
+  if (ch.kind === 'dm' || ch.kind === 'group') targets = ch.members.filter((m) => m !== msg.authorId).map(emp);
   const scope = broadcastScope(ch, msg.text);
   if (scope) {
     const delivered = scope.type === 'all' ? db().employees.filter((e) => e.type === 'ai').length : scopeTargets(scope).length;
@@ -964,32 +1005,45 @@ export async function onHumanMessage(msg) {
     targets.push(db().employees.find((e) => e.isPA && e.ownerId === msg.authorId) || db().employees.find((e) => e.isMaster));
   }
   const mentions = [...msg.text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase());
-  for (const name of mentions) { const e = db().employees.find((x) => x.id === name || x.name.toLowerCase() === name); if (e) targets.push(e); }
+  if (ch.kind === 'group') { const only = mentions.map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter((e) => e && ch.members.includes(e.id)); if (only.length) targets = only; }   // @name inside a group narrows who answers
+  else for (const name of mentions) { const e = db().employees.find((x) => x.id === name || x.name.toLowerCase() === name); if (e && (!closed || ch.members.includes(e.id))) targets.push(e); }
   if (!targets.length && ch.kind === 'channel') targets.push(ch.divisionId ? headOf(ch.divisionId) : db().employees.find((e) => e.isPA && e.ownerId === msg.authorId) || db().employees.find((e) => e.isMaster));
-  targets = [...new Set(targets.filter((e) => e && e.type === 'ai'))].slice(0, 3);
+  targets = [...new Set(targets.filter((e) => e && e.type === 'ai'))].slice(0, ch.kind === 'group' ? 4 : 3);
+  if (ch.kind === 'group') {   // turn-taking: one after another, so later speakers read what the earlier ones said
+    (async () => { for (const e of targets) { try { await replyAs(e, ch, msg); } catch (err) { postMessage(ch.id, e.id, `⚠️ Maaf, saya error: ${err.message}`); } } })();
+    return;
+  }
   for (const e of targets) replyAs(e, ch, msg).catch((err) => postMessage(ch.id, e.id, `⚠️ Maaf, saya error: ${err.message}`));
 }
 
 const TASK_RE = /^(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tulis|cari|riset|rancang|please|create|make|write|draft|prepare)\b/i;
 
+const chatBusy = new Map();
 async function replyAs(e, ch, msg) {
   const prev = { status: e.status, text: e.statusText };
+  chatBusy.set(e.id, (chatBusy.get(e.id) || 0) + 1);
+  // "ikuti saya" / "berhenti ikut": the agent walks with the person who asked (and stops when asked)
+  const wantsFollow = /\b(ikut(i)?\s+(saya|aku|gue|kami)|ayo\s+ikut|ikut\s+jalan|follow\s+me|jalan[- ]jalan|(?:datangi|hampiri|dekati|temui)\s+(?:saya|aku|gue|kami)|(?:sini|kemari|ke\s+sini|ke\s+tempat\s+(?:saya|aku))|come\s+(?:here|to\s+me))\b/i.test(msg.text);
+  const wantsStop = /\b(berhenti\s+(ikut|mengikuti)|stop\s+ikut|kembali\s+(ke\s+)?(meja|kerja)|balik\s+kerja)\b/i.test(msg.text);
+  if (wantsFollow) event('follow', e.id, `${e.name} mengikuti ${emp(msg.authorId)?.name}`, { targetId: msg.authorId });
+  if (wantsStop) event('unfollow', e.id, `${e.name} kembali bekerja`, { targetId: msg.authorId });
   if (e.status === 'idle') setStatus(e, 'chatting', `Membalas ${emp(msg.authorId)?.name}`);
   event('message', msg.authorId, `${emp(msg.authorId)?.name} → ${e.name}: ${msg.text.slice(0, 80)}`, { targetId: e.id, channelId: ch.id });
   try {
     if (llm.isLive() && llm.budgetLeft() > 0) {
-      const history = db().messages.filter((m) => m.channelId === ch.id).slice(-16);
+      const history = db().messages.filter((m) => m.channelId === ch.id).slice(-10);
       const convo = history.map((m) => `${emp(m.authorId)?.name || m.authorId}: ${m.text}`).join('\n');
       const chatTools = toolsFor(e).filter((x) => ['search_brain', 'read_note', 'write_note', 'web_search', 'calculate', 'company_status', 'ask_colleague', 'convene_meeting', 'schedule_job', 'list_jobs', 'visit_url', 'google_sheets_append', 'google_drive_create', 'google_calendar_create'].includes(x.name)).concat([{
         name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description'] },
       }]);
-      const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : '#' + ch.name}:\n${convo}\n\nBalas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu. Jika diminta pekerjaan besar, buat tugas dengan create_task lalu konfirmasi.` }];
+      const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : ch.kind === 'group' ? 'diskusi grup (' + ch.name + ')' : '#' + ch.name}:\n${convo}\n\n${wantsFollow ? 'Kamu SEKARANG ikut berjalan bersama orang ini di kantor 3D. Jawab singkat bahwa kamu ikut sambil mengobrol, jangan bilang tidak bisa ikut.\n\n' : ''}${wantsStop ? 'Kamu berhenti ikut dan kembali bekerja di meja. Jawab singkat.\n\n' : ''}Balas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu.${ch.kind === 'group' ? ' Ini diskusi grup: baca jawaban peserta lain di atas, jangan mengulang isinya; tambahkan sudut pandang divisimu atau setuju/tidak setuju dengan singkat.' : ''} Jawab langsung dan natural seperti rekan kerja; JANGAN menyebut nama tool atau istilah teknis (mis. create_task) kepada manusia. Untuk sapaan atau obrolan ringan, balas satu atau dua kalimat saja. Jika diminta pekerjaan besar, panggil tool create_task lalu konfirmasi singkat apa yang sudah kamu buat dan siapa yang mengerjakan.` }];
       const pseudo = { id: 'chat', title: 'chat', log: [], transient: true };
+      let posted = false;
       for (let i = 0; i < 5; i++) {
         const res = await llm.call({ system: systemPrompt(e), messages, tools: chatTools, model: e.model || llm.defaultModels()[e.isPA || e.isMaster || e.isLead ? 'worker' : 'small'], employee: e, maxTokens: 4000 });
         messages.push({ role: 'assistant', content: res.content });
         const uses = res.content.filter((b) => b.type === 'tool_use');
-        if (!uses.length) { postMessage(ch.id, e.id, (llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); break; }
+        if (!uses.length) { postMessage(ch.id, e.id, (llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); posted = true; break; }
         const results = [];
         for (const u of uses) {
           let out;
@@ -1003,10 +1057,13 @@ async function replyAs(e, ch, msg) {
         }
         messages.push({ role: 'user', content: results });
       }
+      if (!posted) postMessage(ch.id, e.id, 'Saya sudah menjalankan beberapa langkah untuk permintaan ini, tetapi belum sempat merangkum hasilnya. Tanya lagi, atau minta saya membuat tugas.');
     } else {
       await new Promise((r) => setTimeout(r, 900 + Math.random() * 1200));
       const text = msg.text.replace(/@[\w-]+/g, '').trim();
-      if (TASK_RE.test(text)) {
+      const dup = ch.kind === 'group' && db().tasks.find((x) => x.createdBy === msg.authorId && x.description === text && Date.now() - x.createdAt < 120000);
+      if (dup) postMessage(ch.id, e.id, `Setuju. Tugas itu sudah diambil **${emp(dup.assigneeId)?.name}**; saya siap membantu dari sisi ${e.title} bila diminta.`, { taskId: dup.id });
+      else if (TASK_RE.test(text)) {
         const t = createTask({ title: text.slice(0, 100), description: text, assigneeId: e.id, createdBy: msg.authorId, priority: 'medium' });
         postMessage(ch.id, e.id, `Siap! Sudah saya masukkan ke antrean kerja: **${t.title}**. Pantau progresnya di Kanban atau lihat saya di kantor 3D 👀`, { taskId: t.id });
       } else {
@@ -1016,8 +1073,32 @@ async function replyAs(e, ch, msg) {
       }
     }
   } finally {
-    if (e.status === 'chatting') setStatus(e, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);
+    const left = (chatBusy.get(e.id) || 1) - 1; chatBusy.set(e.id, left);
+    if (left === 0 && e.status === 'chatting') setStatus(e, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);
   }
 }
 
 export const running = () => [...jobs.entries()].map(([taskId, j]) => ({ taskId, empId: j.empId, mode: j.mode }));
+
+// ───────────────────────── orchestrator entry point (one chat box for everything) ─────────────────────────
+/** One message from the Owner. mode: 'auto' | 'chat' | 'goal'. auto = goal when it reads like work and nobody was addressed, otherwise a chat (DM with one agent, group with several). */
+export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto' }) {
+  text = String(text || '').trim().slice(0, 8000);
+  if (!text) throw new Error('Pesan kosong');
+  const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
+  const mentioned = [...text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase()).map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter(Boolean).map((e) => e.id);
+  const ids = [...new Set([...(Array.isArray(to) ? to : []), ...mentioned])].filter((id) => emp(id)?.type === 'ai');
+  const action = mode === 'goal' ? 'goal' : mode === 'chat' ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
+  if (action === 'goal') {
+    const chId = ensureDM(userId, pa.id);
+    postMessage(chId, userId, text);
+    const t = submitGoal({ title: text.replace(/@[\w-]+/g, '').trim().slice(0, 150) || 'Goal dari Owner', description: text, userId });
+    postMessage(chId, pa.id, `🎯 **Goal diterima.** Saya pecah ke tim yang tepat dan kabari kalau ada kemajuan atau butuh keputusanmu.`, { taskId: t.id, goal: true });
+    return { action: 'goal', channelId: chId, taskId: t.id, orchestrator: pa.id };
+  }
+  const members = ids.length ? ids : [pa.id];
+  const chId = members.length === 1 ? ensureDM(userId, members[0]) : ensureGroup(userId, members);
+  const m = postMessage(chId, userId, text);
+  onHumanMessage(m).catch((err) => { console.error('[orchestrate] chat error', err); postMessage(chId, pa.id, '⚠️ Maaf, ada galat saat memproses pesan: ' + err.message); });
+  return { action: 'chat', channelId: chId, members, orchestrator: pa.id };
+}

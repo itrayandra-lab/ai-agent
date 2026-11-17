@@ -10,10 +10,10 @@ let connected = false;
 window.setTheme = (t) => {
   document.documentElement.dataset.theme = t;
   document.querySelector('meta[name=theme-color]').content = t === 'light' ? '#f4f1ec' : '#0a0a0a';
-  try { localStorage.setItem('theme', t); } catch { /* storage unavailable */ }
+  try { localStorage.setItem('ui-theme', t); } catch { /* storage unavailable */ }
   officeApi()?.setTheme(t);
 };
-try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* ignore */ }
+try { const t = localStorage.getItem('ui-theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* ignore */ }
 
 function badges() {
   const ap = S.data.approvals.filter((a) => a.status === 'pending' && (a.approverId === S.me || S.me === 'owner')).length;
@@ -23,10 +23,10 @@ function badges() {
 
 const NAV = [
   { group: 'Workspace', items: ['office', 'dashboard', 'tasks', 'chat', 'brain'] },
-  { group: 'Organisasi', items: ['studio', 'team', 'approvals'] },
+  { group: 'Organisasi', items: ['studio', 'team', 'knowledge', 'approvals'] },
   { group: 'Sistem', items: ['settings'] },
 ];
-const SUB = { office: 'Pantau & masuk ke kantor', dashboard: 'Ringkasan perusahaan', tasks: 'Kanban & jejak kerja', chat: 'Percakapan & rapat', brain: 'Knowledge graph', studio: 'Rancang karyawan AI', team: 'Hierarki & divisi', approvals: 'Keputusan manusia', settings: 'Mesin AI & sistem' };
+const SUB = { office: 'Pantau & masuk ke kantor', dashboard: 'Ringkasan perusahaan', tasks: 'Kanban & jejak kerja', chat: 'Percakapan & rapat', brain: 'Knowledge graph', studio: 'Rancang karyawan AI', studio: 'Rancang karyawan AI', knowledge: 'Knowledge, pelatihan & dataset', team: 'Hierarki & divisi', approvals: 'Keputusan manusia', settings: 'Mesin AI & sistem' };
 let collapsed = false;
 try { collapsed = localStorage.getItem('navCollapsed') === '1'; } catch { /* ignore */ }
 
@@ -38,7 +38,7 @@ function renderNav() {
   const active = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length;
   const prov = d.provider || (d.live ? 'claude' : 'sim');
   document.getElementById('app').classList.toggle('nav-collapsed', collapsed);
-  $('#sidebar').innerHTML = `<div class="brand"><div class="logo">◐</div><span class="lbl"><span class="wordmark">RAY // OFFICE</span><small>${esc(d.company.name)}</small></span><button class="btn icon ghost nav-toggle" id="navtg" title="${collapsed ? 'Perluas' : 'Ciutkan'} navigasi">${icon(collapsed ? 'expand' : 'collapse', 16)}</button></div>
+  $('#sidebar').innerHTML = `<div class="brand"><div class="logo">◐</div><span class="lbl"><span class="wordmark">R<b class="ai">AI</b>VERSE <em>AGENT</em></span><small>${esc(d.company.name)}</small></span><button class="btn icon ghost nav-toggle" id="navtg" title="${collapsed ? 'Perluas' : 'Ciutkan'} navigasi">${icon(collapsed ? 'expand' : 'collapse', 16)}</button></div>
     ${NAV.map((g) => `<div class="nav-group"><div class="nav-label">${g.group}</div>${g.items.map(item).join('')}</div>`).join('')}
     <div class="side-foot">
       <div class="engine"><span class="dot ${prov !== 'sim' && d.settings.autonomy ? 'on' : ''}"></span><span class="lbl">${prov === 'groq' ? 'Groq · GPT-OSS' : prov === 'claude' ? 'Claude' : 'Simulasi'} · ${active}/${ai.length} aktif</span></div>
@@ -86,7 +86,7 @@ function route() {
   current = VIEWS[next].view;
   current.mount(root);
   renderNav(); renderTop();
-  document.title = `${VIEWS[next].title} · ${S.data.company.name}`;
+  document.title = `${VIEWS[next].title} · RAIVERSE AGENT`;
 }
 
 // ───── command palette (Obsidian/Linear style)

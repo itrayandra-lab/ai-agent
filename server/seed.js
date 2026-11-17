@@ -1,4 +1,5 @@
 // Initial company: divisions, AI + human employees, knowledge brain, routines, channels.
+import { knowledgeNotes, attachKnowledge } from './knowledge/index.js';
 import { SEED_SKILLS, ensureEmployeeConfig, autoActivate } from './catalog.js';
 import { TEAMS } from './roster-teams.js';
 import { DIVISIONS, ROSTER, rosterEmployees, personalAssistant } from './roster.js';
@@ -277,6 +278,7 @@ Terkait: [[Cara Kerja AI + Manusia]]
     if (e.type === 'ai') e.knowledgeIds = [...new Set([SOP_OF[e.divisionId], 'Kebijakan Persetujuan', ...(EXTRA_KB[e.divisionId] || [])].map(slug))].filter((id) => notes.some((n) => n.id === id));
   }
 
+  notes.push(...knowledgeNotes(t)); attachKnowledge(employees, notes);
   const channels = [
     { id: 'general', name: 'general', kind: 'channel', divisionId: null, topic: 'Pengumuman & koordinasi seluruh perusahaan' },
     { id: 'standup', name: 'daily-standup', kind: 'channel', divisionId: null, topic: 'Update harian otomatis dari tim' },

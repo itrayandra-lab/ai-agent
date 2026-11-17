@@ -23,8 +23,21 @@ export async function api(method, url, body) {
   return data;
 }
 
+/** Any colour → the pastel of the same hue (greys stay grey). Running it twice gives the same result. */
+export function soften(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return hex;
+  const n = parseInt(m[1], 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0;
+  if (d) h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const sat = d < 0.08 ? 0.06 : 0.5, l = 0.72, c = (1 - Math.abs(2 * l - 1)) * sat, x = c * (1 - Math.abs((h % 2) - 1)), q = l - c / 2;
+  const [R, G, B] = [[c, x, 0], [x, c, 0], [0, c, x], [0, x, c], [x, 0, c], [c, 0, x]][Math.floor(h) % 6];
+  return '#' + [R, G, B].map((v) => Math.round((v + q) * 255).toString(16).padStart(2, '0')).join('');
+}
+const softDiv = (d) => { if (d && d.color) d.color = soften(d.color); return d; };
+
 export async function loadState() {
   S.data = await (await fetch('/api/state')).json();
+  (S.data.divisions || []).forEach(softDiv);
   S.me = S.data.settings.currentUserId || 'owner';
   notify('*');
 }
@@ -40,6 +53,7 @@ export function connect(setConn) {
     if (msg.kind === 'reload') return location.reload();
     if (msg.kind === 'upsert') {
       const arr = d[msg.coll];
+      if (msg.coll === 'divisions') softDiv(msg.item);
       const i = arr.findIndex((x) => x.id === msg.item.id);
       if (i >= 0) arr[i] = msg.item; else arr.push(msg.item);
       if (msg.coll === 'events') { if (arr.length > 600) arr.splice(0, arr.length - 600); for (const fn of eventSubs) fn(msg.item); }
@@ -50,6 +64,7 @@ export function connect(setConn) {
       notify(msg.coll);
     } else if (msg.kind === 'root') {
       d[msg.key] = msg.value;
+      if (msg.key === 'divisions') msg.value.forEach(softDiv);
       if (msg.key === 'settings') S.me = msg.value.currentUserId || S.me;
       notify(msg.key);
     }
@@ -155,6 +170,7 @@ export function closeDrawer() {
 export const drawerKey = () => drawerState?.key;
 
 export function navigate(view, params = {}) {
+  if (S.embedHook && S.embedUntil && performance.now() < S.embedUntil && S.embedHook(view, params)) return;
   S.view = view; S.params = params;
   const q = new URLSearchParams(params).toString();
   history.replaceState(null, '', `#${view}${q ? '?' + q : ''}`);
