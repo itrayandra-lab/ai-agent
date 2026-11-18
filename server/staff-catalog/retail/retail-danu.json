@@ -1,39 +1,164 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "retail-danu",
   "division": "retail",
   "employeeId": "danu",
   "title": "Store Manager",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Danu",
-    "tugasPeran": [
-      "Mengatur jadwal shift, target harian, dan briefing pagi tim toko",
-      "Memastikan SOP buka-tutup toko, kasir, dan kebersihan dijalankan",
-      "Menangani keluhan pelanggan di toko dan eskalasi bila perlu"
-    ],
-    "keahlian": [
-      "store manager",
-      "shift",
-      "pelayanan",
-      "target harian"
-    ],
-    "contohTugas": [
-      "Checklist buka-tutup toko harian",
-      "Rencana shift minggu depan untuk 6 staf",
-      "Skrip briefing pagi untuk promo akhir pekan"
+  "name": "Penyusun jadwal shift toko seminggu",
+  "ringkas": "Bagi karyawan ke shift pagi, siang, dan malam selama seminggu secara bergilir dan adil, lengkap dengan hitungan beban tiap orang.",
+  "kataKunci": [
+    "jadwal shift",
+    "karyawan toko",
+    "giliran kerja",
+    "roster",
+    "toko"
+  ],
+  "inputs": [
+    {
+      "key": "karyawan",
+      "type": "longtext",
+      "label": "Nama karyawan (satu per baris)",
+      "required": true,
+      "contoh": "Ani\nBudi\nCitra\nDedi\nEka"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Hari pertama jadwal",
+      "required": true,
+      "contoh": "2026-12-07"
+    },
+    {
+      "key": "shift",
+      "type": "choice",
+      "label": "Jumlah shift per hari",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2 shift (pagi dan siang)"
+        },
+        {
+          "v": "3",
+          "t": "3 shift (pagi, siang, malam)"
+        }
+      ]
+    },
+    {
+      "key": "petugas",
+      "type": "choice",
+      "label": "Petugas per shift",
+      "required": true,
+      "default": "1",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 orang"
+        },
+        {
+          "v": "2",
+          "t": "2 orang"
+        }
+      ]
+    },
+    {
+      "key": "hari",
+      "type": "choice",
+      "label": "Toko buka",
+      "required": true,
+      "default": "6",
+      "choices": [
+        {
+          "v": "6",
+          "t": "6 hari (hari ke-7 tutup)"
+        },
+        {
+          "v": "7",
+          "t": "7 hari"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "orang": "baris(input.karyawan).slice(0, 30)",
+        "nama": "['Pagi', 'Siang', 'Malam'].slice(0, num(input.shift))",
+        "butuh": "num(input.shift) * num(input.petugas)",
+        "jadwal": "[0, 1, 2, 3, 4, 5, 6].map((d) => ({ tanggal: new Date(Date.parse(input.mulai) + d * 864e5).toISOString().slice(0, 10), hari: ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][new Date(Date.parse(input.mulai) + d * 864e5).getUTCDay()], isi: v.nama.map((n, s) => d >= num(input.hari) ? 'Tutup' : [0, 1].slice(0, num(input.petugas)).map((k) => v.orang[(d * v.butuh + s * num(input.petugas) + k) % Math.max(1, v.orang.length)]).join(' & ')) }))",
+        "beban": "v.orang.map((o) => ({ nama: o, shift: v.jadwal.reduce((a, j) => a + j.isi.filter((x) => x.split(' & ').includes(o)).length, 0) }))",
+        "kurang": "v.orang.length < v.butuh"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Jadwal ' + v.orang.length + ' karyawan untuk 7 hari, ' + v.nama.length + ' shift per hari' + (v.kurang ? '; karyawan kurang dari kebutuhan, sebagian merangkap' : '')",
+    "teks": "'# Jadwal shift\\n\\n' + tabel(['Tanggal', 'Hari'].concat(v.nama), v.jadwal.map((j) => [j.tanggal, j.hari].concat(j.isi))) + '\\n\\n## Beban tiap orang\\n' + tabel(['Nama', 'Jumlah shift'], v.beban.map((b) => [b.nama, b.shift]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-shift'",
+        "isi": "csv([['Tanggal', 'Hari'].concat(v.nama)].concat(v.jadwal.map((j) => [j.tanggal, j.hari].concat(j.isi))))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "karyawan": "Ani\nBudi\nCitra\nDedi\nEka",
+      "mulai": "2026-12-07",
+      "shift": "2",
+      "petugas": "1",
+      "hari": "6"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Jadwal 5 karyawan untuk 7 hari, 2 shift",
+        "Tutup",
+        "Beban tiap orang"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Store Manager di divisi Retail & Beauty Stores, memakai bahasa awam",
+    "tujuan": "Bagi karyawan ke shift pagi, siang, dan malam selama seminggu secara bergilir dan adil, lengkap dengan hitungan beban tiap orang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Toko harus lebih bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "jadwal shift"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun jadwal shift toko seminggu perlu dibaca bersama: jadwal shift menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

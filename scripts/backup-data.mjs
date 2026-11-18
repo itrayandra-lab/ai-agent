@@ -11,9 +11,9 @@ export const sha256 = (file) => crypto.createHash('sha256').update(fs.readFileSy
 /** daftar berkas data yang dicadangkan, relatif terhadap folder data */
 export function dataFiles(dataDir) {
   const out = [];
-  for (const f of ['db.json', 'auth.json', 'otomasi.json']) if (fs.existsSync(path.join(dataDir, f))) out.push(f);
+  for (const f of ['db.json', 'db.sqlite', 'storage-flags.json', 'auth.json', 'otomasi.json']) if (fs.existsSync(path.join(dataDir, f))) out.push(f);
   const ws = path.join(dataDir, 'ws');
-  if (fs.existsSync(ws)) for (const id of fs.readdirSync(ws).sort()) { const rel = `ws/${id}/db.json`; if (fs.existsSync(path.join(dataDir, rel))) out.push(rel); }
+  if (fs.existsSync(ws)) for (const id of fs.readdirSync(ws).sort()) { for (const n of ['db.json', 'db.sqlite']) { const rel = `ws/${id}/${n}`; if (fs.existsSync(path.join(dataDir, rel))) out.push(rel); } }
   return out;
 }
 
@@ -26,6 +26,13 @@ function counts(file) {
   } catch { return { unreadable: true }; }
 }
 
+/** salinan konsisten satu berkas SQLite (tanpa -wal) */
+export function snapshotSqlite(src, dst) {
+  const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
+  const c = new DatabaseSync(src);
+  try { c.exec(`VACUUM INTO '${dst.replace(/'/g, "''")}'`); } finally { c.close(); }
+}
+
 export function makeBackup({ dataDir, label = 'manual', now = new Date() } = {}) {
   dataDir = path.resolve(dataDir);
   const safeLabel = String(label).toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'manual';
@@ -34,17 +41,20 @@ export function makeBackup({ dataDir, label = 'manual', now = new Date() } = {})
   if (fs.existsSync(dir)) throw new Error(`Folder cadangan sudah ada: ${dir}`);
   const files = dataFiles(dataDir);
   if (!files.length) throw new Error(`Tidak ada berkas data di ${dataDir}`);
-  const entries = [];
+  const entries = [], skipped = [];
   for (const rel of files) {
     const src = path.join(dataDir, rel), dst = path.join(dir, rel);
     fs.mkdirSync(path.dirname(dst), { recursive: true });
-    fs.copyFileSync(src, dst);
+    if (rel.endsWith('.sqlite')) {
+      try { snapshotSqlite(src, dst); }
+      catch (err) { fs.rmSync(dst, { force: true }); skipped.push({ path: rel, alasan: err.message }); console.error(`[cadangan] ${rel} dilewati: ${err.message} (db.json tetap dicadangkan)`); continue; }   // SQLite rusak tidak boleh menggagalkan cadangan JSON
+    } else fs.copyFileSync(src, dst);   // SQLite: salinan konsisten lewat VACUUM INTO (aman walau server sedang berjalan)
     const e = { path: rel, bytes: fs.statSync(dst).size, sha256: sha256(dst) };
-    if (e.sha256 !== sha256(src)) throw new Error(`Salinan ${rel} tidak sama dengan aslinya (berkas berubah saat disalin? hentikan server dulu)`);
+    if (!rel.endsWith('.sqlite') && e.sha256 !== sha256(src)) throw new Error(`Salinan ${rel} tidak sama dengan aslinya (berkas berubah saat disalin? hentikan server dulu)`);
     if (rel.endsWith('db.json')) Object.assign(e, counts(dst));
     entries.push(e);
   }
-  const manifest = { format: 1, createdAt: now.toISOString(), label: safeLabel, files: entries };
+  const manifest = { format: 1, createdAt: now.toISOString(), label: safeLabel, files: entries, ...(skipped.length ? { skipped } : {}) };
   fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2));
   return { dir, manifest };
 }

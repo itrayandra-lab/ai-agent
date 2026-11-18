@@ -26,9 +26,9 @@ const STATUS_COLOR = { working: 0x3ddc84, meeting: 0xb57bff, chatting: 0x4aa8ff,
 const isMobile = matchMedia('(max-width: 820px)').matches || navigator.maxTouchPoints > 1;
 const FACILITIES = [
   { id: 'conference', kind: 'conference', name: 'Conference Hall', note: 'Rapat & standup' },
-  { id: 'library', kind: 'library', name: 'Library', note: 'Riset & Company Brain' },
+  { id: 'library', kind: 'library', name: 'Library', note: 'Riset & catatan perusahaan' },
   { id: 'cafe', kind: 'cafe', name: 'Courtyard Café', note: 'Istirahat' },
-  { id: 'play', kind: 'play', name: 'Play Room', note: 'Agen yang sedang luang' },
+  { id: 'play', kind: 'play', name: 'Play Room', note: 'Orang yang sedang luang' },
   { id: 'lounge', kind: 'lounge', name: 'Guest Lounge', note: 'Ngobrol santai' },
 ];
 const READING = /brain|catatan|riset|research|mencari|membaca|referensi/i;
@@ -771,7 +771,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         fragmentShader: 'uniform float uT; uniform float uAmt; varying vec2 vP; void main(){ float a = atan(vP.y, vP.x) + uT * 0.25; float tick = step(0.55, fract(a * 22.0 / 6.2831)); float chunk = step(0.35, fract(a * 5.0 / 6.2831 + 0.1)); float r = (length(vP) - 2.95) / 0.3; float edge = smoothstep(0.0, 0.12, r) * smoothstep(1.0, 0.88, r); gl_FragColor = vec4(1.0, 0.82, 0.56, edge * (0.25 + 0.55 * tick * chunk) * uAmt); }' }));
       glyph.position.y = 1.52; glyph.userData.keep = true; bg.add(glyph);
       brainCore = { group: bg, boltMat, orb, inner, light, rings, beam, halo, motes, mdat, mp, net, ncol, nph, sats, pylons, bolts, glyph, notes: [], spin: 0, scanT: 0, insightT: 0, pulse: 0, pulseS: 0, top: 5.55 };
-      pois.push({ id: 'brain', x: 0, z: 0, r: 6.4, label: 'Company Brain', sub: 'E: sentuh & buka graf pengetahuan' });
+      pois.push({ id: 'brain', x: 0, z: 0, r: 6.4, label: 'Catatan perusahaan', sub: 'E: sentuh & buka peta catatan' });
     }
     solid(0, 0, 9.5, 9.5);
     // ── plaza life: a floating sky deck with a winding stair, an open-air stage, a fountain and a kiosk, plus gathering points, so the middle of the campus is used
@@ -909,7 +909,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       }
       // ── landmarks for the parts of the platform: each is a small themed building; click it (or press E) to open the page as a window
       {
-        const ZNAME = { tasks: ['📋', 'Papan Tugas', 'Kanban perusahaan'], studio: ['✨', 'Bengkel Agent Studio', 'Rancang karyawan AI'], approvals: ['🛑', 'Gerbang Persetujuan', 'Keputusan menunggu'], knowledge: ['🏛️', 'Paviliun Pengetahuan', 'Perpustakaan perusahaan'], team: ['👥', 'Pohon Organisasi', 'Tim & divisi'], chat: ['💬', 'Menara Obrolan', 'Percakapan & rapat'] };
+        const ZNAME = { tasks: ['📋', 'Papan Pekerjaan', 'Pekerjaan perusahaan'], studio: ['✨', 'Bengkel Pembantu', 'Rancang pembantu baru'], approvals: ['🛑', 'Gerbang Konfirmasi', 'Menunggu jawabanmu'], knowledge: ['🏛️', 'Paviliun Pengetahuan', 'Perpustakaan perusahaan'], team: ['👥', 'Pohon Organisasi', 'Tim & divisi'], chat: ['💬', 'Menara Obrolan', 'Percakapan & rapat'] };
         const mkCv = (w, h) => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; return { cv, tex, g: cv.getContext('2d') }; };
         const SITES = [['tasks', 10], ['studio', 50], ['approvals', 90], ['knowledge', 130], ['team', 210], ['chat', 250]];
         for (const [id, deg] of SITES) {
@@ -1607,7 +1607,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   }
   /** Emotion = facial expression held for a while (laugh, sad, surprised, love, smile…). */
   const feel = (a, type, ms = 2500) => { if (a) a.emo = { type, until: performance.now() + ms }; };
-  const SMALLTALK = ['Kopinya enak banget hari ini ☕', 'Hahaha serius? 😂', 'Weekend kemarin ke mana?', 'Campaign kemarin tembus target! 🎉', 'Aku lagi belajar skill baru nih 📚', 'Ayo satu ronde lagi! 🎮', 'GG! 😆', 'Butuh istirahat sebentar 😌', 'Ide bagus, nanti kita bahas di rapat', 'Mantap, lanjut! 💪', 'Eh, sudah lihat dashboard KPI tadi?', 'Siapa yang mau es kopi susu?', 'Tadi riset kompetitor seru banget', 'Wah, notulen rapat tadi rapi sekali 👏'];
+  const SMALLTALK = ['Kopinya enak banget hari ini ☕', 'Hahaha serius? 😂', 'Weekend kemarin ke mana?', 'Campaign kemarin tembus target! 🎉', 'Aku lagi belajar skill baru nih 📚', 'Ayo satu ronde lagi! 🎮', 'GG! 😆', 'Butuh istirahat sebentar 😌', 'Ide bagus, nanti kita bahas di rapat', 'Mantap, lanjut! 💪', 'Eh, sudah lihat ringkasan kinerja tadi?', 'Siapa yang mau es kopi susu?', 'Tadi riset kompetitor seru banget', 'Wah, notulen rapat tadi rapi sekali 👏'];
   /** Life in shared spaces: play room games & dancing, café drinks, lounge small talk between neighbours. */
   function leisureLife(a, now) {
     if (a.mode !== 'leisure' || a.path.length || a.player || now < (a.nextAct || 0)) return;
@@ -2050,17 +2050,17 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       const now = new Date(), hh = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
       HT.led(g, W - 150, 32, uiTick % 2 === 0, '#34d399'); HT.text(g, 'LIVE', W - 136, 38, '600 14px ' + FAMILY, '#8fe9ff'); HT.text(g, hh, W - 34, 40, '600 20px ' + FAMILY, '#cfe9ff', 'right');
       const t0 = new Date().setHours(0, 0, 0, 0), ai = emps.filter((e) => e.type === 'ai').length, act = emps.filter((e) => e.status === 'working' || e.status === 'meeting').length, active = tasks.filter((x) => x.status !== 'done').length, doneT = tasks.filter((x) => x.status === 'done' && (x.completedAt || 0) >= t0).length, pend = apps.filter((x) => x.status === 'pending').length;
-      const kp = [['AGEN AKTIF', act, '#34d399', ai ? act / ai : 0], ['TUGAS AKTIF', active, '#38bdf8', tasks.length ? active / tasks.length : 0], ['SELESAI HARI INI', doneT, '#a78bfa', Math.min(1, doneT / Math.max(1, doneT + active))], ['PERSETUJUAN', pend, '#fbbf24', Math.min(1, pend / 5)]], kw = (W - 30 * 2 - 14 * 3) / 4;
+      const kp = [['ORANG BEKERJA', act, '#34d399', ai ? act / ai : 0], ['TUGAS AKTIF', active, '#38bdf8', tasks.length ? active / tasks.length : 0], ['SELESAI HARI INI', doneT, '#a78bfa', Math.min(1, doneT / Math.max(1, doneT + active))], ['MENUNGGU KAMU', pend, '#fbbf24', Math.min(1, pend / 5)]], kw = (W - 30 * 2 - 14 * 3) / 4;
       kp.forEach(([l, n, c, fr], i) => { const x = 30 + i * (kw + 14), y = 62; HT.chamfer(g, x, y, kw, 104, 12); g.fillStyle = 'rgba(255,255,255,0.05)'; g.fill(); g.strokeStyle = c + '99'; g.lineWidth = 1.5; g.stroke(); HT.glow(g, String(n), x + 18, y + 66, '700 50px ' + FAMILY, c, 14); HT.text(g, l, x + 18, y + 92, '600 13px ' + FAMILY, '#9fc3e6'); HT.ring(g, x + kw - 40, y + 50, 22, fr, c); });
       // flow bars
       HT.chamfer(g, 30, 184, 470, 226, 12); g.fillStyle = 'rgba(255,255,255,0.04)'; g.fill(); g.strokeStyle = '#38bdf855'; g.stroke(); HT.text(g, 'ALUR TUGAS', 48, 212, '700 15px ' + FAMILY, '#8fe9ff');
-      const cols = [['TO DO', 'todo', '#5b8cff'], ['JALAN', 'in_progress', '#34d399'], ['TUNGGU', 'waiting', '#f59e0b'], ['REVIEW', 'review', '#ec4899'], ['SELESAI', 'done', '#a78bfa']], cnt = cols.map(([, id]) => tasks.filter((x) => (id === 'waiting' ? x.status === 'waiting' || x.status === 'blocked' : x.status === id)).length), mx = Math.max(1, ...cnt);
+      const cols = [['ANTRE', 'todo', '#5b8cff'], ['JALAN', 'in_progress', '#34d399'], ['TUNGGU', 'waiting', '#f59e0b'], ['DICEK', 'review', '#ec4899'], ['SELESAI', 'done', '#a78bfa']], cnt = cols.map(([, id]) => tasks.filter((x) => (id === 'waiting' ? x.status === 'waiting' || x.status === 'blocked' : x.status === id)).length), mx = Math.max(1, ...cnt);
       cols.forEach(([l, , c], i) => { const x = 54 + i * 88, bh = Math.max(6, Math.round((118 * cnt[i]) / mx)), y = 376 - bh; const gr = g.createLinearGradient(0, y, 0, 376); gr.addColorStop(0, c); gr.addColorStop(1, c + '33'); g.save(); g.shadowColor = c; g.shadowBlur = 12; g.fillStyle = gr; HT.chamfer(g, x, y, 56, bh, 5); g.fill(); g.restore(); HT.text(g, String(cnt[i]), x + 28, y - 8, '700 16px ' + FAMILY, '#e6f4ff', 'center'); HT.text(g, l, x + 28, 398, '600 11px ' + FAMILY, '#8fb4d8', 'center'); });
       // queue
       HT.chamfer(g, 518, 184, W - 548, 226, 12); g.fillStyle = 'rgba(255,255,255,0.04)'; g.fill(); g.strokeStyle = '#38bdf855'; g.stroke(); HT.text(g, 'ANTRIAN TERBARU', 536, 212, '700 15px ' + FAMILY, '#8fe9ff');
-      const SC = { todo: ['#5b8cff', 'TODO'], in_progress: ['#34d399', 'JALAN'], waiting: ['#f59e0b', 'TUNGGU'], blocked: ['#f59e0b', 'TUNGGU'], review: ['#ec4899', 'REVIEW'] };
+      const SC = { todo: ['#5b8cff', 'ANTRE'], in_progress: ['#34d399', 'JALAN'], waiting: ['#f59e0b', 'TUNGGU'], blocked: ['#f59e0b', 'TUNGGU'], review: ['#ec4899', 'DICEK'] };
       tasks.filter((x) => x.status !== 'done').slice(-4).reverse().forEach((x, i) => { const y = 224 + i * 45, c = SC[x.status] || ['#38bdf8', '•']; HT.chamfer(g, 536, y, W - 584, 38, 8); g.fillStyle = 'rgba(255,255,255,0.07)'; g.fill(); g.fillStyle = c[0]; g.fillRect(536, y + 5, 4, 28); HT.text(g, c[1], 552, y + 24, '700 12px ' + FAMILY, c[0]); g.font = '600 16px ' + FAMILY; HT.text(g, HT.fit(g, clean(x.title), W - 584 - 200), 612, y + 25, '600 16px ' + FAMILY, '#f2f7ff'); HT.text(g, nameOf(emps, x.assigneeId), W - 52, y + 24, '500 13px ' + FAMILY, '#8fb4d8', 'right'); });
-      HT.text(g, 'SINKRON · ' + ai + ' AGEN · ' + tasks.length + ' TUGAS TERCATAT', 30, H - 14, '500 12px ' + FAMILY, '#6f93b8');
+      HT.text(g, 'SINKRON · ' + ai + ' ORANG · ' + tasks.length + ' PEKERJAAN TERCATAT', 30, H - 14, '500 12px ' + FAMILY, '#6f93b8');
       tex.needsUpdate = true;
     }
     if (screens.feed) {
@@ -2081,7 +2081,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       { k: 'KANTOR HARI INI', m: [[act, 'aktif'], [tasks, 'tugas'], [done, 'selesai']] },
       { k: 'PINTASAN', keys: [['E', 'duduk / gunakan'], ['M', 'suara'], ['H', 'bantuan']] },
       { k: 'PLAZA TENGAH', big: fmtTod(), sub: 'Selamat datang 👋' },
-      { k: 'TIM', big: String(emps.length), sub: 'agen siap bekerja & bergaul' },
+      { k: 'TIM', big: String(emps.length), sub: 'orang siap bekerja & bergaul' },
     ];
     for (const f of floaters) {
       if (f.kind !== 'holo') continue; const g = f.cv.getContext('2d'), p = pages[(f.page + Math.floor(t / 8)) % pages.length], W = 768, H = 432;
@@ -2178,7 +2178,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     const g = { lab: ['pipette', 'pipette', 'think', 'observe'], factory: ['operate', 'operate', 'point', 'observe'], warehouse: ['carry', 'carry', 'point', 'stretch'], studio: ['present', 'present', 'laugh', 'cheer'] }[v];
     const pick = g[(Math.random() * g.length) | 0];
     gesture(a, pick, 2800);
-    if (v === 'studio') { a.talkUntil = now + 2600; feel(a, 'smile', 2800); if (Math.random() < 0.3) say(a, ['Hai guys! Hari ini kita review serum baru ✨', 'Jangan lupa checkout ya! 🛒', 'Tekstur ringan banget 😍', 'Diskon live cuma sampai jam 9! ⏰'][(Math.random() * 4) | 0], 3200); }
+    if (v === 'studio') { a.talkUntil = now + 2600; feel(a, 'smile', 2800); if (Math.random() < 0.3) say(a, ['Hai guys! Hari ini kita bahas serum baru ✨', 'Jangan lupa checkout ya! 🛒', 'Tekstur ringan banget 😍', 'Diskon live cuma sampai jam 9! ⏰'][(Math.random() * 4) | 0], 3200); }
     else feel(a, pick === 'observe' || pick === 'think' ? 'focus' : 'neutral', 2800);
     if (Math.random() < 0.25) emote(a, ACT_EMOJI[v][(Math.random() * 3) | 0], 2200);
   }
@@ -2279,7 +2279,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         const members = data.employees.filter((e) => e.divisionId === r.id);
         const working = members.filter((e) => e.status === 'working').length;
         const open = data.tasks.filter((t) => t.divisionId === r.id && t.status !== 'done').length;
-        lines = [`${r.div.icon} ${r.div.name}`, `${working}/${members.length} active · ${open} tasks`];
+        lines = [`${r.div.icon} ${r.div.name}`, `${working}/${members.length} bekerja · ${open} pekerjaan`];
       } else {
         const here = [...avatars.values()].filter((a) => roomAt(a.g.position) === r).length;
         lines = [r.name, `${r.note} · ${here} here`];
@@ -2339,12 +2339,11 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         if (ev.type === 'task_created') { sfx.play('task'); if (brainCore) { brainHit(0x8fd0ff, 'brain'); if (b) packet(brainFlat(), b.desk.seat, 0x8fd0ff); } } else if (ev.type === 'delegated') sfx.play('task');
         if (a && b) { packet(a.g.position, b.desk.seat, col(a), () => { burst(b.desk.seat, col(a)); emote(b, '📥', 2200); feel(b, 'surprised', 900); setTimeout(() => feel(b, 'focus', 3000), 900); }); if (ev.type !== 'task_created') { gesture(a, 'point', 1600); emote(a, '📨', 2000); if (Math.random() < 0.55) visit(a, b); } }
         break;
-      case 'message': sfx.play('msg'); if (a) { const txt = messageSource(ev, getMessageText); if (a.mode !== 'talk') tts.whenFree(() => speak(a, txt, 2));   /* the bubble waits while the owner is typing; bubble and voice use the full original message, not the clipped event preview */ if (b && (b.player || b.id === 'owner') && a.id !== 'owner') tts.speak(a.id, txt, { interrupt: true }); a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45); a.speechUntil = a.talkUntil;
+      case 'message': sfx.play('msg'); if (a) { const txt = messageSource(ev, getMessageText); if (a.mode !== 'talk') tts.whenFree(() => speak(a, txt, 2));   /* the bubble waits while the owner is typing; bubble and voice use the full original message, not the clipped event preview */ a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45); a.speechUntil = a.talkUntil;
         if (/haha|wkwk|😂|🎉|mantap|selamat|keren/i.test(txt)) { feel(a, 'laugh', 2500); gesture(a, 'laugh', 1800); } else if (/maaf|gagal|sayang|kendala|masalah/i.test(txt)) feel(a, 'sad', 3000); else if (/\?/.test(txt)) gesture(a, 'shrug', 1500); else if (Math.random() < 0.4) gesture(a, 'present', 2500); if (b) { packet(a.g.position, b.g.position, 0x9ecbff); a.lookAt = b.g.position; setTimeout(() => { if (a.lookAt === b.g.position) a.lookAt = null; }, 4000); if (Math.random() < 0.3) visit(a, b); } } break;
       case 'reasoning': if (a) { say(a, '💭 ' + ev.text, 7000, true); a.talkUntil = performance.now() + 6500; gesture(a, 'think', 4200); feel(a, 'focus', 5000); emote(a, '💭', 2600); } break;
       case 'meeting_say': if (a) {
-        if (a.id !== 'owner' && !a.player) tts.speak(a.id, ev.text, { group: getMeetingMembers?.(ev.meetingId) });   /* meeting lines are read in order; each agent keeps their own voice */
-        say(a, ev.text, 9000, true); a.speechUntil = performance.now() + 9000; a.talkUntil = performance.now() + 6000; gesture(a, 'present', 4000);
+                say(a, ev.text, 9000, true); a.speechUntil = performance.now() + 9000; a.talkUntil = performance.now() + 6000; gesture(a, 'present', 4000);
         for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.35) gesture(o, 'observe', 4000);
         if (/setuju|sepakat|bagus|tepat|agree/i.test(ev.text)) for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.5) gesture(o, 'nod', 2500);
         if (/\?|bagaimana|apakah|kenapa/i.test(ev.text)) gesture(a, 'shrug', 1800); else if (/risiko|masalah|hati-hati|kendala/i.test(ev.text)) gesture(a, 'think', 2600);
@@ -2359,7 +2358,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       case 'note_written': if (a) emote(a, /merapikan|rapikan/.test(ev.text) ? '🗂️' : '📝', 2200);
         if (a && brainCore) knowledgeFlow(a, 0xffb36b); break;
       case 'task_done': sfx.play('done'); if (a) { burst(a.g.position, 0x3ddc84); say(a, '✓ Selesai', 2500); feel(a, Math.random() < 0.5 ? 'laugh' : 'smile', 3000); emote(a, ['🎉', '✅', '😄', '💪'][(Math.random() * 4) | 0], 2800); if (a.pose !== 'sit') { a.jump = 1; gesture(a, 'cheer', 1800); } else gesture(a, 'stretch', 1600); } break;
-      case 'approval_requested': sfx.play('ask'); if (a) { say(a, '⏸ Menunggu persetujuan', 5000); emote(a, '✋', 3000); const o = avatars.get('owner'); if (o) packet(a.g.position, o.g.position, 0xffb020); } break;
+      case 'approval_requested': sfx.play('ask'); if (a) { say(a, '⏸ Menunggu jawabanmu', 5000); emote(a, '✋', 3000); const o = avatars.get('owner'); if (o) packet(a.g.position, o.g.position, 0xffb020); } break;
       case 'approved': sfx.play('approved'); if (b) { burst(b.g.position, 0xf5c76b); say(b, 'Disetujui', 2500); emote(b, '🥳', 3000); gesture(b, 'cheer', 2000); feel(b, 'laugh', 2600); if (b.pose !== 'sit') b.jump = 1; } break;
       case 'rejected': if (b) { say(b, 'Revisi diminta', 2500); emote(b, '😅', 2600); gesture(b, 'sad', 2400); feel(b, 'sad', 4000); } break;
     }
@@ -2517,7 +2516,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   const KEYACT = [
     ['free', 'KeyW', 'KeyW', 'Maju'], ['free', 'KeyS', 'KeyS', 'Mundur'], ['free', 'KeyA', 'KeyA', 'Geser kiri'], ['free', 'KeyD', 'KeyD', 'Geser kanan'],
     ['free', 'Act:lookLeft', 'KeyZ', 'Tengok kiri (menoleh di tempat)'], ['free', 'Act:lookRight', 'KeyC', 'Tengok kanan (menoleh di tempat)'], ['free', 'Act:up', 'KeyQ', 'Naik'], ['free', 'Act:down', 'KeyE', 'Turun'],
-    ['free', 'Space', 'Space', 'Mode jalan / terbang'], ['free', 'KeyP', 'KeyP', 'Main sebagai karakter'], ['free', 'Tab', 'Tab', 'Agen berikutnya'],
+    ['free', 'Space', 'Space', 'Mode jalan / terbang'], ['free', 'KeyP', 'KeyP', 'Main sebagai karakter'], ['free', 'Tab', 'Tab', 'Orang berikutnya'],
     ['free', 'KeyU', 'KeyU', 'Waktu mundur'], ['free', 'KeyI', 'KeyI', 'Waktu maju'], ['free', 'KeyT', 'KeyT', 'Siang-malam otomatis'],
     ['free', 'KeyL', 'KeyL', 'Label nama'], ['free', 'KeyH', 'KeyH', 'Bantuan'], ['free', 'KeyB', 'KeyB', 'Simpan tampilan favorit'], ['free', 'PageUp', 'PageUp', 'Favorit sebelumnya'], ['free', 'PageDown', 'PageDown', 'Favorit berikutnya'],
     ['free', 'Digit8', 'Digit8', 'Tampilan dari atas'], ['free', 'Digit5', 'Digit5', 'Tampilan isometrik'], ['free', 'Digit4', 'Digit4', 'Putar 90° ke kiri'], ['free', 'Digit6', 'Digit6', 'Putar 90° ke kanan'], ['free', 'Digit2', 'Digit2', 'Tampilan depan'], ['free', 'Digit0', 'Digit0', 'Posisi awal'],
@@ -2688,7 +2687,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       { sep: 1 },
       { ic: '📷', t: 'Ikuti dengan kamera', fn: () => startChase(id) },
       { ic: '🔎', t: 'Detail & pekerjaan', fn: () => onMenu?.('detail', id) },
-      { ic: '✉️', t: 'Chat', fn: () => onMenu?.('chat', id) },
+      { ic: '✉️', t: 'Bicara', fn: () => onMenu?.('chat', id) },
       { ic: '＋', t: 'Beri tugas', fn: () => onMenu?.('task', id) },
     ]);
   }
@@ -2754,7 +2753,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       out.push({ id: 'poi:' + p.id, group: deck ? 'Sky Deck' : 'Plaza', icon: deck ? '🛰️' : (ICON[p.id] || iconFor(p.label)), label: p.label, sub: String(p.sub || '').replace(/^E:\s*/i, '') });
     }
     for (const r of rooms.values()) out.push({ id: 'room:' + r.id, group: 'Ruangan', icon: r.div?.icon || '🏢', label: r.div?.name || r.name || String(r.id), sub: r.kind === 'work' ? 'Ruang kerja' : '' });
-    for (const a of avatars.values()) out.push({ id: 'agent:' + a.id, group: 'Agen', icon: '🙂', label: a.e.name, sub: a.e.title || '', status: a.e.status });
+    for (const a of avatars.values()) out.push({ id: 'agent:' + a.id, group: 'Agen' /* 3d */, icon: '🙂', label: a.e.name, sub: a.e.title || '', status: a.e.status });
     return out;
   }
   function teleResolve(id) {
@@ -2942,11 +2941,11 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   const HUMS = ['♪ mmm~ la la ♪', '♪ du du du~ ♪', 'Hmm hmm hmm~ 🎵', '♪ hari yang indah ♪', '🎶 mmm mmm 🎶'];
   // ───── lower third: tells the player which room or zone they just walked into
   let zoneKey = '', zoneCand = '', zoneCandT = 0, zoneShownAt = 0;
-  const ZONES = { stage: ['🎤', 'Panggung terbuka', 'Presentasi & demo'], fountain: ['⛲', 'Air mancur', 'Taman santai'], kiosk: ['☕', 'Kios kopi taman', 'Ngopi bareng'], skydeck1: ['🛰️', 'Sky Deck Utara', 'Dek melayang · tangga spiral'], skydeck2: ['🛰️', 'Sky Deck Timur', 'Dek melayang · 4 m'], skydeck3: ['🛰️', 'Sky Deck Barat', 'Dek melayang · 6,5 m'], content: ['🎬', 'Sudut konten kreator', 'Rekam & produksi konten'], wellness: ['🧘', 'Taman peregangan', 'Yoga & napas sejenak'], pitch: ['🤝', 'Booth penawaran', 'Pitch & demo produk'], maker: ['🧪', 'Meja kreatif & lab', 'Sketsa dan eksperimen'], brain: ['🧠', 'Company Brain', 'Pusat pengetahuan perusahaan'], 'app:tasks': ['📋', 'Papan Tugas', 'Kanban perusahaan'], 'app:studio': ['✨', 'Bengkel Agent Studio', 'Rancang karyawan AI'], 'app:approvals': ['🛑', 'Gerbang Persetujuan', 'Keputusan menunggu'], 'app:knowledge': ['🏛️', 'Paviliun Pengetahuan', 'Perpustakaan perusahaan'], 'app:team': ['👥', 'Pohon Organisasi', 'Tim & divisi'], 'app:chat': ['💬', 'Menara Obrolan', 'Percakapan & rapat'] };
+  const ZONES = { stage: ['🎤', 'Panggung terbuka', 'Presentasi & demo'], fountain: ['⛲', 'Air mancur', 'Taman santai'], kiosk: ['☕', 'Kios kopi taman', 'Ngopi bareng'], skydeck1: ['🛰️', 'Sky Deck Utara', 'Dek melayang · tangga spiral'], skydeck2: ['🛰️', 'Sky Deck Timur', 'Dek melayang · 4 m'], skydeck3: ['🛰️', 'Sky Deck Barat', 'Dek melayang · 6,5 m'], content: ['🎬', 'Sudut konten kreator', 'Rekam & produksi konten'], wellness: ['🧘', 'Taman peregangan', 'Yoga & napas sejenak'], pitch: ['🤝', 'Booth penawaran', 'Pitch & demo produk'], maker: ['🧪', 'Meja kreatif & lab', 'Sketsa dan eksperimen'], brain: ['🧠', 'Catatan perusahaan', 'Pusat pengetahuan perusahaan'], 'app:tasks': ['📋', 'Papan Pekerjaan', 'Pekerjaan perusahaan'], 'app:studio': ['✨', 'Bengkel Pembantu', 'Rancang pembantu baru'], 'app:approvals': ['🛑', 'Gerbang Konfirmasi', 'Menunggu jawabanmu'], 'app:knowledge': ['🏛️', 'Paviliun Pengetahuan', 'Perpustakaan perusahaan'], 'app:team': ['👥', 'Pohon Organisasi', 'Tim & divisi'], 'app:chat': ['💬', 'Menara Obrolan', 'Percakapan & rapat'] };
   const ROOM_SUB = { conference: 'Ruang rapat', library: 'Perpustakaan pengetahuan', cafe: 'Kafe & pantry', play: 'Ruang bermain', lounge: 'Lounge tamu', private: 'Ruang eksekutif' };
   function zoneAt(p) {
     const r = roomAt(p);
-    if (r) { const n = data?.employees?.filter((x) => x.divisionId === r.id).length ?? 0; return { key: 'room:' + r.id, icon: r.div?.icon || '🏢', title: r.div ? r.div.name : r.name, sub: ROOM_SUB[r.kind] || (n ? n + ' agen di divisi ini' : 'Ruang kerja'), color: r.div?.color || '#7c83ff' }; }
+    if (r) { const n = data?.employees?.filter((x) => x.divisionId === r.id).length ?? 0; return { key: 'room:' + r.id, icon: r.div?.icon || '🏢', title: r.div ? r.div.name : r.name, sub: ROOM_SUB[r.kind] || (n ? n + ' orang di divisi ini' : 'Ruang kerja'), color: r.div?.color || '#7c83ff' }; }
     for (const poi of pois) { const z = ZONES[poi.id]; if (z && Math.hypot(poi.x - p.x, poi.z - p.z) < (poi.r || 3)) return { key: 'poi:' + poi.id, icon: z[0], title: z[1], sub: z[2], color: '#7c83ff' }; }
     const d = Math.hypot(p.x, p.z), w = envWalk;
     if (w && d > w.rx * 0.95) { for (const i of w.isl) if ((p.x - i.x) ** 2 + (p.z - i.z) ** 2 <= i.r * i.r) return { key: 'isl', icon: '🌆', title: 'Distrik melayang', sub: 'Kota langit di seberang', color: '#5b8cff' }; return { key: 'bridge', icon: '🌉', title: 'Jembatan cahaya', sub: 'Menuju distrik di seberang', color: '#5bbfff' }; }

@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-matriks-prioritas",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penentu prioritas pekerjaan",
+  "ringkas": "Urutkan daftar pekerjaan berdasarkan dampak dan usaha, lalu tandai mana yang dikerjakan sekarang, direncanakan, atau ditinggalkan.",
+  "kataKunci": [
+    "prioritas",
+    "dampak",
+    "usaha",
+    "urutan kerja",
+    "matriks"
+  ],
+  "inputs": [
+    {
+      "key": "daftar",
+      "type": "longtext",
+      "label": "Satu baris satu pekerjaan: nama | dampak 1-5 | usaha 1-5",
+      "required": true,
+      "contoh": "Perbaiki login | 5 | 2"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Nilai",
+      "set": {
+        "rows": "baris(input.daftar).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const d = Math.min(5, Math.max(1, num(p[1]))); const u = Math.min(5, Math.max(1, num(p[2]))); return { nama: p[0] || '-', dampak: d, usaha: u, skor: Math.round(d / u * 100) / 100, saran: d >= 4 && u <= 2 ? 'Kerjakan sekarang' : d >= 4 ? 'Rencanakan' : u <= 2 ? 'Isi waktu luang' : 'Tinggalkan dulu' }; }).sort((x, y) => y.skor - x.skor)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' pekerjaan diurutkan; pertama: ' + v.rows[0].nama + ' (' + v.rows[0].saran + ')'",
+    "teks": "tabel(['Urutan', 'Pekerjaan', 'Dampak', 'Usaha', 'Skor', 'Saran'], v.rows.map((r, i) => [i + 1, r.nama, r.dampak, r.usaha, r.skor, r.saran]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'prioritas'",
+        "isi": "csv([['Pekerjaan', 'Dampak', 'Usaha', 'Skor', 'Saran']].concat(v.rows.map((r) => [r.nama, r.dampak, r.usaha, r.skor, r.saran])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "daftar": "Perbaiki login | 5 | 2\nRedesign total | 5 | 5\nGanti ikon | 2 | 1\nFitur langka | 1 | 5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "pertama: Perbaiki login (Kerjakan sekarang)",
+        "Tinggalkan dulu"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "otakProfil": {
+    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
+    "tujuan": "Urutkan daftar pekerjaan berdasarkan dampak dan usaha, lalu tandai mana yang dikerjakan sekarang, direncanakan, atau ditinggalkan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Hasil sudah benar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "prioritas"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penentu prioritas pekerjaan perlu dibaca bersama: prioritas menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

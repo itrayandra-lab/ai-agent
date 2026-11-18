@@ -1,37 +1,172 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "mfg-sigit",
   "division": "mfg",
   "employeeId": "sigit",
   "title": "Production Supervisor",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Sigit",
-    "tugasPeran": [
-      "Mengawasi proses mixing, filling, dan packing",
-      "Menyusun batch record dan line clearance",
-      "Melaporkan output dan kendala harian"
-    ],
-    "keahlian": [
-      "produksi",
-      "batch record",
-      "line"
-    ],
-    "contohTugas": [
-      "Buat batch record serum 500 kg",
-      "Checklist line clearance antar produk"
+  "name": "Catatan batch dan hasil produksi",
+  "ringkas": "Susun catatan batch lengkap: hasil baik, reject, persen hasil terhadap target, status, dan daftar periksa proses.",
+  "kataKunci": [
+    "batch",
+    "produksi",
+    "yield",
+    "reject",
+    "catatan batch"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "batch",
+      "type": "text",
+      "label": "Nomor batch",
+      "required": true,
+      "contoh": "B-2026-118"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal produksi",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "shift",
+      "type": "choice",
+      "label": "Shift",
+      "required": true,
+      "default": "pagi",
+      "choices": [
+        {
+          "v": "pagi",
+          "t": "Pagi"
+        },
+        {
+          "v": "siang",
+          "t": "Siang"
+        },
+        {
+          "v": "malam",
+          "t": "Malam"
+        }
+      ]
+    },
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Target jumlah (unit)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "baik",
+      "type": "number",
+      "label": "Jumlah hasil baik (unit)",
+      "required": true,
+      "contoh": "940"
+    },
+    {
+      "key": "reject",
+      "type": "number",
+      "label": "Jumlah reject (unit)",
+      "required": true,
+      "contoh": "40"
+    },
+    {
+      "key": "catatan",
+      "type": "longtext",
+      "label": "Catatan penyimpangan (boleh kosong)",
+      "required": false,
+      "contoh": "Mesin berhenti 15 menit"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung hasil",
+      "set": {
+        "hasilPct": "Math.round(Number(input.baik) / Math.max(1, Number(input.target)) * 1000) / 10",
+        "rejectPct": "Math.round(Number(input.reject) / Math.max(1, Number(input.baik) + Number(input.reject)) * 1000) / 10",
+        "selisih": "Number(input.target) - Number(input.baik)",
+        "status": "v.hasilPct >= 95 ? 'Sesuai target' : v.hasilPct >= 90 ? 'Perlu catatan penyimpangan' : 'Wajib diselidiki'",
+        "shiftNama": "({ pagi: 'Pagi', siang: 'Siang', malam: 'Malam' })[input.shift]",
+        "cek": "['Pembersihan jalur sebelum mulai sudah dilakukan', 'Timbangan sudah dicek', 'Bahan baku sesuai kode dan sudah lolos pemeriksaan mutu', 'Suhu dan waktu proses sesuai instruksi', 'Sampel pengawasan proses diambil', 'Alat dibersihkan setelah batch'].map((t) => '- [ ] ' + t).join('\\n')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Batch ' + input.batch + ': hasil baik ' + v.hasilPct + '% dari target, reject ' + v.rejectPct + '%. ' + v.status",
+    "teks": "'# Catatan batch ' + input.batch + '\\n\\n- Produk: ' + input.produk + '\\n- Tanggal: ' + tgl(input.tanggal) + ' (shift ' + v.shiftNama + ')\\n- Target: ' + input.target + ' unit\\n- Hasil baik: ' + input.baik + ' unit (' + v.hasilPct + '%)\\n- Reject: ' + input.reject + ' unit (' + v.rejectPct + '%)\\n- Kekurangan terhadap target: ' + v.selisih + ' unit\\n- Status: **' + v.status + '**\\n\\n## Daftar periksa\\n' + v.cek + '\\n\\n## Catatan penyimpangan\\n' + (input.catatan || 'Tidak ada.')",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'batch-' + input.batch",
+        "isi": "'# Catatan batch ' + input.batch + '\\n\\nProduk: ' + input.produk + '\\nTanggal: ' + input.tanggal + '\\nHasil baik: ' + input.baik + ' / target ' + input.target + ' (' + v.hasilPct + '%)\\nReject: ' + input.reject + ' (' + v.rejectPct + '%)\\nStatus: ' + v.status + '\\n\\n' + v.cek + '\\n\\nCatatan: ' + (input.catatan || '-') + '\\n'"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "batch": "B-2026-118",
+      "tanggal": "2026-11-18",
+      "shift": "pagi",
+      "target": 1000,
+      "baik": 940,
+      "reject": 40,
+      "catatan": "Mesin berhenti 15 menit"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "94%",
+        "4.1%",
+        "Perlu catatan penyimpangan"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Production Supervisor di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Susun catatan batch lengkap: hasil baik, reject, persen hasil terhadap target, status, dan daftar periksa proses. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "batch"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil catatan batch dan hasil produksi perlu dibaca bersama: batch menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "it-rangga-kapasitas-disk",
+  "division": "it",
+  "employeeId": "rangga",
+  "title": "Cloud & Infrastructure Engineer",
+  "version": 1,
+  "name": "Peramal penyimpanan penuh",
+  "ringkas": "Perkirakan kapan ruang penyimpanan penuh dan kapan perlu ditambah supaya tidak kehabisan mendadak.",
+  "kataKunci": [
+    "disk penuh",
+    "kapasitas",
+    "penyimpanan",
+    "prediksi",
+    "ruang"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "kapasitas",
+      "type": "number",
+      "label": "Kapasitas total (GB)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "terpakai",
+      "type": "number",
+      "label": "Sudah terpakai (GB)",
+      "required": true,
+      "contoh": "700"
+    },
+    {
+      "key": "tumbuh",
+      "type": "number",
+      "label": "Bertambah berapa GB per bulan?",
+      "required": true,
+      "contoh": "50"
+    },
+    {
+      "key": "batas",
+      "type": "choice",
+      "label": "Mau ditambah saat terpakai berapa persen?",
+      "required": true,
+      "default": "80",
+      "choices": [
+        {
+          "v": "70",
+          "t": "70%"
+        },
+        {
+          "v": "80",
+          "t": "80%"
+        },
+        {
+          "v": "90",
+          "t": "90%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung perkiraan",
+      "set": {
+        "persen": "Math.round(num(input.terpakai) / Math.max(1, num(input.kapasitas)) * 1000) / 10",
+        "penuh": "num(input.tumbuh) > 0 ? Math.round((num(input.kapasitas) - num(input.terpakai)) / num(input.tumbuh) * 10) / 10 : -1",
+        "tambah": "num(input.tumbuh) > 0 ? Math.max(0, Math.round((num(input.kapasitas) * num(input.batas) / 100 - num(input.terpakai)) / num(input.tumbuh) * 10) / 10) : -1",
+        "tglPenuh": "v.penuh < 0 ? '-' : new Date(Date.parse(input.acuan) + v.penuh * 30.44 * 864e5).toISOString().slice(0, 10)",
+        "tglTambah": "v.tambah < 0 ? '-' : new Date(Date.parse(input.acuan) + v.tambah * 30.44 * 864e5).toISOString().slice(0, 10)",
+        "status": "v.persen >= 90 ? 'Kritis' : v.persen >= num(input.batas) ? 'Waspada' : 'Aman'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.status + ': terpakai ' + v.persen + '%, ' + (v.penuh < 0 ? 'tidak ada pertumbuhan' : 'penuh dalam ' + v.penuh + ' bulan (sekitar ' + tgl(v.tglPenuh) + ')')",
+    "teks": "'# Perkiraan penyimpanan\\n\\n' + tabel(['Hal', 'Nilai'], [['Terpakai', num(input.terpakai) + ' dari ' + num(input.kapasitas) + ' GB (' + v.persen + '%)'], ['Pertumbuhan', num(input.tumbuh) + ' GB per bulan'], ['Penuh dalam', v.penuh < 0 ? '-' : v.penuh + ' bulan, sekitar ' + v.tglPenuh], ['Perlu ditambah saat ' + input.batas + '%', v.tambah < 0 ? '-' : (v.tambah === 0 ? 'Sekarang juga' : v.tambah + ' bulan lagi, sekitar ' + v.tglTambah)], ['Status', v.status]])",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'perkiraan-penyimpanan'",
+        "isi": "csv([['Hal', 'Nilai'], ['Persen terpakai', v.persen], ['Bulan sampai penuh', v.penuh], ['Tanggal penuh', v.tglPenuh], ['Bulan sampai batas tambah', v.tambah], ['Tanggal batas tambah', v.tglTambah], ['Status', v.status]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "kapasitas": "1000",
+      "terpakai": "700",
+      "tumbuh": "50",
+      "batas": "80"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Aman: terpakai 70%",
+        "penuh dalam 6 bulan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Cloud & Infrastructure Engineer di divisi IT & Security, memakai bahasa awam",
+    "tujuan": "Perkirakan kapan ruang penyimpanan penuh dan kapan perlu ditambah supaya tidak kehabisan mendadak. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Sistem mungkin kurang aman."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "disk penuh"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil peramal penyimpanan penuh perlu dibaca bersama: disk penuh menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

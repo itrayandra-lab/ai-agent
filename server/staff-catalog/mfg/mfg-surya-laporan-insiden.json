@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-surya-laporan-insiden",
+  "division": "mfg",
+  "employeeId": "surya",
+  "title": "HSE / K3 Officer",
+  "version": 1,
+  "name": "Pembuat laporan kejadian di tempat kerja",
+  "ringkas": "Susun laporan kejadian (hampir celaka, cedera ringan, atau berat) lengkap dengan batas waktu lapor dan daftar tindak lanjut.",
+  "kataKunci": [
+    "insiden",
+    "kecelakaan kerja",
+    "laporan kejadian",
+    "hampir celaka",
+    "investigasi"
+  ],
+  "inputs": [
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis kejadian",
+      "required": true,
+      "default": "ringan",
+      "choices": [
+        {
+          "v": "hampir",
+          "t": "Hampir celaka"
+        },
+        {
+          "v": "ringan",
+          "t": "Cedera ringan"
+        },
+        {
+          "v": "berat",
+          "t": "Cedera berat"
+        }
+      ]
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal kejadian",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "lokasi",
+      "type": "text",
+      "label": "Lokasi",
+      "required": true,
+      "contoh": "Jalur Filling 1"
+    },
+    {
+      "key": "uraian",
+      "type": "longtext",
+      "label": "Apa yang terjadi?",
+      "required": true,
+      "contoh": "Karyawan terpeleset di lantai basah"
+    },
+    {
+      "key": "korban",
+      "type": "text",
+      "label": "Nama yang terlibat (boleh kosong)",
+      "required": false,
+      "contoh": "Andi"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun laporan",
+      "set": {
+        "hariLapor": "({ hampir: 7, ringan: 3, berat: 1 })[input.jenis]",
+        "batas": "new Date(Date.parse(input.tanggal) + v.hariLapor * 864e5).toISOString().slice(0, 10)",
+        "nama": "({ hampir: 'Hampir celaka', ringan: 'Cedera ringan', berat: 'Cedera berat' })[input.jenis]",
+        "tindakan": "(input.jenis === 'berat' ? ['Beri pertolongan dan hubungi bantuan medis', 'Amankan lokasi dan hentikan pekerjaan di sekitarnya'] : input.jenis === 'ringan' ? ['Beri pertolongan pertama dan catat di buku kotak P3K'] : ['Amankan area dan tandai sumber bahayanya']).concat(['Kumpulkan keterangan saksi', 'Cari penyebab utama (tanyakan \"mengapa\" sampai lima kali)', 'Tetapkan perbaikan dan penanggung jawabnya', 'Beritahu seluruh tim tentang pelajarannya'])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.nama + ' di ' + input.lokasi + ': laporan harus selesai paling lambat ' + v.batas",
+    "teks": "'# Laporan kejadian: ' + v.nama + '\\n\\n- Tanggal: ' + tgl(input.tanggal) + '\\n- Lokasi: ' + input.lokasi + '\\n- Yang terlibat: ' + (input.korban || '-') + '\\n- Batas laporan selesai: **' + v.batas + '**\\n\\n## Uraian\\n' + input.uraian + '\\n\\n## Tindak lanjut\\n' + v.tindakan.map((t, i) => (i + 1) + '. [ ] ' + t).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tindak-lanjut-' + input.tanggal",
+        "isi": "csv([['No', 'Tindakan', 'Penanggung jawab', 'Batas waktu', 'Selesai']].concat(v.tindakan.map((t, i) => [i + 1, t, '', v.batas, ''])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Safety",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "jenis": "ringan",
+      "tanggal": "2026-11-18",
+      "lokasi": "Jalur Filling 1",
+      "uraian": "Karyawan terpeleset di lantai basah",
+      "korban": "Andi"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2026-11-21",
+        "Cedera ringan"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "HSE / K3 Officer di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Susun laporan kejadian (hampir celaka, cedera ringan, atau berat) lengkap dengan batas waktu lapor dan daftar tindak lanjut. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "insiden"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat laporan kejadian di tempat kerja perlu dibaca bersama: insiden menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

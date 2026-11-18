@@ -92,7 +92,7 @@ export function explainGender(name) {
   return { gender: nameHash(k) % 2 ? 'female' : 'male', source: 'tebakan' };
 }
 /** Voice gender of an agent: the stored `voiceGender` first (editable in the data), otherwise guessed from the name. Never uses appearance. */
-export const genderOf = (e) => (e?.voiceGender === 'female' || e?.voiceGender === 'male' ? e.voiceGender : inferGender(e?.name || e?.id || ''));
+export const genderOf = (e) => (e?.voiceGender === 'female' || e?.voiceGender === 'male' ? e.voiceGender : e?.type === 'human' && (e?.appearance?.gender === 'female' || e?.appearance?.gender === 'male') ? e.appearance.gender : inferGender(e?.name || e?.id || ''));
 
 
 // Pitch/speed grid per gender. Neighbouring steps are far enough apart to hear (about 1.5 semitones / 7 percent speed).
@@ -156,7 +156,7 @@ export function createFloor({ now = () => Date.now(), timer = setTimeout, clear 
     start(it, () => { if (cur !== it) return; cur = null; later(pump, pause()); });
   }
   return {
-    enqueue(it) { it.at = now(); q.push(it); while (q.length > max) onDrop?.(q.shift()); pump(); },
+    enqueue(it, { front = false } = {}) { it.at = now(); if (front) q.unshift(it); else q.push(it); while (q.length > max) onDrop?.(front ? q.pop() : q.shift()); pump(); },
     /** the owner types or speaks: hold the floor, fade out whoever talks, forget queued lines that are now out of date */
     ownerActive(ms = hold) {
       ownerUntil = Math.max(ownerUntil, now() + ms);
@@ -208,7 +208,7 @@ export function sentencesOf(text, longer = 70) {
 }
 
 // ── runtime (browser only)
-const S = { on: false, vol: 0.9, engine: 'browser', v: 3, maleEdge: true };   /* maleEdge: male agents use Microsoft Ardi when the browser has no Indonesian male voice */   /* 'browser' = built-in voice (default); 'edge' = server voice (Microsoft Gadis/Ardi), also optional */
+const S = { on: false, vol: 0.9, engine: 'browser', v: 3, maleEdge: true, autoRead: true, ownerVoice: true };   /* maleEdge: male agents use Microsoft Ardi when the browser has no Indonesian male voice */   /* 'browser' = built-in voice (default); 'edge' = server voice (Microsoft Gadis/Ardi), also optional */
 const EG = { status: 'idle', ok: null, err: '', ms: 0, hits: 0, misses: 0 };   /* server (Microsoft) engine state */
 let gen = 0, actx = null, live = null;
 let lookup = null, voices = [], lastErr = '', stats = { spoken: 0, dropped: 0, lastStartMs: 0 };
@@ -262,13 +262,16 @@ const voiceInfo = () => ({ female: voices.filter((v) => voiceGenderOf(v.name) ==
 /** A real Indonesian male voice in the browser? (An English male voice reading Indonesian does not count.) */
 const hasMaleIdVoice = () => hasId && voices.some((v) => voiceGenderOf(v.name) === 'male');
 /** Male agents are spoken by Microsoft Ardi when the browser has no Indonesian male voice and the server voice is available; otherwise the built-in voice. */
-const maleViaEdge = (p) => !!(S.maleEdge && S.engine === 'browser' && p?.gender === 'male' && !hasMaleIdVoice() && EG.avail === true && EG.ok !== false);
+const maleViaEdge = (p) => !!(S.maleEdge && S.engine === 'browser' && p?.gender === 'male' && !hasMaleIdVoice() && EG.avail === true && EG.ok !== false && !edgeSlow());
+const willUseEdge = (it) => !it.browserOnly && !it.fb && EG.ok !== false && (S.engine === 'edge' || maleViaEdge(it.profile));
+/** The Microsoft voice is judged too slow when the last three first sounds all took more than 5 s; it is tried again after 3 minutes. */
+const edgeSlow = () => { if (!EG.slow) return false; if (Date.now() - EG.slowAt > 180000) { EG.slow = false; EG.lat = []; return false; } return true; };
 
 // the one floor of the whole page
 const floor = createFloor({
   start: (it, done) => runItem(it, done),
   stop: () => { gen++; const l = live; live = null; try { l?.stop(true); } catch { /* ignore */ } try { ss()?.cancel(); } catch { /* ignore */ } },
-  onDrop: () => { stats.dropped++; },
+  onDrop: (x) => { stats.dropped++; try { x?.ac?.abort(); } catch { /* ignore */ } },
 });
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopSpeaking(); });
@@ -281,7 +284,7 @@ if (typeof document !== 'undefined') {
 
 function runItem(it, done) {
   const my = gen;
-  if ((S.engine === 'edge' || maleViaEdge(it.profile)) && !it.fb && EG.ok !== false) return playEdge(it, my, done);
+  if (willUseEdge(it)) return playEdge(it, my, done);
   runBrowser(it, my, done);
 }
 /** Built-in voice, sentence by sentence with pitch/speed/pause following the punctuation. */
@@ -295,7 +298,7 @@ function runBrowser(it, my, done) {
     if (i >= parts.length) return finish();
     const sen = parts[i++], pr = prosodyFor(sen, i === 1 ? it.tag : ''), u = new SpeechSynthesisUtterance(applyPron(sen, PR.dict));
     u.lang = 'id-ID'; const vv = voiceFor(p); if (vv) u.voice = vv;
-    const B = BAND[p.gender]; u.pitch = +clamp(p.pitch + pr.dPitch, B.pitch[0] - 0.12, B.pitch[1] + 0.12).toFixed(3); u.rate = +clamp(p.rate + pr.dRate, 0.7, 1.3).toFixed(3); u.volume = clamp(vol * pr.vol, 0, 1);
+    const B = BAND[p.gender], jp = (Math.random() - 0.5) * 0.024, jr = (Math.random() - 0.5) * 0.03; u.pitch = +clamp(p.pitch + pr.dPitch + jp, B.pitch[0] - 0.12, B.pitch[1] + 0.12).toFixed(3); u.rate = +clamp(p.rate + pr.dRate + jr, 0.7, 1.3).toFixed(3); u.volume = clamp(vol * pr.vol, 0, 1);
     const t0 = performance.now(); let started = false;
     const next = () => { clearTimeout(wd); if (my !== gen) return; to = setTimeout(step, pr.pause); };
     wd = setTimeout(() => { try { s.cancel(); } catch { /* ignore */ } next(); }, 4000 + sen.length * 140);   /* some engines never fire onend */
@@ -311,12 +314,44 @@ export function speak(agentId, text, opts = {}) {
   const s = ss(); if (!s || (!S.on && !opts.force)) return false;
   const tag = extractTag(text), t = cleanText(text); if (!t || t.length < 2) return false;
   if (opts.ambient && !floor.idle()) return false;   /* background chatter never waits in line, never delays a real reply, and is silent while the owner has the floor */
-  const it = { text: t, tag, profile: opts.profile || profileOf(agentId, opts.group), vol: opts.vol, ambient: !!opts.ambient, manual: !!(opts.manual || opts.force) };
+  const it = { text: t, tag, profile: opts.profile || profileOf(agentId, opts.group), vol: opts.vol, ambient: !!opts.ambient, manual: !!(opts.manual || opts.force), browserOnly: !!opts.browserOnly };
+  if (willUseEdge(it)) edgeJobs(it);   /* start fetching the audio now, while the line waits for its turn */
   if (opts.interrupt) floor.reset();
-  floor.enqueue(it);
+  floor.enqueue(it, { front: !!opts.front });
   return true;
 }
 export function stopSpeaking() { floor.reset(); }
+/** Which new chat messages should be spoken: only those from conversations the owner takes part in, fresh (< 20 s), not mirrored copies, not slash commands.
+ *  `seen` is a Set of message ids already handled. The owner's own lines are marked so they can go first and use the owner's voice. */
+export function pickSpeakable(messages, channels, me, seen, now = Date.now()) {
+  const out = [], ch = new Map((channels || []).map((c) => [c.id, c]));
+  for (let i = Math.max(0, (messages || []).length - 40); i < messages.length; i++) {
+    const m = messages[i]; if (!m || seen.has(m.id)) continue; seen.add(m.id);
+    if (now - (m.t || 0) > 20000 || m.mirrored) continue;
+    const c = ch.get(m.channelId); if (!c || (c.members && !c.members.includes(me))) continue;   /* a channel without a member list (#general) is open to everyone */
+    const text = String(m.text ?? ''); if (!text.trim() || /^\s*\//.test(text)) continue;
+    out.push({ id: m.id, authorId: m.authorId, text, owner: m.authorId === me, group: (c.members || []).filter((x) => x !== me) });
+  }
+  return out;
+}
+let primed = false; const seenMsgs = new Set();
+/** Call whenever chat messages change. The first call only remembers what is already there; after that every new message in a conversation the owner is in is spoken
+ *  in its author's voice (the owner's own message first, in the owner's voice), so one-to-one chats, groups and meetings all sound like a conversation. */
+function ingest(messages, channels, me) {
+  if (!primed) { primed = true; for (const m of messages || []) seenMsgs.add(m.id); return 0; }
+  if (seenMsgs.size > 4000) seenMsgs.clear();
+  const list = pickSpeakable(messages || [], channels || [], me, seenMsgs);
+  if (!S.on || !S.autoRead) return 0;
+  let n = 0;
+  for (const m of list) {
+    if (m.owner && !S.ownerVoice) continue;
+    if (speak(m.authorId, m.text, { group: m.group.concat([m.authorId]), front: m.owner, manual: m.owner, browserOnly: m.owner })) n++;   /* the owner's own line uses the local voice: no network wait before the agents answer */
+  }
+  return n;
+}
+let watchT = 0;
+/** Poll the chat data a few times a second (independent of animation frames, which pause in background tabs). ctx() returns { messages, channels, me }. */
+function watch(ctx) { clearInterval(watchT); if (typeof setInterval === 'undefined' || !ctx) return; watchT = setInterval(() => { try { const c = ctx(); if (c?.messages) ingest(c.messages, c.channels, c.me); } catch { /* ignore */ } }, 600); }
 const waiters = []; let waitT = 0;
 /** Run `fn` now, or as soon as the owner stops typing (used so a new reply bubble never appears over the text being written). */
 export function whenFree(fn) {
@@ -328,6 +363,7 @@ export function whenFree(fn) {
 // ── Server engine (Microsoft Gadis/Ardi through /api/tts). Sentence by sentence, played gapless; any failure falls back to the browser voice.
 const splitSentences = (t, max = 110) => { const out = []; let cur = ''; for (const s of t.split(/(?<=[.!?])\s+/)) { if (cur && cur.length + s.length + 1 > max) { out.push(cur); cur = s; } else cur += (cur ? ' ' : '') + s; } if (cur) out.push(cur); return out.flatMap((x) => (x.length <= max ? [x] : x.match(new RegExp('.{1,' + max + '}(\\s|$)', 'g')) || [x])).map((x) => x.trim()).filter(Boolean); };
 const ecache = new Map();
+const ensureCtx = () => (actx = actx || new (window.AudioContext || window.webkitAudioContext)());
 async function edgeFetch(text, p, signal) {
   const key = p.eVoice + '|' + p.eRate + '|' + p.ePitch + '|' + text, hit = ecache.get(key);
   if (hit) { EG.hits++; ecache.delete(key); ecache.set(key, hit); return hit; }
@@ -335,16 +371,27 @@ async function edgeFetch(text, p, signal) {
   const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: p.eVoice, rate: (p.eRate >= 0 ? '+' : '') + p.eRate + '%', pitch: (p.ePitch >= 0 ? '+' : '') + p.ePitch + 'Hz' }), signal });
   if (!r.ok) throw new Error('suara server ' + r.status);
   const j = await r.json(), bin = atob(j.audio), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-  const buf = await actx.decodeAudioData(u8.buffer);
+  const buf = await ensureCtx().decodeAudioData(u8.buffer);
   if (text.length <= 120) { ecache.set(key, buf); while (ecache.size > 30) ecache.delete(ecache.keys().next().value); }
   return buf;
 }
+/** Request the audio of every sentence of a line at once (the wait is that of the slowest, not the sum). Called when the line is queued, so it is often ready by its turn. */
+function edgeJobs(it) {
+  if (it.jobs) return it;
+  const p = it.profile; it.parts = splitSentences(it.text); it.ac = new AbortController(); it.t0 = performance.now();
+  it.pros = it.parts.map((x, k) => prosodyFor(x, k === 0 ? it.tag : ''));
+  const tm = setTimeout(() => it.ac.abort(), 15000);
+  it.jobs = it.parts.map((x, k) => { const pr = it.pros[k], pp = { ...p, ePitch: p.ePitch + Math.round(pr.dPitch * 40 + (Math.random() - 0.5) * 3), eRate: p.eRate + Math.round(pr.dRate * 60 + (Math.random() - 0.5) * 3) }; return edgeFetch(x, pp, it.ac.signal).catch((e) => e); });
+  Promise.allSettled(it.jobs).then(() => clearTimeout(tm));
+  return it;
+}
 function playEdge(it, my, done) {
-  const p = it.profile, parts = splitSentences(it.text), vol = clamp(it.vol ?? S.vol, 0, 1), ac = new AbortController(), run = { srcs: [], live: 0, next: 0, finished: false };
+  edgeJobs(it);
+  const parts = it.parts, vol = clamp(it.vol ?? S.vol, 0, 1), run = { srcs: [], live: 0, next: 0, finished: false };
   let played = 0, mg = null;
   const finish = () => { if (live === run) live = null; if (my === gen) done(); };
   run.stop = (fade) => {
-    ac.abort();
+    try { it.ac.abort(); } catch { /* ignore */ }
     const srcs = run.srcs.splice(0); for (const x of srcs) x.onended = null;
     if (fade && mg && actx) { const t = actx.currentTime; mg.gain.cancelScheduledValues(t); mg.gain.setValueAtTime(mg.gain.value, t); mg.gain.linearRampToValueAtTime(0.0001, t + 0.2); setTimeout(() => { for (const x of srcs) try { x.stop(); } catch { /* ignore */ } }, 260); }
     else for (const x of srcs) try { x.stop(); } catch { /* ignore */ }
@@ -352,18 +399,18 @@ function playEdge(it, my, done) {
   live = run;
   (async () => {
     try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') await actx.resume();
+      ensureCtx(); if (actx.state === 'suspended') await actx.resume();
       mg = actx.createGain(); mg.gain.value = vol; mg.connect(actx.destination);
-      const t0 = performance.now();
       for (let k = 0; k < parts.length; k++) {
-        const pr = prosodyFor(parts[k], k === 0 ? it.tag : ''), pp = { ...p, ePitch: p.ePitch + Math.round(pr.dPitch * 100), eRate: p.eRate + Math.round(pr.dRate * 100) };
-        const tm = setTimeout(() => ac.abort(), 12000);
-        let buf; try { buf = await edgeFetch(parts[k], pp, ac.signal); } finally { clearTimeout(tm); }
+        const pr = it.pros[k]; const r = await it.jobs[k]; if (r instanceof Error) throw r; const buf = r;
         if (my !== gen) return;
         const src = actx.createBufferSource(); src.buffer = buf; const g = actx.createGain(); g.gain.value = pr.vol; src.connect(g).connect(mg);
         const t = Math.max(actx.currentTime + 0.03, run.next) + (k === 0 ? (pr.lead || 0) / 1000 : 0); src.start(t); run.next = t + buf.duration + pr.pause / 1000; run.srcs.push(src); run.live++; played++;
         src.onended = () => { run.live--; if (run.finished && run.live === 0) finish(); };
-        if (played === 1) EG.ms = Math.round(performance.now() - t0);
+        if (played === 1) {   // time from queueing to the first sound; three slow ones in a row switch male agents to the local voice for a while
+          EG.ms = Math.round(performance.now() - it.t0); (EG.lat = EG.lat || []).push(EG.ms); if (EG.lat.length > 3) EG.lat.shift();
+          if (EG.lat.length === 3 && EG.lat.every((x) => x > 5000)) { EG.slow = true; EG.slowAt = Date.now(); }
+        }
       }
       EG.ok = true; EG.err = ''; EG.fails = 0;
       run.finished = true; if (run.live === 0) finish();
@@ -395,7 +442,7 @@ export function hum(agentId, closeness = 1) {
 }
 
 export const tts = {
-  hum, messageSource, whenFree, learnBrands, extractTag, prosodyFor,
+  hum, ingest, watch, messageSource, whenFree, learnBrands, extractTag, prosodyFor,
   /** the owner is talking (microphone): hold the floor for `ms` */
   ownerSpeaking: (ms = 2500) => floor.ownerActive(ms),
   pron: () => ({ dict: { ...PR.dict } }),
@@ -406,7 +453,7 @@ export const tts = {
   bind(fn) { lookup = fn; },
   available: () => !!ss(),
   voices: () => voices.map((v) => ({ name: v.name, lang: v.lang, local: v.localService })),
-  state: () => ({ ...S, edge: { ...EG }, available: !!ss(), voiceCount: voices.length, hasIndonesian: hasId, voiceNames: voices.map((v) => v.name), voiceInfo: voiceInfo(), maleBrowser: hasMaleIdVoice(), maleViaEdge: maleViaEdge({ gender: 'male' }), speaking: floor.speaking(), pending: floor.pending(), ownerBusy: floor.ownerBusy(), lastErr, ...stats }),
+  state: () => ({ ...S, edge: { ...EG }, available: !!ss(), voiceCount: voices.length, hasIndonesian: hasId, voiceNames: voices.map((v) => v.name), voiceInfo: voiceInfo(), maleSlow: edgeSlow(), maleBrowser: hasMaleIdVoice(), maleViaEdge: maleViaEdge({ gender: 'male' }), speaking: floor.speaking(), pending: floor.pending(), ownerBusy: floor.ownerBusy(), lastErr, ...stats }),
   isOn: () => S.on,
   profile: (id, group) => profileOf(id, group),
   set(patch) { if (patch.engine === 'edge') { EG.ok = null; EG.fails = 0; EG.err = ''; }

@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-aksa-cron",
+  "division": "kms",
+  "employeeId": "aksa",
+  "title": "Automation & Integration Engineer",
+  "version": 1,
+  "name": "Penyusun jadwal berkala",
+  "ringkas": "Ubah pilihan \"tiap hari / hari kerja / mingguan\" menjadi aturan jadwal siap pakai, dengan saran menghindari bentrok.",
+  "kataKunci": [
+    "jadwal",
+    "cron",
+    "berkala",
+    "rutin",
+    "penjadwalan"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama pekerjaan terjadwal",
+      "required": true,
+      "contoh": "Rekap penjualan"
+    },
+    {
+      "key": "frekuensi",
+      "type": "choice",
+      "label": "Seberapa sering?",
+      "required": true,
+      "default": "kerja",
+      "choices": [
+        {
+          "v": "jam",
+          "t": "Tiap jam"
+        },
+        {
+          "v": "harian",
+          "t": "Tiap hari"
+        },
+        {
+          "v": "kerja",
+          "t": "Hari kerja (Senin-Jumat)"
+        },
+        {
+          "v": "mingguan",
+          "t": "Tiap Senin"
+        },
+        {
+          "v": "bulanan",
+          "t": "Tiap awal bulan"
+        }
+      ]
+    },
+    {
+      "key": "jam",
+      "type": "text",
+      "label": "Jam jalan WIB (contoh 08:30)",
+      "required": true,
+      "contoh": "08:30"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "waktu": "(() => { const m = String(input.jam).match(/^(\\d{1,2})[:.](\\d{2})$/); const h = m ? Math.min(23, Number(m[1])) : 8; const mi = m ? Math.min(59, Number(m[2])) : 0; return { h: h, mi: mi, teks: String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0') }; })()",
+        "cron": "({ jam: v.waktu.mi + ' * * * *', harian: v.waktu.mi + ' ' + v.waktu.h + ' * * *', kerja: v.waktu.mi + ' ' + v.waktu.h + ' * * 1-5', mingguan: v.waktu.mi + ' ' + v.waktu.h + ' * * 1', bulanan: v.waktu.mi + ' ' + v.waktu.h + ' 1 * *' })[input.frekuensi]",
+        "kata": "({ jam: 'Tiap jam, pada menit ke-' + v.waktu.mi, harian: 'Tiap hari pukul ' + v.waktu.teks + ' WIB', kerja: 'Senin sampai Jumat pukul ' + v.waktu.teks + ' WIB', mingguan: 'Tiap Senin pukul ' + v.waktu.teks + ' WIB', bulanan: 'Tanggal 1 tiap bulan pukul ' + v.waktu.teks + ' WIB' })[input.frekuensi]",
+        "saran": "v.waktu.mi === 0 ? 'Pakai menit selain :00 (mis. :07) agar tidak bentrok dengan pekerjaan lain yang jalan di awal jam.' : 'Menit sudah tidak di awal jam, aman dari bentrok.'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ': ' + v.kata + ' (aturan ' + v.cron + ')'",
+    "teks": "'# Jadwal ' + input.nama + '\\n\\n- Dalam kata: ' + v.kata + '\\n- Aturan jadwal: ' + v.cron + '\\n- Saran: ' + v.saran",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-berkala'",
+        "isi": "csv([['Nama', 'Kata', 'Aturan'], [input.nama, v.kata, v.cron]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Technical",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Rekap penjualan",
+      "frekuensi": "kerja",
+      "jam": "08:30"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "30 8 * * 1-5",
+        "Senin sampai Jumat pukul 08:30"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Automation & Integration Engineer di divisi Knowledge & AI Ops, memakai bahasa awam",
+    "tujuan": "Ubah pilihan \"tiap hari / hari kerja / mingguan\" menjadi aturan jadwal siap pakai, dengan saran menghindari bentrok. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Simpan saja."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "jadwal"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun jadwal berkala perlu dibaca bersama: jadwal menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

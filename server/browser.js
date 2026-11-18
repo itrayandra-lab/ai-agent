@@ -10,6 +10,7 @@ import net from 'node:net';
 import * as store from './store.js';
 import * as llm from './llm.js';
 import * as gov from './governor.js';
+import * as approvals from './approvals.js';
 import * as engine from './engine.js';
 
 const db = () => store.get();
@@ -307,12 +308,15 @@ const QA_RE = /\b(uji|tes\b|testing|qa\b|responsif|tampilan|console|jaringan|net
 /** Komputer sedang berat? Kembalikan alasan (string) atau '' bila aman. */
 export async function systemBusy() {
   if (process.env.RAIVERSE_BROWSER_FORCE_BUSY === '1') return 'beban uji';
+  if (process.env.RAIVERSE_BROWSER_SKIP_LOAD_CHECK === '1') return '';   // khusus tes: suite paralel membuat CPU tinggi dan tes jadi tidak deterministik
   const free = os.freemem(), total = os.totalmem();
   if (free < 1.0 * 2 ** 30 || free / total < 0.07) return 'memori komputer hampir penuh';
   const a = os.cpus().map((c) => c.times); await wait(350); const b = os.cpus().map((c) => c.times);
   let idle = 0, all = 0; b.forEach((t, i) => { const p = a[i]; const d = (k) => t[k] - p[k]; idle += d('idle'); all += d('user') + d('nice') + d('sys') + d('idle') + d('irq'); });
   return all && 1 - idle / all > 0.9 ? 'prosesor komputer sedang sangat sibuk' : '';
 }
+/** dipakai pintu buka_alat('browser'): validasi alasan, beban komputer, lalu buka kunci dalam satu langkah */
+export async function unlockViaDoor(e, t, alasan) { const text = await openBrowser(e, t, { alasan }); return { ok: unlocked.has(ukey(t)), text }; }
 async function openBrowser(e, t, input) {
   const alasan = String(input.alasan || '').trim(), base = { taskId: t.id, agentId: e.id, agentName: e.name, tool: 'buka_browser' };
   const no = (msg) => { logTrace({ ...base, summary: `Meminta browser — ditolak: ${msg}`, status: 'ditolak' }); return msg; };
@@ -424,7 +428,7 @@ export async function endTask(taskId) {
   await closeSessionPages(s).catch(() => {});
 }
 setInterval(() => {   // lease menganggur dilepas; Chrome dimatikan bila lama tidak dipakai
-  const idle = (() => { try { return store.ids().map((w) => store.run(w, () => cfg().idleCloseSec)).reduce((a, b) => Math.min(a, b), 3600); } catch { return 90; } })() * 1000;
+  const idle = (() => { try { return store.ids().filter((w) => store.activity(w)?.loaded).map((w) => store.runQuiet(w, () => cfg().idleCloseSec)).reduce((a, b) => Math.min(a, b), 3600); } catch { return 90; } })() * 1000;
   if (lease && !lease.awaiting) { try { const tk = store.run(lease.ws, () => db().tasks.find((x) => x.id === lease.taskId)); if (!tk || ['done', 'cancelled', 'failed', 'blocked', 'review'].includes(tk.status)) endTask(lease.taskId).catch(() => {}); } catch { /* abaikan */ } }
   if (lease && Date.now() - lease.last > Math.max(idle, 60000) && !lease.awaiting) endTask(lease.taskId).catch(() => {});
   if (mcp?.alive && !lease && Date.now() - lastUse > idle) { stopServer().catch(() => {}); logTrace({ ws: store.ids()[0], tool: 'sistem', summary: 'Browser dimatikan otomatis (tidak ada aktivitas)', status: 'ok' }); }
@@ -449,7 +453,7 @@ async function askOwner(sess, e, t, name, input, why, label) {
   const c = cfg();
   const sig = `${name}:${JSON.stringify(input)}:${sess.url}`;
   if (sess.grants.has(sig)) { sess.grants.delete(sig); return true; }
-  const a = store.upsert('approvals', { id: store.uid('ap'), kind: 'browser_action', taskId: t.id, requesterId: e.id, approverId: t.createdBy || 'owner', title: `Aksi browser: ${describe(name, input, label)}`, summary: `${e.name} ingin ${describe(name, input, label).toLowerCase()} di ${sess.url || 'halaman web'}. Alasan ditahan: ${why}.`, status: 'pending', createdAt: Date.now() });
+  const a = approvals.create({ kind: 'browser_action', expiresAt: Date.now() + c.approvalWaitSec * 1000, taskId: t.id, requesterId: e.id, approverId: t.createdBy || 'owner', title: `Aksi browser: ${describe(name, input, label)}`, summary: `${e.name} ingin ${describe(name, input, label).toLowerCase()} di ${sess.url || 'halaman web'}. Alasan ditahan: ${why}.`, status: 'pending', createdAt: Date.now() });
   engine.event('approval_requested', e.id, `${e.name} butuh persetujuan: "${a.title}"`, { taskId: t.id, approvalId: a.id });
   logTrace({ taskId: t.id, agentId: e.id, agentName: e.name, tool: name, summary: `${describe(name, input, label)} — DITAHAN menunggu Owner (${why})`, status: 'ditahan', url: sess.url });
   sess.awaiting = true;
@@ -461,8 +465,7 @@ async function askOwner(sess, e, t, name, input, why, label) {
       if (cur?.status === 'rejected') return false;
       await wait(1000);
     }
-    const cur = db().approvals.find((x) => x.id === a.id);
-    if (cur?.status === 'pending') { cur.status = 'rejected'; cur.feedback = 'Kedaluwarsa: Owner tidak memutuskan tepat waktu.'; cur.decidedAt = Date.now(); store.upsert('approvals', cur); }
+    approvals.expire(a.id);
     return false;
   } finally { sess.awaiting = false; sess.last = Date.now(); }
 }
@@ -576,6 +579,7 @@ export function status() {
   const mine = lease && lease.ws === ws ? lease : null;
   const task = mine ? db().tasks.find((x) => x.id === mine.taskId) : null;
   lastPoll = Date.now();
+  if (mine && mine.pageId !== undefined && (!frame || frame.at < mine.startedAt) && !frameBusy) captureFrame(mine.pageId, mine.url).catch(() => {});   // sesi baru tanpa gambar: ambil satu bingkai (tidak menunggu)
   return {
     installed: installed(), running: !!mcp?.alive, error: lastError, version: PKG_VERSION, config: c,
     divisions: db().divisions.map((d) => ({ id: d.id, name: d.name })),

@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-selisih-tanggal",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penghitung selisih tanggal",
+  "ringkas": "Hitung berapa hari, minggu, dan hari kerja di antara dua tanggal.",
+  "kataKunci": [
+    "tanggal",
+    "selisih",
+    "hari kerja",
+    "durasi",
+    "kalender"
+  ],
+  "inputs": [
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Tanggal mulai",
+      "required": true,
+      "contoh": "2026-01-01"
+    },
+    {
+      "key": "akhir",
+      "type": "date",
+      "label": "Tanggal akhir",
+      "required": true,
+      "contoh": "2026-12-31"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "d": "Math.round((Date.parse(input.akhir) - Date.parse(input.mulai)) / 864e5)",
+        "total": "Math.abs(v.d) + 1",
+        "awal": "new Date(Math.min(Date.parse(input.mulai), Date.parse(input.akhir))).getUTCDay()",
+        "kerja": "Math.floor(v.total / 7) * 5 + [0, 1, 2, 3, 4, 5, 6].filter((i) => i < v.total % 7 && (v.awal + i) % 7 !== 0 && (v.awal + i) % 7 !== 6).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "Math.abs(v.d) + ' hari selisih (' + v.total + ' hari bila kedua ujung dihitung), ' + v.kerja + ' hari kerja'",
+    "teks": "tabel(['Ukuran', 'Nilai'], [['Selisih hari', Math.abs(v.d)], ['Selisih minggu', Math.round(Math.abs(v.d) / 7 * 10) / 10], ['Hari termasuk kedua ujung', v.total], ['Hari kerja (Senin-Jumat)', v.kerja]])"
+  },
+  "sample": {
+    "input": {
+      "mulai": "2026-01-01",
+      "akhir": "2026-12-31"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "364 hari selisih",
+        "261 hari kerja"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "otakProfil": {
+    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
+    "tujuan": "Hitung berapa hari, minggu, dan hari kerja di antara dua tanggal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Hasil sudah benar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "tanggal"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung selisih tanggal perlu dibaca bersama: tanggal menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

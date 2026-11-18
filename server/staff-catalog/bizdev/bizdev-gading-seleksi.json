@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "bizdev-gading-seleksi",
+  "division": "bizdev",
+  "employeeId": "gading",
+  "title": "Channel Partner Manager — RayFlow Resellers & Integrators",
+  "version": 1,
+  "name": "Penilai calon mitra reseller",
+  "ringkas": "Beri skor calon mitra dari pengalaman, tim, jaringan pelanggan, dan kesiapan, lalu putuskan layak direkrut atau perlu dibina dulu.",
+  "kataKunci": [
+    "calon mitra",
+    "seleksi",
+    "reseller",
+    "rekrut mitra",
+    "penilaian"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama calon mitra",
+      "required": true,
+      "contoh": "CV Digital Makmur"
+    },
+    {
+      "key": "tahun",
+      "type": "number",
+      "label": "Lama usaha (tahun)",
+      "required": true,
+      "contoh": "4"
+    },
+    {
+      "key": "tim",
+      "type": "number",
+      "label": "Jumlah orang di tim penjualan",
+      "required": true,
+      "contoh": "5"
+    },
+    {
+      "key": "klien",
+      "type": "choice",
+      "label": "Punya pelanggan UMKM sendiri?",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Banyak (lebih dari 50)"
+        },
+        {
+          "v": "1",
+          "t": "Sedikit"
+        },
+        {
+          "v": "0",
+          "t": "Belum ada"
+        }
+      ]
+    },
+    {
+      "key": "kota",
+      "type": "choice",
+      "label": "Wilayah",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Kota yang belum kita garap"
+        },
+        {
+          "v": "1",
+          "t": "Kota yang sudah ada mitra"
+        },
+        {
+          "v": "0",
+          "t": "Bentrok dengan mitra lain"
+        }
+      ]
+    },
+    {
+      "key": "latihan",
+      "type": "choice",
+      "label": "Bersedia ikut pelatihan sertifikasi?",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya, langsung"
+        },
+        {
+          "v": "1",
+          "t": "Mungkin"
+        },
+        {
+          "v": "0",
+          "t": "Tidak"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skor",
+      "set": {
+        "tahunSkor": "num(input.tahun) >= 3 ? 2 : num(input.tahun) >= 1 ? 1 : 0",
+        "timSkor": "num(input.tim) >= 5 ? 2 : num(input.tim) >= 2 ? 1 : 0",
+        "total": "v.tahunSkor + v.timSkor + num(input.klien) + num(input.kota) + num(input.latihan)",
+        "skor": "Math.round(v.total / 10 * 100)",
+        "putusan": "num(input.kota) === 0 ? 'Tolak atau cari wilayah lain: bentrok dengan mitra yang ada' : v.skor >= 70 ? 'Layak direkrut' : v.skor >= 50 ? 'Bina dulu, tinjau ulang 3 bulan lagi' : 'Belum layak'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ': skor ' + v.skor + ' dari 100. ' + v.putusan",
+    "teks": "'# Penilaian ' + input.nama + '\\n\\n- Skor: **' + v.skor + '/100**\\n- Lama usaha: ' + input.tahun + ' tahun (nilai ' + v.tahunSkor + ' dari 2)\\n- Tim penjualan: ' + input.tim + ' orang (nilai ' + v.timSkor + ' dari 2)\\n- Pelanggan sendiri: ' + input.klien + ' dari 2\\n- Wilayah: ' + input.kota + ' dari 2\\n- Kesediaan pelatihan: ' + input.latihan + ' dari 2\\n\\n**Putusan: ' + v.putusan + '**'",
+    "data": "({ skor: v.skor, putusan: v.putusan })"
+  },
+  "sample": {
+    "input": {
+      "nama": "CV Digital Makmur",
+      "tahun": "4",
+      "tim": "5",
+      "klien": "2",
+      "kota": "1",
+      "latihan": "2"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "skor 90 dari 100",
+        "Layak direkrut"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Channel Partner Manager — RayFlow Resellers & Integrators di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Beri skor calon mitra dari pengalaman, tim, jaringan pelanggan, dan kesiapan, lalu putuskan layak direkrut atau perlu dibina dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "calon mitra"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilai calon mitra reseller perlu dibaca bersama: calon mitra menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

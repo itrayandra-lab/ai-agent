@@ -32,8 +32,8 @@ export const slug = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, 
 
 /** Parameter kabar yang dipakai bersama: ke mana pesan dikirim. */
 export const NOTIFY_PARAMS = [
-  { key: 'saluran', label: 'Kabari lewat mana?', type: 'choice', choices: [{ v: 'raiverse', t: 'Di sini (RAIVERSE)' }, { v: 'whatsapp', t: 'WhatsApp' }, { v: 'email', t: 'Email' }], default: 'raiverse' },
-  { key: 'tujuan', label: 'Nomor WhatsApp atau alamat email tujuan', type: 'text', when: (p) => p.saluran && p.saluran !== 'raiverse' },
+  { key: 'saluran', label: 'Kabari lewat mana?', type: 'choice', choices: [{ v: 'raiverse', t: 'Di sini (dan Telegram atau Discord bila sudah dihubungkan)' }, { v: 'email', t: 'Email' }], default: 'raiverse' },   // WhatsApp tidak tersedia; kabar ikut diteruskan ke saluran chat yang tertaut (server/channels)
+  { key: 'tujuan', label: 'Alamat email tujuan', type: 'text', when: (p) => p.saluran && p.saluran !== 'raiverse' },
 ];
 export function checkNotify(p, errs) {
   p.saluran = ['raiverse', 'whatsapp', 'email'].includes(p.saluran) ? p.saluran : 'raiverse';
@@ -66,9 +66,9 @@ export function notifyNode(p, textJs, ctx, pos, name = 'Kirim kabar') {
 /** Apa yang perlu tersedia agar saluran ini bisa jalan. */
 export function notifyNeeds(p, env) {
   const need = [];
-  if (['whatsapp', 'email'].includes(p.saluran) && !env.shared) need.push({ kind: 'pengirim', pesan: 'WhatsApp dan email belum tersedia untuk akunmu. Pakai kabar lewat RAIVERSE saja.' });
-  if (p.saluran === 'whatsapp' && !env.waha) need.push({ kind: 'whatsapp', pesan: 'WhatsApp belum tersambung. Sambungkan WhatsApp dulu, atau pilih kabar lewat RAIVERSE.' });
-  if (p.saluran === 'email' && !env.smtp) need.push({ kind: 'email', pesan: 'Email pengirim belum disiapkan. Pilih kabar lewat RAIVERSE atau WhatsApp dulu.' });
+  if (p.saluran === 'whatsapp') need.push({ kind: 'whatsapp', pesan: 'WhatsApp belum tersedia di RAIVERSE. Hubungkan Telegram atau Discord di Pengaturan, atau pilih kabar lewat RAIVERSE.' });
+  else if (p.saluran === 'email' && !env.shared) need.push({ kind: 'pengirim', pesan: 'Email belum tersedia untuk akunmu. Pakai kabar lewat RAIVERSE (bisa juga lewat Telegram atau Discord yang sudah kamu hubungkan).' });
+  if (p.saluran === 'email' && !env.smtp) need.push({ kind: 'email', pesan: 'Email pengirim belum disiapkan. Pilih kabar lewat RAIVERSE, atau hubungkan Telegram atau Discord dulu.' });
   return need;
 }
 

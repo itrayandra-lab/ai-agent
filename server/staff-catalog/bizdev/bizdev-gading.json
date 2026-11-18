@@ -1,39 +1,118 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "bizdev-gading",
   "division": "bizdev",
   "employeeId": "gading",
   "title": "Channel Partner Manager — RayFlow Resellers & Integrators",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Gading",
-    "tugasPeran": [
-      "Merekrut dan mengaktivasi reseller serta integrator RayFlow di berbagai kota",
-      "Merancang program kemitraan: tier, komisi, sertifikasi, dan materi penjualan",
-      "Memantau pipeline dan kinerja mitra serta mencegah konflik channel"
-    ],
-    "keahlian": [
-      "reseller",
-      "integrator",
-      "channel",
-      "saas"
-    ],
-    "contohTugas": [
-      "Rancang program tier reseller RayFlow",
-      "Playbook onboarding integrator 30 hari",
-      "Analisis kinerja 10 reseller teratas"
+  "name": "Penghitung komisi dan tingkat mitra",
+  "ringkas": "Tentukan tingkat tiap mitra (perunggu sampai platinum) dari omzet bulanannya dan hitung komisi yang harus dibayar.",
+  "kataKunci": [
+    "komisi",
+    "tingkat mitra",
+    "reseller",
+    "integrator",
+    "program kemitraan"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Omzet mitra bulan ini (satu baris: mitra | omzet)",
+      "required": true,
+      "contoh": "Mitra Satu | 15000000\nMitra Dua | 45000000\nMitra Tiga | 120000000"
+    },
+    {
+      "key": "program",
+      "type": "choice",
+      "label": "Program komisi",
+      "required": true,
+      "default": "standar",
+      "choices": [
+        {
+          "v": "standar",
+          "t": "Standar (5% sampai 15%)"
+        },
+        {
+          "v": "bonus",
+          "t": "Dengan bonus 2 poin (musim promo)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung komisi",
+      "set": {
+        "tambah": "input.program === 'bonus' ? 2 : 0",
+        "rows": "baris(input.data).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const o = num(p[1]); const t = o >= 100000000 ? ['Platinum', 15] : o >= 50000000 ? ['Gold', 12] : o >= 20000000 ? ['Silver', 8] : ['Bronze', 5]; const k = t[1] + v.tambah; return { mitra: p[0] || '-', omzet: o, tingkat: t[0], persen: k, komisi: Math.round(o * k / 100) }; }).sort((a, b) => b.omzet - a.omzet)",
+        "total": "v.rows.reduce((a, b) => a + b.komisi, 0)",
+        "omzet": "v.rows.reduce((a, b) => a + b.omzet, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' mitra, total komisi ' + rp(v.total) + ' dari omzet ' + rp(v.omzet)",
+    "teks": "'# Komisi mitra\\n\\n' + tabel(['Mitra', 'Omzet', 'Tingkat', 'Komisi %', 'Komisi'], v.rows.map((r) => [r.mitra, rp(r.omzet), r.tingkat, r.persen + '%', rp(r.komisi)])) + '\\n\\nBatas tingkat: Silver mulai Rp 20 juta, Gold Rp 50 juta, Platinum Rp 100 juta.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'komisi-mitra'",
+        "isi": "csv([['Mitra', 'Omzet', 'Tingkat', 'Komisi %', 'Komisi']].concat(v.rows.map((r) => [r.mitra, r.omzet, r.tingkat, r.persen, r.komisi])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "data": "Mitra Satu | 15000000\nMitra Dua | 45000000\nMitra Tiga | 120000000",
+      "program": "standar"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 mitra",
+        "Rp 22.350.000",
+        "Platinum"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Channel Partner Manager — RayFlow Resellers & Integrators di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Tentukan tingkat tiap mitra (perunggu sampai platinum) dari omzet bulanannya dan hitung komisi yang harus dibayar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "komisi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung komisi dan tingkat mitra perlu dibaca bersama: komisi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-naufal-evaluasi-model",
+  "division": "eng",
+  "employeeId": "naufal",
+  "title": "Mobile & ML Engineer",
+  "version": 1,
+  "name": "Penilai mutu model prediksi",
+  "ringkas": "Hitung ketepatan, daya tangkap, dan skor F1 dari jumlah tebakan benar dan salah, lalu beri penilaian singkat.",
+  "kataKunci": [
+    "evaluasi model",
+    "precision",
+    "recall",
+    "f1",
+    "confusion matrix"
+  ],
+  "inputs": [
+    {
+      "key": "tp",
+      "type": "number",
+      "label": "Tebakan \"ya\" yang benar",
+      "required": true,
+      "contoh": "80"
+    },
+    {
+      "key": "fp",
+      "type": "number",
+      "label": "Tebakan \"ya\" yang salah",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "fn",
+      "type": "number",
+      "label": "Kasus \"ya\" yang terlewat",
+      "required": true,
+      "contoh": "20"
+    },
+    {
+      "key": "tn",
+      "type": "number",
+      "label": "Tebakan \"tidak\" yang benar",
+      "required": true,
+      "contoh": "90"
+    },
+    {
+      "key": "berat",
+      "type": "choice",
+      "label": "Kesalahan mana yang lebih merugikan?",
+      "required": true,
+      "default": "seimbang",
+      "choices": [
+        {
+          "v": "seimbang",
+          "t": "Sama saja"
+        },
+        {
+          "v": "lolos",
+          "t": "Kasus yang terlewat"
+        },
+        {
+          "v": "salah",
+          "t": "Alarm palsu"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung ukuran",
+      "set": {
+        "n": "num(input.tp) + num(input.fp) + num(input.fn) + num(input.tn)",
+        "akurasi": "v.n ? Math.round((num(input.tp) + num(input.tn)) / v.n * 1000) / 10 : 0",
+        "presisi": "num(input.tp) + num(input.fp) ? Math.round(num(input.tp) / (num(input.tp) + num(input.fp)) * 1000) / 10 : 0",
+        "tangkap": "num(input.tp) + num(input.fn) ? Math.round(num(input.tp) / (num(input.tp) + num(input.fn)) * 1000) / 10 : 0",
+        "f1": "v.presisi + v.tangkap ? Math.round(2 * v.presisi * v.tangkap / (v.presisi + v.tangkap) * 10) / 10 : 0",
+        "spesifik": "num(input.tn) + num(input.fp) ? Math.round(num(input.tn) / (num(input.tn) + num(input.fp)) * 1000) / 10 : 0",
+        "nilai": "(input.berat === 'lolos' ? (v.tangkap >= 90 ? 'Bagus: sedikit kasus terlewat' : 'Perlu diperbaiki: terlalu banyak kasus terlewat (' + v.tangkap + '%)') : input.berat === 'salah' ? (v.presisi >= 90 ? 'Bagus: alarm palsu sedikit' : 'Perlu diperbaiki: alarm palsu terlalu banyak (' + v.presisi + '%)') : (v.f1 >= 85 ? 'Cukup baik untuk dipakai' : 'Perlu diperbaiki sebelum dipakai'))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Skor F1 ' + v.f1 + '%, ketepatan ' + v.akurasi + '%. ' + v.nilai",
+    "teks": "'# Mutu model\\n\\n' + tabel(['Ukuran', 'Nilai', 'Artinya'], [['Ketepatan total', v.akurasi + '%', 'Seberapa sering tebakan benar'], ['Ketepatan tebakan \"ya\"', v.presisi + '%', 'Dari yang ditebak \"ya\", berapa yang benar'], ['Daya tangkap', v.tangkap + '%', 'Dari kasus \"ya\" sebenarnya, berapa yang terdeteksi'], ['Skor F1', v.f1 + '%', 'Gabungan dua ukuran di atas'], ['Ketepatan tebakan \"tidak\"', v.spesifik + '%', 'Dari kasus \"tidak\" sebenarnya, berapa yang benar']]) + '\\n\\n**Penilaian:** ' + v.nilai",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'mutu-model'",
+        "isi": "csv([['Ukuran', 'Nilai persen'], ['Ketepatan total', v.akurasi], ['Presisi', v.presisi], ['Daya tangkap', v.tangkap], ['F1', v.f1], ['Spesifisitas', v.spesifik]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "tp": "80",
+      "fp": "10",
+      "fn": "20",
+      "tn": "90",
+      "berat": "seimbang"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Skor F1 84.2%",
+        "ketepatan 85%"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Mobile & ML Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Hitung ketepatan, daya tangkap, dan skor F1 dari jumlah tebakan benar dan salah, lalu beri penilaian singkat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "evaluasi model"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilai mutu model prediksi perlu dibaca bersama: evaluasi model menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

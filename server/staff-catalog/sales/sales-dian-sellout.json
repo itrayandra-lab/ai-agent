@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-dian-sellout",
+  "division": "sales",
+  "employeeId": "dian",
+  "title": "Distributor & Reseller Manager",
+  "version": 1,
+  "name": "Pemantau penjualan mitra (sell-in vs sell-out)",
+  "ringkas": "Bandingkan barang yang kita kirim ke mitra dengan yang laku terjual, lalu tandai mitra yang stoknya menumpuk atau cepat habis.",
+  "kataKunci": [
+    "sell-out",
+    "sell-in",
+    "stok mitra",
+    "penjualan mitra",
+    "sell-through"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data mitra (satu baris: mitra | dikirim | terjual)",
+      "required": true,
+      "contoh": "Toko Maju | 200 | 150"
+    },
+    {
+      "key": "batas",
+      "type": "choice",
+      "label": "Mitra dianggap lancar bila terjual minimal",
+      "required": true,
+      "default": "65",
+      "choices": [
+        {
+          "v": "50",
+          "t": "50% dari kiriman"
+        },
+        {
+          "v": "65",
+          "t": "65% dari kiriman"
+        },
+        {
+          "v": "80",
+          "t": "80% dari kiriman"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung sell-through",
+      "set": {
+        "rows": "baris(input.data).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const i = num(p[1]); const o = num(p[2]); const pct = i ? Math.round(o / i * 1000) / 10 : 0; return { mitra: p[0] || '-', masuk: i, laku: o, sisa: i - o, persen: pct, status: pct >= 85 ? 'Cepat habis, tawarkan tambah stok' : pct >= num(input.batas) ? 'Lancar' : 'Stok menumpuk, bantu promosi' }; }).sort((a, b) => a.persen - b.persen)",
+        "totalMasuk": "v.rows.reduce((a, b) => a + b.masuk, 0)",
+        "totalLaku": "v.rows.reduce((a, b) => a + b.laku, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Sell-through keseluruhan ' + (v.totalMasuk ? Math.round(v.totalLaku / v.totalMasuk * 1000) / 10 : 0) + '%; ' + v.rows.filter((r) => r.status.startsWith('Stok')).length + ' mitra stoknya menumpuk'",
+    "teks": "'# Penjualan mitra\\n\\n' + tabel(['Mitra', 'Dikirim', 'Terjual', 'Sisa', 'Terjual %', 'Status'], v.rows.map((r) => [r.mitra, r.masuk, r.laku, r.sisa, r.persen + '%', r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'sell-through-mitra'",
+        "isi": "csv([['Mitra', 'Dikirim', 'Terjual', 'Sisa', 'Terjual %', 'Status']].concat(v.rows.map((r) => [r.mitra, r.masuk, r.laku, r.sisa, r.persen, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Toko Maju | 200 | 150\nAgen Barat | 100 | 30\nReseller Budi | 50 | 48",
+      "batas": "65"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "30%",
+        "Stok menumpuk",
+        "Cepat habis",
+        "Sell-through keseluruhan 65.1%"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Distributor & Reseller Manager di divisi Sales, memakai bahasa awam",
+    "tujuan": "Bandingkan barang yang kita kirim ke mitra dengan yang laku terjual, lalu tandai mitra yang stoknya menumpuk atau cepat habis. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
+      "buruk": "Beli sekarang atau rugi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "sell-out"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemantau penjualan mitra (sell-in vs sell-out) perlu dibaca bersama: sell-out menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

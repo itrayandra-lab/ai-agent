@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-putra-bundling",
+  "division": "ecom",
+  "employeeId": "putra",
+  "title": "Marketplace Specialist (Shopee & Tokopedia)",
+  "version": 1,
+  "name": "Perancang paket bundling",
+  "ringkas": "Cari pasangan produk terbaik untuk dijual sebagai paket, hitung harga paket dengan diskon, dan pastikan untungnya masih sehat.",
+  "kataKunci": [
+    "bundling",
+    "paket hemat",
+    "pasangan produk",
+    "diskon paket",
+    "untung"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Produk (satu baris: nama | harga | harga pokok)",
+      "required": true,
+      "contoh": "Serum | 85000 | 30000\nToner | 60000 | 20000\nKrim | 95000 | 38000"
+    },
+    {
+      "key": "diskon",
+      "type": "choice",
+      "label": "Diskon paket",
+      "required": true,
+      "default": "10",
+      "choices": [
+        {
+          "v": "5",
+          "t": "5%"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "15",
+          "t": "15%"
+        }
+      ]
+    },
+    {
+      "key": "minimal",
+      "type": "choice",
+      "label": "Untung paket minimal",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        },
+        {
+          "v": "40",
+          "t": "40%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun paket",
+      "set": {
+        "prod": "baris(input.data).slice(0, 12).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: p[0] || '-', harga: num(p[1]), hpp: num(p[2]) }; })",
+        "paket": "v.prod.flatMap((a, i) => v.prod.slice(i + 1).map((b) => { const normal = a.harga + b.harga; const jual = Math.round(normal * (100 - num(input.diskon)) / 100 / 500) * 500; const pokok = a.hpp + b.hpp; return { nama: a.nama + ' + ' + b.nama, normal: normal, jual: jual, untung: jual - pokok, persen: jual ? Math.round((jual - pokok) / jual * 1000) / 10 : 0 }; })).sort((x, y) => y.untung - x.untung)",
+        "layak": "v.paket.filter((p) => p.persen >= num(input.minimal))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.paket.length + ' kemungkinan paket, ' + v.layak.length + ' memenuhi untung minimal ' + input.minimal + '%' + (v.layak[0] ? '; terbaik: ' + v.layak[0].nama : '')",
+    "teks": "'# Paket bundling\\n\\n' + tabel(['Paket', 'Harga normal', 'Harga paket', 'Untung', 'Untung %', 'Layak'], v.paket.map((p) => [p.nama, rp(p.normal), rp(p.jual), rp(p.untung), p.persen + '%', p.persen >= num(input.minimal) ? 'Ya' : 'Tidak']))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'paket-bundling'",
+        "isi": "csv([['Paket', 'Harga normal', 'Harga paket', 'Untung', 'Untung %']].concat(v.paket.map((p) => [p.nama, p.normal, p.jual, p.untung, p.persen])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Serum | 85000 | 30000\nToner | 60000 | 20000\nKrim | 95000 | 38000",
+      "diskon": "10",
+      "minimal": "30"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 kemungkinan paket",
+        "Serum + Krim",
+        "Rp 162.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Marketplace Specialist (Shopee & Tokopedia) di divisi E-commerce & Marketplace, memakai bahasa awam",
+    "tujuan": "Cari pasangan produk terbaik untuk dijual sebagai paket, hitung harga paket dengan diskon, dan pastikan untungnya masih sehat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jualan perlu ditingkatkan."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "bundling"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perancang paket bundling perlu dibaca bersama: bundling menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

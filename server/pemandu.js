@@ -9,6 +9,7 @@ import * as store from './store.js';
 import * as engine from './engine.js';
 import * as brain from './brain.js';
 import * as llm from './llm.js';
+import * as gov from './governor.js';
 import * as kamus from './kamus.js';
 import * as mem from './memory-lite.js';
 import dns from 'node:dns/promises';
@@ -30,7 +31,7 @@ export const INTENTS = {
     label: 'Membuat konten', kartu: 'Bantu aku membuat konten', ikon: 'edit',
     re: /\b(konten|caption|postingan|posting|instagram|tiktok|reels|iklan|poster|promo|feed|story)\b/i,
     qs: [
-      { id: 'tujuan', brief: 'Tujuan konten', say: 'Konten ini untuk apa?', opts: [o('baru', 'Menarik pembeli baru', 'Cocok untuk akun yang baru tumbuh', 1), o('promo', 'Promo minggu ini', 'Ada penawaran yang mau diumumkan'), o('cerita', 'Cerita tentang usahaku', 'Biar orang kenal dan percaya')] },
+      { id: 'tujuan', brief: 'Tujuan konten', infer: [[/promo|diskon|potongan/i, 'promo'], [/cerita|kisah/i, 'cerita'], [/jualan|jual |pembeli baru|laris/i, 'baru']], say: 'Konten ini untuk apa?', opts: [o('baru', 'Menarik pembeli baru', 'Cocok untuk akun yang baru tumbuh', 1), o('promo', 'Promo minggu ini', 'Ada penawaran yang mau diumumkan'), o('cerita', 'Cerita tentang usahaku', 'Biar orang kenal dan percaya')] },
       { id: 'kanal', brief: 'Dipasang di', say: 'Mau dipasang lewat mana?', profileKey: 'kanal', infer: [[/instagram|\big\b|reels/i, 'ig'], [/whatsapp|\bwa\b/i, 'wa']], opts: [o('ig', 'Instagram'), o('wa', 'WhatsApp'), o('dua', 'Keduanya', 'Hasilnya cocok untuk dua tempat', 1)], learn: { ig: 'Instagram', wa: 'WhatsApp', dua: 'Instagram dan WhatsApp' } },
     ],
     plans: {
@@ -38,7 +39,7 @@ export const INTENTS = {
       balanced: { give: '5 teks dan jadwal tayang 1 minggu', out: 'Lima teks beserta jadwal tayang' },
       full: { give: 'Rencana 30 hari, 15 teks, dan ide visual', out: 'Rencana bulanan lengkap dengan teks dan ide gambar' },
     },
-    lanjut: [['wa', 'Buat versi WhatsApp', 'Ubah hasil tadi jadi versi WhatsApp yang singkat dan akrab'], ['jadwal', 'Jadwalkan'], ['selesai', 'Selesai dulu']],
+    lanjut: [['wa', 'Buat versi WhatsApp', 'Ubah hasil tadi jadi versi WhatsApp yang singkat dan akrab'], ['jadwal', 'Jadwalkan'], ['selesai', 'Cukup dulu']],
   },
   riset: {
     label: 'Mencari tahu', kartu: 'Cari tahu soal sesuatu', ikon: 'search',
@@ -52,7 +53,7 @@ export const INTENTS = {
       balanced: { give: 'Laporan 1 halaman beserta sumbernya', out: 'Satu halaman laporan dengan sumber' },
       full: { give: 'Laporan lengkap, peluang, dan langkah berikutnya', out: 'Laporan menyeluruh plus saran langkah' },
     },
-    lanjut: [['rencana', 'Jadikan rencana langkah', 'Susun rencana langkah dari hasil tadi', 'rencana'], ['ringkas5', 'Ringkas jadi 5 poin', 'Ringkas hasil tadi jadi 5 poin'], ['selesai', 'Selesai dulu']],
+    lanjut: [['rencana', 'Jadikan rencana langkah', 'Susun rencana langkah dari hasil tadi', 'rencana'], ['ringkas5', 'Ringkas jadi 5 poin', 'Ringkas hasil tadi jadi 5 poin'], ['selesai', 'Cukup dulu']],
   },
   rencana: {
     label: 'Menyusun rencana', kartu: 'Atur rencana usahaku', ikon: 'goal',
@@ -66,13 +67,13 @@ export const INTENTS = {
       balanced: { give: 'Rencana 4 minggu dengan target tiap minggu', out: 'Rencana empat minggu yang jelas' },
       full: { give: 'Rencana 3 bulan, target, perkiraan biaya, dan risikonya', out: 'Rencana tiga bulan lengkap' },
     },
-    lanjut: [['pesan', 'Tulis pesan untuk tim atau pelanggan', 'Tulis pesan singkat berdasarkan rencana tadi', 'pesan'], ['jadwal', 'Jadwalkan pengingat'], ['selesai', 'Selesai dulu']],
+    lanjut: [['pesan', 'Tulis pesan untuk tim atau pelanggan', 'Tulis pesan singkat berdasarkan rencana tadi', 'pesan'], ['jadwal', 'Jadwalkan pengingat'], ['selesai', 'Cukup dulu']],
   },
   pesan: {
     label: 'Menulis pesan', kartu: 'Tuliskan sebuah pesan', ikon: 'chat',
     re: /\b(pesan|balas|balasan|email|surel|surat|undangan|ucapan|tagih|penawaran|chat ke|kirim ke)\b/i,
     qs: [
-      { id: 'untuk', brief: 'Pesan untuk', say: 'Pesan ini untuk siapa?', opts: [o('pelanggan', 'Pelanggan', '', 1), o('rekan', 'Rekan kerja'), o('mitra', 'Mitra atau pemasok')] },
+      { id: 'untuk', brief: 'Pesan untuk', infer: [[/pelanggan|pembeli|customer/i, 'pelanggan'], [/rekan|tim |karyawan|atasan/i, 'rekan'], [/mitra|pemasok|supplier/i, 'mitra']], say: 'Pesan ini untuk siapa?', opts: [o('pelanggan', 'Pelanggan', '', 1), o('rekan', 'Rekan kerja'), o('mitra', 'Mitra atau pemasok')] },
       { id: 'nada', brief: 'Gaya bahasa', say: 'Mau pakai gaya bahasa apa?', profileKey: 'gaya', infer: [[/santai|akrab/i, 'santai'], [/resmi|formal|sopan/i, 'resmi']], opts: [o('santai', 'Santai dan ramah', '', 1), o('resmi', 'Sopan dan resmi'), o('tegas', 'Tegas tapi halus')], learn: { santai: 'santai dan ramah', resmi: 'sopan dan resmi', tegas: 'tegas tapi halus' } },
     ],
     plans: {
@@ -80,7 +81,7 @@ export const INTENTS = {
       balanced: { give: '1 pesan dan 2 versi lain', out: 'Tiga versi pesan untuk kamu pilih' },
       full: { give: 'Pesan, 2 versi lain, dan balasan untuk 3 kemungkinan jawaban', out: 'Pesan lengkap dengan bahan membalas' },
     },
-    lanjut: [['santai', 'Buat versi lebih santai', 'Ubah pesan tadi jadi lebih santai'], ['tolak', 'Buat balasan kalau dia menolak', 'Tulis balasan kalau penerimanya menolak'], ['selesai', 'Selesai dulu']],
+    lanjut: [['santai', 'Buat versi lebih santai', 'Ubah pesan tadi jadi lebih santai'], ['tolak', 'Buat balasan kalau dia menolak', 'Tulis balasan kalau penerimanya menolak'], ['selesai', 'Cukup dulu']],
   },
   ringkas: {
     label: 'Meringkas', kartu: 'Ringkaskan sebuah tulisan', ikon: 'doc',
@@ -95,7 +96,7 @@ export const INTENTS = {
       balanced: { give: 'Ringkasan poin penting dan kesimpulan', out: 'Poin penting dan kesimpulan' },
       full: { give: 'Ringkasan, poin penting, dan daftar tindakan', out: 'Ringkasan lengkap dengan daftar tindakan' },
     },
-    lanjut: [['tindakan', 'Jadikan daftar tindakan', 'Ubah ringkasan tadi jadi daftar tindakan'], ['balas', 'Tulis balasannya', 'Tulis balasan berdasarkan ringkasan tadi'], ['selesai', 'Selesai dulu']],
+    lanjut: [['tindakan', 'Jadikan daftar tindakan', 'Ubah ringkasan tadi jadi daftar tindakan'], ['balas', 'Tulis balasannya', 'Tulis balasan berdasarkan ringkasan tadi'], ['selesai', 'Cukup dulu']],
   },
   belajar: {
     label: 'Belajar', kartu: 'Ajari aku sesuatu', ikon: 'book',
@@ -109,7 +110,7 @@ export const INTENTS = {
       balanced: { give: 'Penjelasan, 3 contoh, dan latihan kecil', out: 'Bahan belajar yang bisa langsung dicoba' },
       full: { give: 'Rencana belajar 7 hari beserta latihan', out: 'Rencana belajar mingguan lengkap' },
     },
-    lanjut: [['latihan', 'Buat latihan soal', 'Buat latihan soal dari materi tadi'], ['tujuh', 'Buat rencana belajar 7 hari', 'Buat rencana belajar 7 hari dari materi tadi'], ['selesai', 'Selesai dulu']],
+    lanjut: [['latihan', 'Buat latihan soal', 'Buat latihan soal dari materi tadi'], ['tujuh', 'Buat rencana belajar 7 hari', 'Buat rencana belajar 7 hari dari materi tadi'], ['selesai', 'Cukup dulu']],
   },
 };
 const UMUM = {
@@ -123,9 +124,11 @@ const UMUM = {
     balanced: { give: 'Hasil yang rapi dengan penjelasan', out: 'Hasil rapi dan mudah dipakai' },
     full: { give: 'Hasil lengkap beserta saran langkah berikutnya', out: 'Hasil menyeluruh dengan saran' },
   },
-  lanjut: [['ringkas', 'Buat lebih ringkas', 'Buat hasil tadi lebih ringkas'], ['jadwal', 'Jadwalkan'], ['selesai', 'Selesai dulu']],
+  lanjut: [['ringkas', 'Buat lebih ringkas', 'Buat hasil tadi lebih ringkas'], ['jadwal', 'Jadwalkan'], ['selesai', 'Cukup dulu']],
 };
 const KARTU_AWAL = ['konten', 'riset', 'rencana', 'pesan'];
+const TERIMA = /^\s*(terima kasih|makasih|thanks?|thx|oke|ok|sip|mantap|siap)(\s+(ya|yaa|banget|kak|deh|sekali))*\W*$/i;
+const TENTANG = /\b(kamu siapa|siapa kamu|bisa apa|bisa bantu apa|apa yang bisa)\b/i;
 const SAPAAN = /^\s*(hi|hai|halo|hello|hey|pagi|siang|sore|malam|assalamualaikum|permisi|tes|test|p)\W*$/i;
 
 const tmplOf = (s) => (s.intent === 'umum' ? (s.l1 ? { ...UMUM, ...s.l1 } : UMUM) : INTENTS[s.intent] || UMUM);
@@ -138,10 +141,13 @@ export function detectIntent(text) {
 
 // ───────────────────────── jatah, profil ─────────────────────────
 export function quota() {
+  const word = (pct) => (pct > 60 ? 'Masih banyak' : pct > 25 ? 'Cukup' : pct > 0 ? 'Hampir habis' : 'Habis');
+  const qs = gov.quotaStatus();   // jatah harian jumlah (tugas dan pekerjaan otomatis), terpisah dari uang
+  const jatah = { tugas: { sisa: qs.tasks.left, dari: qs.tasks.limit }, otomatis: { sisa: qs.n8nRuns.left, dari: qs.n8nRuns.limit, pct: qs.n8nRuns.pct, word: word(qs.n8nRuns.pct) } };
   const budget = Number(db().settings.dailyBudgetUSD) || 0;
-  if (!budget) return { pct: 100, word: 'Masih banyak' };
+  if (!budget) return { pct: 100, word: 'Masih banyak', jatah };
   const pct = Math.max(0, Math.min(100, Math.round((llm.budgetLeft() / budget) * 100)));
-  return { pct, word: pct > 60 ? 'Masih banyak' : pct > 25 ? 'Cukup' : pct > 0 ? 'Hampir habis' : 'Habis' };
+  return { pct, word: word(pct), jatah };
 }
 
 const PROFIL_LABEL = { nama: 'Nama usaha', bidang: 'Usahaku bergerak di', situs: 'Alamat situs', target: 'Pembeli yang dituju', gaya: 'Gaya bahasa', kanal: 'Tempat berjualan atau promosi', hindari: 'Hal yang tidak kusuka' };
@@ -320,7 +326,9 @@ function pickQuestions(s) {
     if (q.profileKey && p[q.profileKey]) { s.answers[q.id] = { id: 'profil', label: p[q.profileKey], auto: true, fromProfile: true }; s.notes.push(`Aku pakai yang sudah kamu ceritakan: ${PROFIL_LABEL[q.profileKey].toLowerCase()} ${p[q.profileKey]}.`); continue; }
     used.push(q.id);
   }
-  s.qs = used.slice(0, 2);   // paling banyak dua pertanyaan
+  // bertanya balik HANYA bila perlu: permintaan yang sudah jelas (>= 9 kata) langsung dikerjakan; selain itu satu pertanyaan saja (paling banyak dua)
+  const rich = `${s.input} ${s.extra}`.trim().split(/\s+/).filter(Boolean).length >= 9;
+  s.qs = rich ? [] : used.slice(0, 1);
   s.qi = 0;
 }
 
@@ -335,6 +343,7 @@ function offerCards(s, ctx = {}) {
 }
 
 async function render(s) {
+  if (s.stage === 'plan') launch(s);   // tidak ada kartu rencana: Seimbang dipilih otomatis (Cepat bila jatah menipis); "Ubah sedikit" mengatur panjang hasil
   const b = base(s); const t = tmplOf(s);
   const notes = s.notes.length ? take(s, 'notes') : null;
   const learned = s.learned ? take(s, 'learned') : null;
@@ -351,16 +360,11 @@ async function render(s) {
     }
     case 'topic':
       return { ...b, ...extra, kind: 'choices', say: `Seru! ${t.label} tentang apa? Ketik atau ucapkan satu kalimat saja.`, options: profileOf(s.userId).data.nama ? [o('topic:usaha', `Tentang ${profileOf(s.userId).data.nama}`)] : [], freeText: true, delegate: true };
-    case 'plan': {
-      const low = quota().pct < 25;
-      const opts = ['fast', 'balanced', 'full'].map((k) => ({ ...o(`plan:${k}`, { fast: 'Cepat', balanced: 'Seimbang', full: 'Lengkap' }[k], t.plans[k].give, (low ? k === 'fast' : k === 'balanced')), eta: ETA[k], cost: COST[k] }));
-      return { ...b, ...extra, kind: 'plan', say: low ? 'Jatah hari ini tinggal sedikit, jadi aku sarankan yang Cepat. Pilih yang kamu mau:' : 'Ini tiga cara aku bisa membantu. Pilih satu:', options: opts, freeText: true, delegate: true };
-    }
     case 'confirm': {
       const p = t.plans[s.planId];
       return { ...b, ...extra, kind: 'confirm', say: `Siap. Aku akan membuat: ${p.give}. Hasilnya kamu terima sebagai: ${p.out}. Mulai sekarang?`, preview: previewOf(s, t), options: [o('start', 'Mulai', ETA[s.planId], 1), o('edit', 'Ubah pilihan')] };
     }
-    case 'work': if (resultOf(s)) { s.stage = 'result'; return render(s); } return progressOf(s, b);
+    case 'work': if (resultOf(s)) { s.stage = 'result'; if (s.learned) s.learned = extra.learned || s.learned; return render(s); } return { ...progressOf(s, b), ...extra };
     case 'result': case 'tweak': {
       const r = resultOf(s);
       if (!r) return progressOf(s, b);
@@ -368,7 +372,7 @@ async function render(s) {
         if (s.awaiting === 'other') return { ...b, kind: 'choices', say: 'Ketik bagian mana yang mau diubah.', options: [], freeText: true, result: r };
         return { ...b, kind: 'choices', say: 'Mau diubah bagaimana?', options: [o('tw:singkat', 'Lebih singkat'), o('tw:santai', 'Lebih santai'), o('tw:resmi', 'Lebih resmi'), o('tw:lengkap', 'Lebih lengkap')], freeText: true, result: r };
       }
-      return { ...b, ...extra, kind: 'result', say: 'Ini hasilnya. Bagaimana menurutmu?', result: r, options: [o('use', 'Pakai ini', '', 1), o('tweak', 'Ubah sedikit'), o('redo', 'Ulangi'), o('save', 'Simpan')] };
+      return { ...b, ...extra, kind: 'result', say: 'Ini hasilnya. Cocok, atau mau kuubah?', result: r, options: [o('use', 'Pakai ini', '', 1), o('tweak', 'Ubah sedikit'), o('redo', 'Buat versi lain'), o('save', 'Simpan')] };
     }
     case 'auto': return renderAuto(s, b);
     case 'done': {
@@ -403,6 +407,8 @@ function briefOf(s) {
   ];
   return { title: clip(`${t.label}: ${s.input || s.extra || t.label}`, 120), description: lines.filter((l) => l !== '').join('\n'), priority: s.planId === 'full' ? 'high' : s.planId === 'fast' ? 'low' : 'medium' };
 }
+/** pilihan rencana diambil diam-diam: Seimbang, atau Cepat bila jatah hari ini menipis */
+function launch(s) { s.planId = quota().pct < 25 ? 'fast' : 'balanced'; startWork(s); }
 function startWork(s) {
   const br = briefOf(s);
   const g = engine.submitGoal({ title: br.title, description: br.description, userId: s.userId, priority: br.priority });
@@ -495,7 +501,7 @@ function renderAuto(s, b) {
   }
   if (a.step === 'confirm') {
     const rows = [...(a.pratinjau?.langkah || []).map((v) => ({ label: 'Langkah', value: v })), ...(a.pratinjau?.dampak || []).map((v) => ({ label: 'Yang akan terjadi', value: v }))];
-    return { ...b, kind: 'confirm', say: `${a.uji?.catatan || ''} ${a.tanyaOn || 'Nyalakan sekarang?'}`.trim(), preview: rows, options: [o('oto:on', 'Ya, nyalakan', '', 1), o('oto:no', 'Jangan dulu')], undo: false };
+    return { ...b, kind: 'confirm', say: `${a.uji?.catatan || ''} ${a.tanyaOn || 'Nyalakan sekarang?'}`.trim(), preview: rows, options: [o('oto:on', 'Ya, nyalakan', '', 1), o('oto:edit', 'Ubah'), o('oto:no', 'Batal')], undo: false };
   }
   return { ...b, kind: 'error', say: `${a.err || 'Otomasi belum bisa dipasang sekarang.'} Mau aku ulangi pekerjaan ini setiap hari saja?`, options: [o('oto:biasa', 'Ya, ulangi setiap hari', '', 1), o('oto:no', 'Tidak dulu')], undo: false };
 }
@@ -504,6 +510,7 @@ async function autoTurn(s, cid, text) {
   const finish = (say) => { s.stage = 'done'; s.doneSay = say; s.auto = null; };
   if (cid === 'oto:no') { const n8n = await load('./n8n.js'); if (a.id && n8n?.remove) await n8n.remove(a.id).catch(() => {}); return finish('Oke, tidak dijadwalkan dulu. Selanjutnya mau apa?'); }
   if (cid === 'oto:biasa') { scheduleRoutine(s); return finish('Sudah dijadwalkan setiap hari. Aku kabari kalau ada yang perlu kamu lihat.'); }
+  if (cid === 'oto:edit') { a.step = 'pick'; a.answers = {}; a.tanya = []; return; }
   if (a.step === 'pick' && cid.startsWith('oto:opsi')) { a.pick = cid.slice(4); await prepareAuto(s); return; }
   if (a.step === 'ask' && (cid.startsWith('ans:') || text)) { a.answers[a.tanya[0].kunci] = cid.startsWith('ans:') ? cid.slice(4) : text; a.tanya.shift(); if (!a.tanya.length) await prepareAuto(s); return; }
   if (a.step === 'confirm' && cid === 'oto:on') {
@@ -565,6 +572,8 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
       if (cid.startsWith('intent:')) { s.intent = cid.slice(7); s.stage = 'topic'; if (!INTENTS[s.intent]) { reset(s); return await render(s); } if (INTENTS[s.intent].needsText) s.needInput = true; return await render(s); }
       if (!text) return await render(s);
       if (SAPAAN.test(text)) return await render(s);
+      if (TERIMA.test(text)) { s.notes.push('Sama-sama! Senang bisa membantu.'); return await render(s); }
+      if (TENTANG.test(text)) { s.notes.push('Aku Pemandu. Aku bantu menulis konten dan pesan, mencari tahu sesuatu, menyusun rencana, meringkas, dan menjelaskan hal baru, lalu merapikan hasilnya sampai kamu puas.'); return await render(s); }
       s.input = text;
       s.intent = detectIntent(text);
       if (!s.intent) {

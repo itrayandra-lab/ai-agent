@@ -1,39 +1,140 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "exec-dewi",
   "division": "exec",
   "employeeId": "dewi",
   "title": "Executive Assistant",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Dewi",
-    "tugasPeran": [
-      "Menyusun agenda dan notulen rapat dengan action item",
-      "Merangkum dokumen panjang menjadi poin keputusan",
-      "Menyiapkan draf email dan memo resmi untuk Owner",
-      "Menindaklanjuti action item ke pemiliknya"
-    ],
-    "keahlian": [
-      "agenda",
-      "notulen",
-      "koordinasi"
-    ],
-    "contohTugas": [
-      "Buat agenda rapat bulanan direksi",
-      "Rangkum hasil kerja semua divisi minggu ini",
-      "Draf email undangan kerja sama ke calon partner"
+  "name": "Penyusun notulen rapat",
+  "ringkas": "Rapikan hasil rapat menjadi notulen lengkap dengan keputusan dan daftar tindak lanjut beserta peringatan tenggat.",
+  "kataKunci": [
+    "notulen",
+    "rapat",
+    "tindak lanjut",
+    "keputusan",
+    "action item"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul rapat",
+      "required": true,
+      "contoh": "Rapat Mingguan Pemasaran"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal rapat",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "peserta",
+      "type": "text",
+      "label": "Peserta (pisahkan dengan koma)",
+      "required": true,
+      "contoh": "Maya, Raka, Sinta"
+    },
+    {
+      "key": "bahasan",
+      "type": "longtext",
+      "label": "Yang dibahas (satu per baris)",
+      "required": true,
+      "contoh": "Hasil kampanye November\nRencana promo Desember"
+    },
+    {
+      "key": "keputusan",
+      "type": "longtext",
+      "label": "Keputusan (satu per baris)",
+      "required": true,
+      "contoh": "Promo Desember mulai tanggal 1\nAnggaran iklan naik 10%"
+    },
+    {
+      "key": "tindak",
+      "type": "longtext",
+      "label": "Tindak lanjut (satu baris: tugas | penanggung jawab | tenggat YYYY-MM-DD)",
+      "required": true,
+      "contoh": "Kirim proposal promo | Maya | 2026-11-25\nSiapkan data pelanggan | Raka | 2026-11-19"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun notulen",
+      "set": {
+        "peserta": "String(input.peserta).split(',').map((s) => s.trim()).filter(Boolean)",
+        "bahasan": "baris(input.bahasan)",
+        "keputusan": "baris(input.keputusan)",
+        "tindak": "baris(input.tindak).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const d = Math.round((Date.parse(p[2]) - Date.parse(input.tanggal)) / 864e5); return { tugas: p[0], pj: p[1] || '(belum ada)', tenggat: p[2] || '', hari: Number.isNaN(d) ? null : d, catatan: Number.isNaN(d) ? 'Tenggat belum jelas' : d <= 1 ? 'Tenggat sangat dekat' : '' }; })"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Notulen \"' + input.judul + '\": ' + v.keputusan.length + ' keputusan, ' + v.tindak.length + ' tindak lanjut'",
+    "teks": "'# Notulen: ' + input.judul + '\\n\\n**Tanggal:** ' + tgl(input.tanggal) + '  \\n**Peserta:** ' + v.peserta.join(', ') + '\\n\\n## Yang dibahas\\n' + v.bahasan.map((b) => '- ' + b).join('\\n') + '\\n\\n## Keputusan\\n' + v.keputusan.map((k, i) => (i + 1) + '. ' + k).join('\\n') + '\\n\\n## Tindak lanjut\\n' + tabel(['Tugas', 'Penanggung jawab', 'Tenggat', 'Catatan'], v.tindak.map((t) => [t.tugas, t.pj, t.tenggat, t.catatan]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tindak-lanjut-rapat'",
+        "isi": "csv([['Tugas', 'Penanggung jawab', 'Tenggat', 'Catatan']].concat(v.tindak.map((t) => [t.tugas, t.pj, t.tenggat, t.catatan])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Meeting",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "judul": "Rapat Mingguan Pemasaran",
+      "tanggal": "2026-11-18",
+      "peserta": "Maya, Raka, Sinta",
+      "bahasan": "Hasil kampanye November\nRencana promo Desember",
+      "keputusan": "Promo Desember mulai tanggal 1\nAnggaran iklan naik 10%",
+      "tindak": "Kirim proposal promo | Maya | 2026-11-25\nSiapkan data pelanggan | Raka | 2026-11-19"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 tindak lanjut",
+        "Tenggat sangat dekat",
+        "2 keputusan"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Executive Assistant di divisi Executive Office, memakai bahasa awam",
+    "tujuan": "Rapikan hasil rapat menjadi notulen lengkap dengan keputusan dan daftar tindak lanjut beserta peringatan tenggat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan, lalu keputusan yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
+      "buruk": "Ada banyak hal yang perlu dibahas."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "notulen"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun notulen rapat perlu dibaca bersama: notulen menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

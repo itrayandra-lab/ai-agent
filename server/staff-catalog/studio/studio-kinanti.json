@@ -1,39 +1,157 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "studio-kinanti",
   "division": "studio",
   "employeeId": "kinanti",
   "title": "Content Creator — Beauty (TikTok/Reels)",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Kinanti",
-    "tugasPeran": [
-      "Membuat konten video pendek edukasi dan hiburan untuk Ray Beauty",
-      "Memantau tren audio, format, dan hook TikTok/Reels setiap minggu",
-      "Menguji variasi hook 3 detik pertama dan mencatat hasilnya"
-    ],
-    "keahlian": [
-      "tiktok",
-      "reels",
-      "beauty",
-      "video pendek"
-    ],
-    "contohTugas": [
-      "10 ide hook untuk serum niacinamide",
-      "Naskah video \"skincare 60 detik pagi hari\"",
-      "Analisis tren TikTok beauty minggu ini"
+  "name": "Perencana video pendek mingguan",
+  "ringkas": "Susun lima ide video pendek selama satu minggu lengkap dengan kata pembuka 3 detik pertama dan ajakan.",
+  "kataKunci": [
+    "ide konten",
+    "video pendek",
+    "reels",
+    "beauty",
+    "hook"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Produk yang dibahas",
+      "required": true,
+      "contoh": "Serum Cerah"
+    },
+    {
+      "key": "kulit",
+      "type": "choice",
+      "label": "Jenis kulit sasaran",
+      "required": true,
+      "default": "normal",
+      "choices": [
+        {
+          "v": "normal",
+          "t": "Normal"
+        },
+        {
+          "v": "berminyak",
+          "t": "Berminyak"
+        },
+        {
+          "v": "kering",
+          "t": "Kering"
+        },
+        {
+          "v": "sensitif",
+          "t": "Sensitif"
+        },
+        {
+          "v": "kombinasi",
+          "t": "Kombinasi"
+        }
+      ]
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Tujuan minggu ini",
+      "required": true,
+      "default": "edukasi",
+      "choices": [
+        {
+          "v": "edukasi",
+          "t": "Edukasi"
+        },
+        {
+          "v": "penjualan",
+          "t": "Penjualan"
+        },
+        {
+          "v": "hiburan",
+          "t": "Hiburan"
+        }
+      ]
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal (hari Senin)",
+      "required": true,
+      "contoh": "2026-12-07"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun ide",
+      "set": {
+        "ide": "(() => { const cta = ({ edukasi: 'Simpan video ini untuk nanti', penjualan: 'Cek tautan di profil', hiburan: 'Komen pengalamanmu' })[input.tujuan]; const p = input.produk; const k = input.kulit; const x = [['Mitos vs fakta', 'Banyak yang salah paham soal ' + p + ' untuk kulit ' + k], ['Rutinitas 3 langkah', 'Rutinitas singkat untuk kulit ' + k + ' pakai ' + p], ['Sebelum dan sesudah (jujur)', 'Hasil pemakaian ' + p + ' tanpa filter, apa adanya'], ['Jawab pertanyaan pengikut', 'Kalian tanya, aku jawab: ' + p + ' cocok untuk siapa?'], ['Siap-siap bareng', 'Ikut aku siap-siap pakai ' + p + ' di pagi hari']]; return x.map((a, i) => ({ hari: new Date(Date.parse(input.mulai) + i * 864e5).toISOString().slice(0, 10), format: a[0], hook: a[1], ajakan: cta })); })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ide.length + ' video direncanakan mulai ' + tgl(input.mulai) + ' untuk kulit ' + input.kulit",
+    "teks": "'# Rencana video minggu ini\\n\\n' + tabel(['Tanggal', 'Format', 'Kata pembuka (3 detik)', 'Ajakan'], v.ide.map((a) => [a.hari, a.format, a.hook, a.ajakan])) + '\\n\\nHindari klaim medis dan janji hasil pasti.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-video'",
+        "isi": "csv([['Tanggal', 'Format', 'Pembuka', 'Ajakan']].concat(v.ide.map((a) => [a.hari, a.format, a.hook, a.ajakan])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Cerah",
+      "kulit": "berminyak",
+      "tujuan": "edukasi",
+      "mulai": "2026-12-07"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 video",
+        "Mitos vs fakta",
+        "kulit berminyak"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Content Creator — Beauty (TikTok/Reels) di divisi Content Studio, memakai bahasa awam",
+    "tujuan": "Susun lima ide video pendek selama satu minggu lengkap dengan kata pembuka 3 detik pertama dan ajakan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Buat iklan yang keren."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "ide konten"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perencana video pendek mingguan perlu dibaca bersama: ide konten menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -9,6 +9,10 @@ import * as store from './store.js';
 import * as collab from './collab.js';
 import * as browser from './browser.js';
 import * as engine from './engine.js';
+import * as secure from './secure.js';
+import * as limits_ from './limits.js';
+import * as auth from './auth.js';
+import * as approvals from './approvals.js';
 import { TEMPLATES, byId } from './n8n-templates/index.js';
 import * as C from './n8n-templates/common.js';
 
@@ -18,7 +22,7 @@ export const LABEL = '[RAIVERSE] ';                       // semua alur buatan a
 const MAX_BYTES = 600_000;                                // batas ukuran balasan dari mesin otomasi
 
 // ═════════════════════ konfigurasi & batas ═════════════════════
-export const LIMITS = { maxActive: 10, maxDrafts: 20, maxCreatePerHourAI: 6, maxPings: 30, timeoutMs: 12000, maxActiveGlobal: 300, maxRowsShown: 50 };
+export const LIMITS = { maxActive: 10, maxDrafts: 20, maxCreatePerHourAI: 6, maxPings: 30, maxDigests: 30, timeoutMs: 12000, maxActiveGlobal: 300, maxRowsShown: 50 };
 export const limits = () => ({ ...LIMITS, ...(db().settings?.otomasi || {}) });
 const baseUrl = () => String(process.env.N8N_URL || 'http://127.0.0.1:5678').replace(/\/+$/, '');
 const apiKey = () => String(process.env.N8N_API_KEY || '');
@@ -100,17 +104,17 @@ export function executionProblem(ex) {
 }
 /** Eksekusi hanya milik satu alur: dicek dulu supaya tidak membocorkan alur lain. */
 async function credential(name, type, data) {   // buat kredensial sekali; isinya (rahasia) tidak pernah kita cetak
-  const reg = readReg(); const meta = (reg.cred ||= {});
-  const sig = JSON.stringify([type, data]); const hash = (await import('node:crypto')).createHash('sha256').update(sig).digest('hex');
+  const meta = readReg().cred || {};
+  const hash = secure.sha256(JSON.stringify([type, data]));
   if (meta[name]?.hash === hash) return { id: meta[name].id, name };
   if (meta[name]?.id) await request('DELETE', `/api/v1/credentials/${meta[name].id}`).catch(() => {});
   const made = await request('POST', '/api/v1/credentials', { name, type, data });
-  meta[name] = { id: made.id, hash }; writeReg(reg);
+  updateReg((r) => { (r.cred ||= {})[name] = { id: made.id, hash }; });   // baca ulang isi terbaru: tidak menimpa tulisan lain yang terjadi selama menunggu
   return { id: made.id, name };
 }
 
 // ═════════════════════ larangan: simpul berbahaya, isi dari luar ═════════════════════
-const ALLOWED_TYPES = new Set(['webhook', 'scheduleTrigger', 'set', 'if', 'filter', 'switch', 'merge', 'noOp', 'httpRequest', 'emailSend', 'dateTime', 'aggregate', 'limit', 'splitOut', 'sort', 'respondToWebhook', 'stickyNote', 'code', 'dataTable']);
+const ALLOWED_TYPES = new Set(['webhook', 'scheduleTrigger', 'set', 'if', 'filter', 'switch', 'merge', 'noOp', 'httpRequest', 'emailSend', 'dateTime', 'aggregate', 'limit', 'splitOut', 'sort', 'respondToWebhook', 'stickyNote', 'code', 'dataTable', 'crypto']);
 const FORBIDDEN_TYPE = /executeCommand|readWriteFile|readBinaryFile|writeBinaryFile|\bssh\b|ftp|executeWorkflow|localFileTrigger|n8n\b|\bn8n-nodes-base\.(?:function|functionItem)\b|puppeteer|compression|git\b|rssFeedRead/i;
 const FORBIDDEN_TEXT = /\$env\b|process\.|require\s*\(|child_process|\bimport\s*\(|globalThis|constructor\s*\(|\bfs\.|\$execution\.|eval\s*\(|new Function/;
 /** Periksa alur sebelum dikirim ke mesin otomasi. trusted = hasil templat kita sendiri (boleh Code tetap & alamat internal). */
@@ -120,7 +124,7 @@ export async function vet(wf, { trusted = false } = {}) {
   for (const n of wf.nodes || []) {
     const short = String(n.type || '').replace(/^n8n-nodes-base\./, '');
     if (!String(n.type).startsWith('n8n-nodes-base.') || FORBIDDEN_TYPE.test(short) || !ALLOWED_TYPES.has(short)) problems.push(`Langkah "${n.name}" (${short}) tidak diizinkan untuk alur buatan agen.`);
-    if ((short === 'code' || short === 'dataTable') && !trusted) problems.push(`Langkah "${n.name}" (${short}) hanya boleh dari templat tepercaya.`);
+    if ((short === 'code' || short === 'dataTable' || short === 'crypto') && !trusted) problems.push(`Langkah "${n.name}" (${short}) hanya boleh dari templat tepercaya.`);
     const s = JSON.stringify(n.parameters || {});
     if (!(trusted && short === 'code') && FORBIDDEN_TEXT.test(s)) problems.push(`Langkah "${n.name}" memuat perintah yang dilarang.`);
     if (short === 'httpRequest' && !trusted) {
@@ -134,11 +138,12 @@ export async function vet(wf, { trusted = false } = {}) {
 // ═════════════════════ registri (milik RAIVERSE, bukan milik mesin otomasi) ═════════════════════
 const regFile = () => process.env.OTOMASI_FILE || path.join(process.env.DATA_DIR || path.resolve('data'), 'otomasi.json');
 function readReg() { try { return JSON.parse(fs.readFileSync(regFile(), 'utf8')); } catch { return { items: [], cred: {} }; } }
-function writeReg(r) { fs.mkdirSync(path.dirname(regFile()), { recursive: true }); fs.writeFileSync(regFile(), JSON.stringify(r)); }
+/** semua tulis registri: atomik (berkas sementara + rename) dan di bawah kunci berkas; selalu membaca isi terbaru lebih dulu */
+const updateReg = (fn) => secure.updateJson(regFile(), () => ({ items: [], cred: {} }), (r) => { r.items ||= []; fn(r); return r; }, { mode: 0o600 });
 const mine = () => readReg().items.filter((x) => x.ws === store.current());
-function save(item) { const r = readReg(); const i = r.items.findIndex((x) => x.id === item.id); item.updatedAt = Date.now(); if (i >= 0) r.items[i] = item; else r.items.push(item); writeReg(r); return item; }
+function save(item) { item.updatedAt = Date.now(); updateReg((r) => { const i = r.items.findIndex((x) => x.id === item.id); if (i >= 0) r.items[i] = item; else r.items.push(item); }); return item; }
 const find = (id) => mine().find((x) => x.id === id);
-const gone = (id) => { const r = readReg(); r.items = r.items.filter((x) => x.id !== id); writeReg(r); };
+const gone = (id) => { updateReg((r) => { r.items = r.items.filter((x) => x.id !== id); }); };
 const STATUS = { usulan: 'Menunggu pilihanmu', siap: 'Siap, belum dinyalakan', aktif: 'Berjalan', jeda: 'Dijeda', gagal: 'Gagal diuji' };
 
 function env() {
@@ -170,7 +175,7 @@ export function propose({ text, userId, templateId, params } = {}) {
   else if (picks.length < 2) for (const id of ['pengingat', 'ringkasan_harian']) if (picks.length < 2 && !picks.some((r) => r.x.id === id)) picks.push({ x: byId(id), s: 0 });
   const g = { ...guess(t), ...(params || {}) };
   const e = env();
-  const item = save({ id: store.uid('oto'), ws: store.current(), status: 'usulan', request: t, by: userId || null, createdAt: Date.now(), hookToken: C.hex(16), options: picks.map((r, i) => ({ id: `opsi${i + 1}`, templateId: r.x.id })), guess: g });
+  const item = save({ id: store.uid('oto'), ws: store.current(), status: 'usulan', request: t, by: userId || null, createdAt: Date.now(), options: picks.map((r, i) => ({ id: `opsi${i + 1}`, templateId: r.x.id })), guess: g });
   return { id: item.id, tanya: 'Mau aku otomatiskan ini?', pilihan: picks.map((r, i) => optionView(r.x, g, e, `opsi${i + 1}`)) };
 }
 function questions(tpl, p, errs) { return tpl.params.filter((f) => (!f.when || f.when(p)) && (errs[f.key] || (f.required && !String(p[f.key] ?? '').trim()))).map((f) => ({ kunci: f.key, label: f.label, jenis: f.type, pilihan: f.choices?.map((c) => ({ nilai: c.v, teks: c.t })), contoh: f.default, pesan: errs[f.key] || '' })); }
@@ -198,7 +203,10 @@ function checkCapacity({ byAI, active = false }) {
   if (byAI) { const hour = Date.now() - 3600e3; if (items.filter((x) => x.byAI && x.createdAt > hour && x.status !== 'usulan').length >= L.maxCreatePerHourAI) throw new OtomasiError('Batas pembuatan otomasi per jam sudah tercapai. Coba lagi nanti.', 429, 'batas'); }
 }
 async function buildCtx(tpl, item) {
-  const g = googleCfg(), ctx = { hookToken: item.hookToken, mailFrom: process.env.N8N_MAIL_FROM || '', tenant: store.current(), otomasiId: item.id };
+  // panggilan balik v2: token di alamat hanya PENGENAL (disimpan sebagai hash), rahasia penandatangan terpisah (disimpan terenkripsi); alur menandatangani tiap panggilan
+  const hookToken = C.hex(16), hookSecret = C.hex(24);
+  Object.assign(item, { hookKey: secure.sha256(hookToken), hookSecret: secure.seal(hookSecret, 'hook-secret'), hookV: 2 }); delete item.hookToken; delete item.hookLegacy;
+  const g = googleCfg(), ctx = { hookToken, hookSecret, mailFrom: process.env.N8N_MAIL_FROM || '', tenant: store.current(), otomasiId: item.id };
   if (tpl.tabel) ctx.tableId = await ensureTable();
   if (tpl.id === 'catat_sheets' || tpl.id === 'formulir_masuk') {
     ctx.googleUrl = g.url;
@@ -311,13 +319,23 @@ export async function list() {
 }
 export async function show(id) { const item = find(id); if (!item) throw new OtomasiError('Otomasi tidak ditemukan.', 404); return view(item, await lastRuns([item])); }
 
+/** (P3) Hapus semua otomasi milik satu ruang kerja (hapus akun): alur di mesin otomasi dibuang bila terbukti milik RAIVERSE, lalu catatannya. Mengembalikan jumlahnya. */
+export async function purgeWorkspace(wsId) {
+  let n = 0;
+  for (const it of readReg().items.filter((x) => x.ws === wsId)) {
+    try { await store.run(wsId, () => remove(it.id)); } catch { gone(it.id); }   // mesin mati/ditolak: catatan tetap dibuang, alur yatim dibersihkan lewat skrip kebersihan
+    n++;
+  }
+  return n;
+}
+
 // ═════════════════════ penyimpanan gratis: tabel data di mesin otomasi (satu tabel bersama, dipisah per pengguna) ═════════════════════
 const TABLE = 'raiverse_catatan';
 export async function ensureTable() {
   const reg = readReg(); if (reg.tableId) { const ok = await request('GET', `/api/v1/data-tables/${reg.tableId}`).then(() => true).catch((e) => (e.code === 404 ? false : true)); if (ok) return reg.tableId; }
   const found = ((await request('GET', '/api/v1/data-tables?limit=250'))?.data || []).find((t) => t.name === TABLE);
   const t = found || await request('POST', '/api/v1/data-tables', { name: TABLE, columns: ['tenant', 'otomasi', 'waktu', 'isi'].map((name) => ({ name, type: 'string' })) });
-  const r2 = readReg(); r2.tableId = t.id; writeReg(r2); return t.id;
+  updateReg((r2) => { r2.tableId = t.id; }); return t.id;
 }
 /** Baris tersimpan milik SATU otomasi milik pengguna ini (tidak pernah baris pengguna lain). */
 export async function rows(id) {
@@ -332,28 +350,54 @@ export async function rows(id) {
 
 // ═════════════════════ kabar dari otomasi → pengguna: RAIVERSE yang mengambil hasilnya ═════════════════════
 let pollTimer = null, polling = false;
+const pollStat = { terakhir: 0, diambil: 0, total: 0, galat: '' };   // untuk konsol pengelola
+export const pollStatus = () => ({ berjalan: !!pollTimer, tiapMs: Number(process.env.OTOMASI_POLL_MS) || 60000, terakhir: pollStat.terakhir, diambilTerakhir: pollStat.diambil, totalDiambil: pollStat.total, galat: pollStat.galat, otomasiAktif: (() => { try { return readReg().items.filter((x) => x.status === 'aktif' && x.params?.saluran === 'raiverse').length; } catch { return 0; } })() });
 export function ensurePoller() { if (pollTimer) return; pollTimer = setInterval(() => pollOnce().catch(() => {}), Number(process.env.OTOMASI_POLL_MS) || 60000); pollTimer.unref?.(); }
-function deliver(item, text) {
-  const owner = db().settings.currentUserId, pa = db().employees.find((x) => x.isPA && x.ownerId === owner) || db().employees.find((x) => x.isPA);
-  if (pa) engine.postMessage(engine.ensureDM(pa.id, owner), pa.id, `🔔 ${item.title}\n${text}`);   // isi dari luar hanya jadi teks pesan, tidak pernah dijalankan
+/** Pemilik otomasi di ruang kerjanya: Owner ruang kerja itu menurut akun (bukan currentUserId global), lalu pembuat otomasi bila manusia. */
+function ownerOf(item) {
+  const emps = db().employees, has = (id) => !!id && emps.some((e) => e.id === id);
+  const m = auth.wsById(item.ws)?.members?.find((x) => x.role === 'owner');
+  if (has(m?.employeeId)) return m.employeeId;
+  if (has(item.by) && emps.find((e) => e.id === item.by).type === 'human') return item.by;
+  return has('owner') ? 'owner' : db().settings.currentUserId;
+}
+/** Kirim kabar ke DM pemilik. `key` membuat pengiriman idempoten: kunci yang sama tidak pernah menghasilkan pesan kedua. */
+function deliver(item, text, key = null) {
+  if (key && db().messages.some((m) => m.autoKey === key)) return false;
+  const owner = ownerOf(item), pa = db().employees.find((x) => x.isPA && x.ownerId === owner) || (owner === 'owner' ? db().employees.find((x) => x.isPA) : null);
+  if (!pa) return false;
+  engine.postMessage(engine.ensureDM(pa.id, owner), pa.id, `🔔 ${item.title}\n${text}`, key ? { autoKey: key } : {});   // isi dari luar hanya jadi teks pesan, tidak pernah dijalankan
+  // ganti WhatsApp: kabar yang sama diteruskan ke Telegram/Discord milik pemilik bila sudah tertaut (bila belum, cukup kabar di aplikasi)
+  import('./channels/index.js').then((m) => m.pushNews({ ws: store.current(), employeeId: owner, text: `${item.title}\n${text}` })).catch(() => {});
+  return true;
 }
 /** Ambil hasil eksekusi baru dari semua otomasi aktif berkanal RAIVERSE dan sampaikan ke pemiliknya masing-masing (ruang kerja terpisah). */
 export async function pollOnce() {
-  if (polling) return 0; polling = true; let posted = 0;
+  if (polling) return 0; polling = true; let posted = 0; pollStat.galat = '';
   try {
     const items = readReg().items.filter((x) => x.status === 'aktif' && x.n8nId && x.params?.saluran === 'raiverse' && store.exists(x.ws)).slice(0, 300);
     for (const item of items) {
-      let list; try { list = (await request('GET', `/api/v1/executions?workflowId=${encodeURIComponent(item.n8nId)}&limit=5&includeData=true`))?.data || []; } catch (err) { if (err.kind === 'mati' || err.kind === 'kunci') break; continue; }
-      const fresh = list.filter((ex) => ex.status === 'success' && Number(ex.id) > (item.lastExec || 0)).sort((a, b) => Number(a.id) - Number(b.id));
+      let list; try { list = (await request('GET', `/api/v1/executions?workflowId=${encodeURIComponent(item.n8nId)}&limit=25&includeData=true`))?.data || []; } catch (err) { if (err.kind === 'mati' || err.kind === 'kunci') break; continue; }   // mesin mati: tidak ada yang digeser, semua diambil saat pulih
+      // Penanda terakhir (lastExec) hanya maju berurutan dan berhenti di eksekusi yang belum selesai atau yang gagal dikirim,
+      // dan tiap kabar punya kunci tetap (autoKey): hasil tidak hilang dan tidak pernah ganda, juga bila server mati di tengah pengiriman.
+      const fresh = list.filter((ex) => Number(ex.id) > (item.lastExec || 0)).sort((a, b) => Number(a.id) - Number(b.id));
+      let mark = item.lastExec || 0;
       for (const ex of fresh) {
-        const out = ex.data?.resultData?.runData?.['Kirim kabar']?.[0]?.data?.main?.[0]?.[0]?.json?.kabar;
-        let text = C.clean(out, 600); if (!text) continue;
-        await store.run(item.ws, async () => { if (text === '__RINGKASAN__') text = digestText(); deliver(item, text); }); posted++;
+        if (['running', 'new', 'waiting'].includes(ex.status)) break;
+        if (ex.status === 'success') {
+          const out = ex.data?.resultData?.runData?.['Kirim kabar']?.[0]?.data?.main?.[0]?.[0]?.json?.kabar;
+          let text = C.clean(out, 600);
+          if (text) {
+            try { const sent = await store.run(item.ws, async () => deliver(item, text === '__RINGKASAN__' ? digestText() : text, `${item.id}:${ex.id}`)); if (sent) posted++; }
+            catch (err) { console.warn('[otomasi] kabar gagal dikirim, dicoba lagi nanti:', scrub(err.message)); break; }
+          }
+        }
+        mark = Number(ex.id) || mark;
       }
-      const top = Math.max(item.lastExec || 0, ...list.map((e) => Number(e.id) || 0));
-      if (top !== item.lastExec) { const cur = readReg().items.find((x) => x.id === item.id); if (cur) { cur.lastExec = top; save(cur); } }
+      if (mark !== (item.lastExec || 0)) updateReg((r) => { const cur = r.items.find((x) => x.id === item.id); if (cur) { cur.lastExec = Math.max(cur.lastExec || 0, mark); cur.updatedAt = Date.now(); } });
     }
-  } finally { polling = false; }
+  } catch (err) { pollStat.galat = scrub(err.message).slice(0, 120); throw err; }
+  finally { polling = false; pollStat.terakhir = Date.now(); pollStat.diambil = posted; pollStat.total += posted; }
   return posted;
 }
 try { if (readReg().items.some((x) => x.status === 'aktif')) ensurePoller(); } catch { /* registri belum ada */ }
@@ -361,7 +405,7 @@ try { if (readReg().items.some((x) => x.status === 'aktif')) ensurePoller(); } c
 // ═════════════════════ persetujuan (kartu yang sudah ada) ═════════════════════
 /** Pratinjau + kartu persetujuan Owner. Mengaktifkan hanya terjadi setelah Owner menyetujui. */
 export function requestApproval(item, e, t, kind = 'aktifkan') {
-  const a = store.upsert('approvals', { id: store.uid('ap'), kind: 'automation', automationId: item.id, automationAction: kind, taskId: t?.id, requesterId: e.id, approverId: t?.createdBy || 'owner', title: `${kind === 'aktifkan' ? 'Nyalakan' : 'Lanjutkan'} otomasi: ${item.title}`, summary: `${e.name} ingin menyalakan "${item.title}".\n${(item.preview?.langkah || []).map((s) => '• ' + s).join('\n')}\nDampak keluar:\n${(item.preview?.dampak || []).map((s) => '• ' + s).join('\n')}\nSudah diuji dengan data contoh (tidak ada pesan nyata).`, status: 'pending', createdAt: Date.now() });
+  const a = approvals.create({ kind: 'automation', automationId: item.id, automationAction: kind, taskId: t?.id, requesterId: e.id, approverId: t?.createdBy || 'owner', title: `${kind === 'aktifkan' ? 'Nyalakan' : 'Lanjutkan'} otomasi: ${item.title}`, summary: `${e.name} ingin menyalakan "${item.title}".\n${(item.preview?.langkah || []).map((s) => '• ' + s).join('\n')}\nDampak keluar:\n${(item.preview?.dampak || []).map((s) => '• ' + s).join('\n')}\nSudah diuji dengan data contoh (tidak ada pesan nyata).`, status: 'pending', createdAt: Date.now() });
   engine.event('approval_requested', e.id, `${e.name} butuh persetujuan: "${a.title}"`, { taskId: t?.id, approvalId: a.id });
   item.approvalId = a.id; save(item); return a;
 }
@@ -376,7 +420,7 @@ export async function onDecision(a, decision) {
 // ═════════════════════ tool agen: satu pintu kecil ═════════════════════
 export const isTool = (name) => name === 'otomatiskan';
 export const allowed = (e) => !!e && e.type === 'ai';   // semua agen AI boleh mengusulkan; menyalakan tetap butuh persetujuan Owner
-const DEF = { name: 'otomatiskan', description: '[Otomasi] Satu pintu untuk otomasi nyata (catat ke Google Sheets, ringkasan harian, pengingat, formulir masuk, pantau halaman web). aksi: "usulkan" (buat otomasi TIDAK AKTIF + uji data contoh + minta persetujuan Owner), "daftar", "status", "jeda", "hapus". Jangan menyebut istilah teknis ke pengguna.', input_schema: { type: 'object', properties: { aksi: { type: 'string', enum: ['usulkan', 'daftar', 'status', 'jeda', 'hapus'] }, tujuan: { type: 'string', description: 'Untuk usulkan: apa yang mau diotomatiskan, dalam kalimat biasa' }, templat: { type: 'string', enum: TEMPLATES.map((x) => x.id), description: 'Pilihan templat bila sudah jelas' }, isian: { type: 'object', description: 'Isian: pesan, jam, ulang, hari, saluran (raiverse|whatsapp|email), tujuan, url, cari, setiap, kolom, namaSheet, namaSpreadsheet' }, id: { type: 'string', description: 'id otomasi untuk status/jeda/hapus' } }, required: ['aksi'] } };
+const DEF = { name: 'otomatiskan', description: '[Otomasi] Satu pintu untuk otomasi nyata (catat ke Google Sheets, ringkasan harian, pengingat, formulir masuk, pantau halaman web). aksi: "usulkan" (buat otomasi TIDAK AKTIF + uji data contoh + minta persetujuan Owner), "daftar", "status", "jeda", "hapus". Jangan menyebut istilah teknis ke pengguna.', input_schema: { type: 'object', properties: { aksi: { type: 'string', enum: ['usulkan', 'daftar', 'status', 'jeda', 'hapus'] }, tujuan: { type: 'string', description: 'Untuk usulkan: apa yang mau diotomatiskan, dalam kalimat biasa' }, templat: { type: 'string', enum: TEMPLATES.map((x) => x.id), description: 'Pilihan templat bila sudah jelas' }, isian: { type: 'object', description: 'Isian: pesan, jam, ulang, hari, saluran (raiverse|email; kabar ikut ke Telegram/Discord yang tertaut), tujuan, url, cari, setiap, kolom, namaSheet, namaSpreadsheet' }, id: { type: 'string', description: 'id otomasi untuk status/jeda/hapus' } }, required: ['aksi'] } };
 export async function toolDefs(e, t) { return allowed(e) && t?.kind !== 'routine' ? [DEF] : []; }
 export function promptSection(e) {
   if (!allowed(e)) return '';
@@ -403,8 +447,23 @@ export async function call(e, t, name, input = {}) {
   } catch (err) { return `Otomasi belum berhasil: ${scrub(err.message)}`; }
 }
 
-// ═════════════════════ panggilan balik dari mesin otomasi → RAIVERSE (hanya dari komputer ini, dengan token) ═════════════════════
-const pings = new Map();
+// ═════════════════════ panggilan balik dari mesin otomasi → RAIVERSE (bertanda tangan) ═════════════════════
+// v2: alamat memuat PENGENAL (hash-nya yang disimpan), tiap panggilan membawa x-rv-ts, x-rv-nonce, x-rv-sig =
+//     HMAC-SHA256(rahasia otomasi, `${ts}.${nonce}.${METODE}.${aksi}.${sha256(badan)}`). Jam melenceng > 5 menit, tanda tangan salah, dan nonce
+//     yang dipakai ulang ditolak. Batas laju per otomasi disimpan di data/limits.json (tahan restart).
+// v1 (transisi): otomasi lama yang token polosnya ada di alamat. Token itu sudah diubah jadi hash; masih diterima HANYA dari komputer ini
+//     dan selama masa transisi (OTOMASI_LEGACY_HOOK_UNTIL, bawaan 30 hari sejak migrasi), lalu ditolak. Siapkan ulang otomasi untuk pindah ke v2.
+const LEGACY_DAYS = 30;
+/** Satu kali, idempoten: token polos di registri diganti hash + masa transisi. Berkas dicadangkan dulu (otomasi.json.bak-p3). */
+export function migrateHooks() {
+  const r = readReg(); if (!r.items?.some((x) => x.hookToken)) return 0;
+  try { if (fs.existsSync(regFile()) && !fs.existsSync(regFile() + '.bak-p3')) fs.copyFileSync(regFile(), regFile() + '.bak-p3'); } catch { /* cadangan gagal: lanjut, data tidak hilang */ }
+  let n = 0;
+  updateReg((reg) => { for (const x of reg.items) if (x.hookToken) { x.hookKey = secure.sha256(x.hookToken); x.hookLegacy = true; x.hookLegacyUntil = x.hookLegacyUntil || Date.now() + LEGACY_DAYS * 864e5; delete x.hookToken; n++; } });
+  return n;
+}
+const legacyUntil = (item) => { const e = Date.parse(process.env.OTOMASI_LEGACY_HOOK_UNTIL || ''); return Number.isFinite(e) ? e : item.hookLegacyUntil || 0; };
+const HOOK_SKEW = () => Number(process.env.HOOK_SKEW_MS) || 300000;
 function digestText() {
   const d = db(), day = Date.now() - 864e5;
   const done = d.tasks.filter((x) => x.status === 'done' && (x.updatedAt || x.completedAt || 0) > day).length;
@@ -412,22 +471,42 @@ function digestText() {
   const wait_ = d.approvals.filter((a) => a.status === 'pending').length;
   return `Ringkasan RAIVERSE: ${done} tugas selesai dalam 24 jam, ${open} sedang berjalan, ${wait_} menunggu persetujuanmu.`;
 }
+async function readRaw(req, max = 20000) { let s = ''; for await (const c of req) { s += c; if (s.length > max) throw Object.assign(new Error('Badan terlalu besar.'), { code: 413 }); } return s; }
 /** Dipasang di server/index.js SEBELUM gerbang login. Mengembalikan true bila permintaan ditangani. */
 export async function handleHook(req, res, url, readBody) {
   const m = url.pathname.match(/^\/api\/automations\/hook\/([a-f0-9]{32})\/(ping|digest)$/); if (!m) return false;
   const send = (code, data) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); return true; };
-  const ra = req.socket?.remoteAddress || ''; if (!process.env.RAIVERSE_PUBLIC_URL && !/^(127.0.0.1|::1|::ffff:127.0.0.1)$/.test(ra)) return send(403, { error: 'Hanya dari komputer ini.' });
-  const item = readReg().items.find((x) => x.hookToken === m[1] && x.status !== 'usulan'); if (!item || !store.exists(item.ws)) return send(404, { error: 'Tidak dikenal.' });
+  const local = limits_.isLocalDirect(req);
+  if (!process.env.RAIVERSE_PUBLIC_URL && !local) return send(403, { error: 'Hanya dari komputer ini.' });
+  const key = secure.sha256(m[1]);
+  const item = readReg().items.find((x) => x.hookKey === key && x.status !== 'usulan'); if (!item || !store.exists(item.ws)) return send(404, { error: 'Tidak dikenal.' });
+  const L = limits(), cap = m[2] === 'digest' ? (L.maxDigests ?? 30) : L.maxPings;
+  const rl = limits_.hit(`hook:${item.id}:${m[2]}`, { limit: cap, windowMs: 3600e3, persist: true });   // tahan restart; rute digest ikut dibatasi
+  if (!rl.ok) return send(429, { error: 'Terlalu sering.', retryAfter: rl.retryAfter });
+  const method = String(req.method || (m[2] === 'digest' ? 'GET' : 'POST')).toUpperCase();
+  let raw = ''; try { if (typeof req.on === 'function') raw = await readRaw(req); else { const b = await readBody(req); raw = b && Object.keys(b).length ? JSON.stringify(b) : ''; } } catch (err) { return send(err.code === 413 ? 413 : 400, { error: err.message }); }
+  if (item.hookV === 2) {
+    const h = req.headers || {}, ts = Number(h['x-rv-ts']), nonce = String(h['x-rv-nonce'] || ''), sig = String(h['x-rv-sig'] || '');
+    if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > HOOK_SKEW()) return send(401, { error: 'Jam panggilan tidak cocok.' });
+    if (!/^[A-Za-z0-9_-]{8,64}$/.test(nonce) || !/^[a-f0-9]{64}$/.test(sig)) return send(401, { error: 'Tanda tangan tidak ada.' });
+    let secret; try { secret = secure.open(item.hookSecret, 'hook-secret'); } catch { return send(500, { error: 'Rahasia otomasi tidak terbaca.' }); }
+    if (!secure.safeEqual(secure.hmacHex(secret, `${ts}.${nonce}.${method}.${m[2]}.${secure.sha256(raw)}`), sig)) return send(401, { error: 'Tanda tangan salah.' });
+    if (!limits_.once(`hook:${item.id}`, nonce, HOOK_SKEW() * 2 + 60000)) return send(409, { error: 'Panggilan ini sudah pernah dipakai.' });
+  } else {
+    // v1 transisi: hanya dari komputer ini dan selama masa transisi
+    if (!local) return send(401, { error: 'Alamat panggilan lama hanya berlaku dari komputer ini. Siapkan ulang otomasinya.' });
+    if (Date.now() > legacyUntil(item)) return send(410, { error: 'Alamat panggilan lama sudah tidak berlaku. Siapkan ulang otomasi ini.' });
+    console.warn(`[otomasi] panggilan lama (tanpa tanda tangan) untuk ${item.id}; siapkan ulang sebelum ${new Date(legacyUntil(item)).toISOString().slice(0, 10)}`);
+  }
   return store.run(item.ws, async () => {
     if (m[2] === 'digest') return send(200, { text: digestText() });
-    const hour = Math.floor(Date.now() / 3600e3), k = `${item.id}:${hour}`; pings.set(k, (pings.get(k) || 0) + 1); if (pings.size > 500) pings.clear();
-    if (pings.get(k) > limits().maxPings) return send(429, { error: 'Terlalu sering.' });
-    const body = await readBody(req).catch(() => ({}));
+    let body = {}; try { body = raw ? JSON.parse(raw) : {}; } catch { return send(400, { error: 'Isi bukan JSON.' }); }
     const text = C.clean(body?.text, 600); if (!text) return send(400, { error: 'Pesan kosong.' });
     deliver(item, text);
     return send(200, { ok: true });
   });
 }
+// migrateHooks() dipanggil dari server/index.js saat boot (bukan saat modul dimuat, supaya skrip dan tes tidak menyentuh data asli)
 
 // ═════════════════════ rute untuk layar depan ═════════════════════
 const wrap = (fn) => async (b, p, url, me, member) => { try { return await fn(b, p, url, me, member); } catch (err) { if (err instanceof OtomasiError) throw Object.assign(new Error(err.message), { code: err.code }); throw err; } };

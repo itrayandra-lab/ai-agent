@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-budi-oee",
+  "division": "mfg",
+  "employeeId": "budi",
+  "title": "Filling & Packing Line Lead",
+  "version": 1,
+  "name": "Penghitung efektivitas mesin (OEE)",
+  "ringkas": "Hitung seberapa efektif mesin bekerja dari waktu, kecepatan, dan mutu, lalu tunjukkan bagian yang paling perlu diperbaiki.",
+  "kataKunci": [
+    "oee",
+    "efektivitas mesin",
+    "downtime",
+    "kecepatan mesin",
+    "kinerja lini"
+  ],
+  "inputs": [
+    {
+      "key": "lini",
+      "type": "text",
+      "label": "Nama jalur atau mesin",
+      "required": true,
+      "contoh": "Jalur Filling 1"
+    },
+    {
+      "key": "rencana",
+      "type": "number",
+      "label": "Waktu kerja terjadwal (menit)",
+      "required": true,
+      "contoh": "480"
+    },
+    {
+      "key": "henti",
+      "type": "number",
+      "label": "Waktu berhenti (menit)",
+      "required": true,
+      "contoh": "60"
+    },
+    {
+      "key": "kecepatan",
+      "type": "number",
+      "label": "Kecepatan ideal mesin (unit per menit)",
+      "required": true,
+      "contoh": "25"
+    },
+    {
+      "key": "total",
+      "type": "number",
+      "label": "Total unit yang keluar",
+      "required": true,
+      "contoh": "9000"
+    },
+    {
+      "key": "baik",
+      "type": "number",
+      "label": "Unit yang baik",
+      "required": true,
+      "contoh": "8800"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung OEE",
+      "set": {
+        "jalan": "Math.max(1, Number(input.rencana) - Number(input.henti))",
+        "ketersediaan": "Math.round(v.jalan / Math.max(1, Number(input.rencana)) * 1000) / 10",
+        "kinerja": "Math.min(100, Math.round(Number(input.total) / Math.max(1, Number(input.kecepatan) * v.jalan) * 1000) / 10)",
+        "mutu": "Math.round(Number(input.baik) / Math.max(1, Number(input.total)) * 1000) / 10",
+        "oee": "Math.round(v.ketersediaan * v.kinerja * v.mutu / 1000) / 10",
+        "lemah": "[['Ketersediaan (mesin berhenti)', v.ketersediaan], ['Kinerja (kecepatan)', v.kinerja], ['Mutu (reject)', v.mutu]].sort((x, y) => x[1] - y[1])[0][0]",
+        "nilai": "v.oee >= 85 ? 'Sangat baik' : v.oee >= 60 ? 'Cukup, masih bisa naik' : 'Rendah, perlu perbaikan'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'OEE ' + input.lini + ' ' + v.oee + '% (' + v.nilai + '); paling lemah: ' + v.lemah",
+    "teks": "'# OEE ' + input.lini + '\\n\\n' + tabel(['Komponen', 'Nilai'], [['Ketersediaan', v.ketersediaan + '%'], ['Kinerja', v.kinerja + '%'], ['Mutu', v.mutu + '%'], ['**OEE**', '**' + v.oee + '%**']]) + '\\n\\nPaling perlu diperbaiki: **' + v.lemah + '**.\\n\\nPatokan: 85% ke atas sangat baik, 60 sampai 85% cukup.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'oee-' + input.lini",
+        "isi": "csv([['Komponen', 'Persen'], ['Ketersediaan', v.ketersediaan], ['Kinerja', v.kinerja], ['Mutu', v.mutu], ['OEE', v.oee]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "lini": "Jalur Filling 1",
+      "rencana": 480,
+      "henti": 60,
+      "kecepatan": 25,
+      "total": 9000,
+      "baik": 8800
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "OEE Jalur Filling 1 73.3%",
+        "Kinerja (kecepatan)"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Filling & Packing Line Lead di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Hitung seberapa efektif mesin bekerja dari waktu, kecepatan, dan mutu, lalu tunjukkan bagian yang paling perlu diperbaiki. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "oee"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung efektivitas mesin (oee) perlu dibaca bersama: oee menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

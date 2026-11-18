@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "hr-galih-wawancara",
+  "division": "hr",
+  "employeeId": "galih",
+  "title": "Talent Recruiter",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penyusun kit wawancara kerja",
+  "ringkas": "Buat daftar pertanyaan wawancara, lembar nilai, dan pembagian waktu dari kemampuan yang dicari.",
+  "kataKunci": [
+    "wawancara",
+    "interview",
+    "rubrik",
+    "pertanyaan",
+    "kandidat"
+  ],
+  "inputs": [
+    {
+      "key": "posisi",
+      "type": "text",
+      "label": "Nama posisi",
+      "required": true,
+      "contoh": "Staf Gudang"
+    },
+    {
+      "key": "fokus",
+      "type": "choice",
+      "label": "Fokus pertanyaan",
+      "required": true,
+      "default": "campuran",
+      "choices": [
+        {
+          "v": "teknis",
+          "t": "Kemampuan kerja"
+        },
+        {
+          "v": "perilaku",
+          "t": "Sikap dan kebiasaan kerja"
+        },
+        {
+          "v": "campuran",
+          "t": "Campuran keduanya"
+        }
+      ]
+    },
+    {
+      "key": "kompetensi",
+      "type": "longtext",
+      "label": "Kemampuan yang dicari (satu per baris)",
+      "required": true,
+      "contoh": "Ketelitian"
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama wawancara",
+      "required": true,
+      "default": "45",
+      "choices": [
+        {
+          "v": "30",
+          "t": "30 menit"
+        },
+        {
+          "v": "45",
+          "t": "45 menit"
+        },
+        {
+          "v": "60",
+          "t": "60 menit"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "susun",
+      "use": "hitung",
+      "label": "Susun pertanyaan",
+      "set": {
+        "tanya": "baris(input.kompetensi).slice(0, 8).map((k) => input.fokus === 'teknis' ? [[k, 'Ceritakan pengalaman Anda dengan ' + k + '.'], [k, 'Contoh pekerjaan terbaru yang memakai ' + k + ' dan hasilnya?']] : input.fokus === 'perilaku' ? [[k, 'Ceritakan situasi sulit terkait ' + k + ' dan apa yang Anda lakukan.'], [k, 'Apa yang Anda pelajari dari situasi itu?']] : [[k, 'Ceritakan pengalaman Anda dengan ' + k + '.'], [k, 'Ceritakan situasi sulit terkait ' + k + ' dan apa yang Anda lakukan.']]).reduce((a, b) => a.concat(b), []).map((q, i) => ({ no: i + 1, komp: q[0], tanya: q[1] }))",
+        "menit": "Math.round(num(input.durasi) * 0.8 / Math.max(1, v.tanya.length))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Kit wawancara ' + input.posisi + ': ' + v.tanya.length + ' pertanyaan, sekitar ' + v.menit + ' menit per pertanyaan'",
+    "teks": "'# Kit wawancara: ' + input.posisi + '\\n\\n' + tabel(['No', 'Kemampuan', 'Pertanyaan'], v.tanya.map((q) => [q.no, q.komp, q.tanya])) + '\\n\\n**Waktu:** ' + v.menit + ' menit per pertanyaan (sisa waktu untuk pembukaan dan tanya jawab kandidat)\\n\\n## Lembar nilai\\n- 1: Tidak ada contoh nyata\\n- 2: Contoh umum, kurang rinci\\n- 3: Contoh jelas dengan hasil\\n- 4: Contoh kuat, terukur, dan bisa diulang'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kit-wawancara-' + input.posisi",
+        "isi": "csv([['No', 'Kemampuan', 'Pertanyaan', 'Nilai 1-4', 'Catatan']].concat(v.tanya.map((q) => [q.no, q.komp, q.tanya, '', ''])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "posisi": "Staf Gudang",
+      "fokus": "campuran",
+      "kompetensi": "Ketelitian\nKerja sama",
+      "durasi": "45"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "4 pertanyaan",
+        "sekitar 9 menit",
+        "Kerja sama"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Talent Recruiter di divisi People & HR, memakai bahasa awam",
+    "tujuan": "Buat daftar pertanyaan wawancara, lembar nilai, dan pembagian waktu dari kemampuan yang dicari. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Karyawan malas."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "wawancara"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun kit wawancara kerja perlu dibaca bersama: wawancara menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

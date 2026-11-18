@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-lukas-batas-laju",
+  "division": "eng",
+  "employeeId": "lukas",
+  "title": "Backend Engineer",
+  "version": 1,
+  "name": "Perencana kapasitas server",
+  "ringkas": "Hitung berapa server dibutuhkan untuk jam sibuk dan berapa batas permintaan per pengguna yang aman.",
+  "kataKunci": [
+    "kapasitas",
+    "rate limit",
+    "beban puncak",
+    "server",
+    "rps"
+  ],
+  "inputs": [
+    {
+      "key": "pengguna",
+      "type": "number",
+      "label": "Pengguna aktif bersamaan di hari biasa",
+      "required": true,
+      "contoh": "5000"
+    },
+    {
+      "key": "permenit",
+      "type": "number",
+      "label": "Rata-rata permintaan per pengguna per menit",
+      "required": true,
+      "contoh": "6"
+    },
+    {
+      "key": "puncak",
+      "type": "choice",
+      "label": "Jam sibuk berapa kali lipat dari biasa?",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2 kali"
+        },
+        {
+          "v": "3",
+          "t": "3 kali"
+        },
+        {
+          "v": "5",
+          "t": "5 kali"
+        }
+      ]
+    },
+    {
+      "key": "kapasitas",
+      "type": "number",
+      "label": "Kemampuan satu server (permintaan per detik)",
+      "required": true,
+      "contoh": "120"
+    },
+    {
+      "key": "cadangan",
+      "type": "choice",
+      "label": "Sisa kapasitas yang dijaga",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "30",
+          "t": "30%"
+        },
+        {
+          "v": "50",
+          "t": "50%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung kapasitas",
+      "set": {
+        "rata": "Math.round(num(input.pengguna) * num(input.permenit) / 60)",
+        "puncak": "v.rata * num(input.puncak)",
+        "efektif": "num(input.kapasitas) * (1 - num(input.cadangan) / 100)",
+        "server": "Math.max(2, Math.ceil(v.puncak / v.efektif))",
+        "batas": "Math.ceil(num(input.permenit) * 3)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Butuh ' + v.server + ' server untuk puncak ' + v.puncak + ' permintaan/detik; batas aman ' + v.batas + ' permintaan per pengguna per menit'",
+    "teks": "'# Rencana kapasitas\\n\\n' + tabel(['Hal', 'Nilai'], [['Beban rata-rata', v.rata + ' permintaan/detik'], ['Beban puncak', v.puncak + ' permintaan/detik'], ['Kemampuan efektif satu server', v.efektif + ' permintaan/detik'], ['Server dibutuhkan (minimal 2 untuk cadangan)', v.server], ['Batas per pengguna per menit', v.batas]]) + '\\n\\nBatas per pengguna = 3 kali rata-rata, agar lonjakan wajar tidak ditolak tetapi penyalahgunaan tertahan.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-kapasitas'",
+        "isi": "csv([['Hal', 'Nilai'], ['Beban rata-rata per detik', v.rata], ['Beban puncak per detik', v.puncak], ['Kemampuan efektif satu server', v.efektif], ['Server dibutuhkan', v.server], ['Batas per pengguna per menit', v.batas]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "pengguna": "5000",
+      "permenit": "6",
+      "puncak": "3",
+      "kapasitas": "120",
+      "cadangan": "30"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Butuh 18 server",
+        "1500 permintaan/detik"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Backend Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Hitung berapa server dibutuhkan untuk jam sibuk dan berapa batas permintaan per pengguna yang aman. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "kapasitas"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perencana kapasitas server perlu dibaca bersama: kapasitas menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

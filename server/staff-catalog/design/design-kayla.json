@@ -1,36 +1,157 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "design-kayla",
   "division": "design",
   "employeeId": "kayla",
   "title": "Motion Designer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Kayla",
-    "tugasPeran": [
-      "Storyboard & motion untuk iklan dan konten",
-      "Template motion brand"
-    ],
-    "keahlian": [
-      "motion",
-      "animasi",
-      "video"
-    ],
-    "contohTugas": [
-      "Storyboard iklan 15 detik serum",
-      "Template motion untuk Reels"
+  "name": "Penyusun papan cerita iklan pendek",
+  "ringkas": "Bagi iklan 15, 30, atau 60 detik menjadi adegan lengkap dengan waktu, isi visual, dan teks di layar.",
+  "kataKunci": [
+    "storyboard",
+    "papan cerita",
+    "iklan video",
+    "motion",
+    "adegan"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Kopi Susu Gula Aren"
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Panjang iklan",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "15",
+          "t": "15 detik"
+        },
+        {
+          "v": "30",
+          "t": "30 detik"
+        },
+        {
+          "v": "60",
+          "t": "60 detik"
+        }
+      ]
+    },
+    {
+      "key": "rasio",
+      "type": "choice",
+      "label": "Bentuk layar",
+      "required": true,
+      "default": "9:16",
+      "choices": [
+        {
+          "v": "9:16",
+          "t": "Tegak (TikTok/Reels)"
+        },
+        {
+          "v": "1:1",
+          "t": "Kotak"
+        },
+        {
+          "v": "16:9",
+          "t": "Lebar (YouTube)"
+        }
+      ]
+    },
+    {
+      "key": "pesan",
+      "type": "text",
+      "label": "Pesan utama",
+      "required": true,
+      "contoh": "Segar, manisnya pas"
+    },
+    {
+      "key": "ajakan",
+      "type": "text",
+      "label": "Ajakan di akhir",
+      "required": true,
+      "contoh": "Pesan sekarang lewat tombol di bio"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Bagi adegan",
+      "set": {
+        "adegan": "(() => { const d = Number(input.durasi); const p = input.produk; const bagian = d === 15 ? [['Pembuka menarik', 3, 'Tunjukkan masalah atau pertanyaan yang dekat dengan penonton'], ['Solusi', 8, p + ' beraksi: ' + input.pesan], ['Ajakan', 4, input.ajakan]] : d === 30 ? [['Pembuka menarik', 3, 'Pertanyaan atau kejutan dalam 3 detik pertama'], ['Masalah', 7, 'Situasi sehari-hari yang bikin repot'], ['Solusi', 12, p + ' beraksi: ' + input.pesan], ['Bukti', 5, 'Reaksi pengguna atau detail produk'], ['Ajakan', 3, input.ajakan]] : [['Pembuka menarik', 5, 'Pertanyaan atau kejutan'], ['Masalah', 10, 'Cerita singkat masalah pengguna'], ['Solusi', 10, 'Kenalkan ' + p], ['Cara kerja', 15, input.pesan], ['Bukti', 10, 'Pengguna nyata atau perbandingan'], ['Ringkasan', 5, 'Tiga manfaat dalam satu layar'], ['Ajakan', 5, input.ajakan]]; let t = 0; return bagian.map((b, i) => { const m = { no: i + 1, mulai: t, selesai: t + b[1], judul: b[0], isi: b[2] }; t += b[1]; return m; }); })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.adegan.length + ' adegan, total ' + input.durasi + ' detik, layar ' + input.rasio",
+    "teks": "'# Papan cerita: ' + input.produk + '\\n\\n' + tabel(['Detik', 'Adegan', 'Isi visual'], v.adegan.map((a) => [a.mulai + '-' + a.selesai, a.judul, a.isi]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'papan-cerita'",
+        "isi": "csv([['No', 'Mulai', 'Selesai', 'Adegan', 'Isi visual']].concat(v.adegan.map((a) => [a.no, a.mulai, a.selesai, a.judul, a.isi])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Kopi Susu Gula Aren",
+      "durasi": "30",
+      "rasio": "9:16",
+      "pesan": "Segar, manisnya pas",
+      "ajakan": "Pesan sekarang lewat tombol di bio"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 adegan",
+        "total 30 detik",
+        "0-3"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Motion Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Bagi iklan 15, 30, atau 60 detik menjadi adegan lengkap dengan waktu, isi visual, dan teks di layar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "storyboard"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun papan cerita iklan pendek perlu dibaca bersama: storyboard menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -14,6 +14,7 @@ let llmCalls = 0, llmText = 'Pos Iklan melewati anggaran 12%. Tinjau ulang kanal
 const llmSrv = http.createServer(async (req, res) => { let s = ''; for await (const c of req) s += c; llmCalls++; res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [{ type: 'text', text: llmText }], stop_reason: 'end_turn', usage: { input_tokens: 50, output_tokens: 30 } })); });
 await new Promise((r) => llmSrv.listen(0, '127.0.0.1', r));
 Object.assign(process.env, { DATA_DIR: dataDir, N8N_URL: mock.url, N8N_API_KEY: KEY, GROQ_API_KEY: '', ANTHROPIC_API_KEY: '', RAY_ANTHROPIC_BASE_URL: `http://127.0.0.1:${llmSrv.address().port}` });
+process.env.RAIVERSE_STAFF_ENGINE = 'n8n';   // tes ini menguji jalur n8n (pemasang, kait, tahap AI); mesin native diuji di staff-native.test.js
 const store = await import('../server/store.js');
 fs.writeFileSync(path.join(dataDir, 'db.json'), JSON.stringify((await import('../server/seed.js')).buildSeed()));
 store.load();
@@ -31,6 +32,15 @@ const wfCount = () => mock.state.workflows.size;
 const readySpecs = () => registry.all().filter(registry.ready);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const emp = (id) => db.employees.find((e) => e.id === id);
+// rintisan sintetis (katalog asli bisa sudah terisi penuh): disalin ke katalog sementara supaya registry mengenalnya
+const stubEmp = roster.find((e) => e.divisionId === 'hr' && !e.isLead && e.type === 'ai');
+const STUB = { schema: 1, status: 'todo', key: 'hr-uji-rintisan', division: 'hr', employeeId: stubEmp.id, title: stubEmp.title, name: 'todo' };
+async function withStub(fn) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ray-staff-stub-')); fs.cpSync(registry.catalogDir(), dir, { recursive: true });
+  fs.mkdirSync(path.join(dir, 'hr'), { recursive: true }); fs.writeFileSync(path.join(dir, 'hr', STUB.key + '.json'), JSON.stringify(STUB));
+  const prev = process.env.STAFF_CATALOG_DIR; process.env.STAFF_CATALOG_DIR = dir; registry.reset();
+  try { return await fn(); } finally { if (prev === undefined) delete process.env.STAFF_CATALOG_DIR; else process.env.STAFF_CATALOG_DIR = prev; registry.reset(); fs.rmSync(dir, { recursive: true, force: true }); }
+}
 
 // ───────────────────────── katalog & rintisan ─────────────────────────
 test('katalog: setiap staf AI non-manajer punya berkas, semua valid, tidak ada masalah', () => {
@@ -45,11 +55,14 @@ test('katalog: setiap staf AI non-manajer punya berkas, semua valid, tidak ada m
 });
 
 test('validator membedakan rintisan dan spesifikasi lengkap; rintisan tidak bisa dijalankan', async () => {
-  const stub = registry.get('hr-' + roster.find((e) => e.divisionId === 'hr' && !e.isLead && e.type === 'ai').id);
-  assert.equal(validateSpec(stub, { roster }).kind, 'stub'); assert.equal(registry.ready(stub), false);
+  assert.equal(validateSpec(STUB, { roster }).kind, 'stub'); assert.equal(registry.ready(STUB), false);
   assert.equal(validateSpec(registry.get('fin-ratna'), { roster }).kind, 'ready');
-  await assert.rejects(runner.run({ key: stub.key, input: {} }), (e) => e instanceof StaffError && e.kind === 'belum_siap');
-  const c = registry.counts(); assert.ok(c.fin.lengkap === 4 && c.mkt.lengkap >= 4 && c.cs.lengkap >= 4 && c.hr.lengkap === 0);
+  await withStub(async () => {
+    assert.equal(registry.get(STUB.key).__kind, 'stub');
+    await assert.rejects(runner.run({ key: STUB.key, input: {} }), (e) => e instanceof StaffError && e.kind === 'belum_siap');
+    const c = registry.counts(); assert.ok(c.hr.rintisan >= 1);
+  });
+  const c = registry.counts(); assert.ok(c.fin.lengkap >= 4 && c.mkt.lengkap >= 4 && c.cs.lengkap >= 4 && c.alat.lengkap >= 15);
 });
 
 test('validator: menolak spesifikasi buruk (rahasia, istilah teknis, ekspresi berbahaya, risiko, jadwal AI, contoh hilang)', () => {
@@ -106,7 +119,7 @@ test('kompilasi: semua spesifikasi lengkap menghasilkan alur aman dan terstruktu
     assert.ok(names.includes('Terima permintaan') && names.includes('Masukan') && names.includes('Cek masukan') && names.includes('Hasil'));
     assert.match(b.path, /^rv-staf-[a-z0-9-]+-tok123456789$/);
     assert.ok(!JSON.stringify(b).includes(KEY));
-    assert.equal(b.twoPhase, s.steps.some((x) => x.use === 'minta_ai'));
+    assert.equal(b.twoPhase, s.steps.some((x) => x.use === 'minta_ai' || x.use === 'otak'));
     for (const n of b.nodes) if (typeof n.parameters?.jsonBody === 'string') assert.ok(!/\}\}\}/.test(n.parameters.jsonBody));
   }
 });
@@ -160,7 +173,7 @@ test('pemasang: uji gagal membersihkan alur dan menahan percobaan ulang; rintisa
   await assert.rejects(deployer.ensure(bad, 'main'), (e) => e instanceof StaffError && /Uji gagal/.test(e.message));
   assert.equal(wfCount(), before, 'alur gagal uji dihapus kembali (tidak ada sisa)');
   await assert.rejects(deployer.ensure(bad, 'main'), /sedang diperbaiki|Uji gagal/);
-  await assert.rejects(deployer.ensure(registry.get('hr-' + roster.find((e) => e.divisionId === 'hr' && !e.isLead && e.type === 'ai').id), 'main'), /rintisan/);
+  await assert.rejects(deployer.ensure(STUB, 'main'), /rintisan/);
 });
 
 test('pemasang: lepas pasang hanya alur bertanda milik kita; alur Owner yang disamarkan di registri ditolak', async () => {
@@ -237,9 +250,10 @@ test('manajer: satu tool kecil, hanya staf divisinya, daftar ringkas, jalankan b
   const lead = db.employees.find((e) => e.isLead && e.divisionId === 'fin'); const t = { id: 't1', createdBy: 'owner', kind: 'task' };
   const defs = await manager.toolDefs(lead, t); assert.equal(defs.length, 1); assert.equal(defs[0].name, 'staf');
   assert.equal((await manager.toolDefs(lead, { kind: 'routine' })).length, 0); assert.equal((await manager.toolDefs(lead, { transient: true })).length, 0);
-  const hrLead = db.employees.find((e) => e.isLead && e.divisionId === 'hr'); assert.equal((await manager.toolDefs(hrLead, t)).length, 0, 'divisi tanpa staf siap: tool tidak muncul (tidak membebani model)');
+  const noTools = { ...emp('ratna'), staffToolSeeded: true, tools: ['search_brain'] }; assert.equal((await manager.toolDefs(noTools, t)).length, 0, 'Owner mematikan kemampuan staf di Studio → tool hilang');
+  const hrLead = db.employees.find((e) => e.isLead && e.divisionId === 'hr'); assert.equal((await manager.toolDefs(hrLead, t)).length, 1, 'semua agen minimal punya alat umum'); assert.match(manager.promptSection(hrLead), /alat umum/);
   const prompt = manager.promptSection(lead); assert.match(prompt, /fin-ratna/); assert.ok(prompt.split('\n').filter((l) => l.startsWith('•')).length <= 8); assert.ok(!/n8n|workflow/i.test(prompt.replace(/Jangan menyebut kata[^.]*\./, '')));
-  const masterP = manager.promptSection(db.employees.find((e) => e.isMaster)); assert.match(masterP, /dan \d+ lainnya/); assert.ok(masterP.split('\n').filter((l) => l.startsWith('•')).length === 8, 'prompt tidak dibanjiri: maksimal 8 baris');
+  const masterP = manager.promptSection(db.employees.find((e) => e.isMaster)); assert.match(masterP, /dan \d+ lainnya/); assert.match(masterP, /Alat umum untuk semua agen/); assert.ok(masterP.split('\n').filter((l) => l.startsWith('•')).length <= 6, 'prompt tidak dibanjiri: maksimal 6 baris staf + 1 baris alat umum');
   const list = await manager.call(lead, t, 'staf', { aksi: 'daftar', cari: 'faktur penjualan' }); assert.ok(list.indexOf('fin-ratna') < list.indexOf('fin-bowo') || !list.includes('fin-bowo'), list);
   assert.match(await manager.call(lead, t, 'staf', { aksi: 'lihat', staf: 'fin-ratna' }), /ppn.*wajib|ppn \(choice, wajib\)/);
   assert.match(await manager.call(lead, t, 'staf', { aksi: 'jalankan', staf: 'mkt-dimas', isian: { url: 'https://example.com' } }), /tidak ada di daftarmu/, 'tidak bisa menjalankan staf divisi lain');
@@ -251,6 +265,30 @@ test('manajer: satu tool kecil, hanya staf divisinya, daftar ringkas, jalankan b
   const master = db.employees.find((e) => e.isMaster); assert.match(await manager.call(master, t, 'staf', { aksi: 'daftar', divisi: 'cs', cari: 'tiket' }), /cs-wulan/);
 });
 
+test('alat umum: semua agen bisa memakai; hasil benar (PPN, terbilang, cicilan, selisih tanggal)', async () => {
+  const t = { id: 't2', createdBy: 'owner', kind: 'task' }; const member = emp('ratna'); const other = db.employees.find((e) => e.type === 'ai' && e.divisionId === 'legal' && !e.isLead);
+  for (const a of [member, other, db.employees.find((e) => e.isMaster)]) assert.match(await manager.call(a, t, 'staf', { aksi: 'daftar', cari: 'terbilang kwitansi' }), /alat-terbilang-rupiah/);
+  const run = (key, isian, who = other) => manager.call(who, t, 'staf', { aksi: 'jalankan', staf: key, isian });
+  assert.match(await run('alat-hitung-ppn', { nilai: '2500000', mode: 'tambah', tarif: '11' }), /Rp 2\.775\.000/);
+  assert.match(await run('alat-terbilang-rupiah', { nilai: '1.250.500' }), /satu juta dua ratus lima puluh ribu lima ratus rupiah/);
+  assert.match(await run('alat-cicilan-pinjaman', { pokok: '12000000', bunga: '12', tenor: '12', jenis: 'anuitas' }), /Rp 1\.066\.185/);
+  assert.match(await run('alat-selisih-tanggal', { mulai: '2026-01-01', akhir: '2026-12-31' }), /261 hari kerja/);
+  assert.match(await run('alat-tambah-hari', { tanggal: '2026-11-18', hari: '45' }), /2027-01-02/);
+  for (const k of ['0', '1', '12', '19', '100', '101', '1000', '2024', '1000000', '999999999999']) { const r = simulate({ ...registry.get('alat-terbilang-rupiah'), sample: { ...registry.get('alat-terbilang-rupiah').sample, input: { nilai: k }, expect: {} } }); assert.equal(r.ok, true, k); assert.match(r.hasil.ringkas, /rupiah$/, k); }
+  assert.match(await run('alat-hitung-ppn', { nilai: '-', mode: 'tambah', tarif: '11' }), /Belum bisa/);   // isian ngawur ditolak sopan
+  assert.match(await manager.call(other, t, 'staf', { aksi: 'jalankan', staf: 'fin-ratna', isian: {} }), /tidak ada di daftarmu/, 'staf divisi lain tetap tertutup');
+});
+
+test('skill: setiap staf lengkap menjadi skill yang menjalankan alurnya; idempoten; capability "staf" ada', async () => {
+  const r1 = S.skills.install(db); const skillsOf = db.skills.filter((s) => s.staffKey);
+  assert.equal(skillsOf.length, readySpecs().length); assert.equal(S.skills.install(db).skills, 0, 'pemasangan kedua tanpa perubahan');
+  const sk = db.skills.find((s) => s.id === 'staf-fin-ratna'); assert.match(sk.promptSnippet, /staf\(aksi:"jalankan", staf:"fin-ratna"/); assert.deepEqual(sk.tools, ['staf']); assert.ok(sk.builtIn && sk.category === 'Finance');
+  assert.ok(emp('ratna').skillRefs.find((x) => x.id === 'staf-fin-ratna').proficiency >= 9); assert.ok(emp('hendra').skillRefs.find((x) => x.id === 'staf-fin-ratna').proficiency >= 7);
+  assert.ok(emp('ratna').tools.includes('staf') && emp('ratna').staffToolSeeded);
+  const cat = await import('../server/catalog.js'); assert.ok(cat.CAPABILITIES.some((c) => c.id === 'staf') && cat.CAP_IDS.includes('staf'));
+  assert.ok(!db.skills.some((s) => s.staffKey && !s.description));
+});
+
 test('titik sambung engine: tool "staf" terpasang dan hasil terhitung sebagai bukti nyata', async () => {
   const engineSrc = fs.readFileSync(new URL('../server/engine.js', import.meta.url), 'utf8');
   assert.match(engineSrc, /staff\.isTool\(name\)/); assert.match(engineSrc, /staff\.toolDefs\(e, t\)/); assert.match(engineSrc, /staff\.promptSection\(e\)/);
@@ -260,7 +298,7 @@ test('titik sambung engine: tool "staf" terpasang dan hasil terhitung sebagai bu
 // ───────────────────────── rute API ─────────────────────────
 test('rute API: ringkasan divisi, detail + formulir awam, jalankan, hasil, berkas, izin', async () => {
   const route = (m, p) => S.routes.find(([mm, pp]) => mm === m && pp === p)[2]; const url = new URL('http://x/api/staff/runs');
-  const idx = await route('GET', '/api/staff')({}, {}, url); const fin = idx.divisi.find((d) => d.id === 'fin'); assert.equal(fin.lengkap, 4); assert.ok(idx.divisi.length >= 21);
+  const idx = await route('GET', '/api/staff')({}, {}, url); const fin = idx.divisi.find((d) => d.id === 'fin'); assert.ok(fin.lengkap >= 4); assert.ok(idx.divisi.length >= 21);
   assert.ok(emp('ratna').staff.siap.includes('fin-ratna'), 'karyawan tertaut ke staf');
   const det = await route('GET', '/api/staff/:key')({}, { key: 'fin-ratna' }); assert.equal(det.formulir.find((f) => f.kunci === 'ppn').pilihan.length, 2); assert.ok(!JSON.stringify(det).match(/Hitung faktur|webhook|steps/i));
   await assert.rejects(route('GET', '/api/staff/:key')({}, { key: 'tidak-ada-x' }), (e) => e.code === 404);

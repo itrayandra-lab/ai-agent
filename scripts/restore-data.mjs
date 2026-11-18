@@ -38,6 +38,7 @@ export function restoreBackup({ backupDir, dataDir, confirm = false }) {
     fs.mkdirSync(path.dirname(dst), { recursive: true });
     fs.copyFileSync(path.join(backupDir, f.path), tmp);
     fs.renameSync(tmp, dst);
+    if (dst.endsWith('.sqlite')) for (const x of ['-wal', '-shm']) fs.rmSync(dst + x, { force: true });   // sisa jurnal lama tidak boleh menempel pada berkas hasil pulih
   }
   const bad = m.files.filter((f) => sha256(path.join(dataDir, f.path)) !== f.sha256).map((f) => f.path);
   if (bad.length) throw new Error(`Verifikasi pulih GAGAL untuk: ${bad.join(', ')} (keadaan sebelumnya ada di ${safety})`);

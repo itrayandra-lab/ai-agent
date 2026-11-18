@@ -1,36 +1,166 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "scm-gunawan",
   "division": "scm",
   "employeeId": "gunawan",
   "title": "Raw Material & Packaging Buyer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Gunawan",
-    "tugasPeran": [
-      "Pembelian bahan baku & kemasan",
-      "Negosiasi harga, MOQ, lead time"
-    ],
-    "keahlian": [
-      "pembelian",
-      "bahan",
-      "kemasan"
-    ],
-    "contohTugas": [
-      "RFQ botol airless 30ml",
-      "Bandingkan TCO 3 supplier kemasan"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Penghitung jumlah pesan yang paling hemat",
+  "ringkas": "Hitung berapa banyak sebaiknya memesan sekali jalan agar biaya pesan dan simpan paling hemat, sesuai jumlah minimal pemasok.",
+  "kataKunci": [
+    "eoq",
+    "jumlah pesan",
+    "biaya simpan",
+    "moq",
+    "pembelian bahan"
+  ],
+  "inputs": [
+    {
+      "key": "barang",
+      "type": "text",
+      "label": "Nama barang",
+      "required": true,
+      "contoh": "Botol 30ml"
+    },
+    {
+      "key": "kebutuhan",
+      "type": "number",
+      "label": "Kebutuhan per tahun",
+      "required": true,
+      "contoh": "12000"
+    },
+    {
+      "key": "biaya_pesan",
+      "type": "number",
+      "label": "Biaya sekali memesan (Rp)",
+      "required": true,
+      "contoh": "500000"
+    },
+    {
+      "key": "biaya_simpan",
+      "type": "number",
+      "label": "Biaya simpan per unit per tahun (Rp)",
+      "required": true,
+      "contoh": "400"
+    },
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga per unit (Rp)",
+      "required": true,
+      "contoh": "3500"
+    },
+    {
+      "key": "moq",
+      "type": "number",
+      "label": "Jumlah minimal dari pemasok",
+      "required": true,
+      "contoh": "1000",
+      "default": "1"
+    },
+    {
+      "key": "bulat",
+      "type": "choice",
+      "label": "Bulatkan ke kelipatan",
+      "required": true,
+      "default": "100",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1"
+        },
+        {
+          "v": "10",
+          "t": "10"
+        },
+        {
+          "v": "100",
+          "t": "100"
+        },
+        {
+          "v": "1000",
+          "t": "1.000"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung jumlah pesan",
+      "set": {
+        "eoq": "Math.sqrt(2 * num(input.kebutuhan) * num(input.biaya_pesan) / Math.max(0.0001, num(input.biaya_simpan)))",
+        "q": "Math.ceil(Math.max(v.eoq, num(input.moq)) / num(input.bulat)) * num(input.bulat)",
+        "kali": "Math.round(num(input.kebutuhan) / v.q * 10) / 10",
+        "total": "Math.round(num(input.kebutuhan) * num(input.harga) + num(input.kebutuhan) / v.q * num(input.biaya_pesan) + v.q / 2 * num(input.biaya_simpan))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.barang + ': pesan ' + v.q.toLocaleString('id-ID') + ' unit sekali jalan, sekitar ' + v.kali + ' kali setahun, total biaya ' + rp(v.total)",
+    "teks": "'# Jumlah pesan: ' + input.barang + '\\n\\n- Hitungan paling hemat: ' + Math.round(v.eoq).toLocaleString('id-ID') + ' unit\\n- Setelah memperhitungkan minimal pemasok dan pembulatan: **' + v.q.toLocaleString('id-ID') + ' unit**\\n- Frekuensi pesan: ' + v.kali + ' kali per tahun\\n- Perkiraan total biaya setahun (barang + pesan + simpan): **' + rp(v.total) + '**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jumlah-pesan-' + input.barang",
+        "isi": "csv([['Barang', 'Hitungan hemat', 'Jumlah pesan', 'Kali per tahun', 'Total biaya setahun'], [input.barang, Math.round(v.eoq), v.q, v.kali, v.total]])"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "barang": "Botol 30ml",
+      "kebutuhan": "12000",
+      "biaya_pesan": "500000",
+      "biaya_simpan": "400",
+      "harga": "3500",
+      "moq": "1000",
+      "bulat": "100"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "pesan 5.500 unit",
+        "5.477 unit"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Raw Material & Packaging Buyer di divisi Supply Chain & Warehouse, memakai bahasa awam",
+    "tujuan": "Hitung berapa banyak sebaiknya memesan sekali jalan agar biaya pesan dan simpan paling hemat, sesuai jumlah minimal pemasok. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Stok sepertinya cukup."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "eoq"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung jumlah pesan yang paling hemat perlu dibaca bersama: eoq menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

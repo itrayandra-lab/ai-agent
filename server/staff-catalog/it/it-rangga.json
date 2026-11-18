@@ -1,36 +1,189 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "it-rangga",
   "division": "it",
   "employeeId": "rangga",
   "title": "Cloud & Infrastructure Engineer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Rangga",
-    "tugasPeran": [
-      "Mengelola infrastruktur cloud & backup",
-      "Optimasi biaya cloud"
-    ],
-    "keahlian": [
-      "cloud",
-      "sre",
-      "backup"
-    ],
-    "contohTugas": [
-      "Rencana backup & DR",
-      "Estimasi biaya cloud bulan depan"
+  "name": "Perencana cadangan data (backup)",
+  "ringkas": "Hitung ruang dan biaya penyimpanan cadangan sesuai pola dan masa simpan, lengkap dengan batas data yang bisa hilang.",
+  "kataKunci": [
+    "backup",
+    "cadangan",
+    "retensi",
+    "penyimpanan",
+    "rpo"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "number",
+      "label": "Ukuran data yang dicadangkan (GB)",
+      "required": true,
+      "contoh": "500"
+    },
+    {
+      "key": "tumbuh",
+      "type": "number",
+      "label": "Pertumbuhan data per bulan (persen)",
+      "required": true,
+      "contoh": "5"
+    },
+    {
+      "key": "pola",
+      "type": "choice",
+      "label": "Seberapa sering dicadangkan?",
+      "required": true,
+      "default": "harian",
+      "choices": [
+        {
+          "v": "harian",
+          "t": "Tiap hari (penuh mingguan, sisanya selisih)"
+        },
+        {
+          "v": "mingguan",
+          "t": "Seminggu sekali (penuh)"
+        }
+      ]
+    },
+    {
+      "key": "ubah",
+      "type": "choice",
+      "label": "Berapa persen data berubah per hari?",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2%"
+        },
+        {
+          "v": "5",
+          "t": "5%"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        }
+      ]
+    },
+    {
+      "key": "retensi",
+      "type": "number",
+      "label": "Cadangan disimpan berapa hari?",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "salinan",
+      "type": "choice",
+      "label": "Berapa salinan disimpan?",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 salinan (satu tempat)"
+        },
+        {
+          "v": "2",
+          "t": "2 salinan (lokal dan jauh)"
+        },
+        {
+          "v": "3",
+          "t": "3 salinan (aturan 3-2-1)"
+        }
+      ]
+    },
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga penyimpanan per GB per bulan (Rp)",
+      "required": true,
+      "contoh": "1500"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung penyimpanan",
+      "set": {
+        "penuh": "Math.max(1, Math.ceil(num(input.retensi) / 7))",
+        "selisih": "input.pola === 'harian' ? Math.max(0, num(input.retensi) - v.penuh) : 0",
+        "satu": "Math.round(v.penuh * num(input.data) + v.selisih * num(input.data) * num(input.ubah) / 100)",
+        "total": "v.satu * num(input.salinan)",
+        "biaya": "Math.round(v.total * num(input.harga))",
+        "tahun": "Math.round(num(input.data) * Math.pow(1 + num(input.tumbuh) / 100, 12))",
+        "biayaTahun": "Math.round(v.biaya * Math.pow(1 + num(input.tumbuh) / 100, 12))",
+        "rpo": "input.pola === 'harian' ? 'maksimal 24 jam' : 'maksimal 7 hari'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Butuh ' + v.total + ' GB penyimpanan cadangan, biaya ' + rp(v.biaya) + ' per bulan; data yang bisa hilang ' + v.rpo",
+    "teks": "'# Rencana cadangan\\n\\n' + tabel(['Hal', 'Nilai'], [['Cadangan penuh disimpan', v.penuh + ' kali'], ['Cadangan selisih disimpan', v.selisih + ' kali'], ['Ruang untuk satu salinan', v.satu + ' GB'], ['Ruang untuk semua salinan', v.total + ' GB'], ['Biaya per bulan sekarang', rp(v.biaya)], ['Perkiraan data 12 bulan lagi', v.tahun + ' GB'], ['Perkiraan biaya 12 bulan lagi', rp(v.biayaTahun) + ' per bulan'], ['Data yang mungkin hilang bila rusak (RPO)', v.rpo]]) + '\\n\\nIngat: cadangan yang belum pernah diuji pulih belum bisa dianggap aman. Jadwalkan uji pulih tiap kuartal.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-cadangan'",
+        "isi": "csv([['Hal', 'Nilai'], ['Cadangan penuh', v.penuh], ['Cadangan selisih', v.selisih], ['Ruang satu salinan GB', v.satu], ['Ruang semua salinan GB', v.total], ['Biaya per bulan', v.biaya], ['Data 12 bulan lagi GB', v.tahun], ['Biaya 12 bulan lagi per bulan', v.biayaTahun]])"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "data": "500",
+      "tumbuh": "5",
+      "pola": "harian",
+      "ubah": "5",
+      "retensi": "30",
+      "salinan": "3",
+      "harga": "1500"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Butuh 9375 GB",
+        "Rp 14.062.500"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Cloud & Infrastructure Engineer di divisi IT & Security, memakai bahasa awam",
+    "tujuan": "Hitung ruang dan biaya penyimpanan cadangan sesuai pola dan masa simpan, lengkap dengan batas data yang bisa hilang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Sistem mungkin kurang aman."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "backup"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perencana cadangan data (backup) perlu dibaca bersama: backup menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

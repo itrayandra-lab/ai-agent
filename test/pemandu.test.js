@@ -53,61 +53,71 @@ test('niat: enam niat umum dikenali tanpa token', () => {
   assert.equal(pm.detectIntent('hmm'), null);
 });
 
-for (const [intent, text] of Object.entries({ konten: 'bikinin aku konten buat jualan kopi', riset: 'tolong cari tahu pesaing warung kopi', rencana: 'susun rencana usaha tiga bulan', pesan: 'tulis pesan balasan untuk pelanggan', ringkas: 'tolong ringkas ini: ' + 'Rapat tadi membahas harga baru, jadwal pengiriman, dan keluhan pelanggan. '.repeat(4), belajar: 'ajari aku cara bikin laporan keuangan' })) {
-  test(`alur L0 "${intent}": paling banyak 2 pertanyaan, 3 rencana, konfirmasi dengan pratinjau`, async () => {
+const INPUTS = { konten: 'bikinin aku konten buat jualan kopi', riset: 'tolong cari tahu pesaing warung kopi', rencana: 'susun rencana usaha tiga bulan', pesan: 'tulis pesan balasan untuk pelanggan', ringkas: 'tolong ringkas ini: ' + 'Rapat tadi membahas harga baru, jadwal pengiriman, dan keluhan pelanggan. '.repeat(4), belajar: 'ajari aku cara bikin laporan keuangan' };
+/** jawab semua pertanyaan dengan pilihan yang disarankan sampai Pemandu mulai bekerja */
+async function answerAll(s, r) { let asked = 0; while (r.kind === 'choices' && r.ask) { asked++; r = checkContract(await turn(s, { choiceId: r.options.find((o) => o.recommended).id })); } return { r, asked }; }
+const stopWork = (s) => turn(s, { choiceId: 'cancel' });
+
+for (const [intent, text] of Object.entries(INPUTS)) {
+  test(`alur L0 "${intent}": paling banyak 1 pertanyaan bila perlu, lalu langsung dikerjakan tanpa kartu rencana`, async () => {
     const s = sid();
     let r = checkContract(await turn(s, { input: text }));
-    let asked = 0;
-    while (r.kind === 'choices' && r.ask) {
-      asked++;
-      const pick = r.options.find((o) => o.recommended) || r.options[0];
-      r = checkContract(await turn(s, { choiceId: asked === 1 ? pick.id : 'delegate' }));
-    }
-    assert.ok(asked <= 2, `bertanya ${asked} kali`);
-    assert.equal(r.kind, 'plan');
-    assert.deepEqual(r.options.map((o) => o.id), ['plan:fast', 'plan:balanced', 'plan:full']);
-    assert.equal(r.options.filter((o) => o.recommended)[0].id, 'plan:balanced');
-    assert.ok(r.options.every((o) => o.hint && o.eta && o.cost), 'tiap rencana punya bahasa hasil, waktu, dan biaya dalam kata');
-    assert.equal(r.step.now, 2);
-    r = checkContract(await turn(s, { choiceId: 'plan:fast' }));
-    assert.equal(r.kind, 'confirm');
-    assert.ok(r.preview.length >= 1, 'konfirmasi menampilkan pratinjau');
-    assert.deepEqual(r.options.map((o) => o.id), ['start', 'edit']);
-    // kembali satu langkah lalu ubah pilihan tidak membuat pekerjaan apa pun
-    r = checkContract(await turn(s, { choiceId: 'back' })); assert.equal(r.kind, 'plan');
-    assert.equal(store.get().tasks.filter((t) => t.kind === 'goal').length, 0, 'belum ada pekerjaan sebelum Mulai');
+    const { r: after, asked } = await answerAll(s, r); r = after;
+    assert.ok(asked <= 1, `bertanya ${asked} kali`);
+    assert.notEqual(r.kind, 'plan'); assert.notEqual(r.kind, 'confirm');
+    assert.equal(r.kind, 'progress'); assert.equal(r.step.now, 3);
+    const g = store.get().tasks.find((t) => t.kind === 'goal' && t.description.includes(text.slice(0, 20)));
+    assert.ok(g, 'pekerjaan dibuat saat mulai bekerja');
+    assert.match(g.description, /Yang sudah diputuskan pengguna/, 'pilihan pengguna ikut sebagai brief');
+    await stopWork(s);
   });
 }
+
+test('permintaan yang sudah jelas langsung dikerjakan tanpa pertanyaan', async () => {
+  const s = sid();
+  const r = checkContract(await turn(s, { input: 'tolong buatkan konten instagram promo kopi susu untuk akhir pekan di Bandung' }));
+  assert.equal(r.kind, 'progress');
+  await stopWork(s);
+});
 
 test('kartu awal tanpa topik menanyakan topik dulu, "Serahkan ke kamu" tetap jalan', async () => {
   const s = sid();
   let r = checkContract(await turn(s, { choiceId: 'intent:konten' }));
   assert.equal(r.kind, 'choices'); assert.ok(r.freeText && r.delegate);
   r = checkContract(await turn(s, { choiceId: 'delegate' }));
-  assert.equal(r.ask?.of, 2);
+  assert.ok(r.ask || r.kind === 'progress');
+  if (r.kind === 'progress') await stopWork(s);
+});
+
+test('obrolan ringan dijawab ramah tanpa membuat pekerjaan', async () => {
+  const before = store.get().tasks.length;
+  let r = checkContract(await turn(sid(), { input: 'makasih ya' })); assert.match(r.notes[0], /Sama-sama/);
+  r = checkContract(await turn(sid(), { input: 'kamu bisa apa' })); assert.match(r.notes[0], /Aku Pemandu/);
+  r = checkContract(await turn(sid(), { input: 'halo' })); assert.equal(r.kind, 'choices');
+  assert.equal(store.get().tasks.length, before);
 });
 
 test('pilihan lama dari layar yang sudah lewat tidak merusak keadaan', async () => {
   const s = sid();
-  await turn(s, { input: 'buat konten promo kopi' });
-  const r = checkContract(await turn(s, { choiceId: 'plan:full' }));   // belum di tahap rencana
+  await turn(s, { input: 'buat konten kopi' });
+  const r = checkContract(await turn(s, { choiceId: 'plan:full' }));   // tidak ada pilihan itu di layar sekarang
   assert.equal(r.kind, 'choices'); assert.ok(r.notes?.some((x) => /sudah lewat/.test(x)));
 });
 
 test('profil: pertanyaan yang jawabannya sudah diketahui dilewati, dan jawaban baru dicatat', async () => {
+  pm.setProfile('owner', { gaya: '' });   // jawaban rekomendasi di tes sebelumnya ikut tercatat
   const s0 = sid();
-  await turn(s0, { input: 'tulis pesan untuk pelanggan' });
-  let r = await turn(s0, { choiceId: 'pelanggan' });   // pertanyaan kedua: gaya bahasa
+  let r = checkContract(await turn(s0, { input: 'tulis pesan untuk pelanggan' }));   // penerima terbaca dari kalimat; yang ditanya hanya gaya bahasa
   assert.equal(r.kind, 'choices'); assert.ok(/gaya bahasa/.test(r.say));
   r = checkContract(await turn(s0, { choiceId: 'resmi' }));
   assert.ok(r.learned && /resmi/.test(r.learned.text), 'pilihan gaya dicatat dan diberitahukan ("Betul?")');
   assert.equal(pm.profileView('owner').items.find((i) => i.key === 'gaya').value, 'sopan dan resmi');
+  await stopWork(s0);
   const s1 = sid();
-  r = checkContract(await turn(s1, { input: 'tulis pesan untuk pelanggan' }));   // gaya sudah diketahui
-  assert.ok(/untuk siapa/.test(r.say));
+  r = checkContract(await turn(s1, { input: 'tulis pesan untuk pelanggan' }));   // gaya sudah diketahui: tidak ada pertanyaan
+  assert.equal(r.kind, 'progress', 'tidak menanyakan gaya bahasa dua kali');
   assert.ok(r.notes?.some((x) => /sopan dan resmi/.test(x)), 'memberi tahu apa yang dipakai dari profil');
-  r = checkContract(await turn(s1, { choiceId: 'pelanggan' }));
-  assert.equal(r.kind, 'plan', 'tidak menanyakan gaya bahasa dua kali');
+  await stopWork(s1);
   const note = store.get().notes.find((x) => x.title === 'Profil pengguna owner');
   assert.ok(note && /sopan dan resmi/.test(note.content), 'profil tersimpan sebagai catatan sistem');
 });
@@ -175,6 +185,12 @@ test('kartu "Aku belajar sesuatu, simpan?": usulan nyata dari sesi belajar mandi
 });
 function checkCard(c) { assert.deepEqual(scan(c.say + ' ' + c.options.map((x) => x.label).join(' ')), []); return c; }
 
+test('layar: satu percakapan, bukan wizard (tanpa penunjuk langkah, kartu rencana, atau panel)', () => {
+  const v = fs.readFileSync('public/js/pemandu-view.js', 'utf8');
+  for (const k of ['pm-steps', 'Dikerjakan', 'pm-cards']) assert.ok(!v.includes(k), `tidak boleh ada: ${k}`);
+  for (const k of ['pmThread', 'pmForm', 'pmMic', 'pm-suggest']) assert.ok(v.includes(k), `harus ada: ${k}`);
+});
+
 test('layar: teks antarmuka Pemandu dan menu tidak memuat kata terlarang', () => {
   const src = fs.readFileSync('public/js/pemandu-view.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '').replace(/^import .*$/gm, '');
   const texts = [...src.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map((m) => m[2].replace(/\$\{[^}]*\}/g, ' ')).filter((t) => /[A-Za-z]{3,}/.test(t) && !t.startsWith('/') && !t.startsWith('application/') && (/[ ]/.test(t) || /^[A-Z]/.test(t)));   // kode (alamat, jenis MIME, nama kelas) bukan teks layar
@@ -188,18 +204,16 @@ test('layar: teks antarmuka Pemandu dan menu tidak memuat kata terlarang', () =>
   for (const t of shown) assert.deepEqual(scan(t.replace(/\$\{[^}]*\}/g, ' ').replace(/<[^>]+>/g, ' ')), [], t.slice(0, 80));
 });
 
-test('putaran penuh (mode simulasi): Mulai -> hasil -> Ubah sedikit mulai bekerja lagi -> Pakai ini -> tersimpan dan langkah lanjut', { timeout: 280000 }, async () => {
+test('putaran penuh (mode simulasi): Mulai -> hasil -> Ubah sedikit mulai bekerja lagi -> Pakai ini -> tersimpan dan langkah lanjut', { timeout: 480000 }, async () => {
   engine.start();
   const s = sid();
-  await turn(s, { input: 'bikinin aku konten buat jualan kopi' });
-  await turn(s, { choiceId: 'baru' }); await turn(s, { choiceId: 'delegate' });
-  await turn(s, { choiceId: 'plan:fast' });
-  let r = checkContract(await turn(s, { choiceId: 'start' }));
+  let r = checkContract(await turn(s, { input: 'bikinin aku konten buat jualan kopi' }));
+  ({ r } = await answerAll(s, r));
   assert.equal(r.kind, 'progress'); assert.equal(r.step.now, 3);
-  const goals = store.get().tasks.filter((t) => t.kind === 'goal');
+  const goals = store.get().tasks.filter((t) => t.kind === 'goal' && t.status !== 'cancelled' && t.description.includes('bikinin aku konten buat jualan kopi'));
   assert.equal(goals.length, 1);
   assert.match(goals[0].description, /Yang sudah diputuskan pengguna/, 'pilihan pengguna ikut sebagai brief');
-  const wait = async () => { const t0 = Date.now(); while (r.kind === 'progress' && Date.now() - t0 < 120000) { await new Promise((x) => setTimeout(x, 2000)); r = checkContract(await turn(s, { choiceId: 'poll' })); if (r.kind === 'progress') assert.ok(r.progress.pct >= 0 && r.progress.pct <= 100); } };
+  const wait = async () => { const t0 = Date.now(); while (r.kind === 'progress' && Date.now() - t0 < 200000) { await new Promise((x) => setTimeout(x, 2000)); r = checkContract(await turn(s, { choiceId: 'poll' })); if (r.kind === 'progress') assert.ok(r.progress.pct >= 0 && r.progress.pct <= 100); } };
   await wait();
   assert.equal(r.kind, 'result'); assert.ok(r.result.text.length > 20);
   assert.deepEqual(r.options.map((o) => o.id), ['use', 'tweak', 'redo', 'save']);

@@ -1,39 +1,152 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "studio-bintang",
   "division": "studio",
   "employeeId": "bintang",
   "title": "Videographer & Editor",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Bintang",
-    "tugasPeran": [
-      "Merencanakan shot list dan melakukan shooting video produk & tutorial",
-      "Mengedit video dalam beberapa rasio (9:16, 1:1, 16:9) dengan subtitle",
-      "Mengelola arsip footage dan template editing studio"
-    ],
-    "keahlian": [
-      "videografi",
-      "editing",
-      "color grading",
-      "motion"
-    ],
-    "contohTugas": [
-      "Shot list video demo fitur RayFlow",
-      "Rencana edit 3 versi iklan sunscreen",
-      "Template subtitle dan lower-third studio"
+  "name": "Pembuat daftar shot dan jadwal syuting",
+  "ringkas": "Susun daftar shot lengkap dengan jenis bidikan dan perkiraan jam syuting untuk video produk, tutorial, atau testimoni.",
+  "kataKunci": [
+    "shot list",
+    "syuting",
+    "video produk",
+    "jadwal shooting",
+    "tutorial"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul video",
+      "required": true,
+      "contoh": "Video Serum Cerah"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis video",
+      "required": true,
+      "default": "produk",
+      "choices": [
+        {
+          "v": "produk",
+          "t": "Video produk"
+        },
+        {
+          "v": "tutorial",
+          "t": "Tutorial"
+        },
+        {
+          "v": "testimoni",
+          "t": "Testimoni"
+        }
+      ]
+    },
+    {
+      "key": "jumlah",
+      "type": "number",
+      "label": "Berapa produk/segmen yang direkam?",
+      "required": true,
+      "contoh": "3",
+      "default": "1"
+    },
+    {
+      "key": "lokasi",
+      "type": "choice",
+      "label": "Lokasi syuting",
+      "required": true,
+      "default": "studio",
+      "choices": [
+        {
+          "v": "studio",
+          "t": "Studio"
+        },
+        {
+          "v": "toko",
+          "t": "Toko"
+        },
+        {
+          "v": "luar",
+          "t": "Luar ruangan"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun shot",
+      "set": {
+        "shot": "{\"produk\":[[\"Pembuka: produk muncul\",\"Close-up\",10],[\"Putar produk\",\"Medium\",15],[\"Detail tekstur\",\"Macro\",10],[\"Cara pakai\",\"Medium\",20],[\"Penutup dan logo\",\"Wide\",5]],\"tutorial\":[[\"Perkenalan pembawa acara\",\"Medium\",10],[\"Alat dan bahan\",\"Dari atas\",10],[\"Langkah 1\",\"Medium\",15],[\"Langkah 2\",\"Close-up\",15],[\"Hasil akhir\",\"Close-up\",10]],\"testimoni\":[[\"Perkenalan narasumber\",\"Medium\",10],[\"Cerita sebelum memakai\",\"Medium\",20],[\"Pengalaman memakai\",\"Close-up\",20],[\"Hasil dan pesan\",\"Medium\",15],[\"Produk dan logo\",\"Wide\",5]]}[input.jenis]",
+        "menitSatu": "v.shot.reduce((a, b) => a + b[2], 0)",
+        "total": "v.shot.length * Math.max(1, num(input.jumlah))",
+        "jam": "Math.round((v.menitSatu * Math.max(1, num(input.jumlah)) / 60 + 1) * 10) / 10"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.total + ' shot, perkiraan ' + v.jam + ' jam syuting (sudah termasuk 1 jam persiapan)'",
+    "teks": "'# Shot list: ' + input.judul + '\\n\\nLokasi: ' + input.lokasi + '. Ulangi daftar ini untuk tiap ' + (input.jenis === 'produk' ? 'produk' : 'segmen') + ' (' + Math.max(1, num(input.jumlah)) + ' kali).\\n\\n' + tabel(['No', 'Isi', 'Bidikan', 'Menit siap+rekam'], v.shot.map((s, i) => [i + 1, s[0], s[1], s[2]]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'shot-list'",
+        "isi": "csv([['No', 'Isi', 'Bidikan', 'Menit']].concat(v.shot.map((s, i) => [i + 1, s[0], s[1], s[2]])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "judul": "Video Serum Cerah",
+      "jenis": "produk",
+      "jumlah": "3",
+      "lokasi": "studio"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "15 shot",
+        "4 jam syuting"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Videographer & Editor di divisi Content Studio, memakai bahasa awam",
+    "tujuan": "Susun daftar shot lengkap dengan jenis bidikan dan perkiraan jam syuting untuk video produk, tutorial, atau testimoni. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Buat iklan yang keren."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "shot list"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat daftar shot dan jadwal syuting perlu dibaca bersama: shot list menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

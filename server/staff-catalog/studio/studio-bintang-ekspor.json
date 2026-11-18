@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-bintang-ekspor",
+  "division": "studio",
+  "employeeId": "bintang",
+  "title": "Videographer & Editor",
+  "version": 1,
+  "name": "Penentu ukuran ekspor video per platform",
+  "ringkas": "Beri pengaturan ekspor video yang disarankan untuk tiap platform dan perkiraan ukuran berkasnya.",
+  "kataKunci": [
+    "ekspor video",
+    "resolusi",
+    "bitrate",
+    "tiktok",
+    "youtube"
+  ],
+  "inputs": [
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Diunggah ke mana?",
+      "required": true,
+      "default": "tiktok",
+      "choices": [
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "reels",
+          "t": "Instagram Reels"
+        },
+        {
+          "v": "youtube",
+          "t": "YouTube"
+        },
+        {
+          "v": "shopee",
+          "t": "Video toko online"
+        }
+      ]
+    },
+    {
+      "key": "detik",
+      "type": "number",
+      "label": "Durasi video (detik)",
+      "required": true,
+      "contoh": "45"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Pilih pengaturan",
+      "set": {
+        "p": "({ tiktok: { n: 'TikTok', rasio: '9:16', res: '1080x1920', mbps: 6, maks: 600 }, reels: { n: 'Instagram Reels', rasio: '9:16', res: '1080x1920', mbps: 5, maks: 180 }, youtube: { n: 'YouTube', rasio: '16:9', res: '1920x1080', mbps: 10, maks: 3600 }, shopee: { n: 'Video toko online', rasio: '9:16', res: '720x1280', mbps: 4, maks: 60 } })[input.platform]",
+        "mb": "Math.round(v.p.mbps * num(input.detik) / 8 * 10) / 10",
+        "lewat": "num(input.detik) > v.p.maks"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Ekspor ' + v.p.n + ' ' + v.p.rasio + ' ' + v.p.res + ', perkiraan ' + v.mb + ' MB' + (v.lewat ? ' (durasi melebihi batas umum ' + v.p.maks + ' detik)' : '')",
+    "teks": "'# Pengaturan ekspor ' + v.p.n + '\\n\\n' + tabel(['Hal', 'Saran'], [['Bentuk layar', v.p.rasio], ['Resolusi', v.p.res], ['Kecepatan data', v.p.mbps + ' Mbps'], ['Durasi', input.detik + ' detik'], ['Perkiraan ukuran', v.mb + ' MB']]) + '\\n\\nSaran umum; cek ketentuan terbaru platform sebelum unggah.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'ekspor-video'",
+        "isi": "csv([['Platform', 'Rasio', 'Resolusi', 'Mbps', 'MB'], [v.p.n, v.p.rasio, v.p.res, v.p.mbps, v.mb]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "platform": "tiktok",
+      "detik": "45"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "33.8 MB",
+        "1080x1920"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Videographer & Editor di divisi Content Studio, memakai bahasa awam",
+    "tujuan": "Beri pengaturan ekspor video yang disarankan untuk tiap platform dan perkiraan ukuran berkasnya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Buat iklan yang keren."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "ekspor video"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penentu ukuran ekspor video per platform perlu dibaca bersama: ekspor video menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

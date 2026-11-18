@@ -2,9 +2,10 @@
 // Dua bentuk sah: RINTISAN (status "todo", hanya identitas) dan LENGKAP (status "siap", semua bidang terisi).
 // Dokumen contoh: server/staff-catalog/README.md dan berkas-berkas di server/staff-catalog/{mkt,fin,cs}/.
 import * as X from './expr.js';
-import { FRAGMENTS, STEP_USES } from './fragments.js';
+import { FRAGMENTS, STEP_USES, AI_USES } from './fragments.js';
 import { compile, needsAccount } from './blueprint.js';
 import * as C from '../n8n-templates/common.js';
+import { checkOtak, OTAK_TYPES } from './native.js';
 
 export const SCHEMA_VERSION = 1;
 export const KEY_RE = /^[a-z0-9]+(-[a-z0-9]+)+$/;
@@ -73,7 +74,7 @@ export function validateSpec(spec, { roster } = {}) {
   const steps = spec.steps;
   if (!Array.isArray(steps) || !steps.length || steps.length > 12) err('"steps" harus 1–12 langkah');
   else {
-    if (steps.filter((s) => s?.use === 'minta_ai').length > 1) err('maksimal satu langkah "minta_ai"');
+    if (steps.filter((s) => AI_USES.includes(s?.use)).length > 1) err('maksimal satu langkah AI ("minta_ai" atau "otak")');
     const ids = new Set();
     for (const [i, s] of steps.entries()) {
       if (!FRAGMENTS[s?.use]) { err(`langkah ${i + 1}: "use" harus salah satu ${STEP_USES.join('/')}`); continue; }
@@ -102,13 +103,15 @@ export function validateSpec(spec, { roster } = {}) {
 
   // jadwal, risiko, akun
   if (!spec.schedule || typeof spec.schedule.allowed !== 'boolean') err('"schedule" wajib: { allowed: true|false }');
-  else if (spec.schedule.allowed && steps?.some((s) => s?.use === 'minta_ai')) err('staf berlangkah AI belum boleh dijadwalkan (butuh server RAIVERSE di tiap jalan)');
+  else if (spec.schedule.allowed && steps?.some((s) => AI_USES.includes(s?.use))) err('staf berlangkah AI belum boleh dijadwalkan (butuh server RAIVERSE di tiap jalan)');
   if (!RISKS.includes(spec.risk)) err('"risk" harus low/medium/high');
   if (typeof spec.confirm !== 'boolean') err('"confirm" wajib true/false');
   const effects = (steps || []).map((s) => FRAGMENTS[s?.use]?.effect);
   if (effects.includes('write-external') && spec.risk === 'low') err('langkah yang menulis ke akun luar minimal risk "medium"');
   if (effects.includes('write-external') && !spec.confirm) err('langkah yang menulis ke akun luar wajib "confirm": true');
   if (spec.risk === 'high' && !spec.confirm) err('risk "high" wajib "confirm": true');
+  if (spec.needsN8n !== undefined && typeof spec.needsN8n !== 'boolean') err('"needsN8n" harus true/false (true = staf ini butuh jadwal terus-menerus atau pemicu luar, tetap lewat otomasi n8n)');
+  if (spec.otakProfil !== undefined) for (const m of checkProfil(spec.otakProfil)) err('otakProfil: ' + m);
   if (!spec.brain || typeof spec.brain !== 'object') err('"brain" wajib: { folder, simpan }');
   else if (typeof spec.brain.simpan !== 'boolean') err('brain.simpan wajib true/false');
 
@@ -117,7 +120,7 @@ export function validateSpec(spec, { roster } = {}) {
   if (!sample?.input || typeof sample.input !== 'object') err('"sample.input" wajib (isian contoh untuk uji)');
   else for (const f of inputs || []) if (f.required && todo(sample.input[f.key])) err(`sample.input.${f.key} wajib`);
   if (!sample?.expect || typeof sample.expect !== 'object') err('"sample.expect" wajib: { berkas?, mengandung?[] }');
-  if (steps?.some((s) => s?.use === 'minta_ai') && typeof sample?.ai !== 'string') err('"sample.ai" (teks AI contoh untuk uji) wajib bila ada langkah minta_ai');
+  if (steps?.some((s) => AI_USES.includes(s?.use)) && typeof sample?.ai !== 'string') err('"sample.ai" (teks AI contoh untuk uji) wajib bila ada langkah minta_ai');
   if (steps?.some((s) => s?.use === 'ambil_web') && !sample?.web) warnings.push('sample.web disarankan agar uji tidak membuka web nyata');
 
   // kompilasi percobaan + daftar putih simpul
@@ -170,3 +173,24 @@ export function checkExpect(result, expect = {}) {
 /** Tampilan formulir untuk layar depan (bahasa awam, tombol pilihan untuk jenis choice). */
 export const formView = (spec) => (spec.inputs || []).map((f) => ({ kunci: f.key, label: f.label, jenis: f.type, wajib: !!f.required, pilihan: f.choices?.map((c) => ({ nilai: c.v, teks: c.t })), contoh: f.contoh, bawaan: f.default }));
 export { needsAccount };
+
+/** Periksa blok otakProfil (otak berbasis data). Mengembalikan daftar masalah. */
+export function checkProfil(p) {
+  const m = [];
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return ['harus objek'];
+  for (const k of ['peran', 'tujuan', 'gaya']) if (typeof p[k] !== 'string' || p[k].trim().length < 5 || p[k].length > 400) m.push('"' + k + '" teks 5-400 huruf');
+  const sk = p.skema;
+  if (!sk || typeof sk !== 'object' || Array.isArray(sk) || Object.keys(sk).length < 1 || Object.keys(sk).length > 6) m.push('"skema" 1-6 bidang');
+  else {
+    if (sk.pembahasan !== 'teks') m.push('skema wajib punya "pembahasan": "teks"');
+    for (const [k, t] of Object.entries(sk)) if (!FIELD_RE.test(k) || k === 'dariAI' || typeof t !== 'string' || !OTAK_TYPES.test(t)) m.push('bidang skema "' + k + '" tidak valid');
+  }
+  if (p.contoh !== undefined) for (const k of ['baik', 'buruk']) if (p.contoh?.[k] !== undefined && (typeof p.contoh[k] !== 'string' || p.contoh[k].length > 400)) m.push('contoh.' + k + ' teks maks 400');
+  const b = p.batas || {}; if ((b.pembahasan !== undefined && !(b.pembahasan >= 100 && b.pembahasan <= 1500)) || (b.butir !== undefined && !(b.butir >= 1 && b.butir <= 8))) m.push('"batas" pembahasan 100-1500, butir 1-8');
+  if (p.model !== undefined && !['kecil', 'sedang'].includes(p.model)) m.push('"model" kecil atau sedang');
+  const k = p.kriteria; if (!k || typeof k !== 'object' || !Array.isArray(k.kataKunci) || !k.kataKunci.length || k.kataKunci.length > 5 || k.kataKunci.some((x) => typeof x !== 'string' || !x.trim())) m.push('"kriteria.kataKunci" 1-5 kata wajib');
+  else if (!(k.minPanjang >= 10) || !(k.maksPanjang >= k.minPanjang)) m.push('"kriteria" minPanjang >=10 dan maksPanjang >= minPanjang');
+  if (typeof p.contohAI !== 'string' || !p.contohAI) m.push('"contohAI" (jawaban AI contoh berupa JSON) wajib');
+  else if (sk && typeof sk === 'object' && !m.length && !checkOtak(sk, p.contohAI, {}).dariAI) m.push('"contohAI" tidak sesuai skema');
+  return m;
+}

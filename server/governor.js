@@ -1,5 +1,6 @@
 // AI governance: keeps autonomous work focused, deduplicated, within budget, and routed to the cheapest model that can do it.
 import * as store from './store.js';
+import * as approvals from './approvals.js';
 
 const db = () => store.get();
 const S = () => db().settings;
@@ -16,12 +17,59 @@ function similar(a, b) {
   return inter / Math.min(A.size, B.size);
 }
 
+// ───────────────────────── kuota per ruang kerja (P2) ─────────────────────────
+// Angka awal sengaja konservatif; Owner mengaturnya lewat settings.quota (tasksPerDay, n8nRunsPerDay). Ukurannya JUMLAH, bukan uang.
+export const QUOTA_DEFAULTS = { tasksPerDay: 300, n8nRunsPerDay: 100 };
+export function quotaLimits() {
+  const q = S().quota && typeof S().quota === 'object' ? S().quota : {};
+  const num = (v, d) => (Number.isFinite(Number(v)) && Number(v) >= 0 && v !== '' && v !== null ? Math.floor(Number(v)) : d);
+  return { tasksPerDay: num(q.tasksPerDay, QUOTA_DEFAULTS.tasksPerDay), n8nRunsPerDay: num(q.n8nRunsPerDay, QUOTA_DEFAULTS.n8nRunsPerDay) };
+}
+const dayKey = () => new Date().toISOString().slice(0, 10);
+const startOfDay = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+/** Pemakaian eksekusi n8n hari ini untuk ruang kerja aktif; dicatat di db().usage.exec dan direset tiap hari. */
+export function execUsage() {
+  const u = (db().usage ||= {});
+  if (!u.exec || u.exec.day !== dayKey()) u.exec = { day: dayKey(), runs: 0, byKind: {} };
+  return u.exec;
+}
+export const tasksToday = () => db().tasks.filter((t) => (t.createdAt || 0) >= startOfDay() && t.kind !== 'routine').length;
+/** Sisa jatah hari ini (angka dan persen) untuk tugas dan eksekusi; dipakai Pemandu untuk kata "jatah". */
+export function quotaStatus() {
+  const L = quotaLimits(), x = execUsage(), tt = tasksToday();
+  const left = (limit, used) => (limit ? Math.max(0, limit - used) : 0);
+  const pct = (limit, used) => (limit ? Math.max(0, Math.min(100, Math.round((left(limit, used) / limit) * 100))) : 100);
+  return { tasks: { limit: L.tasksPerDay, used: tt, left: left(L.tasksPerDay, tt), pct: pct(L.tasksPerDay, tt) }, n8nRuns: { limit: L.n8nRunsPerDay, used: x.runs, left: left(L.n8nRunsPerDay, x.runs), pct: pct(L.n8nRunsPerDay, x.runs) } };
+}
+/** Boleh menjalankan `n` eksekusi n8n lagi hari ini? Mengembalikan null bila boleh, atau { limit, spent } bila melewati batas (bentuk sama seperti overBudget). */
+export function execOverBudget(n = 1) {
+  const limit = quotaLimits().n8nRunsPerDay, spent = execUsage().runs;
+  return limit && spent + n > limit ? { limit, spent, unit: 'eksekusi' } : null;   // 0 = tanpa batas
+}
+/** Gerbang eksekusi n8n (staf, otomasi, uji): lempar GovernorError bila jatah harian habis. Tidak mencatat; catat dengan recordExec setelah jalan. */
+export function checkExec(n = 1) {
+  const over = execOverBudget(n);
+  if (over) throw new GovernorError(`Jatah pekerjaan otomatis hari ini sudah habis (${over.spent} dari ${over.limit}). Coba lagi besok atau minta Owner menaikkan jatah.`);
+}
+export function recordExec(n = 1, kind = 'staf') {
+  const x = execUsage();
+  x.runs += n; x.byKind[kind] = (x.byKind[kind] || 0) + n;
+  return x.runs;
+}
+/** Satu panggilan: periksa lalu catat. Dipakai di titik panggil eksekusi supaya tak ada eksekusi yang lolos tanpa tercatat. */
+export function chargeExec(n = 1, kind = 'staf') { checkExec(n); return recordExec(n, kind); }
+
 const recentByWorkspace = new Map(); // timestamps of tasks created by AI without a parent (free-floating initiatives)
 
-/** Validate a task before it exists. Humans and the scheduler are trusted; AI-created work is rate-limited and deduplicated. */
+/** SATU gerbang pembuatan tugas: engine.createTask memanggilnya untuk semua jalur (/api/tasks, broadcast, Pemandu/goal, rapat, delegasi, chat).
+ *  Semua pembuat (manusia, penjadwal, AI) terkena kuota tugas harian per ruang kerja; AI juga dibatasi kapasitas, duplikat, dan inisiatif per jam. */
 export function checkCreate({ title, createdBy, parentId, kind, assigneeId }) {
   const t = String(title ?? '').trim();
   if (!t || t === 'undefined' || t === 'null' || t.length < 3) throw new GovernorError('Judul tugas wajib diisi dan jelas.');
+  if (kind !== 'routine') {
+    const limit = quotaLimits().tasksPerDay;
+    if (limit && tasksToday() >= limit) throw new GovernorError(`Jatah tugas hari ini sudah habis (${limit} tugas). Coba lagi besok atau minta Owner menaikkan jatah.`);
+  }
   const byAI = emp(createdBy)?.type === 'ai';
   if (!byAI) return;
   const g = S();
@@ -89,10 +137,5 @@ export function compact(messages, keepLast = 4, limit = 700) {
   }
 }
 
-/** Only top-level work goes to humans; subtasks are reviewed by the orchestrator above them. */
-const HUMAN_POLICY = /\b(publikasi(kan)?|publish|tayangkan|kirim ke (klien|pelanggan|publik)|tanda ?tangan|kontrak final|transfer dana|pembayaran|bayar|offer letter|phk|pecat|rilis ke produksi)\b/i;
-export function needsHumanApproval(t, requested) {
-  if (t.parentId) return false;
-  if (t.kind === 'goal') return true;
-  return !!requested || HUMAN_POLICY.test(`${t.title} ${t.description}`);
-}
+/** Only top-level work goes to humans; subtasks are reviewed by the orchestrator above them. Aturannya hidup di approvals.js (satu modul persetujuan). */
+export const needsHumanApproval = (t, requested) => approvals.needsHuman(t, requested);

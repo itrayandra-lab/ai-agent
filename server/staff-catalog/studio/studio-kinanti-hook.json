@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-kinanti-hook",
+  "division": "studio",
+  "employeeId": "kinanti",
+  "title": "Content Creator — Beauty (TikTok/Reels)",
+  "version": 1,
+  "name": "Pembuat variasi kata pembuka video",
+  "ringkas": "Buat lima variasi kalimat pembuka 3 detik pertama untuk satu topik sesuai gaya yang dipilih.",
+  "kataKunci": [
+    "hook",
+    "pembuka video",
+    "kata pembuka",
+    "tiktok",
+    "judul video"
+  ],
+  "inputs": [
+    {
+      "key": "topik",
+      "type": "text",
+      "label": "Topik video",
+      "required": true,
+      "contoh": "serum vitamin C"
+    },
+    {
+      "key": "gaya",
+      "type": "choice",
+      "label": "Gaya pembuka",
+      "required": true,
+      "default": "penasaran",
+      "choices": [
+        {
+          "v": "penasaran",
+          "t": "Bikin penasaran"
+        },
+        {
+          "v": "tegas",
+          "t": "Tegas"
+        },
+        {
+          "v": "empati",
+          "t": "Penuh empati"
+        },
+        {
+          "v": "humor",
+          "t": "Lucu"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Buat variasi",
+      "set": {
+        "hook": "({ penasaran: ['Ini yang jarang orang tahu soal #T#', 'Tunggu, kamu pasti belum tahu ini tentang #T#', '3 detik lagi kamu akan paham #T#', 'Kenapa semua orang bicara #T#?', 'Rahasia #T# yang tidak diceritakan'], tegas: ['Berhenti salah pakai #T#', 'Ini cara benar memakai #T#', 'Jangan beli #T# sebelum nonton ini', 'Satu aturan penting untuk #T#', 'Lakukan ini sebelum memakai #T#'], empati: ['Kalau kamu bingung soal #T#, kamu tidak sendiri', 'Aku dulu juga salah soal #T#', 'Pelan-pelan, kita bahas #T# bareng', 'Capek coba-coba? Ini soal #T#', 'Buat kamu yang baru mulai dengan #T#'], humor: ['Dompet: tolong jangan beli #T# lagi', 'Aku vs #T#: siapa yang menang?', 'POV: kamu baru kenal #T#', 'Kata mama #T# itu penting, ternyata benar', 'Sebelum #T#, hidup biasa saja'] })[input.gaya].map((h) => h.replace('#T#', input.topik))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.hook.length + ' hook gaya ' + input.gaya + ' untuk ' + input.topik",
+    "teks": "'# Variasi kata pembuka\\n\\n' + v.hook.map((h, i) => (i + 1) + '. ' + h).join('\\n') + '\\n\\nPilih satu, ucapkan dalam 3 detik pertama sambil menunjukkan produk.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'variasi-hook'",
+        "isi": "csv([['No', 'Hook']].concat(v.hook.map((h, i) => [i + 1, h])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "topik": "serum vitamin C",
+      "gaya": "penasaran"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 hook",
+        "serum vitamin C"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Content Creator — Beauty (TikTok/Reels) di divisi Content Studio, memakai bahasa awam",
+    "tujuan": "Buat lima variasi kalimat pembuka 3 detik pertama untuk satu topik sesuai gaya yang dipilih. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Buat iklan yang keren."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "hook"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat variasi kata pembuka video perlu dibaca bersama: hook menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

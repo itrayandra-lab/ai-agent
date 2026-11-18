@@ -21,7 +21,7 @@ const TOPICS = {
   kerja: {
     open: ['Kerjaan hari ini lumayan padat ya?', 'Eh, progres tugas kamu udah sampai mana?', 'Aku lagi mentok di satu bagian nih, ada ide?', 'Target minggu ini kayaknya bisa kekejar sih', 'Tadi aku baca brief barunya, menarik juga', 'Kamu ikut rapat tadi? Keputusannya apa?'],
     reply: ['Lumayan, tapi masih aman kok', 'Hampir selesai, tinggal rapi-rapi', 'Coba pecah jadi langkah kecil dulu deh', 'Iya nih, aku juga lagi ngejar deadline', 'Nanti aku bantu cek ya', 'Ikut. Intinya kita fokus ke prioritas yang paling berdampak'],
-    follow: ['Kalau gitu nanti aku kirim draft-nya ya', 'Oke, kita sinkron habis ini', 'Makasih ya, jadi lebih jelas', 'Siap, nanti aku tanya tim juga', 'Mantap, aku catat di Brain biar nggak lupa 🧠'],
+    follow: ['Kalau gitu nanti aku kirim draft-nya ya', 'Oke, kita sinkron habis ini', 'Makasih ya, jadi lebih jelas', 'Siap, nanti aku tanya tim juga', 'Mantap, aku catat di Catatan biar nggak lupa 🧠'],
     back: ['Sama-sama, santai aja', 'Kapan pun, tinggal panggil', 'Nanti kabari ya hasilnya', 'Gas! 💪', 'Sip, semangat!'],
   },
   makan: {
@@ -43,7 +43,7 @@ const TOPICS = {
     back: ['Ayo, mumpung belum gelap', 'Setuju banget', 'Hehe, jadi pengen rebahan di rumput', 'Iya, bikin adem 🌿'],
   },
   kantor: {
-    open: ['Kamu udah lihat plaza yang baru? Ada air mancurnya 😍', 'Brain tadi menyala terang banget, ada yang baru belajar kali ya', 'Katanya bakal ada demo di panggung nanti', 'Kamu tahu nggak, Sky Deck sekarang bisa dinaiki', 'Aku suka suasana kantor ini, hidup banget', 'Tadi ada drone lewat di atas kepala, lucu ya'],
+    open: ['Kamu udah lihat plaza yang baru? Ada air mancurnya 😍', 'Catatan tadi menyala terang banget, ada yang baru belajar kali ya', 'Katanya bakal ada demo di panggung nanti', 'Kamu tahu nggak, Sky Deck sekarang bisa dinaiki', 'Aku suka suasana kantor ini, hidup banget', 'Tadi ada drone lewat di atas kepala, lucu ya'],
     reply: ['Udah! Aku sempat duduk di bangkunya', 'Iya, aku juga lihat. Jadi penasaran', 'Wah jam berapa? Aku mau nonton', 'Udah dong, tangganya panjang tapi worth it', 'Setuju, nggak monoton', 'Hahaha, kayak di film ya'],
     follow: ['Kita nonton bareng ya', 'Nanti aku ajak yang lain', 'Besok aku mau coba kios kopinya juga', 'Pokoknya betah banget di sini'],
     back: ['Sip, jangan lupa kabari', 'Ayo ayo!', 'Hehe, kantor impian 😄', 'Setuju!'],
@@ -55,7 +55,7 @@ const TOPICS = {
     back: ['Kapan pun kamu butuh, bilang ya', 'Kita bareng-bareng kok 🤝', 'Pelan-pelan aja, nggak apa-apa', 'Semangat, aku di sini'],
   },
   teknologi: {
-    open: ['Kamu udah coba fitur agen yang baru?', 'Aku penasaran gimana Brain nyimpan semua pengetahuan itu', 'Kayaknya otomatisasi bisa hemat banyak waktu kita', 'Tadi aku lihat grafik kinerjanya, naik terus lho', 'Model yang kita pakai makin cepat ya', 'Aku lagi eksperimen prompt baru, hasilnya lucu'],
+    open: ['Kamu udah coba fitur baru buat pembantu?', 'Aku penasaran gimana Catatan nyimpan semua pengetahuan itu', 'Kayaknya otomatisasi bisa hemat banyak waktu kita', 'Tadi aku lihat grafik kinerjanya, naik terus lho', 'Otak yang kita pakai makin cepat ya', 'Aku lagi eksperimen cara bertanya yang baru, hasilnya lucu'],
     reply: ['Udah, lumayan ngebantu', 'Katanya dia bikin graf dari catatan kita 🧠', 'Betul, tapi tetap perlu dicek manusia', 'Wah mantap, tim kita makin solid', 'Iya, responsnya hampir instan', 'Coba tunjukin dong hasilnya'],
     follow: ['Nanti aku tulis di catatan biar yang lain tahu', 'Kita bikin demo kecil di panggung yuk', 'Ada yang bisa kita otomatisasi lagi kayaknya', 'Seru ya jadi bagian dari ini semua'],
     back: ['Setuju banget', 'Boleh, atur jadwalnya', 'Hehe, masa depan banget', 'Gas eksperimennya!'],
@@ -71,7 +71,7 @@ const CLOSE = ['Oke, aku lanjut dulu ya. Sampai nanti!', 'Seru ngobrol sama kamu
 
 // profession lines: said out loud while someone does their job somewhere in the open
 const PROF = {
-  content: ['Halo guys, balik lagi di channel aku! 🎬', 'Jangan lupa like, share, dan subscribe ya!', 'Take dua, tadi suaranya kurang jelas', 'Hari ini aku mau review fitur terbaru kita 📸', 'Oke kamera… 3, 2, 1, action!', 'Pencahayaannya udah pas belum?', 'Caption-nya mau yang lucu atau yang serius?', 'Ini konten buat besok jam tujuh pagi, jadwalkan ya', 'Wah, view-nya naik terus nih 📈', 'Cut! Kita ulang bagian pembukaan'],
+  content: ['Halo guys, balik lagi di channel aku! 🎬', 'Jangan lupa like, share, dan subscribe ya!', 'Take dua, tadi suaranya kurang jelas', 'Hari ini aku mau bahas fitur terbaru kita 📸', 'Oke kamera… 3, 2, 1, action!', 'Pencahayaannya udah pas belum?', 'Caption-nya mau yang lucu atau yang serius?', 'Ini konten buat besok jam tujuh pagi, jadwalkan ya', 'Wah, view-nya naik terus nih 📈', 'Cut! Kita ulang bagian pembukaan'],
   sketch: ['Warna ini terlalu pucat, tambah sedikit kontras', 'Aku coba layout yang lebih lega ya', 'Tipografinya kayaknya perlu diganti 🎨', 'Nah, begini baru enak dilihat', 'Sketsa kasar dulu, rapi-rapinya belakangan', 'Pakai grid delapan titik biar rapi'],
   pitch: ['Paket ini cuma berlaku sampai akhir minggu! 🤝', 'Coba dulu, nggak puas kami ganti', 'Pelanggan kemarin bilang hasilnya luar biasa', 'Kalau ambil dua, ada bonus spesial lho', 'Boleh aku jelaskan manfaatnya dalam satu menit?', 'Terima kasih sudah mampir, ini kartu namaku'],
   demo: ['Hasil uji stabilitas lolos ✅', 'Sampel nomor tujuh menunjukkan hasil bagus 🔬', 'Kita ulangi sekali lagi buat memastikan', 'Catat suhunya, jangan sampai lupa', 'Datanya konsisten, aman buat lanjut', 'Hati-hati, reaksinya sensitif'],
@@ -81,14 +81,14 @@ const PROF = {
   fountain: ['Gemericik airnya bikin tenang 🌿', 'Duduk sebentar di sini enak banget', 'Aku suka suara air mancur'],
   kiosk: ['Satu kopi susu, kurang manis ya ☕', 'Kue hari ini apa saja?', 'Aroma kopinya bikin semangat'],
   patrol: ['Area plaza aman terkendali 🛡️', 'Semua pintu terkunci dan lampu menyala', 'Tidak ada yang mencurigakan, lanjut keliling', 'Sensor aktif, semua normal'],
-  brain: ['Brain menyala terang, ada yang baru belajar', 'Rasanya pengetahuan kita tumbuh tiap hari 🧠', 'Kalau ragu, tanya Brain saja'],
+  brain: ['Catatan menyala terang, ada yang baru belajar', 'Rasanya pengetahuan kita tumbuh tiap hari 🧠', 'Kalau ragu, tanya Catatan saja'],
   audience: ['Bagus presentasinya! 👏', 'Boleh aku tanya soal angkanya?', 'Catat, ini penting', 'Setuju dengan poin tadi'],
 };
 // what a person says while doing their normal job at the desk, by division
 const WORK = {
   mkt: ['Lagi susun kalender konten bulan depan 📅', 'Copy iklannya perlu dipertajam', 'Angka jangkauan kampanye naik lagi 📈', 'Aku ukur performa tiap kanal dulu'],
   sales: ['Follow-up klien yang kemarin dulu ya', 'Pipeline minggu ini kelihatan sehat 💼', 'Lagi siapin proposal penawaran', 'Satu prospek siap closing!'],
-  eng: ['Bug-nya ketemu, tinggal diperbaiki 🐞', 'Lagi review pull request nih', 'Kompilasinya lama banget ya', 'Tes semuanya hijau, aman 💻'],
+  eng: ['Bug-nya ketemu, tinggal diperbaiki 🐞', 'Lagi memeriksa perubahan kode nih', 'Kompilasinya lama banget ya', 'Tes semuanya hijau, aman 💻'],
   design: ['Lagi rapikan komponen di pustaka desain 🎨', 'Palet warnanya aku ubah sedikit', 'Mockup halaman depan hampir kelar', 'Revisi dari tim aku kerjakan sekarang'],
   cs: ['Pelanggan ini butuh balasan cepat 💬', 'Aku catat keluhan ini buat tim produk', 'Tiket hari ini hampir kosong 🙌', 'Terima kasih sudah sabar menunggu ya'],
   fin: ['Rekonsiliasi akunnya sedikit selisih 🧾', 'Laporan arus kas hampir selesai', 'Cek ulang angka sebelum dikirim', 'Anggaran kuartal ini aman'],
@@ -96,10 +96,10 @@ const WORK = {
   ops: ['Cek ulang prosedur operasional ⚙️', 'Semua proses berjalan lancar', 'Aku pantau metrik harian dulu', 'Ada bottleneck kecil, aku urai'],
   legal: ['Lagi baca klausul kontrak ini ⚖️', 'Perlu tambahan pasal soal data', 'Dokumen ini harus ditinjau dua kali', 'Kepatuhan aman, tinggal tanda tangan'],
   it: ['Patch keamanan terpasang 🛡️', 'Log server kelihatan normal', 'Ada percobaan login aneh, aku blok', 'Cadangan malam ini berhasil'],
-  data: ['Dataset baru selesai dibersihkan 📊', 'Model ini akurasinya naik dua poin', 'Aku bikin dasbor buat tim', 'Ada pola menarik di data pelanggan'],
+  data: ['Data baru selesai dibersihkan 📊', 'Hasil hitungannya naik dua poin', 'Aku bikin dasbor buat tim', 'Ada pola menarik di data pelanggan'],
   reg: ['Memeriksa dokumen registrasi produk 📜', 'Tenggat pengajuan minggu depan', 'Aturan baru perlu kita pelajari'],
   ecom: ['Katalog produk baru diunggah 🛒', 'Stok toko online aku sinkronkan', 'Foto produknya cantik banget', 'Promo kilat siap tayang'],
-  kms: ['Merapikan catatan di Brain 🗂️', 'Aku tautkan dua catatan yang terkait', 'Pengetahuan baru masuk indeks', 'Sumber ini layak disimpan'],
+  kms: ['Merapikan catatan 🗂️', 'Aku tautkan dua catatan yang terkait', 'Pengetahuan baru masuk indeks', 'Sumber ini layak disimpan'],
   exec: ['Meninjau ringkasan performa perusahaan 🧭', 'Prioritas kuartal ini harus tajam', 'Aku butuh laporan singkat dari semua divisi'],
   bizdev: ['Menjajaki kemitraan baru 🤝', 'Draf kerja sama hampir siap', 'Peta pasar ini menarik juga'],
   retail: ['Cek tata letak display toko 🛍️', 'Penjualan akhir pekan naik', 'Stok rak depan perlu diisi'],

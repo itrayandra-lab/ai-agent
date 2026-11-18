@@ -246,3 +246,37 @@ test('suara pria: bila browser tidak punya suara pria Indonesia, agen cowok mema
   assert.match(src, /maleEdge: true/);
   assert.match(fs.readFileSync(path.join(root, 'public/js/views.js'), 'utf8'), /data-mm="1"/);
 });
+
+test('percakapan: hanya pesan baru, segar, dari percakapan yang Owner ikuti, tanpa salinan cermin dan perintah garis miring', async () => {
+  const { pickSpeakable } = await import('../public/js/tts.js');
+  const now = 1_000_000, me = 'owner';
+  const channels = [{ id: 'dm1', kind: 'dm', members: ['owner', 'sora'] }, { id: 'g1', kind: 'channel', members: ['owner', 'dewi', 'raka', 'maya'] }, { id: 'x', kind: 'dm', members: ['dewi', 'raka'] }, { id: 'mtg', kind: 'meeting', members: ['owner', 'bima', 'laras'] }, { id: 'general', kind: 'channel' }];
+  const msgs = [
+    { id: '1', channelId: 'dm1', authorId: 'owner', text: 'Halo Sora', t: now - 1000 },
+    { id: '2', channelId: 'dm1', authorId: 'sora', text: 'Halo Owner, saya siap.', t: now - 500 },
+    { id: '3', channelId: 'x', authorId: 'dewi', text: 'obrolan antar agen', t: now - 500 },
+    { id: '4', channelId: 'g1', authorId: 'dewi', text: 'Saya setuju.', t: now - 400 },
+    { id: '5', channelId: 'g1', authorId: 'raka', text: 'Saya juga.', t: now - 300 },
+    { id: '6', channelId: 'dm1', authorId: 'sora', text: 'lama sekali', t: now - 60000 },
+    { id: '7', channelId: 'mtg', authorId: 'bima', text: 'Usul saya begini.', t: now - 200 },
+    { id: '8', channelId: 'g1', authorId: 'bima', text: 'salinan cermin', t: now - 200, mirrored: true },
+    { id: '9', channelId: 'dm1', authorId: 'owner', text: '/rapat tentang promo', t: now - 100 },
+    { id: '10', channelId: 'general', authorId: 'pa-owner', text: 'Dicatat, Owner.', t: now - 50 },
+  ];
+  const seen = new Set(), out = pickSpeakable(msgs, channels, me, seen, now);
+  assert.deepEqual(out.map((m) => m.id), ['1', '2', '4', '5', '7', '10'], '#general tanpa daftar anggota terbuka untuk semua');
+  assert.equal(out[0].owner, true); assert.equal(out[1].owner, false);
+  assert.deepEqual(out[2].group.sort(), ['dewi', 'maya', 'raka'], 'grup untuk membedakan suara tiap anggota');
+  assert.deepEqual(pickSpeakable(msgs, channels, me, seen, now), [], 'pesan yang sama tidak dibacakan dua kali');
+});
+
+test('giliran: baris Owner sendiri maju ke depan dan tidak ditahan, balasan agen menyusul', () => {
+  const s = sim();
+  s.floor.ownerActive();                                 // Owner baru selesai mengetik
+  s.floor.enqueue({ id: 'balasan1' }); s.floor.enqueue({ id: 'balasan2' });
+  s.floor.enqueue({ id: 'owner', manual: true }, { front: true });
+  s.clk.advance(50); assert.deepEqual(s.plays.map((p) => p[0]), ['owner'], 'Owner didengar dulu, langsung');
+  s.clk.advance(20000);
+  assert.deepEqual(s.plays.map((p) => p[0]), ['owner', 'balasan1', 'balasan2']);
+  assert.equal(s.overlap, 0);
+});

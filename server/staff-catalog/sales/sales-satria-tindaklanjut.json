@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-satria-tindaklanjut",
+  "division": "sales",
+  "employeeId": "satria",
+  "title": "Inside Sales — Clinic & Salon B2B",
+  "version": 1,
+  "name": "Penyusun jadwal tindak lanjut setelah demo",
+  "ringkas": "Buat jadwal tindak lanjut 14 hari setelah demo, ritmenya menyesuaikan seberapa berminat calon pelanggan.",
+  "kataKunci": [
+    "tindak lanjut",
+    "follow up",
+    "setelah demo",
+    "jadwal kontak",
+    "pipeline b2b"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama calon pelanggan",
+      "required": true,
+      "contoh": "Salon Anggun"
+    },
+    {
+      "key": "demo",
+      "type": "date",
+      "label": "Tanggal demo",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "minat",
+      "type": "choice",
+      "label": "Seberapa berminat?",
+      "required": true,
+      "default": "hangat",
+      "choices": [
+        {
+          "v": "panas",
+          "t": "Sangat berminat"
+        },
+        {
+          "v": "hangat",
+          "t": "Cukup berminat"
+        },
+        {
+          "v": "dingin",
+          "t": "Masih ragu"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "plan": "({ panas: [[0, 'Kirim terima kasih dan ringkasan demo'], [1, 'Kirim penawaran tertulis'], [3, 'Telepon: tanya hal yang masih mengganjal'], [7, 'Tawarkan batas waktu harga khusus'], [14, 'Minta keputusan akhir']], hangat: [[0, 'Kirim terima kasih dan ringkasan demo'], [3, 'Kirim contoh hasil dan testimoni'], [7, 'Telepon: tanya perkembangan'], [14, 'Tawarkan uji coba satu bulan']], dingin: [[1, 'Kirim terima kasih dan materi singkat'], [7, 'Kirim artikel yang relevan'], [14, 'Tanya apakah sudah ada perubahan kebutuhan']] })[input.minat]",
+        "jadwal": "v.plan.map((p) => ({ tanggal: new Date(Date.parse(input.demo) + p[0] * 864e5).toISOString().slice(0, 10), hari: p[0], tugas: p[1] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Jadwal ' + v.jadwal.length + ' kontak untuk ' + input.nama + ' sampai ' + v.jadwal[v.jadwal.length - 1].tanggal",
+    "teks": "'# Tindak lanjut ' + input.nama + '\\n\\n' + v.jadwal.map((j) => '- [ ] ' + j.tanggal + ': ' + j.tugas).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tindak-lanjut-' + input.nama",
+        "isi": "csv([['Tanggal', 'Hari ke', 'Tugas']].concat(v.jadwal.map((j) => [j.tanggal, j.hari, j.tugas])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "nama": "Salon Anggun",
+      "demo": "2026-12-01",
+      "minat": "hangat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "4 kontak",
+        "2026-12-15",
+        "Tawarkan uji coba satu bulan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Inside Sales — Clinic & Salon B2B di divisi Sales, memakai bahasa awam",
+    "tujuan": "Buat jadwal tindak lanjut 14 hari setelah demo, ritmenya menyesuaikan seberapa berminat calon pelanggan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
+      "buruk": "Beli sekarang atau rugi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "tindak lanjut"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun jadwal tindak lanjut setelah demo perlu dibaca bersama: tindak lanjut menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

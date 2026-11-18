@@ -2,6 +2,9 @@
 // The engine speaks Anthropic-style messages/tool blocks; the Groq adapter translates both ways so agent code is provider-agnostic.
 import Anthropic from '@anthropic-ai/sdk';
 import * as store from './store.js';
+import * as secure from './secure.js';
+import * as quota from './limits.js';
+import * as platform from './platform.js';
 
 // USD per 1M tokens [input, output]
 const PRICES = {
@@ -19,8 +22,11 @@ const GROQ_STRICT = new Set(['openai/gpt-oss-120b', 'openai/gpt-oss-20b']);
 const GROQ_URL = process.env.RAY_GROQ_BASE_URL || 'https://api.groq.com/openai/v1';
 
 const S = () => store.get().settings;
-const claudeKey = () => S().apiKey || process.env.ANTHROPIC_API_KEY || '';
-const groqKey = () => S().groqApiKey || process.env.GROQ_API_KEY || '';
+// kunci per ruang kerja disimpan sebagai amplop terenkripsi (secure.seal); teks biasa lama tetap terbaca
+const stored = (v) => { try { return secure.open(v, 'ws-secret'); } catch { return ''; } };
+// urutan: kunci ruang kerja → kunci platform (konsol pengelola) → .env
+const claudeKey = () => stored(S().apiKey) || platform.secret('anthropic') || process.env.ANTHROPIC_API_KEY || '';
+const groqKey = () => stored(S().groqApiKey) || platform.secret('groq') || process.env.GROQ_API_KEY || '';
 export const hasGroq = () => !!groqKey();
 
 const GROQ_UTILITY_MODEL = /(?:whisper|orpheus|prompt-guard|safeguard)/i;
@@ -87,9 +93,9 @@ export function provider() {
 }
 export const isLive = () => provider() !== 'sim';
 export function defaultModels(p = provider()) {
-  const s = S();
-  return p === 'groq' ? { lead: s.groqModel || 'openai/gpt-oss-120b', worker: s.groqWorkerModel || 'openai/gpt-oss-120b', small: 'openai/gpt-oss-20b', smart: s.groqSmartModel || 'openai/gpt-oss-120b', vision: s.groqVisionModel || 'qwen/qwen3.8-27b' }
-    : { lead: s.model || 'claude-opus-5-5', worker: s.workerModel || s.model, small: 'claude-haiku-5-5', smart: s.model || 'claude-opus-5-5', vision: s.model || 'claude-opus-5-5' };
+  const s = S(), pm = platform.model;   // pilihan model di konsol pengelola (bila ada) mengalahkan pilihan per ruang kerja
+  return p === 'groq' ? { lead: pm('groqLead') || s.groqModel || 'openai/gpt-oss-120b', worker: pm('groqWorker') || s.groqWorkerModel || 'openai/gpt-oss-120b', small: pm('groqSmall') || 'openai/gpt-oss-20b', smart: pm('groqLead') || s.groqSmartModel || 'openai/gpt-oss-120b', vision: s.groqVisionModel || 'qwen/qwen3.8-27b' }
+    : { lead: pm('claudeLead') || s.model || 'claude-opus-5-5', worker: pm('claudeWorker') || s.workerModel || s.model, small: pm('claudeSmall') || 'claude-haiku-5-5', smart: pm('claudeLead') || s.model || 'claude-opus-5-5', vision: pm('claudeLead') || s.model || 'claude-opus-5-5' };
 }
 
 let client = null, clientKey = null;
@@ -292,6 +298,7 @@ function flattenTools(messages) {
 export async function call({ system, messages, tools, model, employee, maxTokens = 8000, effort, format, taskId }) {
   const p = provider();
   if (p === 'sim') throw new Error('Mode simulasi: tidak ada provider AI aktif');
+  quota.assertGlobalBudget();   // penutup anggaran global platform (mode publik)
   if (p === 'groq') {
     // Discovery is cached for ten minutes and shared by concurrent calls.
     try { await refreshGroqModels(); } catch (err) { console.warn(`[llm] daftar model Groq gagal dimuat: ${err.message}`); }

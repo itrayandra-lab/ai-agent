@@ -1,37 +1,180 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "mkt-bram",
   "division": "mkt",
   "employeeId": "bram",
   "title": "Paid Social Specialist (Meta & TikTok)",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Bram",
-    "tugasPeran": [
-      "Merancang dan mengoptimasi kampanye Meta & TikTok Ads",
-      "Uji A/B kreatif dan audiens",
-      "Laporan ROAS mingguan"
-    ],
-    "keahlian": [
-      "meta ads",
-      "tiktok ads",
-      "roas"
-    ],
-    "contohTugas": [
-      "Struktur kampanye TikTok Ads untuk sunscreen",
-      "Analisis kreatif dengan CTR terbaik"
+  "name": "Perencana uji A/B iklan sosial",
+  "ringkas": "Bagi anggaran uji antar varian iklan, tentukan batas belanja sebelum dihentikan, dan buat matriks hal yang diuji.",
+  "kataKunci": [
+    "uji a/b",
+    "iklan meta",
+    "iklan tiktok",
+    "anggaran uji",
+    "varian iklan"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Produk yang diiklankan",
+      "required": true,
+      "contoh": "Serum Ray"
+    },
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Platform",
+      "required": true,
+      "default": "meta",
+      "choices": [
+        {
+          "v": "meta",
+          "t": "Meta (Instagram dan Facebook)"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        }
+      ]
+    },
+    {
+      "key": "harian",
+      "type": "number",
+      "label": "Anggaran uji per hari (Rp)",
+      "required": true,
+      "contoh": "300000"
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama uji",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3 hari"
+        },
+        {
+          "v": "5",
+          "t": "5 hari"
+        },
+        {
+          "v": "7",
+          "t": "7 hari"
+        }
+      ]
+    },
+    {
+      "key": "varian",
+      "type": "choice",
+      "label": "Jumlah varian iklan",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2 varian"
+        },
+        {
+          "v": "3",
+          "t": "3 varian"
+        },
+        {
+          "v": "4",
+          "t": "4 varian"
+        }
+      ]
+    },
+    {
+      "key": "cpa",
+      "type": "number",
+      "label": "Biaya per pembelian yang kamu targetkan (Rp)",
+      "required": true,
+      "contoh": "40000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Bagi anggaran",
+      "set": {
+        "total": "Number(input.harian) * Number(input.durasi)",
+        "perVarianHari": "Math.floor(Number(input.harian) / Number(input.varian))",
+        "perVarian": "v.perVarianHari * Number(input.durasi)",
+        "batas": "Number(input.cpa) * 2",
+        "ujian": "['Kalimat pembuka (hook)', 'Gambar atau video', 'Penawaran', 'Ajakan bertindak']",
+        "matriks": "['A', 'B', 'C', 'D'].slice(0, Number(input.varian)).map((k, i) => [k, v.ujian[i], 'Ubah hanya ini; sisanya sama dengan varian A'])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Uji ' + input.varian + ' varian selama ' + input.durasi + ' hari: total ' + rp(v.total) + ', ' + rp(v.perVarian) + ' per varian'",
+    "teks": "'# Rencana uji A/B (' + input.platform + ')\\n\\n- Produk: ' + input.produk + '\\n- Anggaran uji: ' + rp(v.total) + ' (' + rp(input.harian) + ' x ' + input.durasi + ' hari)\\n- Per varian: ' + rp(v.perVarianHari) + ' per hari, ' + rp(v.perVarian) + ' total\\n\\n## Yang diuji\\n' + tabel(['Varian', 'Yang diubah', 'Catatan'], v.matriks) + '\\n\\n## Aturan keputusan\\n- Hentikan varian yang sudah menghabiskan ' + rp(v.batas) + ' (2x target) tanpa satu pun pembelian.\\n- Jangan ubah apa pun pada 48 jam pertama.\\n- Pilih pemenang dari biaya per pembelian, bukan hanya klik.\\n- Naikkan anggaran pemenang bertahap, maksimal 20% per hari.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-uji-iklan'",
+        "isi": "csv([['Varian', 'Yang diubah', 'Anggaran per hari', 'Anggaran total', 'Batas hentikan']].concat(v.matriks.map((m) => [m[0], m[1], v.perVarianHari, v.perVarian, v.batas])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Ads",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Ray",
+      "platform": "meta",
+      "harian": 300000,
+      "durasi": "5",
+      "varian": "3",
+      "cpa": 40000
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "total Rp 1.500.000",
+        "Rp 500.000 per varian",
+        "Rp 80.000"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Paid Social Specialist (Meta & TikTok) di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Bagi anggaran uji antar varian iklan, tentukan batas belanja sebelum dihentikan, dan buat matriks hal yang diuji. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "uji a/b"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perencana uji a/b iklan sosial perlu dibaca bersama: uji a/b menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "bizdev-samudra-pasar",
+  "division": "bizdev",
+  "employeeId": "samudra",
+  "title": "Export & International Expansion Analyst",
+  "version": 1,
+  "name": "Pembanding pasar ekspor",
+  "ringkas": "Urutkan negara tujuan ekspor dari nilai yang Anda berikan untuk ukuran pasar, kemudahan aturan, persaingan, dan kedekatan.",
+  "kataKunci": [
+    "pasar ekspor",
+    "perbandingan negara",
+    "prioritas",
+    "skor pasar",
+    "ekspansi"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Nilai 1 sampai 5 tiap negara (satu baris: negara | ukuran pasar | kemudahan aturan | persaingan rendah | kedekatan)",
+      "required": true,
+      "contoh": "Malaysia | 4 | 3 | 3 | 5\nSingapura | 3 | 4 | 2 | 5\nUni Emirat Arab | 5 | 2 | 3 | 2"
+    },
+    {
+      "key": "fokus",
+      "type": "choice",
+      "label": "Yang paling diutamakan",
+      "required": true,
+      "default": "seimbang",
+      "choices": [
+        {
+          "v": "pasar",
+          "t": "Ukuran pasar"
+        },
+        {
+          "v": "aturan",
+          "t": "Kemudahan aturan"
+        },
+        {
+          "v": "seimbang",
+          "t": "Seimbang"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Beri peringkat",
+      "set": {
+        "bobot": "({ pasar: [40, 20, 20, 20], aturan: [20, 40, 20, 20], seimbang: [25, 25, 25, 25] })[input.fokus]",
+        "rows": "baris(input.data).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const n = [1, 2, 3, 4].map((i) => Math.min(5, Math.max(1, num(p[i])))); const skor = Math.round(n.reduce((a, b, i) => a + b * v.bobot[i], 0) / 5 * 10) / 10; return { negara: p[0] || '-', nilai: n, skor: skor }; }).sort((a, b) => b.skor - a.skor)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Prioritas pertama: ' + v.rows[0].negara + ' (skor ' + v.rows[0].skor + ' dari 100)'",
+    "teks": "'# Peringkat pasar ekspor\\n\\n' + tabel(['Peringkat', 'Negara', 'Pasar', 'Aturan', 'Persaingan', 'Kedekatan', 'Skor'], v.rows.map((r, i) => [i + 1, r.negara, r.nilai[0], r.nilai[1], r.nilai[2], r.nilai[3], r.skor])) + '\\n\\nNilai berasal dari isian Anda; periksa aturan resmi tiap negara sebelum memutuskan.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'peringkat-pasar-ekspor'",
+        "isi": "csv([['Peringkat', 'Negara', 'Pasar', 'Aturan', 'Persaingan', 'Kedekatan', 'Skor']].concat(v.rows.map((r, i) => [i + 1, r.negara, r.nilai[0], r.nilai[1], r.nilai[2], r.nilai[3], r.skor])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Malaysia | 4 | 3 | 3 | 5\nSingapura | 3 | 4 | 2 | 5\nUni Emirat Arab | 5 | 2 | 3 | 2",
+      "fokus": "seimbang"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Prioritas pertama: Malaysia",
+        "skor 75 dari 100"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Export & International Expansion Analyst di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Urutkan negara tujuan ekspor dari nilai yang Anda berikan untuk ukuran pasar, kemudahan aturan, persaingan, dan kedekatan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "pasar ekspor"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembanding pasar ekspor perlu dibaca bersama: pasar ekspor menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

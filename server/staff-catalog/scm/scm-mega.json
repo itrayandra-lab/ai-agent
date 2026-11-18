@@ -1,37 +1,182 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "scm-mega",
   "division": "scm",
   "employeeId": "mega",
   "title": "Demand Planner",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Mega",
-    "tugasPeran": [
-      "Membuat forecast per SKU per minggu",
-      "Menghitung uplift promo kampanye",
-      "Mengukur akurasi forecast"
-    ],
-    "keahlian": [
-      "forecast",
-      "demand",
-      "s&op"
-    ],
-    "contohTugas": [
-      "Forecast penjualan 12.12 per SKU",
-      "Analisis musim Ramadan"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Peramal permintaan mingguan",
+  "ringkas": "Perkirakan penjualan beberapa minggu ke depan dari data minggu-minggu lalu, dengan tambahan untuk promo dan ukuran ketepatannya.",
+  "kataKunci": [
+    "forecast",
+    "perkiraan permintaan",
+    "penjualan mingguan",
+    "promo",
+    "akurasi"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Penjualan tiap minggu, urut dari yang lama (pisahkan dengan spasi)",
+      "required": true,
+      "contoh": "120 130 125 140 150 145 160"
+    },
+    {
+      "key": "metode",
+      "type": "choice",
+      "label": "Cara memperkirakan",
+      "required": true,
+      "default": "ma3",
+      "choices": [
+        {
+          "v": "ma3",
+          "t": "Rata-rata 3 minggu terakhir"
+        },
+        {
+          "v": "ma4",
+          "t": "Rata-rata 4 minggu terakhir"
+        },
+        {
+          "v": "tren",
+          "t": "Rata-rata ditambah kecenderungan naik atau turun"
+        }
+      ]
+    },
+    {
+      "key": "horizon",
+      "type": "choice",
+      "label": "Berapa minggu ke depan",
+      "required": true,
+      "default": "4",
+      "choices": [
+        {
+          "v": "4",
+          "t": "4 minggu"
+        },
+        {
+          "v": "8",
+          "t": "8 minggu"
+        }
+      ]
+    },
+    {
+      "key": "promo",
+      "type": "choice",
+      "label": "Minggu promo",
+      "required": true,
+      "default": "0",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tidak ada promo"
+        },
+        {
+          "v": "1",
+          "t": "Minggu ke-1"
+        },
+        {
+          "v": "2",
+          "t": "Minggu ke-2"
+        },
+        {
+          "v": "3",
+          "t": "Minggu ke-3"
+        },
+        {
+          "v": "4",
+          "t": "Minggu ke-4"
+        }
+      ]
+    },
+    {
+      "key": "uplift",
+      "type": "number",
+      "label": "Tambahan penjualan saat promo (%)",
+      "required": false,
+      "contoh": "20",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Perkirakan",
+      "set": {
+        "x": "String(input.data).split(/[\\s,;]+/).filter((s) => s !== '').map((s) => Number(s)).filter((n) => Number.isFinite(n) && n >= 0).slice(-104)",
+        "n": "input.metode === 'ma4' ? 4 : 3",
+        "dasar": "v.x.length >= 3 ? Math.round(v.x.slice(-v.n).reduce((a, b) => a + b, 0) / Math.min(v.n, v.x.length)) : 0",
+        "slope": "input.metode === 'tren' && v.x.length >= 4 ? (v.x[v.x.length - 1] - v.x[v.x.length - 4]) / 3 : 0",
+        "ramal": "[1, 2, 3, 4, 5, 6, 7, 8].slice(0, num(input.horizon)).map((k) => { const b = input.metode === 'tren' ? Math.max(0, Math.round(v.x[v.x.length - 1] + v.slope * k)) : v.dasar; const promo = String(k) === String(input.promo); return { minggu: k, nilai: promo ? Math.round(b * (1 + num(input.uplift) / 100)) : b, promo: promo }; })",
+        "total": "v.ramal.reduce((a, b) => a + b.nilai, 0)",
+        "galat": "(() => { const e = v.x.map((val, i) => i >= v.n && val > 0 ? Math.abs(val - v.x.slice(i - v.n, i).reduce((a, b) => a + b, 0) / v.n) / val : null).filter((q) => q !== null); return e.length ? Math.round(e.reduce((a, b) => a + b, 0) / e.length * 1000) / 10 : null; })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.x.length < 3 ? 'Data terlalu sedikit: isi minimal 3 minggu' : 'Perkiraan ' + v.ramal.length + ' minggu: total ' + v.total + ' unit' + (v.galat !== null ? ', ketepatan uji mundur ' + Math.round((100 - v.galat) * 10) / 10 + '%' : '')",
+    "teks": "'# Perkiraan permintaan\\n\\n' + (v.x.length < 3 ? 'Data terlalu sedikit; isi minimal 3 minggu.' : tabel(['Minggu', 'Perkiraan (unit)', 'Promo'], v.ramal.map((r) => ['Minggu ke-' + r.minggu, r.nilai, r.promo ? 'Ya (+' + num(input.uplift) + '%)' : '-'])) + '\\n\\nTotal: **' + v.total + ' unit**' + (v.galat !== null ? '  \\nSelisih rata-rata uji mundur: ' + v.galat + '%' : ''))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'perkiraan-permintaan'",
+        "isi": "csv([['Minggu', 'Perkiraan', 'Promo']].concat(v.ramal.map((r) => [r.minggu, r.nilai, r.promo ? 'Ya' : ''])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "data": "120 130 125 140 150 145 160",
+      "metode": "ma3",
+      "horizon": "4",
+      "promo": "2",
+      "uplift": "20"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "total 638 unit",
+        "Minggu ke-2",
+        "ketepatan uji mundur 90.8%"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Demand Planner di divisi Supply Chain & Warehouse, memakai bahasa awam",
+    "tujuan": "Perkirakan penjualan beberapa minggu ke depan dari data minggu-minggu lalu, dengan tambahan untuk promo dan ukuran ketepatannya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Stok sepertinya cukup."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "forecast"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil peramal permintaan mingguan perlu dibaca bersama: forecast menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

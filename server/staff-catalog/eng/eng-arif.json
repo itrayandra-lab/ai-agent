@@ -1,39 +1,153 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "eng-arif",
   "division": "eng",
   "employeeId": "arif",
   "title": "Fullstack Engineer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Arif",
-    "tugasPeran": [
-      "Merancang dan mendokumentasikan implementasi fitur",
-      "Menulis spesifikasi API dan model data",
-      "Membuat estimasi dan rencana rilis"
-    ],
-    "keahlian": [
-      "frontend",
-      "backend",
-      "api",
-      "database"
-    ],
-    "contohTugas": [
-      "Rancang API endpoint laporan otomatis",
-      "Buat model data untuk modul inventori",
-      "Tulis dokumentasi integrasi webhook"
+  "name": "Penyusun daftar alamat layanan",
+  "ringkas": "Ubah daftar data yang dikelola menjadi tabel alamat layanan (tambah, lihat, ubah, hapus) beserta kerangka dokumennya.",
+  "kataKunci": [
+    "endpoint",
+    "rest",
+    "crud",
+    "spesifikasi layanan",
+    "openapi"
+  ],
+  "inputs": [
+    {
+      "key": "layanan",
+      "type": "text",
+      "label": "Nama layanan",
+      "required": true,
+      "contoh": "Toko Online"
+    },
+    {
+      "key": "sumber",
+      "type": "longtext",
+      "label": "Data yang dikelola (satu baris: nama | kolom1, kolom2, kolom3)",
+      "required": true,
+      "contoh": "produk | nama, harga, stok"
+    },
+    {
+      "key": "versi",
+      "type": "choice",
+      "label": "Pakai penanda versi di alamat?",
+      "required": true,
+      "default": "v1",
+      "choices": [
+        {
+          "v": "v1",
+          "t": "Ya, awalan /v1"
+        },
+        {
+          "v": "tanpa",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "akses",
+      "type": "choice",
+      "label": "Siapa yang boleh mengakses?",
+      "required": true,
+      "default": "login",
+      "choices": [
+        {
+          "v": "terbuka",
+          "t": "Siapa saja"
+        },
+        {
+          "v": "login",
+          "t": "Harus login"
+        },
+        {
+          "v": "peran",
+          "t": "Login dan sesuai peran"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun alamat",
+      "set": {
+        "pre": "input.versi === 'v1' ? '/v1' : ''",
+        "res": "baris(input.sumber).slice(0, 25).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: (p[0] || 'data').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), kolom: (p[1] || '').split(',').map((s) => s.trim()).filter(Boolean) }; })",
+        "akses": "({ terbuka: 'Siapa saja', login: 'Harus login', peran: 'Login dan peran sesuai' })[input.akses]",
+        "ep": "v.res.reduce((a, r) => a.concat([['GET', v.pre + '/' + r.nama, 'Daftar ' + r.nama, '200'], ['POST', v.pre + '/' + r.nama, 'Tambah ' + r.nama, '201'], ['GET', v.pre + '/' + r.nama + '/{id}', 'Detail ' + r.nama, '200'], ['PUT', v.pre + '/' + r.nama + '/{id}', 'Ubah ' + r.nama, '200'], ['DELETE', v.pre + '/' + r.nama + '/{id}', 'Hapus ' + r.nama, '204']]), [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ep.length + ' alamat layanan untuk ' + v.res.length + ' jenis data di ' + input.layanan",
+    "teks": "'# Alamat layanan ' + input.layanan + '\\n\\nAkses: ' + v.akses + '\\n\\n' + tabel(['Metode', 'Alamat', 'Fungsi', 'Kode sukses'], v.ep.map((e) => [e[0], e[1], e[2], e[3]])) + '\\n\\n' + v.res.map((r) => '**' + r.nama + '** memuat: ' + (r.kolom.join(', ') || '(belum ada kolom)')).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'alamat-layanan'",
+        "isi": "csv([['Metode', 'Alamat', 'Fungsi', 'Akses', 'Kode sukses']].concat(v.ep.map((e) => [e[0], e[1], e[2], v.akses, e[3]])))"
+      },
+      {
+        "jenis": "md",
+        "nama": "'kerangka-dokumen-layanan'",
+        "isi": "'# ' + input.layanan + '\\n\\n~~~yaml\\nopenapi: 3.0.3\\ninfo:\\n  title: ' + input.layanan + '\\n  version: 1.0.0\\npaths:\\n' + v.res.map((r) => '  ' + v.pre + '/' + r.nama + ':\\n    get:\\n      summary: Daftar ' + r.nama + '\\n    post:\\n      summary: Tambah ' + r.nama + '\\n  ' + v.pre + '/' + r.nama + '/{id}:\\n    get:\\n      summary: Detail ' + r.nama + '\\n    put:\\n      summary: Ubah ' + r.nama + '\\n    delete:\\n      summary: Hapus ' + r.nama).join('\\n') + '\\n~~~\\n'"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "layanan": "Toko Online",
+      "sumber": "produk | nama, harga, stok\npesanan | pelanggan_id, total, status",
+      "versi": "v1",
+      "akses": "login"
+    },
+    "expect": {
+      "berkas": 2,
+      "mengandung": [
+        "10 alamat layanan",
+        "/v1/produk/{id}",
+        "openapi: 3.0.3"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Fullstack Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Ubah daftar data yang dikelola menjadi tabel alamat layanan (tambah, lihat, ubah, hapus) beserta kerangka dokumennya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "endpoint"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun daftar alamat layanan perlu dibaca bersama: endpoint menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -1,38 +1,124 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "eng-tania",
   "division": "eng",
   "employeeId": "tania",
   "title": "QA Engineer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Tania",
-    "tugasPeran": [
-      "Menyusun test plan dan test case",
-      "Menguji regresi sebelum rilis",
-      "Menulis bug report yang bisa direproduksi"
-    ],
-    "keahlian": [
-      "test plan",
-      "test case",
-      "bug report"
-    ],
-    "contohTugas": [
-      "Buat test plan fitur integrasi WhatsApp",
-      "Susun checklist regresi rilis",
-      "Tulis test case untuk alur pembayaran"
+  "name": "Pembuat kasus uji formulir",
+  "ringkas": "Ubah aturan isian formulir menjadi daftar kasus uji lengkap: kosong, batas bawah dan atas, serta isian yang salah.",
+  "kataKunci": [
+    "kasus uji",
+    "test case",
+    "formulir",
+    "batas nilai",
+    "validasi"
+  ],
+  "inputs": [
+    {
+      "key": "formulir",
+      "type": "text",
+      "label": "Nama formulir",
+      "required": true,
+      "contoh": "Pendaftaran"
+    },
+    {
+      "key": "kolom",
+      "type": "longtext",
+      "label": "Isian formulir (satu baris: nama | jenis teks/email/angka | wajib ya/tidak | minimal | maksimal)",
+      "required": true,
+      "contoh": "nama | teks | ya | 3 | 50"
+    },
+    {
+      "key": "dalam",
+      "type": "choice",
+      "label": "Seberapa lengkap pengujiannya?",
+      "required": true,
+      "default": "dasar",
+      "choices": [
+        {
+          "v": "dasar",
+          "t": "Dasar (batas nilai dan kosong)"
+        },
+        {
+          "v": "lengkap",
+          "t": "Lengkap (tambah karakter aneh)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun kasus uji",
+      "set": {
+        "f": "baris(input.kolom).slice(0, 25).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: p[0] || 'isian', jenis: (p[1] || 'teks').toLowerCase(), wajib: /^y/i.test(p[2] || ''), min: num(p[3]), max: num(p[4]) }; })",
+        "kasus": "v.f.reduce((a, f) => { const x = (s, d, h) => [f.nama, s, d, h]; const isTeks = f.jenis !== 'angka'; const wajar = f.jenis === 'email' ? 'budi@contoh.com' : f.jenis === 'angka' ? String(Math.max(f.min, 1) + (f.max > f.min ? Math.floor((f.max - f.min) / 2) : 0)) : 'Budi Santoso'; const c = [x('Dikosongkan', '(kosong)', f.wajib ? 'Ditolak, muncul pesan wajib diisi' : 'Diterima')]; c.push(x('Nilai wajar', wajar, 'Diterima')); if (f.jenis === 'email') c.push(x('Tanpa tanda @', 'budi.contoh.com', 'Ditolak, format email salah')); if (f.jenis === 'angka') c.push(x('Bukan angka', 'abc', 'Ditolak, harus angka')); if (f.min > 0) { c.push(x('Tepat di batas bawah', isTeks ? f.min + ' karakter' : String(f.min), 'Diterima')); c.push(x('Di bawah batas bawah', isTeks ? (f.min - 1) + ' karakter' : String(f.min - 1), 'Ditolak')); } if (f.max > 0) { c.push(x('Tepat di batas atas', isTeks ? f.max + ' karakter' : String(f.max), 'Diterima')); c.push(x('Di atas batas atas', isTeks ? (f.max + 1) + ' karakter' : String(f.max + 1), 'Ditolak')); } if (input.dalam === 'lengkap' && isTeks) { c.push(x('Hanya spasi', '(beberapa spasi)', 'Ditolak, dianggap kosong')); c.push(x('Skrip berbahaya', '<script>alert(1)</script>', 'Ditolak atau ditampilkan sebagai teks biasa')); } return a.concat(c); }, []).map((c, i) => ['TC-' + String(i + 1).padStart(3, '0')].concat(c))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kasus.length + ' kasus uji dibuat untuk ' + v.f.length + ' isian formulir ' + input.formulir",
+    "teks": "'# Kasus uji ' + input.formulir + '\\n\\n' + tabel(['No', 'Isian', 'Skenario', 'Data uji', 'Hasil yang diharapkan'], v.kasus)",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kasus-uji-' + input.formulir",
+        "isi": "csv([['No', 'Isian', 'Skenario', 'Data uji', 'Hasil diharapkan', 'Hasil nyata', 'Lulus']].concat(v.kasus.map((k) => k.concat(['', '']))))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "formulir": "Pendaftaran",
+      "kolom": "nama | teks | ya | 3 | 50\nemail | email | ya | 0 | 0\numur | angka | tidak | 17 | 65",
+      "dalam": "dasar"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "16 kasus uji dibuat untuk 3 isian",
+        "TC-016",
+        "Di bawah batas bawah"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "QA Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Ubah aturan isian formulir menjadi daftar kasus uji lengkap: kosong, batas bawah dan atas, serta isian yang salah. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "kasus uji"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat kasus uji formulir perlu dibaca bersama: kasus uji menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

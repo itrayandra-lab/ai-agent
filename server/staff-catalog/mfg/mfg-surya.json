@@ -1,36 +1,104 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "mfg-surya",
   "division": "mfg",
   "employeeId": "surya",
   "title": "HSE / K3 Officer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Surya",
-    "tugasPeran": [
-      "Identifikasi bahaya & kontrol K3",
-      "Inspeksi rutin & investigasi insiden"
-    ],
-    "keahlian": [
-      "k3",
-      "hse",
-      "apd"
-    ],
-    "contohTugas": [
-      "HIRARC area mixing",
-      "Program inspeksi K3 bulanan"
+  "name": "Penilaian risiko keselamatan kerja",
+  "ringkas": "Nilai tiap bahaya dengan matriks 5x5 (kemungkinan kali keparahan), tentukan tingkat risiko, dan beri langkah pengendalian.",
+  "kataKunci": [
+    "k3",
+    "risiko",
+    "bahaya",
+    "keselamatan kerja",
+    "matriks risiko"
+  ],
+  "inputs": [
+    {
+      "key": "area",
+      "type": "text",
+      "label": "Area atau kegiatan yang dinilai",
+      "required": true,
+      "contoh": "Ruang pencampuran"
+    },
+    {
+      "key": "bahaya",
+      "type": "longtext",
+      "label": "Bahaya (satu baris: bahaya | kemungkinan 1-5 | keparahan 1-5)",
+      "required": true,
+      "contoh": "Tumpahan bahan kimia | 3 | 4"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Nilai risiko",
+      "set": {
+        "rows": "baris(input.bahaya).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const k = Math.min(5, Math.max(1, num(p[1]))); const s = Math.min(5, Math.max(1, num(p[2]))); const skor = k * s; const level = skor >= 15 ? 'Tinggi' : skor >= 8 ? 'Sedang' : 'Rendah'; return { bahaya: p[0] || '-', k: k, s: s, skor: skor, level: level, tindakan: level === 'Tinggi' ? 'Hentikan pekerjaan sampai ada pengendalian: hilangkan sumbernya, ganti, atau pasang pelindung' : level === 'Sedang' ? 'Tambah rambu, prosedur kerja, dan alat pelindung diri; tinjau ulang dalam 1 bulan' : 'Pantau rutin dan pastikan pekerja paham' }; }).sort((x, y) => y.skor - x.skor)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' bahaya dinilai di ' + input.area + ': ' + v.rows.filter((r) => r.level === 'Tinggi').length + ' tinggi, ' + v.rows.filter((r) => r.level === 'Sedang').length + ' sedang, ' + v.rows.filter((r) => r.level === 'Rendah').length + ' rendah'",
+    "teks": "'# Penilaian risiko: ' + input.area + '\\n\\n' + tabel(['Bahaya', 'Kemungkinan', 'Keparahan', 'Skor', 'Tingkat', 'Tindakan'], v.rows.map((r) => [r.bahaya, r.k, r.s, r.skor, r.level, r.tindakan]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'risiko-k3-' + input.area",
+        "isi": "csv([['Bahaya', 'Kemungkinan', 'Keparahan', 'Skor', 'Tingkat', 'Tindakan']].concat(v.rows.map((r) => [r.bahaya, r.k, r.s, r.skor, r.level, r.tindakan])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Safety",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "area": "Ruang pencampuran",
+      "bahaya": "Tumpahan bahan kimia | 3 | 4\nMesin tanpa pelindung | 4 | 5\nLantai licin | 2 | 2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 tinggi, 1 sedang, 1 rendah",
+        "| 20 |"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "HSE / K3 Officer di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Nilai tiap bahaya dengan matriks 5x5 (kemungkinan kali keparahan), tentukan tingkat risiko, dan beri langkah pengendalian. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "k3"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilaian risiko keselamatan kerja perlu dibaca bersama: k3 menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

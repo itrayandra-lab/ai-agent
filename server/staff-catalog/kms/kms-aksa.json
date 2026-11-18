@@ -1,38 +1,142 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "kms-aksa",
   "division": "kms",
   "employeeId": "aksa",
   "title": "Automation & Integration Engineer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Aksa",
-    "tugasPeran": [
-      "Mengidentifikasi pekerjaan berulang dan mengotomasinya",
-      "Mengelola jadwal cron perusahaan agar tidak duplikat dan hemat",
-      "Mengintegrasikan sistem eksternal via MCP"
-    ],
-    "keahlian": [
-      "otomasi",
-      "cron",
-      "mcp",
-      "integrasi"
-    ],
-    "contohTugas": [
-      "Audit semua jadwal cron dan rapikan",
-      "Otomasi laporan marketplace mingguan"
+  "name": "Penghitung penghematan otomasi",
+  "ringkas": "Hitung berapa jam dan rupiah yang dihemat oleh sebuah otomasi, kapan balik modal, dan layak dibuat atau belum.",
+  "kataKunci": [
+    "otomasi",
+    "penghematan",
+    "roi",
+    "balik modal",
+    "efisiensi"
+  ],
+  "inputs": [
+    {
+      "key": "kerja",
+      "type": "text",
+      "label": "Pekerjaan yang mau diotomatiskan",
+      "required": true,
+      "contoh": "Rekap penjualan harian"
+    },
+    {
+      "key": "kali",
+      "type": "number",
+      "label": "Berapa kali dikerjakan per minggu?",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "menit",
+      "type": "number",
+      "label": "Berapa menit tiap kali?",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "gaji",
+      "type": "number",
+      "label": "Biaya per jam orang yang mengerjakan (Rp)",
+      "required": true,
+      "contoh": "50000"
+    },
+    {
+      "key": "bangun",
+      "type": "number",
+      "label": "Biaya membuat otomasi (Rp)",
+      "required": true,
+      "contoh": "2000000"
+    },
+    {
+      "key": "bulanan",
+      "type": "number",
+      "label": "Biaya jalan per bulan (Rp)",
+      "required": false,
+      "contoh": "100000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "jam": "Math.round(num(input.kali) * 4.33 * num(input.menit) / 60 * 10) / 10",
+        "hemat": "Math.round(num(input.kali) * 4.33 * num(input.menit) / 60 * num(input.gaji))",
+        "bersih": "v.hemat - num(input.bulanan)",
+        "payback": "v.bersih > 0 ? Math.round(num(input.bangun) / v.bersih * 10) / 10 : 0",
+        "roi": "num(input.bangun) > 0 ? Math.round((v.bersih * 12 - num(input.bangun)) / num(input.bangun) * 100) : 0",
+        "keputusan": "v.bersih <= 0 ? 'Belum layak' : v.payback <= 3 ? 'Sangat layak' : v.payback <= 12 ? 'Layak' : 'Belum layak'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Hemat ' + rp(v.hemat) + ' per bulan, balik modal ' + v.payback + ' bulan: ' + v.keputusan",
+    "teks": "'# Hitungan otomasi: ' + input.kerja + '\\n\\n' + tabel(['Hal', 'Nilai'], [['Jam dihemat per bulan', v.jam], ['Penghematan per bulan', rp(v.hemat)], ['Setelah biaya jalan', rp(v.bersih)], ['Balik modal', v.payback + ' bulan'], ['Untung bersih 12 bulan', v.roi + '%'], ['Keputusan', v.keputusan]])",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hitungan-otomasi'",
+        "isi": "csv([['Pekerjaan', 'Jam per bulan', 'Hemat', 'Bersih', 'Balik modal (bulan)', 'Keputusan'], [input.kerja, v.jam, v.hemat, v.bersih, v.payback, v.keputusan]])"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Plan",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "kerja": "Rekap penjualan harian",
+      "kali": "10",
+      "menit": "30",
+      "gaji": "50000",
+      "bangun": "2000000",
+      "bulanan": "100000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 1.082.500",
+        "Sangat layak"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Automation & Integration Engineer di divisi Knowledge & AI Ops, memakai bahasa awam",
+    "tujuan": "Hitung berapa jam dan rupiah yang dihemat oleh sebuah otomasi, kapan balik modal, dan layak dibuat atau belum. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Simpan saja."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "otomasi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung penghematan otomasi perlu dibaca bersama: otomasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

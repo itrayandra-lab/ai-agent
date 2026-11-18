@@ -23,7 +23,15 @@ import * as staffApi from './staff/index.js';
 import * as learn from './skills-learn.js';
 import * as power from './skills-power.js';
 import * as pemandu from './pemandu.js';
+import * as gov from './governor.js';
 import { starterDb } from './workspace.js';
+import * as limits from './limits.js';   // P3: batas laju + kuota (dipasang lewat limits.edge dan limits.user di bawah)
+import * as gate from './gate.js';
+import * as secure from './secure.js';
+import * as privacy from './privacy.js';
+import * as channels from './channels/index.js';   // saluran chat Telegram dan Discord (docs/SALURAN-CHAT.md)
+import * as admin from './admin.js';        // konsol pengelola (/api/admin/*), lihat docs/KONSOL-ADMIN.md
+import * as platform from './platform.js';
 
 // Local secrets (GROQ_API_KEY / ANTHROPIC_API_KEY) live in .env, never in the repo.
 try { process.loadEnvFile(path.resolve('.env')); } catch { /* no .env */ }
@@ -34,13 +42,22 @@ const ROOT = path.resolve('public');
 const VENDOR = { '/vendor/three/': path.resolve('node_modules/three/') };
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.wasm': 'application/wasm', '.mjs': 'text/javascript; charset=utf-8', '.onnx': 'application/octet-stream', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 
+admin.applyPendingRestore();   // pemulihan data yang dijadwalkan dari konsol pengelola diterapkan sebelum data dimuat
+privacy.purgeAtBoot();   // P3: ruang kerja yang dihapus pemiliknya dipindah ke data/trash sebelum dimuat
 if (process.argv.includes('--reset-only')) { store.load({ reset: true }); console.log('Data direset.'); process.exit(0); }
 store.load();
 store.loadWorkspaces();
-for (const ws of store.ids()) store.run(ws, () => { const d = store.get(); if (d.powerRev !== power.REV) { const r = power.install(d); d.powerRev = power.REV; store.saveNow(); console.log(`  Paket skill super [${ws}]: ${r.skills} skill baru, ${r.refs} pemasangan ke agen`); } });
+const bootInstall = () => { staffApi.registry.linkEmployees(); const r = staffApi.skills.install(store.get()); if (r.skills || r.refs || r.dihapus) { store.saveNow(); console.log(`  Skill staf [${store.current()}]: ${r.skills} skill dipasang/diperbarui, ${r.refs} pemasangan ke agen, ${r.dihapus} dicabut`); } };   // setiap staf lengkap = satu skill yang menjalankan alur nyata
+const bootPower = () => { const d = store.get(); if (d.powerRev !== power.REV) { const r = power.install(d); d.powerRev = power.REV; store.saveNow(); console.log(`  Paket skill super [${store.current()}]: ${r.skills} skill baru, ${r.refs} pemasangan ke agen`); } };
+// pemuatan malas (P7): ruang kerja lain belum dibaca saat boot, jadi pemasangan jalan saat masing-masing dimuat; kalau tidak, semua dibaca sekarang seperti dulu
+if (store.isLazy()) { store.run('main', bootInstall); store.run('main', bootPower); store.onLoad(bootInstall); store.onLoad(bootPower); }
+else for (const ws of store.ids()) store.run(ws, () => { bootInstall(); bootPower(); });
 auth.load();
+privacy.afterAuthLoad(); auth.announceClaim(); otomasi.migrateHooks(); privacy.startRetention();
+if (process.env.RAIVERSE_SEAL_ON_BOOT === '1') console.log('  Rahasia dibungkus ulang:', JSON.stringify(privacy.migrateSecrets({ apply: true })));
 if (store.get().needsOrganize) { const r = lib.autoOrganize('arsa'); delete store.get().needsOrganize; store.save(); console.log(`Brain dirapikan: ${r.moved} dipindah, ${r.renamed} diganti nama`); }
 engine.start();
+channels.start();   // penghubung Telegram/Discord menyala hanya bila token bot sudah dipasang
 
 const clients = new Map();   // SSE response -> workspace id
 const BOOT = Date.now();
@@ -62,7 +79,11 @@ function hostStats() {
   };
 }
 setInterval(() => store.broadcast({ kind: 'root', key: 'host', value: hostStats(), all: true }), 5000);
-store.subscribe((msg) => { const line = `data: ${JSON.stringify(msg)}\n\n`; for (const [res, ws] of clients) if (msg.all || msg.ws === ws) { if (msg.coll === 'notes' && msg.kind === 'upsert' && !store.run(ws, () => brain.canRead(msg.item, { employeeId: res.employeeId }))) res.write(`data: ${JSON.stringify({ kind: 'remove', coll: 'notes', id: msg.item.id })}\n\n`); else res.write(line); } });   // a workspace's changes reach only that workspace
+store.subscribe((msg) => {   // a workspace's changes reach only that workspace
+  const line = `data: ${JSON.stringify(msg)}\n\n`;
+  const lineUser = msg.kind === 'root' && msg.key === 'settings' ? `data: ${JSON.stringify({ ...msg, value: admin.stripSettings(msg.value || {}) })}\n\n` : line;   // pengguna biasa tidak menerima bagian teknis pengaturan
+  for (const [res, ws] of clients) if ((msg.all || msg.ws === ws) && !(msg.key === 'host' && !res.isAdmin)) { if (msg.coll === 'notes' && msg.kind === 'upsert' && !store.run(ws, () => brain.canRead(msg.item, { employeeId: res.employeeId }))) res.write(`data: ${JSON.stringify({ kind: 'remove', coll: 'notes', id: msg.item.id })}\n\n`); else res.write(res.isAdmin ? line : lineUser); }
+});
 setInterval(() => { for (const res of clients.keys()) res.write(': ping\n\n'); }, 20000);
 
 const db = () => store.get();
@@ -78,11 +99,17 @@ async function body(req) {
 }
 
 const routes = [];
+/** (P3) rute berdampak: anggota biasa butuh izin eksplisit dari Owner (auth.PERMS); Owner dan Admin selalu boleh */
+const routePerm = (m, p) => ((m === 'POST' && (p === '/api/employees' || p === '/api/divisions')) || (['PATCH', 'DELETE'].includes(m) && /^\/api\/(employees|divisions)\/[^/]+$/.test(p)) ? 'hire'
+  : m === 'DELETE' && /^\/api\/tasks\/[^/]+$/.test(p) ? 'taskDelete'
+  : m === 'POST' && /^\/api\/approvals\/[^/]+$/.test(p) ? 'approve'
+  : ['POST', 'PATCH', 'DELETE'].includes(m) && /^\/api\/routines(\/|$)/.test(p) ? 'routine' : null);
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
 
 on('GET', '/api/state', async (b, p, url, me, member) => {
   if (llm.hasGroq()) try { await llm.refreshGroqModels(); } catch (err) { console.warn(`Daftar model Groq memakai cache: ${err.message}`); }
-  return { ...store.snapshot(), notes: db().notes.filter(n => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId })), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats(), me: member?.employeeId || db().settings.currentUserId, account: auth.publicUser(me), workspace: me ? wsInfo(me) : null };
+  const snap = store.snapshot(); if (!admin.uiFlag(me)) snap.settings = admin.stripSettings(snap.settings);   // pengguna biasa tidak menerima bagian teknis pengaturan (kunci, MCP, konektor)
+  return { ...snap, notes: db().notes.filter(n => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId })), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: auth.isPlatformAdmin(me) ? hostStats() : {}, me: member?.employeeId || db().settings.currentUserId, account: auth.publicUser(me), workspace: me ? wsInfo(me) : null, ...(admin.uiFlag(me) ? { platformAdmin: true } : {}) };
 });
 
 on('POST', '/api/goals', (b) => { if (/^\s*(\/\w+|saya selesai)\s*$/i.test(String(b.title || ''))) throw new Error('Itu perintah chat rapat, bukan goal. Ketik di chat rapatnya.'); return engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }); });
@@ -135,7 +162,7 @@ on('PUT', '/api/notes/:id', (b, p) => {
 on('DELETE', '/api/notes/:id', (b, p) => ({ ok: store.remove('notes', p.id) }));
 
 const EMP_FIELDS = ['name', 'type', 'divisionId', 'title', 'persona', 'skills', 'isLead', 'reportsTo', 'avatar', 'autonomy', 'model', 'status',
-  'about', 'taskAndFunction', 'instructions', 'escalation', 'outputFormat', 'effort', 'skillRefs', 'tools', 'knowledgeIds', 'starters', 'reasoning', 'team', 'appearance', 'voiceGender'];
+  'about', 'taskAndFunction', 'instructions', 'escalation', 'outputFormat', 'effort', 'skillRefs', 'tools', 'knowledgeIds', 'starters', 'reasoning', 'team', 'appearance', 'voiceGender', 'role'];
 const cleanVoiceGender = (o) => { if ('voiceGender' in o && o.voiceGender !== 'female' && o.voiceGender !== 'male') delete o.voiceGender; return o; };   // the voice follows this field; anything else is ignored
 on('POST', '/api/employees', (b) => org.hire(cleanVoiceGender(pick(b, EMP_FIELDS)), b.userId || 'owner'));
 on('PATCH', '/api/employees/:id', (b, p) => {
@@ -144,9 +171,10 @@ on('PATCH', '/api/employees/:id', (b, p) => {
   if (typeof ch.skills === 'string') ch.skills = ch.skills.split(',').map((s) => s.trim()).filter(Boolean);
   if (ch.status === 'offline') ch.statusText = 'Offline';
   if (ch.status === 'idle') ch.statusText = 'Siap bekerja';
+  org.checkRoleChange(e, ch);   // peran/jabatan yang melanggar aturan ditolak sebelum ada yang berubah
   Object.assign(e, ch);
   if (ch.skillRefs && db().settings.autoActivate !== false) autoActivate(e, db().skills);
-  if (ch.isLead) { const d = db().divisions.find((x) => x.id === e.divisionId); d.leadId = e.id; store.upsert('divisions', d); }
+  org.settleLead(e, ch);        // satu manajer per divisi: isLead menurunkan manajer lama
   return store.upsert('employees', e);
 });
 on('DELETE', '/api/employees/:id', (b, p) => {
@@ -293,14 +321,17 @@ on('POST', '/api/routines/:id/run', (b, p) => engine.runRoutine(db().routines.fi
 
 on('PATCH', '/api/settings', async (b, p, url, me, member) => {
   ownerOnly(me, member);
+  if (!admin.uiFlag(me) && Object.keys(b).some((k) => admin.TECH_PATCH_KEYS.includes(k))) throw bad('Pengaturan itu diatur oleh pengelola platform.', 403);   // kunci, model, MCP, jatah: hanya konsol pengelola
   const s = db().settings;
-  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize', 'staffModel']);
+  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize', 'staffModel', 'quota', 'staffEngine']);
   if ('staffModel' in ch) ch.staffModel = ch.staffModel === true;
-  if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = b.apiKey.trim();
-  if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = b.groqApiKey.trim();
+  if ('staffEngine' in ch) ch.staffEngine = ch.staffEngine === 'n8n' ? 'n8n' : 'native';   // mesin staf: native (bawaan) atau n8n (docs/STAF-NATIVE.md)
+  if ('quota' in ch) { const q = ch.quota && typeof ch.quota === 'object' ? ch.quota : {}; const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 100000 && v !== '' && v !== null ? Math.floor(Number(v)) : d); ch.quota = { tasksPerDay: n(q.tasksPerDay, gov.QUOTA_DEFAULTS.tasksPerDay), n8nRunsPerDay: n(q.n8nRunsPerDay, gov.QUOTA_DEFAULTS.n8nRunsPerDay) }; }   // jatah harian per ruang kerja (jumlah, bukan uang); 0 = tanpa batas
+  if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = secure.seal(b.apiKey.trim(), 'ws-secret');   // P3: amplop terenkripsi berversi, bukan teks biasa
+  if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = secure.seal(b.groqApiKey.trim(), 'ws-secret');
   for (const k of ['tickMs', 'maxConcurrent', 'dailyBudgetUSD']) if (k in ch) ch[k] = Number(ch[k]);
   if ('uiKeys' in ch) { const u = ch.uiKeys || {}, clean = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).slice(0, 60).filter(([a, v]) => typeof v === 'string' && v.length < 24).map(([a, v]) => [String(a).slice(0, 32), v])); ch.uiKeys = { free: clean(u.free), play: clean(u.play), invert: !!u.invert }; }
-  if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.map(m => { const old = (s.mcpServers || []).find(x => x.id === m.id); return old && m.configured && !m.url ? { ...m, url: old.url, headers: old.headers } : m; }); ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); collab.resetMcp(); }
+  if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.map(m => { const old = (s.mcpServers || []).find(x => x.id === m.id); return old && m.configured && !m.url ? { ...m, url: old.url, headers: old.headers } : m; }); ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); for (const m of ch.mcpServers) await collab.assertMcpUrl(m.url, store.current()).catch((e) => { throw bad(e.message); }); collab.resetMcp(); }
   if (ch.googleAppsScript) {
     const prev = s.googleAppsScript || {};
     const next = ch.googleAppsScript || {};
@@ -383,11 +414,19 @@ for (const [m, p, fn] of otomasi.routes) on(m, p, (b, params, url, me, member) =
 for (const [m, p, fn] of staffApi.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url, me, member); });   // staf: daftar, jalankan, hasil (docs/ARSITEKTUR-STAF-N8N.md)
 for (const [m, p, fn] of browser.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });
 for (const [m, p, fn] of learn.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });   // kartu "aku belajar sesuatu": hanya Owner/Admin yang memutuskan
+for (const [m, p, fn] of channels.routes) on(m, p, (b, params, url, me, member) => fn(b, params, url, me, member));   // sambungan Telegram/Discord: tiap orang mengikat akunnya sendiri; rute /admin hanya pemilik platform
 for (const [m, p, fn] of pemandu.routes) on(m, p, (b, params, url, me, member) => { b.canAutomate = !auth.enforced() || ['owner', 'admin'].includes(member?.role); return fn(b, params, url, me, member); });   // Pemandu: antarmuka depan yang dipandu pilihan tombol
 on('GET', '/api/auth/me', (b, p, url, me, member) => ({ configured: auth.configured(), enforced: auth.enforced(), user: auth.publicUser(me), employeeId: member?.employeeId || db().settings.currentUserId, workspace: me ? wsInfo(me) : null, workspaces: me ? auth.myWorkspaces(me) : [], scopes: auth.SCOPES }));
 on('POST', '/api/ws/switch', (b, p, url, me) => ({ id: auth.switchWs(signedIn(me), need(b.id, 'id wajib')) }));
 on('GET', '/api/ws/members', (b, p, url, me) => { signedIn(me); return { members: auth.wsMembers(auth.activeWs(me)) }; });
-on('POST', '/api/ws/invite', (b, p, url, me) => { const r = auth.createInvite(signedIn(me), auth.activeWs(me), b.role); return { ...r, path: '/join/' + r.code }; });
+on('POST', '/api/ws/invite', (b, p, url, me) => { const r = auth.createInvite(signedIn(me), auth.activeWs(me), b.role, { maxUses: Number(b.maxUses) || undefined, days: Number(b.days) || undefined }); return { ...r, path: '/join/' + r.code }; });
+on('GET', '/api/ws/invites', (b, p, url, me) => ({ invites: auth.listInvites(signedIn(me), auth.activeWs(me)) }));
+on('POST', '/api/ws/invite/revoke', (b, p, url, me) => auth.revokeInvite(signedIn(me), auth.activeWs(me), need(b.id, 'id wajib')));
+on('POST', '/api/ws/member-perms', (b, p, url, me) => ({ perms: auth.setMemberPerms(signedIn(me), auth.activeWs(me), need(b.accountId, 'accountId wajib'), b.perms) }));
+// privasi: ekspor data pribadi, hapus akun (docs/KEAMANAN-P3.md)
+on('GET', '/api/me/export', (b, p, url, me, member) => privacy.exportMine(signedIn(me), member));
+on('POST', '/api/me/delete', (b, p, url, me) => privacy.deleteMine(signedIn(me), b));
+on('POST', '/api/me/sessions/revoke', (b, p, url, me) => ({ ditutup: auth.revokeSessions(signedIn(me)) }));
 on('POST', '/api/ws/member', (b, p, url, me) => auth.setMemberRole(signedIn(me), auth.activeWs(me), need(b.accountId, 'accountId wajib'), need(b.role, 'role wajib')));
 on('POST', '/api/ws/rename', (b, p, url, me) => { const name = auth.renameWs(signedIn(me), auth.activeWs(me), b.name); store.setRoot('company', { ...db().company, name }); return { name }; });
 on('GET', '/api/drive/config', (b, p, url, me) => ({ clientId: process.env.GOOGLE_CLIENT_ID || '', pickerKey: process.env.GOOGLE_PICKER_API_KEY || '', appId: String(process.env.GOOGLE_CLIENT_ID || '').split('-')[0], connected: !!me && auth.publicUser(me).drive, folders: auth.driveOf(me?.id)?.folders || null, root: auth.driveOf(me?.id)?.root || null }));
@@ -419,12 +458,16 @@ function serveStatic(req, res, urlPath) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (limits.edge(req, res, url)) return;   // P3: batas laju per alamat IP (429)
+  if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) return admin.handle(req, res, url, { me: auth.sessionUser(req), body });   // konsol pengelola: bukan pengelola = 403 seragam, sebelum gerbang sesi
   // ── sign-in with Google
   if (url.pathname === '/auth/google') return auth.startLogin(req, res);
   if (url.pathname === '/auth/google/callback') return auth.callback(req, res, url, AUTH_HOOKS);
   if (url.pathname === '/auth/logout') return auth.logout(req, res);
   if (url.pathname.startsWith('/join/')) return auth.joinLink(req, res, url.pathname.slice(6), AUTH_HOOKS);
   if (url.pathname.startsWith('/api/automations/hook/') && await otomasi.handleHook(req, res, url, body)) return;   // panggilan balik dari mesin otomasi lokal: token + hanya dari komputer ini, tanpa sesi login
+  if (url.pathname.startsWith('/api/saluran/hook/') && await channels.handleHook(req, res, url, body)) return;   // webhook Telegram: rahasia di header, tanpa sesi login
+  if (url.pathname === '/api/llm-gate' && await gate.handle(req, res, url, body)) return;   // P3: gerbang LLM bertoken per eksekusi (kredensialnya token itu sendiri)
   // ── gate: once anyone has signed in, every API call needs a session (the page itself loads and shows the sign-in card)
   const me = auth.sessionUser(req);
   if (url.pathname.startsWith('/api/') && auth.enforced() && url.pathname !== '/api/auth/me' && !me) return json(res, 401, { error: 'Silakan login dengan Google', login: '/auth/google' });
@@ -432,12 +475,17 @@ const server = http.createServer(async (req, res) => {
   const ws = me && auth.enforced() ? auth.activeWs(me) : 'main';
   const member = me ? auth.memberOf(me, ws) : null;
   if (!store.exists(ws)) return json(res, 500, { error: `Ruang kerja ${ws} tidak ditemukan di server` });
+  if (me && auth.enforced() && !member && url.pathname.startsWith('/api/') && !/^\/api\/(auth\/me|ws\/|me\/)/.test(url.pathname)) return json(res, 403, { error: 'Kamu belum menjadi anggota ruang kerja mana pun.' });   // P3: tidak pernah jatuh ke data kantor utama
+  if (limits.user(req, res, url, { me, admin: auth.isPlatformAdmin(me) })) return;   // P3: batas per akun + kuota harian + anggaran global
   if (url.pathname === '/api/stream') {
+    const release = limits.acquireStream(me?.id || limits.clientIp(req));
+    if (!release) return json(res, 429, { error: 'Terlalu banyak sambungan langsung dari akun ini. Tutup tab lain dulu.' });
+    res.isAdmin = admin.isAdmin(me, req);
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.write('retry: 2000\n\n');
     res.employeeId = member?.employeeId || store.run(ws, () => db().settings.currentUserId);
     clients.set(res, ws);
-    req.on('close', () => clients.delete(res));
+    req.on('close', () => { clients.delete(res); release(); });
     return;
   }
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url.pathname);
@@ -452,8 +500,11 @@ const server = http.createServer(async (req, res) => {
     if (!m) continue;
     try {
       const b = await body(req);
+      const perm = routePerm(req.method, url.pathname);
+      if (perm && !auth.can(member, perm)) throw bad(`Kamu belum diberi izin untuk ${auth.PERMS[perm]}. Minta Owner ruang kerja ini memberikannya.`, 403);
       const sensitive = /^\/api\/(?:import|reset|training|mcp|google-workspace|groq-models|test-key)(?:\/|$)/.test(url.pathname);
       if (sensitive) ownerOnly(me, member);
+      if (/^\/api\/(?:mcp|google-workspace|groq-models|test-key)(?:\/|$)/.test(url.pathname) && !admin.isAdmin(me, req)) throw bad('Bagian itu diatur oleh pengelola platform.', 403);
       if (/^\/api\/(import|reset)$/.test(url.pathname) && store.run(ws, () => engine.running().length || db().meetings.some(m => collab.liveLoops.has(m.id)))) throw bad('Tunggu pekerjaan dan rapat aktif selesai sebelum mengganti data', 409);
       if (/^\/api\/notes\//.test(url.pathname)) {
         const n = store.run(ws, () => db().notes.find(n => n.id === m.groups?.id));
@@ -465,6 +516,7 @@ const server = http.createServer(async (req, res) => {
     catch (err) {
       const code = err.code && Number.isInteger(err.code) ? err.code : (err.status || 500);
       if (code >= 500) console.error(err);
+      if (code === 403) platform.denied({ code, ip: limits.clientIp(req), path: url.pathname, alasan: 'ditolak' });
       return json(res, code, { error: err.message || String(err) });
     }
   }
@@ -482,4 +534,4 @@ server.listen(PORT, HOST, () => {
   console.log(`  Mesin AI: ${{ groq: 'LIVE · Groq', claude: 'LIVE · Claude', sim: 'SIMULASI (isi GROQ_API_KEY atau ANTHROPIC_API_KEY di .env / Pengaturan)' }[llm.provider()]}`);
   if (HOST === '127.0.0.1') console.log('  Akses dari HP di jaringan yang sama: jalankan dengan HOST=0.0.0.0\n');
 });
-process.on('SIGINT', () => { store.saveAll(); auth.saveNow(); process.exit(0); });
+process.on('SIGINT', () => { store.saveAll(); auth.saveNow(); limits.flush(); process.exit(0); });

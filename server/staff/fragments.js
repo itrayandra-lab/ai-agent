@@ -100,7 +100,34 @@ export const FRAGMENTS = {
   },
 };
 
+// Langkah OTAK (mesin native): AI sebagai pengisi dan pembahas, aturan sebagai kerangka. Jawaban AI wajib JSON sesuai "skema"; bagian yang
+// salah/kosong diganti hasil "cadangan" (aturan). Hasil di v.<simpan> = { ...bidang, dariAI }. Model kecil bawaan, biaya dan kuota dicatat per ruang kerja.
+// Di alur n8n (kompatibel mundur) langkah ini dikompilasi seperti minta_ai lalu v.<simpan> diisi hasil "cadangan" saja (dariAI:false).
+/** Isi kosong yang masuk akal per jenis bidang skema (dipakai mesin native dan cadangan n8n supaya bentuknya sama). */
+export const otakEmpty = (type) => (type === 'angka' ? 0 : type === 'daftar' ? [] : String(type).startsWith('pilihan:') ? String(type).slice(8).split('|')[0] : '');
+export const otakDefaults = (skema) => Object.fromEntries(Object.entries(skema || {}).map(([k, t]) => [k, otakEmpty(t)]));
+const OTAK_FIELD_TYPE = /^(teks|angka|daftar|pilihan:[^|]{1,30}(\|[^|]{1,30}){1,7})$/;
+FRAGMENTS.otak = {
+  ringkas: 'Minta AI berpikir (menulis, merangkum, membahas) dengan jawaban terstruktur yang diperiksa; aturan cadangan dipakai bila AI tidak tersedia atau salah format. Hasil di v.<simpan>.',
+  tool: 'AI lewat gerbang RAIVERSE', awam: 'Berpikir dan menulis dengan bantuan AI (hasilnya diperiksa)', effect: 'llm',
+  check(step) {
+    const p = [];
+    if (!FIELD.test(step.simpan || '')) p.push('"simpan" harus nama isian valid');
+    for (const k of ['sistem', 'perintah']) { const b = X.badExpr(step[k]); if (b) p.push(`"${k}": ${b}`); }
+    if (step.cadangan !== undefined) { const b = X.badExpr(step.cadangan); if (b) p.push(`"cadangan": ${b}`); }
+    const sk = step.skema;
+    if (!sk || typeof sk !== 'object' || Array.isArray(sk) || !Object.keys(sk).length || Object.keys(sk).length > 8) p.push('"skema" 1–8 bidang { nama: teks|angka|daftar|pilihan:a|b }');
+    else for (const [k, t] of Object.entries(sk)) { if (!FIELD.test(k) || k === 'dariAI') p.push(`bidang skema "${k}" tidak valid`); if (typeof t !== 'string' || !OTAK_FIELD_TYPE.test(t)) p.push(`bidang skema "${k}": jenis harus teks, angka, daftar, atau pilihan:a|b`); }
+    if (step.maxToken !== undefined && !(step.maxToken >= 100 && step.maxToken <= 3000)) p.push('"maxToken" 100–3000');
+    if (step.model !== undefined && !['kecil', 'sedang'].includes(step.model)) p.push('"model" harus kecil atau sedang');
+    return p;
+  },
+  build: (step, c) => FRAGMENTS.minta_ai.build(step, c),
+};
+
 export const STEP_USES = Object.keys(FRAGMENTS);
+/** Langkah yang memanggil AI (alur n8n dua tahap). */
+export const AI_USES = ['minta_ai', 'otak'];
 /** Alat dalam bahasa awam untuk layar depan (tanpa nama teknis). */
 export const awamTools = (spec) => [...new Set((spec.steps || []).map((s) => FRAGMENTS[s.use]?.awam).filter(Boolean))];
 export const toolNames = (spec) => [...new Set(['Webhook', 'Edit Fields', 'If', ...(spec.steps || []).map((s) => FRAGMENTS[s.use]?.tool).filter(Boolean)])];

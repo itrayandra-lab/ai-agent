@@ -1,5 +1,7 @@
 # RAIVERSE visual lock v1
 
+> **Status: dinonaktifkan sebagai gerbang (keputusan Owner, 2026-11-19).** `npm test` tidak lagi menjalankan `check:visual`. Perangkatnya (`scripts/verify-visual-lock.mjs`, `visual-lock.json`) tetap ada sebagai alat manual opsional untuk melihat berkas frontend mana yang berubah; hasilnya tidak menggagalkan apa pun. Panduan identitas visual di bawah tetap berlaku sebagai pedoman desain, bukan sebagai aturan yang diblokir mesin.
+
 ## Source of truth
 
 `public/css/identity.css` defines the navy–ivory identity and must load last.

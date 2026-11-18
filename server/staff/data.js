@@ -53,3 +53,22 @@ export function readFile(ws, runId, name) {
   try { return fs.readFileSync(p, 'utf8'); } catch { return null; }
 }
 export function rmRunFiles(ws, runId) { try { fs.rmSync(path.join(outDir(), safeSeg(ws), safeSeg(runId)), { recursive: true, force: true }); } catch { /* sudah tidak ada */ } }
+
+// ── tabel data staf mesin native (pengganti Data Table n8n): data/staff-table/<ruang kerja>.json, terpisah per ruang kerja, 500 baris terakhir
+const tableFile = (ws) => path.join(dir(), 'staff-table', safeSeg(ws) + '.json');
+export function appendRow(ws, row) {
+  const f = tableFile(ws), rows = readJson(f, []); rows.push({ staf: String(row.staf || '').slice(0, 80), runId: String(row.runId || '').slice(0, 40), waktu: row.waktu, isi: String(row.isi || '').slice(0, 3000) });
+  writeJson(f, rows.slice(-500)); return rows.length;
+}
+export const rowsOf = (ws, staf) => readJson(tableFile(ws), []).filter((r) => !staf || r.staf === staf);
+
+/** Daftar berkas hasil milik satu ruang kerja (dari catatan jalan; hanya berkas yang benar-benar ada di disk). */
+export function filesOf(ws, { limit = 100 } = {}) {
+  const out = [];
+  for (const r of runsOf(ws)) for (const b of r.berkas || []) {
+    if (readFile(ws, r.id, b.nama) === null) continue;
+    out.push({ jalan: r.id, staf: r.staf, nama: b.nama, jenis: b.jenis, bytes: b.bytes, waktu: r.endedAt || r.startedAt });
+    if (out.length >= limit) return out;
+  }
+  return out;
+}

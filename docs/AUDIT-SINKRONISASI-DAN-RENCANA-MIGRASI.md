@@ -106,3 +106,10 @@ P0 dan P5 dapat dimulai segera setelah sesi fondasi melaporkan skema. P1 harus s
 - **Sesi P4:** antarmuka, setelah kontrak dari P1/P2; ditinjau visual bersama Owner.
 - **Sesi P5 (5 sesi paralel):** pengisian katalog per kelompok divisi.
 - **Sesi suara (sudah ada):** P6.
+
+## 8. Keputusan Owner (2026-11-18)
+
+1. Konsol admin terpisah untuk hal teknis (kunci AI, model, MCP, kuota, data, keamanan): DISETUJUI dan dikerjakan.
+2. 42 agen buatan asisten pribadi: ditandai `legacy` dan dipertahankan (tidak dihapus, tidak dilebur ke katalog).
+3. Eksekusi staf dipindah ke mesin NATIVE di RAIVERSE agar n8n Owner tidak berat; n8n hanya untuk jadwal dan pemicu luar. Workflow staf di n8n dinonaktifkan (bukan dihapus) setelah tes ekuivalensi hijau.
+4. Lainnya (batas harian gratis, target rilis publik, hosting) masih terbuka.

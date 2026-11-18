@@ -1,37 +1,164 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "eng-naufal",
   "division": "eng",
   "employeeId": "naufal",
   "title": "Mobile & ML Engineer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Naufal",
-    "tugasPeran": [
-      "Merancang aplikasi mobile",
-      "Membangun fitur AI (rekomendasi, prediksi)",
-      "Evaluasi biaya inferensi"
-    ],
-    "keahlian": [
-      "mobile",
-      "machine learning",
-      "flutter"
-    ],
-    "contohTugas": [
-      "Arsitektur skin analyzer di aplikasi",
-      "Rekomendasi produk berbasis riwayat"
+  "name": "Penghitung biaya AI per bulan",
+  "ringkas": "Hitung biaya memakai model AI per permintaan, per hari, dan per bulan, termasuk efek jawaban yang disimpan ulang.",
+  "kataKunci": [
+    "biaya ai",
+    "inferensi",
+    "model",
+    "biaya per permintaan",
+    "cache"
+  ],
+  "inputs": [
+    {
+      "key": "req",
+      "type": "number",
+      "label": "Jumlah permintaan per hari",
+      "required": true,
+      "contoh": "20000"
+    },
+    {
+      "key": "masuk",
+      "type": "number",
+      "label": "Rata-rata panjang pertanyaan (dalam satuan hitung model AI)",
+      "required": true,
+      "contoh": "800"
+    },
+    {
+      "key": "keluar",
+      "type": "number",
+      "label": "Rata-rata panjang jawaban (dalam satuan hitung model AI)",
+      "required": true,
+      "contoh": "300"
+    },
+    {
+      "key": "hmasuk",
+      "type": "number",
+      "label": "Harga per 1 juta satuan pertanyaan (US$)",
+      "required": true,
+      "contoh": "0.15"
+    },
+    {
+      "key": "hkeluar",
+      "type": "number",
+      "label": "Harga per 1 juta satuan jawaban (US$)",
+      "required": true,
+      "contoh": "0.6"
+    },
+    {
+      "key": "simpan",
+      "type": "choice",
+      "label": "Berapa persen permintaan terjawab dari simpanan?",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tidak ada"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        },
+        {
+          "v": "60",
+          "t": "60%"
+        }
+      ]
+    },
+    {
+      "key": "kurs",
+      "type": "number",
+      "label": "Kurs rupiah per US$",
+      "required": true,
+      "contoh": "16000",
+      "default": 16000
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung biaya",
+      "set": {
+        "efektif": "Math.round(num(input.req) * (1 - num(input.simpan) / 100))",
+        "perReq": "(num(input.masuk) * num(input.hmasuk) + num(input.keluar) * num(input.hkeluar)) / 1e6",
+        "hari": "Math.round(v.efektif * v.perReq * 100) / 100",
+        "bulan": "Math.round(v.hari * 30 * 100) / 100",
+        "rupiah": "Math.round(v.bulan * num(input.kurs))",
+        "tanpaSimpan": "Math.round(num(input.req) * v.perReq * 30 * 100) / 100"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Sekitar US$ ' + v.bulan + ' per bulan (' + rp(v.rupiah) + ')'",
+    "teks": "'# Biaya AI\\n\\n' + tabel(['Hal', 'Nilai'], [['Permintaan yang benar-benar dihitung per hari', v.efektif], ['Biaya per permintaan', 'US$ ' + v.perReq.toFixed(6)], ['Biaya per hari', 'US$ ' + v.hari], ['Biaya per bulan (30 hari)', 'US$ ' + v.bulan + ' = ' + rp(v.rupiah)], ['Tanpa simpanan jawaban', 'US$ ' + v.tanpaSimpan + ' per bulan'], ['Hemat dari simpanan', 'US$ ' + Math.round((v.tanpaSimpan - v.bulan) * 100) / 100]])",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'biaya-ai'",
+        "isi": "csv([['Hal', 'Nilai'], ['Permintaan efektif per hari', v.efektif], ['Biaya per permintaan USD', v.perReq], ['Biaya per hari USD', v.hari], ['Biaya per bulan USD', v.bulan], ['Biaya per bulan rupiah', v.rupiah]])"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "req": "20000",
+      "masuk": "800",
+      "keluar": "300",
+      "hmasuk": "0.15",
+      "hkeluar": "0.6",
+      "simpan": "30",
+      "kurs": "16000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "US$ 126 per bulan",
+        "Rp 2.016.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Mobile & ML Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Hitung biaya memakai model AI per permintaan, per hari, dan per bulan, termasuk efek jawaban yang disimpan ulang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "biaya ai"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung biaya ai per bulan perlu dibaca bersama: biaya ai menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

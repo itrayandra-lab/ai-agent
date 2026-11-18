@@ -1,37 +1,130 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "reg-zahra",
   "division": "reg",
   "employeeId": "zahra",
   "title": "Halal Assurance Specialist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Zahra",
-    "tugasPeran": [
-      "Memetakan status halal bahan & pemasok",
-      "Menyusun SJPH",
-      "Mengajukan sertifikasi ke BPJPH"
-    ],
-    "keahlian": [
-      "halal",
-      "sjph",
-      "bpjph"
-    ],
-    "contohTugas": [
-      "Audit status halal 30 bahan baku",
-      "Rencana sertifikasi halal produk baru"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Pemeta status halal bahan baku",
+  "ringkas": "Periksa sertifikat halal tiap bahan dan pemasok: yang belum ada, kedaluwarsa, atau segera habis, serta bahan yang tergolong titik kritis.",
+  "kataKunci": [
+    "halal",
+    "bahan",
+    "pemasok",
+    "sertifikat halal",
+    "titik kritis"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "ambang",
+      "type": "choice",
+      "label": "Ingatkan sebelum sertifikat habis",
+      "required": true,
+      "default": "90",
+      "choices": [
+        {
+          "v": "60",
+          "t": "2 bulan"
+        },
+        {
+          "v": "90",
+          "t": "3 bulan"
+        },
+        {
+          "v": "180",
+          "t": "6 bulan"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Daftar bahan (bahan | pemasok | nomor sertifikat halal | berlaku sampai)",
+      "required": true,
+      "contoh": "Gliserin | PT Kimia | ID123 | 2026-12-31"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa sertifikat",
+      "set": {
+        "rows": "baris(input.data).slice(0, 200).map((l) => { const p = l.split('|').map((s) => s.trim()); const sisa = p[2] && p[3] ? Math.floor((Date.parse(p[3]) - Date.parse(input.acuan)) / 864e5) : null; const kritis = /gelatin|alkohol|etanol|kolagen|gliserin|enzim|lemak hewan|tallow|karmin|carmine|whey|rennet|sistein/i.test(p[0]); return { bahan: p[0] || '-', pemasok: p[1] || '-', sertifikat: p[2] || '-', sisa: sisa, kritis: kritis, status: !p[2] ? 'Belum ada sertifikat' : sisa === null || Number.isNaN(sisa) ? 'Tanggal tidak jelas' : sisa < 0 ? 'Kedaluwarsa' : sisa <= num(input.ambang) ? 'Segera habis' : 'Aman' }; })",
+        "kritisN": "v.rows.filter((r) => r.kritis).length",
+        "masalah": "v.rows.filter((r) => r.status !== 'Aman').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.masalah + ' dari ' + v.rows.length + ' bahan perlu ditindaklanjuti, ' + v.kritisN + ' titik kritis'",
+    "teks": "'# Status halal bahan per ' + tgl(input.acuan) + '\\n\\n_' + \"Ini alat bantu pemeriksaan awal, bukan keputusan resmi atau nasihat hukum. Tetap konfirmasikan dengan penanggung jawab regulasi dan aturan terbaru.\" + '_\\n\\n' + tabel(['Bahan', 'Pemasok', 'Sertifikat', 'Sisa hari', 'Titik kritis', 'Status'], v.rows.map((r) => [r.bahan, r.pemasok, r.sertifikat, r.sisa === null ? '-' : r.sisa, r.kritis ? 'Ya' : '-', r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'status-halal-bahan'",
+        "isi": "csv([['Bahan', 'Pemasok', 'Sertifikat', 'Sisa hari', 'Titik kritis', 'Status']].concat(v.rows.map((r) => [r.bahan, r.pemasok, r.sertifikat, r.sisa === null ? '' : r.sisa, r.kritis ? 'Ya' : '', r.status])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "ambang": "90",
+      "data": "Gliserin | PT Kimia | ID123 | 2026-12-31\nNiacinamide | PT Aroma | |\nBotol | PT Plastik | ID999 | 2028-01-01"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Belum ada sertifikat",
+        "Segera habis",
+        "1 titik kritis",
+        "2 dari 3 bahan"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Halal Assurance Specialist di divisi Regulatory Affairs, memakai bahasa awam",
+    "tujuan": "Periksa sertifikat halal tiap bahan dan pemasok: yang belum ada, kedaluwarsa, atau segera habis, serta bahan yang tergolong titik kritis. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat, tanpa menjanjikan persetujuan",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua dokumen belum lengkap; lengkapi sebelum diajukan.",
+      "buruk": "Pasti disetujui."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "halal"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeta status halal bahan baku perlu dibaca bersama: halal menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

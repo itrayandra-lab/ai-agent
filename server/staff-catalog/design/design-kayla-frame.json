@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "design-kayla-frame",
+  "division": "design",
+  "employeeId": "kayla",
+  "title": "Motion Designer",
+  "version": 1,
+  "name": "Penghitung frame dan ukuran video",
+  "ringkas": "Hitung jumlah frame, kecepatan data, dan perkiraan ukuran berkas video dari durasi, fps, dan resolusi.",
+  "kataKunci": [
+    "frame",
+    "fps",
+    "ukuran video",
+    "bitrate",
+    "render"
+  ],
+  "inputs": [
+    {
+      "key": "detik",
+      "type": "number",
+      "label": "Durasi video (detik)",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "fps",
+      "type": "choice",
+      "label": "Kecepatan gambar",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "24",
+          "t": "24 (sinematik)"
+        },
+        {
+          "v": "30",
+          "t": "30 (umum)"
+        },
+        {
+          "v": "60",
+          "t": "60 (halus)"
+        }
+      ]
+    },
+    {
+      "key": "resolusi",
+      "type": "choice",
+      "label": "Resolusi",
+      "required": true,
+      "default": "1080",
+      "choices": [
+        {
+          "v": "720",
+          "t": "HD 720"
+        },
+        {
+          "v": "1080",
+          "t": "Full HD 1080"
+        },
+        {
+          "v": "2160",
+          "t": "4K"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "frame": "Math.round(num(input.detik) * num(input.fps))",
+        "mbps": "({ '720': 5, '1080': 8, '2160': 35 })[input.resolusi] * (num(input.fps) === 60 ? 1.5 : 1)",
+        "mb": "Math.round(v.mbps * num(input.detik) / 8 * 10) / 10"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.frame + ' frame, kira-kira ' + v.mb + ' MB (' + v.mbps + ' Mbps)'",
+    "teks": "'# Hitungan video\\n\\n' + tabel(['Hal', 'Nilai'], [['Durasi', input.detik + ' detik'], ['Kecepatan', input.fps + ' fps'], ['Resolusi', input.resolusi + 'p'], ['Jumlah frame', v.frame], ['Kecepatan data', v.mbps + ' Mbps'], ['Perkiraan ukuran', v.mb + ' MB']]) + '\\n\\nAngka ini perkiraan untuk video yang diekspor siap unggah.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hitungan-video'",
+        "isi": "csv([['Durasi', 'FPS', 'Resolusi', 'Frame', 'Mbps', 'MB'], [input.detik, input.fps, input.resolusi, v.frame, v.mbps, v.mb]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "detik": "30",
+      "fps": "30",
+      "resolusi": "1080"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "900 frame",
+        "30 MB"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Motion Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Hitung jumlah frame, kecepatan data, dan perkiraan ukuran berkas video dari durasi, fps, dan resolusi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "frame"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung frame dan ukuran video perlu dibaca bersama: frame menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

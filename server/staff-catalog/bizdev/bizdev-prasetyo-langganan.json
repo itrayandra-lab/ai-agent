@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "bizdev-prasetyo-langganan",
+  "division": "bizdev",
+  "employeeId": "prasetyo",
+  "title": "Corporate Sales & B2B Gifting Specialist",
+  "version": 1,
+  "name": "Penghitung langganan RayFlow untuk perusahaan",
+  "ringkas": "Bandingkan biaya langganan bulanan dan tahunan RayFlow untuk satu perusahaan dengan beberapa cabang atau tim, termasuk hemat bila bayar setahun.",
+  "kataKunci": [
+    "langganan",
+    "rayflow",
+    "korporat",
+    "tahunan",
+    "penawaran langganan"
+  ],
+  "inputs": [
+    {
+      "key": "klien",
+      "type": "text",
+      "label": "Nama perusahaan",
+      "required": true,
+      "contoh": "Grup Maju"
+    },
+    {
+      "key": "akun",
+      "type": "number",
+      "label": "Jumlah akun atau tim yang berlangganan",
+      "required": true,
+      "contoh": "12"
+    },
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga per akun per bulan (Rp)",
+      "required": true,
+      "contoh": "299000",
+      "default": "299000"
+    },
+    {
+      "key": "tahunan",
+      "type": "choice",
+      "label": "Diskon bila bayar setahun",
+      "required": true,
+      "default": "15",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tidak ada"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "15",
+          "t": "15%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung langganan",
+      "set": {
+        "diskonVol": "num(input.akun) >= 50 ? 15 : num(input.akun) >= 20 ? 10 : num(input.akun) >= 10 ? 5 : 0",
+        "bulanan": "Math.round(num(input.akun) * num(input.harga) * (100 - v.diskonVol) / 100)",
+        "setahunBulanan": "v.bulanan * 12",
+        "tahunan": "Math.round(v.setahunBulanan * (100 - num(input.tahunan)) / 100)",
+        "hemat": "v.setahunBulanan - v.tahunan"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.klien + ': ' + rp(v.bulanan) + ' per bulan, atau ' + rp(v.tahunan) + ' bila bayar setahun (hemat ' + rp(v.hemat) + ')'",
+    "teks": "'# Langganan ' + input.klien + '\\n\\n- Akun: ' + input.akun + ' x ' + rp(input.harga) + '\\n- Diskon jumlah akun: ' + v.diskonVol + '%\\n- **Bayar bulanan:** ' + rp(v.bulanan) + ' per bulan (' + rp(v.setahunBulanan) + ' setahun)\\n- **Bayar setahun di muka:** ' + rp(v.tahunan) + ' (diskon ' + input.tahunan + '%)\\n- Hemat: ' + rp(v.hemat)",
+    "data": "({ bulanan: v.bulanan, tahunan: v.tahunan })"
+  },
+  "sample": {
+    "input": {
+      "klien": "Grup Maju",
+      "akun": "12",
+      "harga": "299000",
+      "tahunan": "15"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Rp 3.408.600",
+        "Rp 34.767.720",
+        "hemat Rp 6.135.480"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Corporate Sales & B2B Gifting Specialist di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Bandingkan biaya langganan bulanan dan tahunan RayFlow untuk satu perusahaan dengan beberapa cabang atau tim, termasuk hemat bila bayar setahun. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "langganan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung langganan rayflow untuk perusahaan perlu dibaca bersama: langganan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

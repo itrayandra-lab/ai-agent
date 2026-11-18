@@ -1,39 +1,142 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "retail-pandu",
   "division": "retail",
   "employeeId": "pandu",
   "title": "Retail Operations & Inventory Analyst",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Pandu",
-    "tugasPeran": [
-      "Memantau stok per toko, menghitung kebutuhan replenishment, dan mencegah stockout",
-      "Menjadwalkan stock opname dan menganalisis selisih serta shrinkage",
-      "Membuat laporan penjualan, sell-through, dan stok kedaluwarsa per toko"
-    ],
-    "keahlian": [
-      "inventori",
-      "replenishment",
-      "stock opname",
-      "analitik retail"
-    ],
-    "contohTugas": [
-      "Hitung replenishment 5 toko minggu ini",
-      "Analisis selisih stock opname bulan lalu",
-      "Laporan sell-through per toko per SKU"
+  "name": "Penghitung kebutuhan pesan ulang stok toko",
+  "ringkas": "Hitung kapan dan berapa banyak stok harus dipesan lagi per produk, dari penjualan harian, lama pengiriman, dan cadangan aman.",
+  "kataKunci": [
+    "restock",
+    "stok",
+    "pesan ulang",
+    "stockout",
+    "persediaan"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Produk (satu baris: kode | stok sekarang | rata-rata terjual per hari | lama pengiriman hari)",
+      "required": true,
+      "contoh": "SRM-30 | 120 | 10 | 7"
+    },
+    {
+      "key": "aman",
+      "type": "choice",
+      "label": "Cadangan aman",
+      "required": true,
+      "default": "7",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3 hari penjualan"
+        },
+        {
+          "v": "7",
+          "t": "7 hari penjualan"
+        },
+        {
+          "v": "14",
+          "t": "14 hari penjualan"
+        }
+      ]
+    },
+    {
+      "key": "cakupan",
+      "type": "choice",
+      "label": "Stok yang ingin dijaga setelah barang datang",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "14",
+          "t": "2 minggu"
+        },
+        {
+          "v": "30",
+          "t": "1 bulan"
+        },
+        {
+          "v": "45",
+          "t": "1,5 bulan"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung stok",
+      "set": {
+        "rows": "baris(input.data).slice(0, 150).map((l) => { const p = l.split('|').map((s) => s.trim()); const stok = num(p[1]); const jual = num(p[2]); const lead = num(p[3]); const titik = Math.ceil(jual * (lead + num(input.aman))); const pesan = Math.max(0, Math.ceil(jual * (lead + num(input.cakupan)) - stok)); const hari = jual ? Math.floor(stok / jual) : 999; return { kode: p[0] || '-', stok: stok, jual: jual, titik: titik, hari: hari, pesan: pesan, status: stok <= 0 ? 'Habis' : stok <= titik ? 'Pesan sekarang' : stok <= titik * 1.5 ? 'Segera siapkan' : 'Aman' }; }).sort((a, b) => a.hari - b.hari)",
+        "urgent": "v.rows.filter((r) => r.status === 'Habis' || r.status === 'Pesan sekarang').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' produk dicek; ' + v.urgent + ' harus dipesan sekarang; total pesan ' + v.rows.reduce((a, b) => a + b.pesan, 0) + ' satuan'",
+    "teks": "'# Pesan ulang stok\\n\\n' + tabel(['Kode', 'Stok', 'Terjual/hari', 'Cukup untuk (hari)', 'Titik pesan', 'Jumlah pesan', 'Status'], v.rows.map((r) => [r.kode, r.stok, r.jual, r.hari === 999 ? '-' : r.hari, r.titik, r.pesan, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pesan-ulang-stok'",
+        "isi": "csv([['Kode', 'Stok', 'Terjual per hari', 'Cukup untuk hari', 'Titik pesan', 'Jumlah pesan', 'Status']].concat(v.rows.map((r) => [r.kode, r.stok, r.jual, r.hari === 999 ? '' : r.hari, r.titik, r.pesan, r.status])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "data": "SRM-30 | 120 | 10 | 7\nTNR-100 | 500 | 5 | 10\nKRM-50 | 0 | 4 | 5",
+      "aman": "7",
+      "cakupan": "30"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 produk dicek; 2 harus dipesan sekarang; total pesan 390 satuan",
+        "Habis",
+        "Pesan sekarang"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Retail Operations & Inventory Analyst di divisi Retail & Beauty Stores, memakai bahasa awam",
+    "tujuan": "Hitung kapan dan berapa banyak stok harus dipesan lagi per produk, dari penjualan harian, lama pengiriman, dan cadangan aman. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Toko harus lebih bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "restock"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung kebutuhan pesan ulang stok toko perlu dibaca bersama: restock menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

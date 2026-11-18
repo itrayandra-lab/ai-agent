@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-vina-segmentasi-pelanggan",
+  "division": "mkt",
+  "employeeId": "vina",
+  "title": "CRM & Email Specialist",
+  "version": 1,
+  "name": "Pengelompok pelanggan (RFM)",
+  "ringkas": "Kelompokkan pelanggan menurut kapan terakhir beli, seberapa sering, dan total belanja, lalu beri saran pesan untuk tiap kelompok.",
+  "kataKunci": [
+    "segmentasi",
+    "rfm",
+    "pelanggan setia",
+    "pelanggan tidur",
+    "kelompok pelanggan"
+  ],
+  "inputs": [
+    {
+      "key": "pelanggan",
+      "type": "longtext",
+      "label": "Pelanggan (satu baris: nama | hari sejak beli terakhir | jumlah pembelian | total belanja Rp)",
+      "required": true,
+      "contoh": "Ani | 10 | 8 | 2000000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Kelompokkan",
+      "set": {
+        "rows": "baris(input.pelanggan).slice(0, 500).map((l) => { const p = l.split('|').map((s) => s.trim()); const r = num(p[1]); const f = num(p[2]); return { nama: p[0] || '-', r: r, f: f, belanja: num(p[3]), seg: r <= 30 && f >= 5 ? 'Juara' : f >= 3 && r <= 90 ? 'Setia' : f <= 1 && r <= 30 ? 'Baru' : r > 120 ? 'Tidur' : r > 60 ? 'Berisiko pergi' : 'Biasa' }; })",
+        "saran": "({ 'Juara': 'Beri akses lebih awal ke produk baru dan program hadiah', 'Setia': 'Tawarkan paket isi ulang dan ajak jadi pemberi ulasan', 'Baru': 'Kirim panduan pemakaian dan ajak beli kedua', 'Tidur': 'Kirim pesan \"kami kangen\" dengan penawaran khusus', 'Berisiko pergi': 'Ingatkan lewat konten bermanfaat dan tawaran ringan', 'Biasa': 'Pertahankan dengan kabar rutin' })",
+        "ringkasSeg": "['Juara', 'Setia', 'Baru', 'Biasa', 'Berisiko pergi', 'Tidur'].map((s) => ({ seg: s, n: v.rows.filter((r) => r.seg === s).length, belanja: v.rows.filter((r) => r.seg === s).reduce((a, b) => a + b.belanja, 0), saran: v.saran[s] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' pelanggan dalam ' + v.ringkasSeg.filter((s) => s.n > 0).length + ' kelompok; terbanyak: ' + v.ringkasSeg.slice().sort((x, y) => y.n - x.n)[0].seg",
+    "teks": "'# Kelompok pelanggan\\n\\n' + tabel(['Kelompok', 'Jumlah', 'Total belanja', 'Saran'], v.ringkasSeg.filter((s) => s.n > 0).map((s) => [s.seg, s.n, rp(s.belanja), s.saran])) + '\\n\\nAturan: Juara = beli terakhir 30 hari dan 5 kali atau lebih; Setia = 3 kali atau lebih dalam 90 hari; Baru = sekali beli dalam 30 hari; Tidur = lebih dari 120 hari.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kelompok-pelanggan'",
+        "isi": "csv([['Nama', 'Hari sejak beli', 'Jumlah beli', 'Total belanja', 'Kelompok']].concat(v.rows.map((r) => [r.nama, r.r, r.f, r.belanja, r.seg])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "CRM",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "pelanggan": "Ani | 10 | 8 | 2000000\nBudi | 20 | 1 | 150000\nCici | 150 | 2 | 300000\nDedi | 70 | 4 | 900000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "4 pelanggan dalam 4 kelompok",
+        "Juara",
+        "Tidur"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "CRM & Email Specialist di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Kelompokkan pelanggan menurut kapan terakhir beli, seberapa sering, dan total belanja, lalu beri saran pesan untuk tiap kelompok. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "segmentasi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pengelompok pelanggan (rfm) perlu dibaca bersama: segmentasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

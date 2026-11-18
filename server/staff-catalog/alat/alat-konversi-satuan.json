@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-konversi-satuan",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Pengubah satuan",
+  "ringkas": "Ubah angka antar satuan yang umum: jarak, berat, volume, panjang, dan suhu.",
+  "kataKunci": [
+    "konversi",
+    "satuan",
+    "kilometer",
+    "kilogram",
+    "suhu"
+  ],
+  "inputs": [
+    {
+      "key": "nilai",
+      "type": "number",
+      "label": "Angka yang diubah",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Ubah dari ke",
+      "required": true,
+      "default": "km_mil",
+      "choices": [
+        {
+          "v": "km_mil",
+          "t": "Kilometer ke mil"
+        },
+        {
+          "v": "mil_km",
+          "t": "Mil ke kilometer"
+        },
+        {
+          "v": "kg_lb",
+          "t": "Kilogram ke pound"
+        },
+        {
+          "v": "lb_kg",
+          "t": "Pound ke kilogram"
+        },
+        {
+          "v": "m_ft",
+          "t": "Meter ke kaki"
+        },
+        {
+          "v": "cm_in",
+          "t": "Sentimeter ke inci"
+        },
+        {
+          "v": "c_f",
+          "t": "Celsius ke Fahrenheit"
+        },
+        {
+          "v": "f_c",
+          "t": "Fahrenheit ke Celsius"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Ubah",
+      "set": {
+        "hasil": "(({ km_mil: (x) => x * 0.621371, mil_km: (x) => x * 1.609344, kg_lb: (x) => x * 2.204623, lb_kg: (x) => x * 0.453592, m_ft: (x) => x * 3.280840, ft_m: (x) => x * 0.3048, cm_in: (x) => x * 0.393701, l_gal: (x) => x * 0.264172, c_f: (x) => x * 9 / 5 + 32, f_c: (x) => (x - 32) * 5 / 9 })[input.jenis])(input.nilai)",
+        "satuan": "({ km_mil: 'mil', mil_km: 'km', kg_lb: 'pound', lb_kg: 'kg', m_ft: 'kaki', ft_m: 'meter', cm_in: 'inci', l_gal: 'galon', c_f: '°F', f_c: '°C' })[input.jenis]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nilai + ' menjadi ' + (Math.round(v.hasil * 10000) / 10000) + ' ' + v.satuan",
+    "teks": "'**' + input.nilai + '** = **' + (Math.round(v.hasil * 10000) / 10000) + ' ' + v.satuan + '**'"
+  },
+  "sample": {
+    "input": {
+      "nilai": "10",
+      "jenis": "km_mil"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "6.2137 mil"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "otakProfil": {
+    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
+    "tujuan": "Ubah angka antar satuan yang umum: jarak, berat, volume, panjang, dan suhu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Hasil sudah benar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "konversi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pengubah satuan perlu dibaca bersama: konversi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

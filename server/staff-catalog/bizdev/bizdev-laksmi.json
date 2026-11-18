@@ -1,39 +1,145 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "bizdev-laksmi",
   "division": "bizdev",
   "employeeId": "laksmi",
   "title": "Partnership Manager — Clinics, Salons & Co-branding",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Laksmi",
-    "tugasPeran": [
-      "Menjalin kemitraan klinik kecantikan dan salon untuk professional line",
-      "Merancang program co-branding dengan brand atau komunitas yang selaras",
-      "Mengelola rencana bersama, materi edukasi, dan review kinerja mitra"
-    ],
-    "keahlian": [
-      "klinik",
-      "salon",
-      "co-branding",
-      "kemitraan"
-    ],
-    "contohTugas": [
-      "Proposal kemitraan untuk jaringan klinik estetika",
-      "Ide 5 co-branding yang cocok dengan Ray Beauty",
-      "Template review kinerja mitra kuartalan"
-    ]
+  "name": "Kalkulator bagi hasil kemitraan klinik",
+  "ringkas": "Hitung bagi hasil bulanan dengan klinik atau salon mitra dan perkirakan berapa bulan sampai biaya awal kemitraan balik modal.",
+  "kataKunci": [
+    "bagi hasil",
+    "kemitraan klinik",
+    "salon",
+    "balik modal",
+    "professional line"
+  ],
+  "inputs": [
+    {
+      "key": "mitra",
+      "type": "text",
+      "label": "Nama klinik atau salon mitra",
+      "required": true,
+      "contoh": "Klinik Cantik Rina"
+    },
+    {
+      "key": "omzet",
+      "type": "number",
+      "label": "Perkiraan penjualan produk kita lewat mitra per bulan (Rp)",
+      "required": true,
+      "contoh": "40000000"
+    },
+    {
+      "key": "porsi",
+      "type": "choice",
+      "label": "Bagian untuk mitra",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "15",
+          "t": "15%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "25",
+          "t": "25%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        }
+      ]
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Biaya pokok produk dari penjualan itu (%)",
+      "required": true,
+      "contoh": "35"
+    },
+    {
+      "key": "modal",
+      "type": "number",
+      "label": "Biaya awal kemitraan: pelatihan, display, contoh produk (Rp)",
+      "required": true,
+      "contoh": "30000000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung bagi hasil",
+      "set": {
+        "mitraRp": "Math.round(num(input.omzet) * num(input.porsi) / 100)",
+        "pokok": "Math.round(num(input.omzet) * num(input.hpp) / 100)",
+        "kita": "num(input.omzet) - v.mitraRp - v.pokok",
+        "bulan": "v.kita > 0 ? Math.ceil(num(input.modal) / v.kita) : 0",
+        "tahun": "v.kita * 12 - num(input.modal)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kita > 0 ? 'Untung kita ' + rp(v.kita) + ' per bulan; balik modal sekitar ' + v.bulan + ' bulan' : 'Kemitraan ini rugi; ubah bagian mitra atau harga'",
+    "teks": "'# Bagi hasil ' + input.mitra + '\\n\\n' + tabel(['Pos', 'Per bulan'], [['Penjualan', rp(input.omzet)], ['Biaya pokok produk', rp(v.pokok)], ['Bagian mitra (' + input.porsi + '%)', rp(v.mitraRp)], ['**Untung kita**', rp(v.kita)]]) + '\\n\\n- Biaya awal: ' + rp(input.modal) + '\\n- Balik modal: ' + v.bulan + ' bulan\\n- Hasil bersih setahun setelah biaya awal: ' + rp(v.tahun)",
+    "data": "({ kita: v.kita, bulan: v.bulan })"
+  },
+  "sample": {
+    "input": {
+      "mitra": "Klinik Cantik Rina",
+      "omzet": "40000000",
+      "porsi": "20",
+      "hpp": "35",
+      "modal": "30000000"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Rp 18.000.000",
+        "balik modal sekitar 2 bulan",
+        "Rp 186.000.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Partnership Manager — Clinics, Salons & Co-branding di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Hitung bagi hasil bulanan dengan klinik atau salon mitra dan perkirakan berapa bulan sampai biaya awal kemitraan balik modal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "bagi hasil"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil kalkulator bagi hasil kemitraan klinik perlu dibaca bersama: bagi hasil menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

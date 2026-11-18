@@ -8,7 +8,7 @@ Pengguna awam **tidak pernah** melihat kata workflow, node, atau n8n. Di layar d
 |---|---|
 | `N8N_API_KEY` | Kunci akses mesin otomasi. Hanya dibaca dari `process.env`; tidak pernah dicatat, dikirim ke agen, atau ditulis ke alur. |
 | `N8N_URL` | Alamat mesin otomasi. Saat ini `https://n8n.raycorpgroup.com` (server Owner). Kosong = `http://127.0.0.1:5678`. |
-| `RAIVERSE_PUBLIC_URL` | Alamat publik aplikasi ini. **Opsional**: kabar lewat RAIVERSE tidak memakainya (RAIVERSE mengambil hasil). Hanya dibutuhkan untuk ringkasan lewat WhatsApp/email dan jalur panggilan masuk `hook`. |
+| `RAIVERSE_PUBLIC_URL` | Alamat publik aplikasi ini. **Opsional**: kabar lewat RAIVERSE tidak memakainya (RAIVERSE mengambil hasil). Hanya dibutuhkan untuk ringkasan lewat WhatsApp/email dan jalur panggilan masuk `hook` (yang kini wajib bertanda tangan; lihat `docs/KEAMANAN-P3.md`). |
 | `OTOMASI_POLL_MS` | Selang pengambilan hasil (bawaan 60000). `OTOMASI_FILE` mengganti lokasi registri (pengujian). |
 | `WAHA_URL`, `WAHA_ENABLED=1` / `WAHA_API_KEY` | Jalur WhatsApp (WAHA). Bila mesin di server lain, `WAHA_URL` harus alamat yang bisa dijangkau server itu. |
 | `N8N_SMTP_CREDENTIAL_ID`, `N8N_SMTP_CREDENTIAL_NAME`, `N8N_MAIL_FROM` | Jalur email (kredensial SMTP yang dibuat Owner sekali di mesin otomasi). |
@@ -80,6 +80,6 @@ Satu mesin otomasi dipakai bersama, tetapi tiap pengguna = satu ruang kerja RAIV
 - Hanya alur berlabel `[RAIVERSE] ` dan tercatat di registri (`data/otomasi.json`, gitignored) yang bisa diubah/dinyalakan/dihapus; alur milik Owner tidak disentuh (dicek ulang tiap operasi).
 - Alur buatan agen (di luar templat): hanya jenis langkah yang diizinkan; Execute Command, berkas, SSH/FTP, Execute Workflow, Code, `$env`, `process`, `require`, alamat lokal/privat ditolak (`vet()`).
 - Teks dari pengguna/halaman web dimasukkan hanya sebagai literal string; `{{ }}` dinetralkan; isi dari luar tidak pernah dieksekusi.
-- Panggilan balik mesin → RAIVERSE: `/api/automations/hook/<token 128-bit>/(ping|digest)`, di luar gerbang login, **hanya dari 127.0.0.1** kecuali `RAIVERSE_PUBLIC_URL` diisi (lalu dijaga token + batas 30/jam).
+- Panggilan balik mesin → RAIVERSE: `/api/automations/hook/<pengenal 128-bit>/(ping|digest)`, di luar gerbang login. **Sejak Fase P3 bertanda tangan** (v2): header `x-rv-ts`, `x-rv-nonce`, `x-rv-sig` = HMAC-SHA256(rahasia otomasi, `ts.nonce.METODE.aksi.sha256(badan)`); jam melenceng > 5 menit, tanda tangan salah, dan nonce yang dipakai ulang ditolak; batas laju per otomasi (ping 30/jam, digest 30/jam) tahan restart. Yang disimpan hanya hash pengenal dan rahasia terenkripsi. Otomasi lama (token polos) dimigrasi jadi hash dan hanya diterima dari komputer ini selama masa transisi (30 hari, `OTOMASI_LEGACY_HOOK_UNTIL`). Detail: `docs/KEAMANAN-P3.md`.
 - Batas: otomasi aktif (10), draf (20), pembuatan oleh agen per jam (6).
 - Rahasia Google/WAHA ada di kredensial mesin otomasi, tidak di berkas alur, log, atau keluaran agen.

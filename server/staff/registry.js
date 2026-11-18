@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as store from '../store.js';
 import { validateSpec, isStub } from './schema.js';
+import { readDeploy } from './data.js';
 
 export const catalogDir = () => process.env.STAFF_CATALOG_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'staff-catalog');
 let cache = null, cacheAt = 0;
@@ -46,15 +47,17 @@ export function counts() {
 }
 
 /** Kunci kata awam → skor kecocokan sederhana (tanpa AI berbayar) untuk memilih staf dari kalimat. */
-export function search(divisionId, query, { limit = 8, onlyReady = true } = {}) {
+/** Urutkan daftar staf menurut kecocokan kata kunci (tanpa AI berbayar). Tanpa kata kunci: urut abjad kunci. */
+export function rank(list, query, { limit = 8 } = {}) {
   const words = String(query || '').toLowerCase().normalize('NFKD').split(/[^a-z0-9]+/).filter((w) => w.length > 2);
-  const rows = byDivision(divisionId, { onlyReady }).map((s) => {
+  const rows = list.map((s) => {
     const hay = [s.name, s.ringkas, ...(s.kataKunci || [])].join(' ').toLowerCase();
     const score = words.reduce((n, w) => n + (hay.includes(w) ? ((s.kataKunci || []).some((k) => k.toLowerCase().includes(w)) ? 3 : 1) : 0), 0);
     return { s, score };
   });
-  return rows.sort((a, b) => b.score - a.score || a.s.key.localeCompare(b.s.key)).slice(0, limit).filter((r) => !words.length || r.score > 0 || rows.length <= limit).map((r) => r.s);
+  return rows.sort((a, b) => b.score - a.score || a.s.key.localeCompare(b.s.key)).filter((r) => !words.length || r.score > 0).slice(0, limit).map((r) => r.s);
 }
+export const search = (divisionId, query, { limit = 8, onlyReady = true } = {}) => rank(byDivision(divisionId, { onlyReady }), query, { limit });
 
 /** Ringkasan satu staf untuk layar atau manajer (tanpa langkah teknis). */
 export const brief = (s) => ({ kunci: s.key, nama: s.name, ringkas: s.ringkas, jabatan: s.title, divisi: s.division, karyawan: s.employeeId, siap: ready(s), risiko: s.risk, perluIzin: !!s.confirm });
@@ -66,6 +69,8 @@ export function linkEmployees() {
     if (e.type !== 'ai') continue;
     const mine = byEmployee(e.id); const siap = mine.filter(ready).map((s) => s.key);
     const next = { kunci: mine.map((s) => s.key), siap, terakhir: e.staff?.terakhir || null };
+    const dep = readDeploy().items[`staf:${e.staffId || mine[0]?.key}`];   // id alur n8n staf utama (bila sudah terpasang)
+    if (dep?.n8nId && e.workflowId !== dep.n8nId) { e.workflowId = dep.n8nId; store.upsert('employees', e); n++; }
     if (JSON.stringify({ ...e.staff, terakhir: 0 }) !== JSON.stringify({ ...next, terakhir: 0 })) { e.staff = next; store.upsert('employees', e); n++; }
   }
   return n;

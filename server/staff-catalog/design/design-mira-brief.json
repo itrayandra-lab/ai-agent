@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "design-mira-brief",
+  "division": "design",
+  "employeeId": "mira",
+  "title": "Graphic & Brand Designer",
+  "version": 1,
+  "name": "Penyusun brief desain",
+  "ringkas": "Susun brief desain lengkap (tujuan, audiens, ukuran aset, gaya, tenggat) siap dikirim ke desainer.",
+  "kataKunci": [
+    "brief desain",
+    "brief visual",
+    "ukuran aset",
+    "konsep desain",
+    "poster"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul desain",
+      "required": true,
+      "contoh": "Promo Akhir Tahun"
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Tujuan desain",
+      "required": true,
+      "default": "awareness",
+      "choices": [
+        {
+          "v": "awareness",
+          "t": "Agar lebih dikenal"
+        },
+        {
+          "v": "penjualan",
+          "t": "Mendorong penjualan"
+        },
+        {
+          "v": "edukasi",
+          "t": "Mengedukasi"
+        },
+        {
+          "v": "peluncuran",
+          "t": "Peluncuran produk"
+        }
+      ]
+    },
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Dipakai di mana?",
+      "required": true,
+      "default": "instagram",
+      "choices": [
+        {
+          "v": "instagram",
+          "t": "Instagram"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "marketplace",
+          "t": "Toko online"
+        },
+        {
+          "v": "cetak",
+          "t": "Cetak (poster/brosur)"
+        }
+      ]
+    },
+    {
+      "key": "audiens",
+      "type": "text",
+      "label": "Untuk siapa desain ini?",
+      "required": true,
+      "contoh": "Ibu muda 25-35 tahun"
+    },
+    {
+      "key": "pesan",
+      "type": "text",
+      "label": "Pesan utama yang harus terbaca",
+      "required": true,
+      "contoh": "Diskon 30% sampai 31 Desember"
+    },
+    {
+      "key": "gaya",
+      "type": "choice",
+      "label": "Gaya tampilan",
+      "required": true,
+      "default": "minimalis",
+      "choices": [
+        {
+          "v": "minimalis",
+          "t": "Minimalis"
+        },
+        {
+          "v": "ceria",
+          "t": "Ceria"
+        },
+        {
+          "v": "mewah",
+          "t": "Mewah"
+        },
+        {
+          "v": "natural",
+          "t": "Natural"
+        }
+      ]
+    },
+    {
+      "key": "tenggat",
+      "type": "date",
+      "label": "Tenggat selesai",
+      "required": true,
+      "contoh": "2026-12-10"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun brief",
+      "set": {
+        "ukuran": "({ instagram: [['Feed', '1080x1350'], ['Story', '1080x1920']], tiktok: [['Sampul video', '1080x1920']], marketplace: [['Foto utama', '1200x1200'], ['Banner toko', '1920x600']], cetak: [['Poster A3', '3508x4961 (300 dpi)'], ['Brosur A5', '1748x2480 (300 dpi)']] })[input.platform]",
+        "palet": "({ minimalis: 'Putih, abu-abu, satu warna aksen', ceria: 'Warna cerah kontras, 3 warna utama', mewah: 'Hitam, emas, krem', natural: 'Hijau daun, krem, coklat tanah' })[input.gaya]",
+        "tahap": "[['Konsep dan sketsa', 'Desainer kirim 2 arah visual'], ['Revisi', 'Maksimal 2 putaran'], ['Final', 'Berkas siap pakai sesuai ukuran']].map((x) => ({ nama: x[0], isi: x[1] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Brief desain \"' + input.judul + '\" untuk ' + input.platform + ' siap, ' + v.ukuran.length + ' ukuran aset, tenggat ' + tgl(input.tenggat)",
+    "teks": "'# Brief desain: ' + input.judul + '\\n\\n- **Tujuan:** ' + input.tujuan + '\\n- **Untuk:** ' + input.audiens + '\\n- **Pesan utama:** ' + input.pesan + '\\n- **Gaya:** ' + input.gaya + ' (' + v.palet + ')\\n- **Tenggat:** ' + tgl(input.tenggat) + '\\n\\n## Ukuran aset\\n' + tabel(['Aset', 'Ukuran (piksel)'], v.ukuran) + '\\n\\n## Tahapan\\n' + v.tahap.map((t, i) => (i + 1) + '. ' + t.nama + ': ' + t.isi).join('\\n') + '\\n\\n## Cek sebelum kirim\\n- [ ] Logo dan warna merek sesuai panduan\\n- [ ] Teks sudah benar ejaannya\\n- [ ] Pesan utama terbaca dalam 3 detik'",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'brief-desain'",
+        "isi": "'# Brief desain: ' + input.judul + '\\n\\nTujuan: ' + input.tujuan + '\\nUntuk: ' + input.audiens + '\\nPesan: ' + input.pesan + '\\nGaya: ' + input.gaya + ' - ' + v.palet + '\\nTenggat: ' + input.tenggat + '\\n\\nUkuran:\\n' + v.ukuran.map((u) => '- ' + u[0] + ': ' + u[1]).join('\\n') + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "judul": "Promo Akhir Tahun",
+      "tujuan": "penjualan",
+      "platform": "instagram",
+      "audiens": "Ibu muda 25-35 tahun",
+      "pesan": "Diskon 30% sampai 31 Desember",
+      "gaya": "ceria",
+      "tenggat": "2026-12-10"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1080x1350",
+        "Warna cerah kontras",
+        "2 ukuran aset"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Graphic & Brand Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Susun brief desain lengkap (tujuan, audiens, ukuran aset, gaya, tenggat) siap dikirim ke desainer. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "brief desain"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun brief desain perlu dibaca bersama: brief desain menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

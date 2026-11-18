@@ -1,38 +1,122 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "it-salsa",
   "division": "it",
   "employeeId": "salsa",
   "title": "Security Analyst",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Salsa",
-    "tugasPeran": [
-      "Menganalisis ancaman dan kerentanan",
-      "Menyusun materi security awareness",
-      "Memantau advisori keamanan terbaru"
-    ],
-    "keahlian": [
-      "threat analysis",
-      "vulnerability",
-      "security awareness"
-    ],
-    "contohTugas": [
-      "Analisis risiko phishing untuk tim",
-      "Checklist keamanan aplikasi web",
-      "Ringkas advisori keamanan minggu ini"
+  "name": "Pemeriksa keamanan isi halaman web",
+  "ringkas": "Baca satu halaman web publik dan periksa hal keamanan dasar yang terlihat di isinya, lalu beri skor dan saran.",
+  "kataKunci": [
+    "keamanan web",
+    "https",
+    "csp",
+    "audit halaman",
+    "celah"
+  ],
+  "inputs": [
+    {
+      "key": "url",
+      "type": "url",
+      "label": "Alamat halaman yang diperiksa",
+      "required": true,
+      "contoh": "https://contoh.com/"
+    }
+  ],
+  "steps": [
+    {
+      "id": "buka",
+      "use": "ambil_web",
+      "label": "Buka halaman",
+      "dari": "url",
+      "simpan": "web"
+    },
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa isi",
+      "set": {
+        "https": "/^https:/i.test(input.url)",
+        "csp": "/<meta[^>]+http-equiv=[\"']content-security-policy[\"']/i.test(v.web.html)",
+        "campur": "(v.web.html.match(/\\ssrc=[\"']http:\\/\\/[^\"']+/gi) || []).length",
+        "luar": "(v.web.html.match(/<script[^>]+src=[\"']https?:\\/\\/[^\"']+[\"'][^>]*>/gi) || [])",
+        "tanpaSri": "v.luar.filter((t) => !/integrity=/i.test(t)).length",
+        "blank": "(v.web.html.match(/<a\\s[^>]*target=[\"']_blank[\"'][^>]*>/gi) || []).filter((t) => !/rel=[\"'][^\"']*noopener/i.test(t)).length",
+        "formHttp": "/<form[^>]+action=[\"']http:\\/\\//i.test(v.web.html)",
+        "generator": "meta(v.web.html, 'generator')"
+      }
+    },
+    {
+      "id": "nilai",
+      "use": "hitung",
+      "label": "Nilai hasil",
+      "set": {
+        "cek": "[['Memakai HTTPS', v.https, v.https ? 'Alamat aman (https)' : 'Pindah ke https'], ['Kebijakan isi (CSP) terpasang', v.csp, v.csp ? 'Ada' : 'Tidak terlihat di isi halaman (bisa juga lewat header)'], ['Tanpa konten campuran', v.campur === 0, v.campur + ' sumber memakai http'], ['Skrip luar punya segel integritas', v.tanpaSri === 0, v.tanpaSri + ' dari ' + v.luar.length + ' skrip luar tanpa segel'], ['Tautan tab baru aman', v.blank === 0, v.blank + ' tautan tanpa pengaman'], ['Formulir tidak dikirim lewat http', !v.formHttp, v.formHttp ? 'Ada formulir ke http' : 'Aman'], ['Tidak membocorkan teknologi', !v.generator, v.generator ? 'Terbaca: ' + v.generator : 'Tidak terbaca']].map((c) => ({ nama: c[0], lulus: !!c[1], catatan: c[2] }))",
+        "skor": "Math.round(v.cek.filter((c) => c.lulus).length / v.cek.length * 100)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Skor keamanan dasar ' + v.skor + ' dari 100; ' + v.cek.filter((c) => !c.lulus).length + ' hal perlu diperbaiki'",
+    "teks": "'# Pemeriksaan keamanan halaman\\n\\nHalaman: ' + input.url + '  \\nJawaban situs: ' + v.web.status + '\\n\\n' + tabel(['Periksa', 'Lulus?', 'Catatan'], v.cek.map((c) => [c.nama, c.lulus ? 'Ya' : 'Belum', c.catatan])) + '\\n\\n**Skor: ' + v.skor + '/100**\\n\\n_Ini hanya membaca isi halaman. Header keamanan, sertifikat, dan celah di server perlu pemeriksaan terpisah._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'keamanan-halaman'",
+        "isi": "csv([['Periksa', 'Lulus', 'Catatan']].concat(v.cek.map((c) => [c.nama, c.lulus ? 'Ya' : 'Belum', c.catatan])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "url": "https://contoh.com/"
+    },
+    "web": {
+      "web": "<html><head><title>Toko</title><meta name=\"generator\" content=\"WordPress 6.0\"></head><body><img src=\"http://cdn.contoh.com/a.jpg\"><script src=\"https://cdn.lain.com/lib.js\"></script><a href=\"https://x.com\" target=\"_blank\">x</a></body></html>"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Skor keamanan dasar 29 dari 100",
+        "Terbaca: WordPress 6.0"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Security Analyst di divisi IT & Security, memakai bahasa awam",
+    "tujuan": "Baca satu halaman web publik dan periksa hal keamanan dasar yang terlihat di isinya, lalu beri skor dan saran. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Sistem mungkin kurang aman."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "keamanan web"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa keamanan isi halaman web perlu dibaca bersama: keamanan web menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

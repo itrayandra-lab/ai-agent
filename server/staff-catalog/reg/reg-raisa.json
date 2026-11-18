@@ -1,36 +1,177 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "reg-raisa",
   "division": "reg",
   "employeeId": "raisa",
   "title": "Regulatory Intelligence Analyst",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Raisa",
-    "tugasPeran": [
-      "Memantau perubahan regulasi BPOM & ASEAN",
-      "Ringkasan dampak regulasi ke produk"
-    ],
-    "keahlian": [
-      "regulasi",
-      "monitoring",
-      "asean"
-    ],
-    "contohTugas": [
-      "Ringkasan regulasi kosmetik terbaru",
-      "Dampak aturan label baru"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Penilai dampak perubahan aturan",
+  "ringkas": "Dari satu aturan baru, hitung sisa waktu, perkiraan beban kerja, dan jadwal langkah penyesuaian yang perlu dikerjakan.",
+  "kataKunci": [
+    "regulasi",
+    "perubahan aturan",
+    "dampak",
+    "bpom",
+    "penyesuaian"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Nama aturan atau perubahannya",
+      "required": true,
+      "contoh": "Aturan batas bahan X"
+    },
+    {
+      "key": "berlaku",
+      "type": "date",
+      "label": "Mulai berlaku",
+      "required": true,
+      "contoh": "2027-03-01"
+    },
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "area",
+      "type": "choice",
+      "label": "Bagian yang terdampak",
+      "required": true,
+      "default": "label",
+      "choices": [
+        {
+          "v": "bahan",
+          "t": "Bahan baku"
+        },
+        {
+          "v": "label",
+          "t": "Label kemasan"
+        },
+        {
+          "v": "klaim",
+          "t": "Klaim iklan"
+        },
+        {
+          "v": "produksi",
+          "t": "Proses produksi"
+        },
+        {
+          "v": "pendaftaran",
+          "t": "Pendaftaran produk"
+        }
+      ]
+    },
+    {
+      "key": "tingkat",
+      "type": "choice",
+      "label": "Seberapa besar perubahannya",
+      "required": true,
+      "default": "sedang",
+      "choices": [
+        {
+          "v": "rendah",
+          "t": "Kecil"
+        },
+        {
+          "v": "sedang",
+          "t": "Sedang"
+        },
+        {
+          "v": "tinggi",
+          "t": "Besar"
+        }
+      ]
+    },
+    {
+      "key": "sku",
+      "type": "number",
+      "label": "Jumlah produk yang terdampak",
+      "required": true,
+      "contoh": "20"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung dampak",
+      "set": {
+        "sisa": "Math.floor((Date.parse(input.berlaku) - Date.parse(input.acuan)) / 864e5)",
+        "urgensi": "v.sisa <= 0 ? 'Sudah berlaku' : v.sisa <= 30 ? 'Mendesak' : v.sisa <= 90 ? 'Segera' : 'Terjadwal'",
+        "jam": "Math.round(num(input.sku) * ({ rendah: 0.5, sedang: 1.5, tinggi: 3 })[input.tingkat])",
+        "langkah": "[[-90, ({ bahan: 'Kumpulkan data bahan terdampak dan hubungi pemasok', label: 'Daftar label yang harus diubah', klaim: 'Telaah semua klaim yang terdampak', produksi: 'Petakan proses yang berubah', pendaftaran: 'Siapkan berkas pendaftaran ulang' })[input.area]], [-60, 'Siapkan rancangan perubahan dan perkiraan biaya'], [-30, 'Uji dan setujui perubahan bersama tim terkait'], [-7, 'Pastikan semua produk dan materi sudah sesuai']].map((s) => ({ tanggal: new Date(Date.parse(input.berlaku) + s[0] * 864e5).toISOString().slice(0, 10), langkah: s[1], status: Date.parse(input.berlaku) + s[0] * 864e5 < Date.parse(input.acuan) ? 'Terlewat' : 'Terjadwal' }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.judul + ': ' + v.urgensi + ', sisa ' + v.sisa + ' hari, perkiraan ' + v.jam + ' jam kerja'",
+    "teks": "'# Dampak aturan: ' + input.judul + '\\n\\n_' + \"Ini alat bantu pemeriksaan awal, bukan keputusan resmi atau nasihat hukum. Tetap konfirmasikan dengan penanggung jawab regulasi dan aturan terbaru.\" + '_\\n\\n- Mulai berlaku: ' + tgl(input.berlaku) + ' (sisa ' + v.sisa + ' hari, **' + v.urgensi + '**)\\n- Produk terdampak: ' + input.sku + '\\n- Perkiraan beban kerja: **' + v.jam + ' jam**\\n\\n' + tabel(['Tanggal', 'Langkah', 'Status'], v.langkah.map((l) => [l.tanggal, l.langkah, l.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'dampak-aturan'",
+        "isi": "csv([['Tanggal', 'Langkah', 'Status', 'Penanggung jawab']].concat(v.langkah.map((l) => [l.tanggal, l.langkah, l.status, ''])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "judul": "Aturan batas bahan X",
+      "berlaku": "2027-03-01",
+      "acuan": "2026-11-18",
+      "area": "label",
+      "tingkat": "sedang",
+      "sku": "20"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Terjadwal",
+        "30 jam",
+        "2026-12-01",
+        "Daftar label yang harus diubah"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Regulatory Intelligence Analyst di divisi Regulatory Affairs, memakai bahasa awam",
+    "tujuan": "Dari satu aturan baru, hitung sisa waktu, perkiraan beban kerja, dan jadwal langkah penyesuaian yang perlu dikerjakan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat, tanpa menjanjikan persetujuan",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua dokumen belum lengkap; lengkapi sebelum diajukan.",
+      "buruk": "Pasti disetujui."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "regulasi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilai dampak perubahan aturan perlu dibaca bersama: regulasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

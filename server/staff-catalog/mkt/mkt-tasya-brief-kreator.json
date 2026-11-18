@@ -1,0 +1,159 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-tasya-brief-kreator",
+  "division": "mkt",
+  "employeeId": "tasya",
+  "title": "KOL & Influencer Manager",
+  "version": 1,
+  "name": "Pembuat brief untuk kreator",
+  "ringkas": "Susun brief kerja sama yang jelas untuk kreator: pesan, jumlah konten, jadwal serah draf dan tayang, serta kewajiban tanda iklan.",
+  "kataKunci": [
+    "brief kreator",
+    "brief kol",
+    "kerja sama kreator",
+    "endorse",
+    "jadwal tayang"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Produk yang dipromosikan",
+      "required": true,
+      "contoh": "Serum Ray"
+    },
+    {
+      "key": "pesan",
+      "type": "text",
+      "label": "Pesan utama yang harus tersampaikan",
+      "required": true,
+      "contoh": "Kulit tampak lebih cerah dalam 14 hari pemakaian"
+    },
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Platform",
+      "required": true,
+      "default": "tiktok",
+      "choices": [
+        {
+          "v": "instagram",
+          "t": "Instagram"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "youtube",
+          "t": "YouTube"
+        }
+      ]
+    },
+    {
+      "key": "jumlah",
+      "type": "number",
+      "label": "Jumlah konten",
+      "required": true,
+      "contoh": "2"
+    },
+    {
+      "key": "tayang",
+      "type": "date",
+      "label": "Tanggal tayang",
+      "required": true,
+      "contoh": "2026-12-10"
+    },
+    {
+      "key": "hindari",
+      "type": "text",
+      "label": "Hal yang harus dihindari (boleh kosong)",
+      "required": false,
+      "contoh": "membandingkan dengan merek lain"
+    },
+    {
+      "key": "kode",
+      "type": "text",
+      "label": "Kode diskon untuk pengikut (boleh kosong)",
+      "required": false,
+      "contoh": "RAY10"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "tanggal": "[['Draf diserahkan', -3], ['Revisi selesai', -1], ['Tayang', 0], ['Laporan hasil (jangkauan dan interaksi)', 7]].map((j) => [j[0], new Date(Date.parse(input.tayang) + j[1] * 864e5).toISOString().slice(0, 10)])",
+        "format": "({ instagram: 'Reels atau carousel, tag akun brand', tiktok: 'Video 15 sampai 60 detik, pasang tautan produk', youtube: 'Video pendek (Shorts) atau ulasan, taruh tautan di deskripsi' })[input.platform]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Brief ' + input.jumlah + ' konten ' + input.platform + ' untuk ' + input.produk + ': draf ' + v.tanggal[0][1] + ', tayang ' + input.tayang",
+    "teks": "'# Brief kreator: ' + input.produk + '\\n\\n- Platform: ' + input.platform + ' (' + v.format + ')\\n- Jumlah konten: ' + input.jumlah + '\\n- Pesan utama: ' + input.pesan + '\\n- Hindari: ' + (input.hindari || '-') + '\\n- Kode diskon: ' + (input.kode || '-') + '\\n\\n## Jadwal\\n' + tabel(['Tahap', 'Tanggal'], v.tanggal) + '\\n\\n## Aturan\\n- Wajib mencantumkan tanda iklan (#ad atau #kerjasama) di konten.\\n- Hanya klaim yang ada di materi produk; jangan menjanjikan menyembuhkan atau hasil instan.\\n- Kirim draf sebelum tayang untuk disetujui.\\n- Konten tidak dihapus selama 30 hari setelah tayang.'",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'brief-kreator-' + input.produk",
+        "isi": "'# Brief ' + input.produk + '\\n\\nPlatform: ' + input.platform + '\\nJumlah: ' + input.jumlah + '\\nPesan: ' + input.pesan + '\\nTayang: ' + input.tayang + '\\nDraf: ' + v.tanggal[0][1] + '\\nWajib mencantumkan tanda iklan.\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Influencer",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Ray",
+      "pesan": "Kulit tampak lebih cerah dalam 14 hari pemakaian",
+      "platform": "tiktok",
+      "jumlah": 2,
+      "tayang": "2026-12-10",
+      "hindari": "membandingkan dengan merek lain",
+      "kode": "RAY10"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "draf 2026-12-07",
+        "Wajib mencantumkan tanda iklan"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "KOL & Influencer Manager di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Susun brief kerja sama yang jelas untuk kreator: pesan, jumlah konten, jadwal serah draf dan tayang, serta kewajiban tanda iklan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "brief kreator"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat brief untuk kreator perlu dibaca bersama: brief kreator menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

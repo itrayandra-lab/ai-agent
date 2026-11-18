@@ -1,7 +1,7 @@
 :root {
   --bg: #0a0a0a; --bg2: #0e0e0e; --panel: #121212; --panel2: #191919; --line: #222; --line2: #2f2f2f;
   --text: #f4f4f3; --muted: #a3a3a3; --faint: #686868; --accent: #e0c9a6; --accent2: #f4f4f3; --accent-bg: rgba(224,201,166,.10);
-  --ok: #3ddc84; --warn: #f2b84b; --bad: #ff6b6b; --purple: #c9a7ff; --sand: #e0c9a6; --on-primary: #0a0a0a;
+  --ok: #3ddc84; --warn: #f2b84b; --bad: #e79b7e; --purple: #c9a7ff; --sand: #e0c9a6; --on-primary: #0a0a0a;
   --graph-link: rgba(200,190,175,.18);
   --r: 12px; --r2: 8px; --shadow: 0 18px 50px rgba(0,0,0,.5);
   --side: 232px; --top: 56px; --bottom: 0px;
@@ -661,7 +661,7 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
 .need { font-size: 11.5px; color: var(--muted); }
 .need i { display: block; height: 7px; border-radius: 99px; background: rgba(255,255,255,.12); margin-top: 4px; overflow: hidden; }
 .need i b { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #7be3a4, #b6f08a); }
-.need.low i b { background: linear-gradient(90deg, #ff8b7b, #ffc46b); }
+.need.low i b { background: linear-gradient(90deg, #e79b7e, #ffc46b); }
 
 /* ───────── Dashboard hero + tiles */
 .hero { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 22px 24px; margin-bottom: 16px; border-radius: 22px; border: 1px solid var(--line2);
@@ -699,7 +699,7 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
   --line: rgba(60,70,130,.10); --line2: rgba(60,70,130,.16);
   --text: #1b1f3b; --muted: #5b6183; --faint: #8f95b2;
   --accent: #3d4fe0; --accent2: #3d4fe0; --accent-bg: rgba(61,79,224,.10); --sand: #3d4fe0; --on-primary: #ffffff;
-  --ok: #1fae6b; --warn: #d98a14; --bad: #e0483f; --purple: #7a5fe0;
+  --ok: #1fae6b; --warn: #d98a14; --bad: #a5532f; --purple: #7a5fe0;
   --r: 22px; --r2: 14px; --shadow: 0 18px 44px rgba(70,80,150,.16), 0 2px 6px rgba(70,80,150,.06);
   --grad: linear-gradient(135deg, #4b5cf0, #7a6bf5);
   color-scheme: light;
@@ -847,7 +847,7 @@ label.f > .chip { width: max-content; justify-self: start; }
 :root[data-theme="light"] {
   --bg: #f1f2fb; --text: #2b3050; --muted: #6d7394; --faint: #9a9fba;
   --accent: #6f7fd8; --accent2: #6f7fd8; --sand: #6f7fd8; --accent-bg: rgba(111,127,216,.12); --sand-bg: rgba(111,127,216,.12);
-  --ok: #5fb391; --warn: #d8a862; --bad: #dc8585; --purple: #9d8fe0;
+  --ok: #5fb391; --warn: #d8a862; --bad: #c98a6c; --purple: #9d8fe0;
   --line: rgba(90,100,160,.10); --line2: rgba(90,100,160,.16); --edge: rgba(90,100,160,.10); --edge2: rgba(90,100,160,.18);
   --card: linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.74));
   --grad: linear-gradient(135deg, #7d8be4, #a79cf0);

@@ -1,37 +1,189 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "ecom-putra",
   "division": "ecom",
   "employeeId": "putra",
   "title": "Marketplace Specialist (Shopee & Tokopedia)",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Putra",
-    "tugasPeran": [
-      "Mengoptimasi listing, foto, dan variasi",
-      "Mengatur voucher, bundling, dan flash sale",
-      "Memantau harga & ulasan kompetitor"
-    ],
-    "keahlian": [
-      "shopee",
-      "tokopedia",
-      "listing"
-    ],
-    "contohTugas": [
-      "Optimasi 10 listing serum",
-      "Riset harga kompetitor sunscreen di Shopee"
+  "name": "Kalkulator harga jual setelah biaya marketplace",
+  "ringkas": "Hitung harga jual agar tetap untung setelah potongan komisi, biaya layanan, voucher, dan ongkir yang kita tanggung.",
+  "kataKunci": [
+    "harga jual",
+    "komisi marketplace",
+    "shopee",
+    "tokopedia",
+    "voucher"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Harga pokok (Rp)",
+      "required": true,
+      "contoh": "45000"
+    },
+    {
+      "key": "komisi",
+      "type": "number",
+      "label": "Komisi marketplace (%) sesuai kategori di toko Anda",
+      "required": true,
+      "contoh": "6",
+      "default": "6"
+    },
+    {
+      "key": "layanan",
+      "type": "number",
+      "label": "Biaya layanan dan transaksi (%)",
+      "required": true,
+      "contoh": "4",
+      "default": "4"
+    },
+    {
+      "key": "voucher",
+      "type": "choice",
+      "label": "Voucher yang dibebankan ke toko",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa voucher"
+        },
+        {
+          "v": "3",
+          "t": "3% dari harga"
+        },
+        {
+          "v": "5",
+          "t": "5% dari harga"
+        }
+      ]
+    },
+    {
+      "key": "ongkir",
+      "type": "number",
+      "label": "Subsidi ongkir per pesanan (Rp)",
+      "required": false,
+      "contoh": "3000",
+      "default": "0"
+    },
+    {
+      "key": "untung",
+      "type": "choice",
+      "label": "Untung bersih yang diinginkan",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "15",
+          "t": "15%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        }
+      ]
+    },
+    {
+      "key": "kemas",
+      "type": "number",
+      "label": "Biaya kemas per pesanan (Rp)",
+      "required": false,
+      "contoh": "2000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung harga",
+      "set": {
+        "potongan": "num(input.komisi) + num(input.layanan) + num(input.voucher) + num(input.untung)",
+        "tetap": "num(input.hpp) + num(input.ongkir) + num(input.kemas)",
+        "harga": "v.potongan >= 100 ? 0 : Math.ceil(v.tetap / (1 - v.potongan / 100) / 500) * 500",
+        "uraian": "[['Harga jual', v.harga], ['Komisi ' + input.komisi + '%', Math.round(v.harga * num(input.komisi) / 100)], ['Biaya layanan ' + input.layanan + '%', Math.round(v.harga * num(input.layanan) / 100)], ['Voucher ' + input.voucher + '%', Math.round(v.harga * num(input.voucher) / 100)], ['Harga pokok', num(input.hpp)], ['Ongkir dan kemas', num(input.ongkir) + num(input.kemas)]]",
+        "bersih": "v.harga - v.uraian.slice(1).reduce((a, b) => a + b[1], 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.harga ? 'Harga jual ' + input.produk + ' sebaiknya ' + rp(v.harga) + '; untung bersih sekitar ' + rp(v.bersih) + ' per pesanan' : 'Potongan terlalu besar, kurangi untung atau voucher'",
+    "teks": "'# Harga ' + input.produk + '\\n\\n' + tabel(['Komponen', 'Nilai'], v.uraian.map((u) => [u[0], rp(u[1])]).concat([['**Untung bersih**', rp(v.bersih)]]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'harga-marketplace'",
+        "isi": "csv([['Komponen', 'Nilai']].concat(v.uraian).concat([['Untung bersih', v.bersih]]))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "hpp": "45000",
+      "komisi": "6",
+      "layanan": "4",
+      "voucher": "3",
+      "ongkir": "3000",
+      "untung": "20",
+      "kemas": "2000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "sebaiknya Rp 75.000",
+        "Voucher 3%",
+        "untung bersih sekitar Rp 15.250"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Marketplace Specialist (Shopee & Tokopedia) di divisi E-commerce & Marketplace, memakai bahasa awam",
+    "tujuan": "Hitung harga jual agar tetap untung setelah potongan komisi, biaya layanan, voucher, dan ongkir yang kita tanggung. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jualan perlu ditingkatkan."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "harga jual"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil kalkulator harga jual setelah biaya marketplace perlu dibaca bersama: harga jual menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

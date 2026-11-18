@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ops-lia-risiko",
+  "division": "ops",
+  "employeeId": "lia",
+  "title": "PMO Manager",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Plan",
+    "simpan": true
+  },
+  "name": "Penyusun daftar risiko proyek",
+  "ringkas": "Nilai tiap risiko dari kemungkinan dan dampaknya, urutkan dari yang terbesar, dan beri saran penanganan.",
+  "kataKunci": [
+    "risiko proyek",
+    "daftar risiko",
+    "mitigasi",
+    "dampak",
+    "kemungkinan"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Risiko (risiko | kemungkinan 1-5 | dampak 1-5 | pemilik)",
+      "required": true,
+      "contoh": "Vendor terlambat | 4 | 4 | Nisa"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai risiko",
+      "set": {
+        "rows": "baris(input.data).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const k = Math.min(5, Math.max(1, Math.round(num(p[1])))); const d = Math.min(5, Math.max(1, Math.round(num(p[2])))); const skor = k * d; const level = skor >= 15 ? 'Tinggi' : skor >= 8 ? 'Sedang' : 'Rendah'; return { risiko: p[0] || '-', k: k, d: d, skor: skor, level: level, pemilik: p[3] || '-', aksi: level === 'Tinggi' ? 'Buat rencana pencegahan dan cadangan; laporkan ke pimpinan minggu ini' : level === 'Sedang' ? 'Tetapkan pemilik dan tinjau tiap 2 minggu' : 'Pantau tiap bulan' }; }).sort((x, y) => y.skor - x.skor)",
+        "t": "v.rows.filter((r) => r.level === 'Tinggi').length",
+        "s": "v.rows.filter((r) => r.level === 'Sedang').length",
+        "r": "v.rows.filter((r) => r.level === 'Rendah').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.t + ' risiko tinggi, ' + v.s + ' sedang, ' + v.r + ' rendah'",
+    "teks": "'# Daftar risiko proyek\\n\\n' + tabel(['Risiko', 'Kemungkinan', 'Dampak', 'Skor', 'Tingkat', 'Pemilik', 'Penanganan'], v.rows.map((r) => [r.risiko, r.k, r.d, r.skor, r.level, r.pemilik, r.aksi]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'daftar-risiko'",
+        "isi": "csv([['Risiko', 'Kemungkinan', 'Dampak', 'Skor', 'Tingkat', 'Pemilik', 'Penanganan']].concat(v.rows.map((r) => [r.risiko, r.k, r.d, r.skor, r.level, r.pemilik, r.aksi])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Vendor terlambat | 4 | 4 | Nisa\nAnggaran membengkak | 3 | 3 | Lia\nStaf kunci keluar | 2 | 5 | Dina\nTypo laporan | 2 | 1 | Eka"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 risiko tinggi, 2 sedang, 1 rendah",
+        "Vendor terlambat",
+        "tinjau tiap 2 minggu"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "PMO Manager di divisi Operations, memakai bahasa awam",
+    "tujuan": "Nilai tiap risiko dari kemungkinan dan dampaknya, urutkan dari yang terbesar, dan beri saran penanganan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
+      "buruk": "Operasional perlu rapi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "risiko proyek"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun daftar risiko proyek perlu dibaca bersama: risiko proyek menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

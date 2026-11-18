@@ -1,38 +1,125 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "design-mira",
   "division": "design",
   "employeeId": "mira",
   "title": "Graphic & Brand Designer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Mira",
-    "tugasPeran": [
-      "Menyusun brief visual dan konsep desain konten",
-      "Membuat prompt dan arahan untuk aset visual",
-      "Menjaga konsistensi aset brand"
-    ],
-    "keahlian": [
-      "desain grafis",
-      "brand asset",
-      "konten visual"
-    ],
-    "contohTugas": [
-      "Buat brief visual 5 posting Instagram",
-      "Konsep visual banner promo",
-      "Moodboard kampanye akhir tahun"
+  "name": "Pemeriksa kontras warna",
+  "ringkas": "Hitung seberapa terbaca teks di atas warna latar, lulus standar keterbacaan atau belum, lengkap dengan saran.",
+  "kataKunci": [
+    "kontras",
+    "warna",
+    "palet",
+    "keterbacaan",
+    "wcag"
+  ],
+  "inputs": [
+    {
+      "key": "warna_teks",
+      "type": "text",
+      "label": "Warna teks (kode hex)",
+      "required": true,
+      "contoh": "#1A1A1A"
+    },
+    {
+      "key": "warna_latar",
+      "type": "text",
+      "label": "Warna latar (kode hex)",
+      "required": true,
+      "contoh": "#FFFFFF"
+    },
+    {
+      "key": "ukuran",
+      "type": "choice",
+      "label": "Ukuran teksnya?",
+      "required": true,
+      "default": "normal",
+      "choices": [
+        {
+          "v": "normal",
+          "t": "Teks biasa"
+        },
+        {
+          "v": "besar",
+          "t": "Teks besar (judul)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung kontras",
+      "set": {
+        "hasil": "(() => { const norm = (h) => { let x = String(h).trim().replace('#', ''); if (x.length === 3) x = x.split('').map((c) => c + c).join(''); return /^[0-9a-fA-F]{6}$/.test(x) ? x : ''; }; const lum = (x) => { const c = [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16) / 255).map((u) => u <= 0.03928 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }; const a = norm(input.warna_teks); const b = norm(input.warna_latar); if (!a || !b) return { valid: false }; const la = lum(a); const lb = lum(b); const r = (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); return { valid: true, a: '#' + a.toUpperCase(), b: '#' + b.toUpperCase(), rasio: Math.round(r * 100) / 100 }; })()",
+        "aa": "v.hasil.valid && v.hasil.rasio >= (input.ukuran === 'besar' ? 3 : 4.5)",
+        "aaa": "v.hasil.valid && v.hasil.rasio >= (input.ukuran === 'besar' ? 4.5 : 7)",
+        "saran": "!v.hasil.valid ? 'Tulis kode warna seperti #1A1A1A atau #FFF.' : v.aaa ? 'Sangat terbaca, aman untuk semua ukuran dan pengguna dengan penglihatan kurang.' : v.aa ? 'Cukup terbaca. Untuk teks kecil, gelapkan warna teks atau terangkan latar agar lebih nyaman.' : 'Sulit dibaca. Gelapkan teks atau terangkan latar sampai kontras minimal ' + (input.ukuran === 'besar' ? '3' : '4.5') + ' banding 1.'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.hasil.valid ? 'Kontras ' + v.hasil.rasio + ' banding 1: ' + (v.aaa ? 'sangat baik (AAA)' : v.aa ? 'cukup (AA)' : 'kurang terbaca') : 'Kode warna belum benar; tulis seperti #1A1A1A'",
+    "teks": "v.hasil.valid ? '# Kontras warna\\n\\nTeks ' + v.hasil.a + ' di atas latar ' + v.hasil.b + '\\n\\n' + tabel(['Standar', 'Syarat', 'Hasil'], [['Terbaca (AA)', input.ukuran === 'besar' ? '3' : '4.5', v.aa ? 'Lulus' : 'Belum'], ['Sangat terbaca (AAA)', input.ukuran === 'besar' ? '4.5' : '7', v.aaa ? 'Lulus' : 'Belum']]) + '\\n\\nRasio kontras: **' + v.hasil.rasio + ' banding 1**\\n\\n' + v.saran : v.saran",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kontras-warna'",
+        "isi": "csv([['Warna teks', 'Warna latar', 'Rasio', 'AA', 'AAA'], [v.hasil.a || '', v.hasil.b || '', v.hasil.rasio || 0, v.aa ? 'Lulus' : 'Belum', v.aaa ? 'Lulus' : 'Belum']])"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "warna_teks": "#000000",
+      "warna_latar": "#FFFFFF",
+      "ukuran": "normal"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Kontras 21 banding 1",
+        "AAA"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Graphic & Brand Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Hitung seberapa terbaca teks di atas warna latar, lulus standar keterbacaan atau belum, lengkap dengan saran. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "kontras"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kontras warna perlu dibaca bersama: kontras menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

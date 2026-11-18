@@ -1,0 +1,276 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "retail-nirmala-audit",
+  "division": "retail",
+  "employeeId": "nirmala",
+  "title": "Visual Merchandiser",
+  "version": 1,
+  "name": "Daftar periksa tampilan toko",
+  "ringkas": "Beri nilai delapan hal tampilan toko (Ya, sebagian, belum) dan dapatkan skor serta daftar yang harus dibenahi lebih dulu.",
+  "kataKunci": [
+    "audit visual",
+    "tampilan toko",
+    "etalase",
+    "kebersihan",
+    "checklist"
+  ],
+  "inputs": [
+    {
+      "key": "toko",
+      "type": "text",
+      "label": "Nama toko atau konter",
+      "required": true,
+      "contoh": "Konter Mall A"
+    },
+    {
+      "key": "bersih",
+      "type": "choice",
+      "label": "Etalase bersih dan terang",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "harga",
+      "type": "choice",
+      "label": "Harga terpasang di semua produk",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "mata",
+      "type": "choice",
+      "label": "Produk unggulan setinggi mata",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "stok",
+      "type": "choice",
+      "label": "Tidak ada rak kosong",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "promo",
+      "type": "choice",
+      "label": "Materi promosi sesuai kampanye berjalan",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "rapi",
+      "type": "choice",
+      "label": "Produk sejajar dan menghadap depan",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "tester",
+      "type": "choice",
+      "label": "Tester tersedia dan bersih",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    },
+    {
+      "key": "jalur",
+      "type": "choice",
+      "label": "Jalur jalan pelanggan lega",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Ya"
+        },
+        {
+          "v": "1",
+          "t": "Sebagian"
+        },
+        {
+          "v": "0",
+          "t": "Belum"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai tampilan",
+      "set": {
+        "daftar": "[['Etalase bersih dan terang', input.bersih], ['Harga terpasang di semua produk', input.harga], ['Produk unggulan setinggi mata', input.mata], ['Tidak ada rak kosong', input.stok], ['Materi promosi sesuai kampanye berjalan', input.promo], ['Produk sejajar dan menghadap depan', input.rapi], ['Tester tersedia dan bersih', input.tester], ['Jalur jalan pelanggan lega', input.jalur]].map((x) => ({ item: x[0], nilai: num(x[1]) }))",
+        "skor": "Math.round(v.daftar.reduce((a, b) => a + b.nilai, 0) / 16 * 100)",
+        "benahi": "v.daftar.filter((d) => d.nilai < 2).sort((a, b) => a.nilai - b.nilai)",
+        "predikat": "v.skor >= 90 ? 'Sangat baik' : v.skor >= 70 ? 'Baik' : 'Perlu dibenahi'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.toko + ': skor tampilan ' + v.skor + ' dari 100 (' + v.predikat + '), ' + v.benahi.length + ' hal perlu dibenahi'",
+    "teks": "'# Tampilan ' + input.toko + '\\n\\nSkor: **' + v.skor + '/100** (' + v.predikat + ')\\n\\n## Benahi dulu\\n' + (v.benahi.map((b) => '- [ ] ' + b.item + (b.nilai === 0 ? ' (belum ada)' : ' (baru sebagian)')).join('\\n') || 'Semua sudah baik.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'audit-tampilan-' + input.toko",
+        "isi": "csv([['Hal', 'Nilai (0-2)']].concat(v.daftar.map((d) => [d.item, d.nilai])).concat([['Skor', v.skor]]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "toko": "Konter Mall A",
+      "bersih": "2",
+      "harga": "2",
+      "mata": "1",
+      "stok": "0",
+      "promo": "2",
+      "rapi": "1",
+      "tester": "2",
+      "jalur": "2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "skor tampilan 75 dari 100 (Baik)",
+        "3 hal perlu dibenahi",
+        "Tidak ada rak kosong (belum ada)"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Visual Merchandiser di divisi Retail & Beauty Stores, memakai bahasa awam",
+    "tujuan": "Beri nilai delapan hal tampilan toko (Ya, sebagian, belum) dan dapatkan skor serta daftar yang harus dibenahi lebih dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Toko harus lebih bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "audit visual"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil daftar periksa tampilan toko perlu dibaca bersama: audit visual menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

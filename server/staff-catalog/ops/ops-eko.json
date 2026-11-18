@@ -1,38 +1,152 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "ops-eko",
   "division": "ops",
   "employeeId": "eko",
   "title": "Automation Specialist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Eko",
-    "tugasPeran": [
-      "Merancang workflow otomasi (trigger → aksi)",
-      "Menghitung jam hemat dan ROI otomasi",
-      "Mendokumentasikan otomasi di Brain"
-    ],
-    "keahlian": [
-      "no-code",
-      "integrasi",
-      "workflow"
-    ],
-    "contohTugas": [
-      "Rancang otomasi laporan penjualan harian",
-      "Otomasi follow-up lead",
-      "Hitung ROI 3 otomasi prioritas"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Penghitung hemat waktu dan balik modal otomasi",
+  "ringkas": "Hitung berapa jam dan rupiah yang dihemat bila satu pekerjaan berulang diotomasi, dan kapan biayanya balik modal.",
+  "kataKunci": [
+    "otomasi",
+    "hemat waktu",
+    "roi",
+    "balik modal",
+    "efisiensi"
+  ],
+  "inputs": [
+    {
+      "key": "tugas",
+      "type": "text",
+      "label": "Pekerjaan yang mau diotomasi",
+      "required": true,
+      "contoh": "Rekap pesanan harian"
+    },
+    {
+      "key": "menit",
+      "type": "number",
+      "label": "Berapa menit sekali kerja",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "kali",
+      "type": "number",
+      "label": "Berapa kali per minggu",
+      "required": true,
+      "contoh": "5"
+    },
+    {
+      "key": "orang",
+      "type": "number",
+      "label": "Berapa orang mengerjakannya",
+      "required": true,
+      "contoh": "2"
+    },
+    {
+      "key": "upah",
+      "type": "number",
+      "label": "Upah per jam (Rp)",
+      "required": true,
+      "contoh": "40000"
+    },
+    {
+      "key": "biaya_buat",
+      "type": "number",
+      "label": "Biaya membuat otomasi (Rp)",
+      "required": true,
+      "contoh": "3000000"
+    },
+    {
+      "key": "biaya_bulan",
+      "type": "number",
+      "label": "Biaya jalan per bulan (Rp)",
+      "required": true,
+      "contoh": "200000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung penghematan",
+      "set": {
+        "jam": "Math.round(num(input.menit) / 60 * num(input.kali) * num(input.orang) * 4.33 * 100) / 100",
+        "nilai": "Math.round(v.jam * num(input.upah))",
+        "bersih": "v.nilai - num(input.biaya_bulan)",
+        "balik": "v.bersih > 0 ? Math.round(num(input.biaya_buat) / v.bersih * 10) / 10 : 0",
+        "roi": "v.bersih > 0 && num(input.biaya_buat) > 0 ? Math.round((v.bersih * 12 - num(input.biaya_buat)) / num(input.biaya_buat) * 100) : 0",
+        "putusan": "v.bersih <= 0 ? 'Tidak layak' : v.balik <= 6 ? 'Sangat layak' : v.balik <= 12 ? 'Layak' : 'Pertimbangkan ulang'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.tugas + ': hemat ' + v.jam + ' jam per bulan, bersih ' + rp(v.bersih) + ' per bulan, balik modal ' + v.balik + ' bulan (' + v.putusan + ')'",
+    "teks": "'# Hitungan otomasi: ' + input.tugas + '\\n\\n- Jam dihemat per bulan: **' + v.jam + ' jam**\\n- Nilai waktu: ' + rp(v.nilai) + ' per bulan\\n- Dikurangi biaya jalan: ' + rp(num(input.biaya_bulan)) + '\\n- **Hemat bersih: ' + rp(v.bersih) + ' per bulan**\\n- Balik modal: **' + v.balik + ' bulan**\\n- Untung bersih 12 bulan: ' + v.roi + '% dari biaya pembuatan\\n- Penilaian: **' + v.putusan + '**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hitungan-otomasi'",
+        "isi": "csv([['Pekerjaan', 'Jam hemat per bulan', 'Nilai per bulan', 'Biaya jalan', 'Hemat bersih', 'Balik modal (bulan)', 'Untung 12 bulan (%)', 'Penilaian'], [input.tugas, v.jam, v.nilai, num(input.biaya_bulan), v.bersih, v.balik, v.roi, v.putusan]])"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "tugas": "Rekap pesanan harian",
+      "menit": "30",
+      "kali": "5",
+      "orang": "2",
+      "upah": "40000",
+      "biaya_buat": "3000000",
+      "biaya_bulan": "200000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 666.000",
+        "4.5 bulan",
+        "Sangat layak",
+        "21.65 jam"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Automation Specialist di divisi Operations, memakai bahasa awam",
+    "tujuan": "Hitung berapa jam dan rupiah yang dihemat bila satu pekerjaan berulang diotomasi, dan kapan biayanya balik modal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
+      "buruk": "Operasional perlu rapi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "otomasi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung hemat waktu dan balik modal otomasi perlu dibaca bersama: otomasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

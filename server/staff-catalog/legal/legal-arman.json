@@ -1,36 +1,230 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "legal-arman",
   "division": "legal",
   "employeeId": "arman",
   "title": "Data Privacy Officer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Arman",
-    "tugasPeran": [
-      "Kepatuhan UU PDP",
-      "DPIA untuk fitur dan vendor baru"
-    ],
-    "keahlian": [
-      "uu pdp",
-      "privasi",
-      "dpia"
-    ],
-    "contohTugas": [
-      "DPIA program loyalitas",
-      "Kebijakan privasi website"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Penilai risiko data pribadi fitur baru",
+  "ringkas": "Jawab beberapa pertanyaan tentang fitur atau mitra baru, dapatkan tingkat risiko data pribadi dan daftar langkah pengamanan.",
+  "kataKunci": [
+    "data pribadi",
+    "privasi",
+    "dpia",
+    "risiko data",
+    "pdp"
+  ],
+  "inputs": [
+    {
+      "key": "fitur",
+      "type": "text",
+      "label": "Nama fitur atau mitra baru",
+      "required": true,
+      "contoh": "Aplikasi Pelanggan Baru"
+    },
+    {
+      "key": "sensitif",
+      "type": "choice",
+      "label": "Memproses data sensitif (kesehatan, keuangan, biometrik, anak)?",
+      "required": true,
+      "default": "tidak",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "subjek",
+      "type": "choice",
+      "label": "Perkiraan jumlah orang yang datanya diproses",
+      "required": true,
+      "default": "sedang",
+      "choices": [
+        {
+          "v": "kecil",
+          "t": "Kurang dari 1.000"
+        },
+        {
+          "v": "sedang",
+          "t": "1.000 sampai 100.000"
+        },
+        {
+          "v": "besar",
+          "t": "Lebih dari 100.000"
+        }
+      ]
+    },
+    {
+      "key": "pihak3",
+      "type": "choice",
+      "label": "Data dibagikan ke pihak lain?",
+      "required": true,
+      "default": "tidak",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "luar",
+      "type": "choice",
+      "label": "Data disimpan di luar negeri?",
+      "required": true,
+      "default": "tidak",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "otomatis",
+      "type": "choice",
+      "label": "Ada keputusan otomatis tentang orang?",
+      "required": true,
+      "default": "tidak",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "retensi",
+      "type": "choice",
+      "label": "Lama menyimpan data",
+      "required": true,
+      "default": "jelas",
+      "choices": [
+        {
+          "v": "jelas",
+          "t": "Sudah ditentukan"
+        },
+        {
+          "v": "tidak_jelas",
+          "t": "Belum jelas"
+        }
+      ]
+    },
+    {
+      "key": "izin",
+      "type": "choice",
+      "label": "Persetujuan pengguna",
+      "required": true,
+      "default": "jelas",
+      "choices": [
+        {
+          "v": "jelas",
+          "t": "Jelas dan tercatat"
+        },
+        {
+          "v": "belum",
+          "t": "Belum ada"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "nilai",
+      "use": "hitung",
+      "label": "Hitung risiko",
+      "set": {
+        "skor": "(input.sensitif === 'ya' ? 3 : 0) + ({ kecil: 0, sedang: 1, besar: 3 })[input.subjek] + (input.pihak3 === 'ya' ? 2 : 0) + (input.luar === 'ya' ? 2 : 0) + (input.otomatis === 'ya' ? 2 : 0) + (input.retensi === 'tidak_jelas' ? 2 : 0) + (input.izin === 'belum' ? 3 : 0)",
+        "level": "v.skor >= 9 ? 'Tinggi' : v.skor >= 4 ? 'Sedang' : 'Rendah'",
+        "langkah": "['Catat data apa saja yang diambil dan untuk apa'].concat(input.sensitif === 'ya' ? ['Batasi akses data sensitif hanya untuk yang perlu', 'Pertimbangkan penyamaran atau enkripsi data'] : []).concat(input.pihak3 === 'ya' ? ['Buat perjanjian pengolahan data dengan pihak yang menerima'] : []).concat(input.luar === 'ya' ? ['Periksa syarat pengiriman data ke luar negeri'] : []).concat(input.otomatis === 'ya' ? ['Sediakan jalur keberatan dan peninjauan oleh manusia'] : []).concat(input.retensi === 'tidak_jelas' ? ['Tentukan masa simpan dan jadwal penghapusan data'] : []).concat(input.izin === 'belum' ? ['Siapkan pemberitahuan privasi dan catatan persetujuan sebelum fitur dipakai'] : []).concat(v.level === 'Tinggi' ? ['Tinjau bersama penasihat hukum sebelum diluncurkan'] : [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Risiko data pribadi ' + input.fitur + ': ' + v.level + ' (skor risiko ' + v.skor + ' dari 17)'",
+    "teks": "'# Penilaian risiko data pribadi: ' + input.fitur + '\\n\\n_' + \"Daftar ini alat bantu awal, bukan nasihat hukum. Konfirmasikan dengan penasihat hukum sebelum dipakai sebagai dasar keputusan.\" + '_\\n\\n**Tingkat risiko: ' + v.level + '** (skor risiko ' + v.skor + ' dari 17)\\n\\n## Langkah pengamanan yang disarankan\\n' + v.langkah.map((l, i) => (i + 1) + '. ' + l).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'risiko-data-' + input.fitur",
+        "isi": "csv([['No', 'Langkah', 'Penanggung jawab', 'Status']].concat(v.langkah.map((l, i) => [i + 1, l, '', 'Belum'])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "fitur": "Aplikasi Pelanggan Baru",
+      "sensitif": "tidak",
+      "subjek": "sedang",
+      "pihak3": "ya",
+      "luar": "tidak",
+      "otomatis": "tidak",
+      "retensi": "tidak_jelas",
+      "izin": "belum"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "skor risiko 8",
+        "Sedang",
+        "Tentukan masa simpan",
+        "bukan nasihat hukum"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Data Privacy Officer di divisi Legal & Compliance, memakai bahasa awam",
+    "tujuan": "Jawab beberapa pertanyaan tentang fitur atau mitra baru, dapatkan tingkat risiko data pribadi dan daftar langkah pengamanan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
+      "buruk": "Pasti aman secara hukum."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "data pribadi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilai risiko data pribadi fitur baru perlu dibaca bersama: data pribadi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

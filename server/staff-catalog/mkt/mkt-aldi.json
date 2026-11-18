@@ -1,37 +1,170 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "mkt-aldi",
   "division": "mkt",
   "employeeId": "aldi",
   "title": "Community Manager",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Aldi",
-    "tugasPeran": [
-      "Mengelola komunitas pengguna",
-      "Program UGC & challenge",
-      "Merangkum suara pelanggan"
-    ],
-    "keahlian": [
-      "komunitas",
-      "ugc",
-      "engagement"
-    ],
-    "contohTugas": [
-      "Rencana program ambassador",
-      "Kalender aktivitas komunitas sebulan"
+  "name": "Perencana tantangan komunitas",
+  "ringkas": "Susun tantangan komunitas harian (7 atau 14 hari) dengan isi ajakan tiap hari, aturan main, dan target peserta aktif.",
+  "kataKunci": [
+    "komunitas",
+    "tantangan",
+    "challenge",
+    "ugc",
+    "ajakan harian"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama tantangan",
+      "required": true,
+      "contoh": "Tantangan Kulit Sehat"
+    },
+    {
+      "key": "tema",
+      "type": "text",
+      "label": "Tema",
+      "required": true,
+      "contoh": "rutinitas skincare"
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama tantangan",
+      "required": true,
+      "default": "7",
+      "choices": [
+        {
+          "v": "7",
+          "t": "7 hari"
+        },
+        {
+          "v": "14",
+          "t": "14 hari"
+        }
+      ]
+    },
+    {
+      "key": "peserta",
+      "type": "number",
+      "label": "Target jumlah peserta",
+      "required": true,
+      "contoh": "100"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "hadiah",
+      "type": "text",
+      "label": "Hadiah (boleh kosong)",
+      "required": false,
+      "contoh": "paket produk untuk 3 peserta terbaik"
+    },
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Di mana dijalankan?",
+      "required": true,
+      "default": "instagram",
+      "choices": [
+        {
+          "v": "instagram",
+          "t": "Instagram"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "grup",
+          "t": "Grup WhatsApp atau Telegram"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun tantangan",
+      "set": {
+        "pool": "['Perkenalkan dirimu dan alasan ikut {tema}', 'Bagikan langkah pertamamu untuk {tema}', 'Ceritakan kebiasaan {tema} yang paling kamu suka', 'Tunjukkan produk atau alat yang kamu pakai untuk {tema}', 'Bagikan satu tips {tema} yang pernah gagal', 'Ajak satu teman ikut {tema}', 'Bagikan perubahan kecil yang kamu rasakan', 'Foto sebelum dan sesudah pekan pertama', 'Tanyakan satu pertanyaan tentang {tema} ke komunitas', 'Jawab pertanyaan temanmu tentang {tema}', 'Bagikan hasil kreasimu untuk {tema}', 'Beri apresiasi untuk satu peserta lain', 'Tulis pelajaran terbesarmu selama ini', 'Ceritakan rencana setelah tantangan selesai']",
+        "hari": "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].filter((i) => i < Number(input.durasi)).map((i) => ({ hari: i + 1, tanggal: new Date(Date.parse(input.mulai) + i * 864e5).toISOString().slice(0, 10), ajakan: v.pool[i].replace('{tema}', input.tema) }))",
+        "aktif": "Math.round(Number(input.peserta) * 0.6)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ': ' + input.durasi + ' hari, target ' + v.aktif + ' peserta aktif dari ' + input.peserta",
+    "teks": "'# ' + input.nama + '\\n\\nTema: ' + input.tema + ' | ' + input.durasi + ' hari di ' + input.platform + '\\nHadiah: ' + (input.hadiah || '-') + '\\n\\n## Ajakan harian\\n' + tabel(['Hari', 'Tanggal', 'Ajakan'], v.hari.map((h) => [h.hari, h.tanggal, h.ajakan])) + '\\n\\n## Aturan main\\n- Unggah dengan tagar tantangan.\\n- Satu hari satu unggahan; boleh menyusul maksimal 2 hari.\\n- Konten harus asli milikmu dan sopan.\\n- Pemenang dipilih dari keaktifan dan kualitas, diumumkan sehari setelah selesai.\\n\\n## Target\\n- Peserta: ' + input.peserta + '\\n- Peserta aktif (60%): ' + v.aktif",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tantangan-' + input.nama",
+        "isi": "csv([['Hari', 'Tanggal', 'Ajakan']].concat(v.hari.map((h) => [h.hari, h.tanggal, h.ajakan])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Community",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Tantangan Kulit Sehat",
+      "tema": "rutinitas skincare",
+      "durasi": "7",
+      "peserta": 100,
+      "mulai": "2026-12-01",
+      "hadiah": "paket produk untuk 3 peserta terbaik",
+      "platform": "instagram"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "7 hari, target 60 peserta aktif",
+        "Bagikan langkah pertamamu untuk rutinitas skincare"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Community Manager di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Susun tantangan komunitas harian (7 atau 14 hari) dengan isi ajakan tiap hari, aturan main, dan target peserta aktif. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "komunitas"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perencana tantangan komunitas perlu dibaca bersama: komunitas menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-cek-halaman-web",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Pembaca halaman web",
+  "ringkas": "Buka satu halaman web publik dan laporkan jawaban situs, judul, deskripsi, jumlah tautan dan gambar, serta ukurannya.",
+  "kataKunci": [
+    "halaman web",
+    "situs",
+    "url",
+    "judul",
+    "cek"
+  ],
+  "inputs": [
+    {
+      "key": "url",
+      "type": "url",
+      "label": "Alamat halaman",
+      "required": true,
+      "contoh": "https://contoh.com"
+    }
+  ],
+  "steps": [
+    {
+      "id": "b",
+      "use": "ambil_web",
+      "label": "Buka halaman",
+      "dari": "url",
+      "simpan": "web"
+    },
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Baca isi",
+      "set": {
+        "judul": "ambil(v.web.html, 'title')",
+        "deskripsi": "meta(v.web.html, 'description')",
+        "tautan": "hitungTag(v.web.html, 'a')",
+        "gambar": "hitungTag(v.web.html, 'img')",
+        "kata": "plain(v.web.html).split(' ').filter(Boolean).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Situs menjawab ' + v.web.status + (v.judul ? ', judul: ' + cut(v.judul, 80) : ', tanpa judul')",
+    "teks": "tabel(['Hal', 'Isi'], [['Alamat', input.url], ['Jawaban situs', v.web.status], ['Judul', v.judul || '-'], ['Deskripsi', v.deskripsi || '-'], ['Tautan', v.tautan], ['Gambar', v.gambar], ['Jumlah kata', v.kata], ['Ukuran (KB)', Math.round(v.web.html.length / 1024)]])"
+  },
+  "sample": {
+    "input": {
+      "url": "https://example.com/"
+    },
+    "web": {
+      "web": "<html><head><title>Toko Kopi</title><meta name=\"description\" content=\"Kopi pilihan\"></head><body><a href=\"/a\">a</a><a href=\"/b\">b</a><img src=\"x.jpg\"><p>Kopi enak</p></body></html>"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Situs menjawab 200",
+        "Toko Kopi"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "otakProfil": {
+    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
+    "tujuan": "Buka satu halaman web publik dan laporkan jawaban situs, judul, deskripsi, jumlah tautan dan gambar, serta ukurannya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Hasil sudah benar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "halaman web"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembaca halaman web perlu dibaca bersama: halaman web menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

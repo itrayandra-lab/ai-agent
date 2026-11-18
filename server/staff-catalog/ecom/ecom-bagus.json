@@ -1,37 +1,148 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "ecom-bagus",
   "division": "ecom",
   "employeeId": "bagus",
   "title": "Marketplace Ads Specialist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Bagus",
-    "tugasPeran": [
-      "Mengelola kampanye iklan marketplace",
-      "Optimasi bid & keyword",
-      "Laporan ROAS harian"
-    ],
-    "keahlian": [
-      "shopee ads",
-      "gmv max",
-      "roas"
-    ],
-    "contohTugas": [
-      "Struktur iklan Shopee untuk 5 SKU",
-      "Analisis keyword dengan CTR rendah"
+  "name": "Penilai iklan marketplace dan saran tawaran",
+  "ringkas": "Nilai tiap iklan dari biaya, penjualan, dan titik impas lalu beri saran naikkan, pertahankan, atau hentikan.",
+  "kataKunci": [
+    "iklan marketplace",
+    "roas",
+    "acos",
+    "bid",
+    "titik impas"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data iklan (satu baris: nama | biaya | omzet | klik | pesanan)",
+      "required": true,
+      "contoh": "Iklan Serum | 500000 | 2500000 | 400 | 25"
+    },
+    {
+      "key": "margin",
+      "type": "choice",
+      "label": "Untung kotor produk",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        },
+        {
+          "v": "40",
+          "t": "40%"
+        },
+        {
+          "v": "50",
+          "t": "50%"
+        }
+      ]
+    },
+    {
+      "key": "target",
+      "type": "choice",
+      "label": "Target balik modal iklan (kali lipat)",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3 kali"
+        },
+        {
+          "v": "5",
+          "t": "5 kali"
+        },
+        {
+          "v": "8",
+          "t": "8 kali"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai iklan",
+      "set": {
+        "impas": "Math.round(100 / num(input.margin) * 100) / 100",
+        "rows": "baris(input.data).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const b = num(p[1]); const o = num(p[2]); const k = num(p[3]); const n = num(p[4]); const roas = b ? Math.round(o / b * 100) / 100 : 0; return { nama: p[0] || '-', biaya: b, omzet: o, roas: roas, acos: o ? Math.round(b / o * 1000) / 10 : 0, cpc: k ? Math.round(b / k) : 0, cr: k ? Math.round(n / k * 1000) / 10 : 0, saran: roas >= num(input.target) ? 'Naikkan tawaran 10 sampai 20%' : roas >= v.impas * 1.2 ? 'Pertahankan, tes kata kunci baru' : roas >= v.impas ? 'Tipis: turunkan tawaran 10%' : 'Hentikan atau perbaiki foto dan harga' }; })",
+        "rugi": "v.rows.filter((r) => r.roas < v.impas).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' iklan dinilai; titik impas ' + v.impas + ' kali; ' + v.rugi + ' iklan merugi'",
+    "teks": "'# Penilaian iklan\\n\\nTitik impas dengan untung ' + input.margin + '% adalah balik modal ' + v.impas + ' kali.\\n\\n' + tabel(['Iklan', 'Biaya', 'Omzet', 'Balik modal', 'ACOS %', 'Biaya per klik', 'Pesanan per klik %', 'Saran'], v.rows.map((r) => [r.nama, rp(r.biaya), rp(r.omzet), r.roas, r.acos, rp(r.cpc), r.cr, r.saran]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'penilaian-iklan'",
+        "isi": "csv([['Iklan', 'Biaya', 'Omzet', 'ROAS', 'ACOS %', 'CPC', 'CR %', 'Saran']].concat(v.rows.map((r) => [r.nama, r.biaya, r.omzet, r.roas, r.acos, r.cpc, r.cr, r.saran])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "data": "Iklan Serum | 500000 | 2500000 | 400 | 25\nIklan Toner | 300000 | 600000 | 500 | 8\nIklan Paket | 200000 | 1200000 | 150 | 14",
+      "margin": "30",
+      "target": "5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "titik impas 3.33 kali",
+        "1 iklan merugi",
+        "Hentikan atau perbaiki",
+        "Naikkan tawaran"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Marketplace Ads Specialist di divisi E-commerce & Marketplace, memakai bahasa awam",
+    "tujuan": "Nilai tiap iklan dari biaya, penjualan, dan titik impas lalu beri saran naikkan, pertahankan, atau hentikan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jualan perlu ditingkatkan."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "iklan marketplace"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilai iklan marketplace dan saran tawaran perlu dibaca bersama: iklan marketplace menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

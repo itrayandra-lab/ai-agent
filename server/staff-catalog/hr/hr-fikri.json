@@ -1,37 +1,126 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "hr-fikri",
   "division": "hr",
   "employeeId": "fikri",
   "title": "HR Operations & Payroll",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Fikri",
-    "tugasPeran": [
-      "Penggajian bulanan & BPJS",
-      "Administrasi kontrak & cuti",
-      "Laporan headcount"
-    ],
-    "keahlian": [
-      "payroll",
-      "bpjs",
-      "administrasi"
-    ],
-    "contohTugas": [
-      "Simulasi gaji operator produksi",
-      "Checklist onboarding administrasi"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penghitung gaji bulanan sederhana",
+  "ringkas": "Hitung gaji bersih tiap karyawan dari gaji pokok, tunjangan, lembur, dan iuran BPJS (pajak penghasilan belum termasuk).",
+  "kataKunci": [
+    "gaji",
+    "payroll",
+    "lembur",
+    "bpjs",
+    "slip gaji"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data karyawan (nama | gaji pokok | tunjangan | jam lembur)",
+      "required": true,
+      "contoh": "Andi | 6000000 | 500000 | 3"
+    },
+    {
+      "key": "bpjs",
+      "type": "choice",
+      "label": "Karyawan ikut BPJS?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya, hitung iurannya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "batas_jp",
+      "type": "number",
+      "label": "Batas upah untuk iuran pensiun (Rp)",
+      "required": true,
+      "contoh": "10042300",
+      "default": "10042300"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung gaji",
+      "set": {
+        "rows": "baris(input.data).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const pokok = num(p[1]); const tunj = num(p[2]); const jam = num(p[3]); const perJam = pokok / 173; const lembur = Math.round(jam > 0 ? perJam * (1.5 + (jam - 1) * 2) : 0); const kotor = pokok + tunj + lembur; const dasar = pokok + tunj; const kes = input.bpjs === 'ya' ? Math.round(Math.min(dasar, 12000000) * 0.01) : 0; const jht = input.bpjs === 'ya' ? Math.round(dasar * 0.02) : 0; const jp = input.bpjs === 'ya' ? Math.round(Math.min(dasar, num(input.batas_jp)) * 0.01) : 0; return { nama: p[0] || '-', pokok: pokok, tunj: tunj, jam: jam, lembur: lembur, kotor: kotor, potongan: kes + jht + jp, bersih: kotor - kes - jht - jp }; })",
+        "totalBersih": "v.rows.reduce((a, b) => a + b.bersih, 0)",
+        "totalKotor": "v.rows.reduce((a, b) => a + b.kotor, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' karyawan, total gaji bersih ' + rp(v.totalBersih) + ' (belum termasuk pajak penghasilan)'",
+    "teks": "'# Rekap gaji bulan ini\\n\\n' + tabel(['Nama', 'Gaji pokok', 'Tunjangan', 'Lembur', 'Gaji kotor', 'Potongan BPJS', 'Gaji bersih'], v.rows.map((r) => [r.nama, rp(r.pokok), rp(r.tunj), rp(r.lembur), rp(r.kotor), rp(r.potongan), rp(r.bersih)])) + '\\n\\n**Total gaji bersih:** ' + rp(v.totalBersih) + '\\n\\n_Catatan: lembur memakai aturan jam pertama 1,5 kali dan berikutnya 2 kali upah per jam (gaji pokok dibagi 173). Iuran karyawan dihitung kesehatan 1%, hari tua 2%, pensiun 1%. Pajak penghasilan belum dihitung; periksa lagi dengan bagian pajak sebelum dibayarkan._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rekap-gaji'",
+        "isi": "csv([['Nama', 'Gaji pokok', 'Tunjangan', 'Jam lembur', 'Upah lembur', 'Gaji kotor', 'Potongan BPJS', 'Gaji bersih']].concat(v.rows.map((r) => [r.nama, r.pokok, r.tunj, r.jam, r.lembur, r.kotor, r.potongan, r.bersih])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "data": "Andi | 6000000 | 500000 | 3\nSari | 5000000 | 0 | 0",
+      "bpjs": "ya",
+      "batas_jp": "10042300"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 6.430.751",
+        "Rp 4.800.000",
+        "Rp 11.230.751"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "HR Operations & Payroll di divisi People & HR, memakai bahasa awam",
+    "tujuan": "Hitung gaji bersih tiap karyawan dari gaji pokok, tunjangan, lembur, dan iuran BPJS (pajak penghasilan belum termasuk). Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Karyawan malas."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "gaji"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung gaji bulanan sederhana perlu dibaca bersama: gaji menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

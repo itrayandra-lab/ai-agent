@@ -1,37 +1,139 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "mfg-dodi",
   "division": "mfg",
   "employeeId": "dodi",
   "title": "PPIC Planner",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Dodi",
-    "tugasPeran": [
-      "Menyusun jadwal produksi mingguan",
-      "Menghitung kebutuhan bahan (MRP)",
-      "Koordinasi dengan gudang dan pembelian"
-    ],
-    "keahlian": [
-      "ppic",
-      "mrp",
-      "jadwal produksi"
-    ],
-    "contohTugas": [
-      "Buat MPS 4 minggu untuk 6 SKU",
-      "Hitung kebutuhan bahan untuk 20.000 unit serum"
+  "name": "Penghitung kebutuhan bahan per batch",
+  "ringkas": "Hitung kebutuhan bahan dan kemasan untuk sekian batch (termasuk susut), bandingkan dengan stok, dan daftar yang harus dibeli.",
+  "kataKunci": [
+    "kebutuhan bahan",
+    "mrp",
+    "stok",
+    "pembelian",
+    "resep"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "jumlah_batch",
+      "type": "number",
+      "label": "Berapa batch yang direncanakan?",
+      "required": true,
+      "contoh": "5"
+    },
+    {
+      "key": "susut",
+      "type": "choice",
+      "label": "Perkiraan susut bahan",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa susut"
+        },
+        {
+          "v": "3",
+          "t": "3%"
+        },
+        {
+          "v": "5",
+          "t": "5%"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        }
+      ]
+    },
+    {
+      "key": "resep",
+      "type": "longtext",
+      "label": "Bahan (satu baris: nama | kebutuhan per batch | stok sekarang | satuan)",
+      "required": true,
+      "contoh": "Niacinamide | 2 | 1 | kg"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung kebutuhan",
+      "set": {
+        "rows": "baris(input.resep).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const per = num(p[1]); const stok = num(p[2]); const butuh = Math.round(per * Number(input.jumlah_batch) * (100 + Number(input.susut))) / 100; const beli = Math.max(0, Math.round((butuh - stok) * 100) / 100); return { bahan: p[0] || '-', per: per, butuh: butuh, stok: stok, beli: beli, satuan: p[3] || '', status: beli > 0 ? 'Perlu dibeli' : 'Stok cukup' }; })"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.filter((r) => r.beli > 0).length + ' dari ' + v.rows.length + ' bahan perlu dibeli untuk ' + input.jumlah_batch + ' batch ' + input.produk",
+    "teks": "'# Kebutuhan bahan: ' + input.produk + '\\n\\n' + input.jumlah_batch + ' batch, susut ' + input.susut + '%\\n\\n' + tabel(['Bahan', 'Per batch', 'Kebutuhan', 'Stok', 'Beli', 'Status'], v.rows.map((r) => [r.bahan, r.per + ' ' + r.satuan, r.butuh + ' ' + r.satuan, r.stok + ' ' + r.satuan, r.beli + ' ' + r.satuan, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kebutuhan-bahan-' + input.produk",
+        "isi": "csv([['Bahan', 'Satuan', 'Per batch', 'Kebutuhan total', 'Stok', 'Perlu dibeli']].concat(v.rows.map((r) => [r.bahan, r.satuan, r.per, r.butuh, r.stok, r.beli])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "jumlah_batch": 5,
+      "susut": "5",
+      "resep": "Niacinamide | 2 | 1 | kg\nBotol | 100 | 150 | pcs"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 dari 2 bahan",
+        "9.5 kg",
+        "375 pcs"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "PPIC Planner di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Hitung kebutuhan bahan dan kemasan untuk sekian batch (termasuk susut), bandingkan dengan stok, dan daftar yang harus dibeli. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "kebutuhan bahan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung kebutuhan bahan per batch perlu dibaca bersama: kebutuhan bahan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

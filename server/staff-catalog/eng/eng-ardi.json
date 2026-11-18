@@ -1,35 +1,121 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "eng-ardi",
   "division": "eng",
   "employeeId": "ardi",
   "title": "QA Automation Engineer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Ardi",
-    "tugasPeran": [
-      "Membangun suite uji otomatis",
-      "Menjaga gate kualitas rilis"
-    ],
-    "keahlian": [
-      "test automation",
-      "regresi"
-    ],
-    "contohTugas": [
-      "Rencana uji regresi checkout",
-      "Kasus uji Given-When-Then fitur login"
+  "name": "Penentu uji yang layak diotomasikan",
+  "ringkas": "Beri skor tiap kasus uji manual dan tentukan mana yang paling untung diotomasikan lebih dulu.",
+  "kataKunci": [
+    "otomasi uji",
+    "kasus uji",
+    "regresi",
+    "prioritas uji",
+    "balik modal"
+  ],
+  "inputs": [
+    {
+      "key": "kasus",
+      "type": "longtext",
+      "label": "Kasus uji (nama | sering dijalankan 1-5 | stabil 1-5 | menit sekali uji manual)",
+      "required": true,
+      "contoh": "Login | 5 | 5 | 10"
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Seberapa agresif mengotomasi?",
+      "required": true,
+      "default": "seimbang",
+      "choices": [
+        {
+          "v": "cepat",
+          "t": "Hanya yang paling untung"
+        },
+        {
+          "v": "seimbang",
+          "t": "Seimbang"
+        },
+        {
+          "v": "lengkap",
+          "t": "Sebanyak mungkin"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Beri skor kasus uji",
+      "set": {
+        "ambang": "({ cepat: 70, seimbang: 56, lengkap: 40 })[input.tujuan]",
+        "rows": "baris(input.kasus).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const f = Math.min(5, Math.max(1, num(p[1]))); const st = Math.min(5, Math.max(1, num(p[2]))); const m = num(p[3]); const kali = [2, 4, 8, 16, 30][f - 1]; const hemat = Math.round(m * kali / 60 * 10) / 10; const usaha = Math.round((2 + m / 10) * 10) / 10; const skor = st * 12 + f * 8; return { nama: p[0] || '-', f: f, st: st, m: m, hemat: hemat, usaha: usaha, balik: hemat ? Math.round(usaha / hemat * 10) / 10 : 0, skor: skor, saran: st < 3 ? 'Tunda: fitur belum stabil' : skor >= v.ambang ? 'Otomasikan' : 'Tetap manual dulu' }; }).sort((a, b) => b.skor - a.skor)",
+        "layak": "v.rows.filter((r) => r.saran === 'Otomasikan').length",
+        "hematTotal": "Math.round(v.rows.filter((r) => r.saran === 'Otomasikan').reduce((a, r) => a + r.hemat, 0) * 10) / 10"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.layak + ' dari ' + v.rows.length + ' kasus layak diotomasikan sekarang, menghemat sekitar ' + v.hematTotal + ' jam uji manual per bulan'",
+    "teks": "'# Prioritas otomasi uji\\n\\n' + tabel(['Kasus', 'Skor', 'Hemat (jam/bulan)', 'Usaha otomasi (jam)', 'Balik modal (bulan)', 'Saran'], v.rows.map((r) => [r.nama, r.skor, r.hemat, r.usaha, r.balik, r.saran])) + '\\n\\n_Usaha otomasi adalah perkiraan kasar: 2 jam + menit uji manual / 10._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'prioritas-otomasi-uji'",
+        "isi": "csv([['Kasus', 'Skor', 'Hemat jam per bulan', 'Usaha otomasi jam', 'Balik modal bulan', 'Saran']].concat(v.rows.map((r) => [r.nama, r.skor, r.hemat, r.usaha, r.balik, r.saran])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "kasus": "Login | 5 | 5 | 10\nCheckout | 4 | 4 | 20\nLaporan akhir tahun | 1 | 2 | 45",
+      "tujuan": "seimbang"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 dari 3 kasus",
+        "Tunda: fitur belum stabil"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "QA Automation Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Beri skor tiap kasus uji manual dan tentukan mana yang paling untung diotomasikan lebih dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "otomasi uji"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penentu uji yang layak diotomasikan perlu dibaca bersama: otomasi uji menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

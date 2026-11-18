@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-dodi-jadwal-produksi",
+  "division": "mfg",
+  "employeeId": "dodi",
+  "title": "PPIC Planner",
+  "version": 1,
+  "name": "Penyusun jadwal produksi mingguan",
+  "ringkas": "Atur urutan produksi beberapa produk sesuai kapasitas harian, lewati hari libur, dan beri tanggal mulai serta selesai.",
+  "kataKunci": [
+    "jadwal produksi",
+    "kapasitas",
+    "urutan produksi",
+    "mingguan",
+    "ppic"
+  ],
+  "inputs": [
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "hari_kerja",
+      "type": "choice",
+      "label": "Hari kerja",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "5",
+          "t": "Senin sampai Jumat"
+        },
+        {
+          "v": "6",
+          "t": "Senin sampai Sabtu"
+        }
+      ]
+    },
+    {
+      "key": "produk",
+      "type": "longtext",
+      "label": "Produk (satu baris: nama | jumlah target | kapasitas per hari)",
+      "required": true,
+      "contoh": "Serum A | 2500 | 1000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "hari": "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27].map((n) => new Date(Date.parse(input.mulai) + n * 864e5)).filter((d) => d.getUTCDay() !== 0 && (input.hari_kerja === '6' || d.getUTCDay() !== 6)).map((d) => d.toISOString().slice(0, 10))",
+        "rows": "baris(input.produk).slice(0, 12).map((l) => { const p = l.split('|').map((s) => s.trim()); return { produk: p[0] || '-', target: num(p[1]), kap: Math.max(1, num(p[2])) }; }).reduce((a, p) => { const n = Math.max(1, Math.ceil(p.target / p.kap)); a.rows.push({ produk: p.produk, target: p.target, kap: p.kap, hari: n, mulai: v.hari[a.c] || 'di luar 4 minggu', selesai: v.hari[a.c + n - 1] || 'di luar 4 minggu' }); a.c += n; return a; }, { rows: [], c: 0 }).rows"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' produk dijadwalkan, produksi terakhir selesai ' + v.rows[v.rows.length - 1].selesai",
+    "teks": "'# Jadwal produksi mulai ' + tgl(input.mulai) + '\\n\\n' + tabel(['Produk', 'Target', 'Kapasitas/hari', 'Hari', 'Mulai', 'Selesai'], v.rows.map((r) => [r.produk, r.target, r.kap, r.hari, r.mulai, r.selesai]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-produksi-' + input.mulai",
+        "isi": "csv([['Produk', 'Target', 'Kapasitas per hari', 'Hari kerja', 'Mulai', 'Selesai']].concat(v.rows.map((r) => [r.produk, r.target, r.kap, r.hari, r.mulai, r.selesai])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "mulai": "2026-12-01",
+      "hari_kerja": "5",
+      "produk": "Serum A | 2500 | 1000\nKrim B | 1200 | 600"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 produk dijadwalkan",
+        "2026-12-07"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "PPIC Planner di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Atur urutan produksi beberapa produk sesuai kapasitas harian, lewati hari libur, dan beri tanggal mulai serta selesai. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "jadwal produksi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun jadwal produksi mingguan perlu dibaca bersama: jadwal produksi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

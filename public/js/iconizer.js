@@ -16,10 +16,12 @@ function convert(node) {
   let last = 0; let m;
   while ((m = PICTO.exec(text))) {
     if (m.index > last) frag.append(text.slice(last, m.index));
-    const name = EMOJI_ICON[m[0].replace(/️/g, '')];
-    if (name) {
+    // emoji yang belum terpetakan tidak boleh hilang diam-diam dari kalimat: diganti titik netral dan dicatat sekali
+    const name = EMOJI_ICON[m[0].replace(/️/g, '')] || 'dot';
+    if (!EMOJI_ICON[m[0].replace(/️/g, '')] && !convert.warned?.has(m[0])) { (convert.warned ||= new Set()).add(m[0]); console.warn('[iconizer] emoji belum terpetakan, dipakai titik:', m[0], 'U+' + m[0].codePointAt(0).toString(16)); }
+    {
       const s = document.createElement('span');
-      s.className = 'emi'; s.setAttribute('aria-hidden', 'true'); s.innerHTML = icon(name, '1.1em');
+      s.className = 'emi'; s.setAttribute('aria-hidden', 'true'); s.dataset.emoji = m[0]; s.innerHTML = icon(name, '1.1em');
       frag.append(s);
     }
     last = m.index + m[0].length;

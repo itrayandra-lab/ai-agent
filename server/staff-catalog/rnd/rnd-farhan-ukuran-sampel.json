@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-farhan-ukuran-sampel",
+  "division": "rnd",
+  "employeeId": "farhan",
+  "title": "Clinical & Efficacy Researcher",
+  "version": 1,
+  "name": "Penghitung jumlah subjek uji",
+  "ringkas": "Hitung berapa subjek yang dibutuhkan per kelompok untuk membandingkan dua rata-rata, termasuk cadangan jika ada yang mundur.",
+  "kataKunci": [
+    "ukuran sampel",
+    "jumlah subjek",
+    "desain uji",
+    "kekuatan uji",
+    "dropout"
+  ],
+  "inputs": [
+    {
+      "key": "sd",
+      "type": "number",
+      "label": "Perkiraan sebaran data (simpangan baku)",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "selisih",
+      "type": "number",
+      "label": "Selisih terkecil yang ingin terdeteksi",
+      "required": true,
+      "contoh": "5"
+    },
+    {
+      "key": "yakin",
+      "type": "choice",
+      "label": "Tingkat keyakinan",
+      "required": true,
+      "default": "95",
+      "choices": [
+        {
+          "v": "95",
+          "t": "95%"
+        },
+        {
+          "v": "99",
+          "t": "99%"
+        }
+      ]
+    },
+    {
+      "key": "kuat",
+      "type": "choice",
+      "label": "Kekuatan uji",
+      "required": true,
+      "default": "80",
+      "choices": [
+        {
+          "v": "80",
+          "t": "80%"
+        },
+        {
+          "v": "90",
+          "t": "90%"
+        }
+      ]
+    },
+    {
+      "key": "mundur",
+      "type": "choice",
+      "label": "Perkiraan subjek yang mundur",
+      "required": true,
+      "default": "10",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tidak ada"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung sampel",
+      "set": {
+        "za": "({ 95: 1.96, 99: 2.576 })[input.yakin]",
+        "zb": "({ 80: 0.84, 90: 1.282 })[input.kuat]",
+        "n": "Math.ceil(2 * Math.pow((v.za + v.zb) * Number(input.sd) / Number(input.selisih), 2) - 1e-9)",
+        "nCadangan": "Math.ceil(v.n * 100 / (100 - Number(input.mundur)) - 1e-9)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n + ' subjek per kelompok (' + v.nCadangan + ' bila ' + input.mundur + '% mundur), total ' + (v.nCadangan * 2) + ' untuk dua kelompok'",
+    "teks": "'# Jumlah subjek uji\\n\\n- Sebaran data: ' + input.sd + '\\n- Selisih yang ingin terdeteksi: ' + input.selisih + '\\n- Keyakinan ' + input.yakin + '%, kekuatan ' + input.kuat + '%\\n\\n**Per kelompok: ' + v.n + ' subjek**  \\nDengan cadangan ' + input.mundur + '%: **' + v.nCadangan + ' subjek**  \\nTotal dua kelompok: ' + (v.nCadangan * 2) + '\\n\\n_Rumus dua rata-rata dengan kelompok sama besar. Konsultasikan dengan ahli statistik sebelum uji sebenarnya._'",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'ukuran-sampel'",
+        "isi": "'Sebaran ' + input.sd + ', selisih ' + input.selisih + ', keyakinan ' + input.yakin + '%, kekuatan ' + input.kuat + '%\\nPer kelompok: ' + v.n + '\\nDengan cadangan: ' + v.nCadangan + '\\nTotal: ' + (v.nCadangan * 2) + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Clinical",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "sd": 10,
+      "selisih": 5,
+      "yakin": "95",
+      "kuat": "80",
+      "mundur": "10"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "63 subjek per kelompok",
+        "70 bila 10% mundur"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Clinical & Efficacy Researcher di divisi R&D & Formulation, memakai bahasa awam",
+    "tujuan": "Hitung berapa subjek yang dibutuhkan per kelompok untuk membandingkan dua rata-rata, termasuk cadangan jika ada yang mundur. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Formula B pasti terbaik."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "ukuran sampel"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung jumlah subjek uji perlu dibaca bersama: ukuran sampel menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

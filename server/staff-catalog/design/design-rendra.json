@@ -1,36 +1,178 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "design-rendra",
   "division": "design",
   "employeeId": "rendra",
   "title": "3D Product Visualizer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Rendra",
-    "tugasPeran": [
-      "Membuat brief & visual 3D produk",
-      "Visual marketplace dan peluncuran"
-    ],
-    "keahlian": [
-      "3d",
-      "render",
-      "visual produk"
-    ],
-    "contohTugas": [
-      "Daftar shot render botol serum",
-      "Konsep visual hero banner marketplace"
+  "name": "Perencana sudut render 3D produk",
+  "ringkas": "Susun daftar sudut dan lensa render produk 3D beserta perkiraan waktu render sesuai resolusi.",
+  "kataKunci": [
+    "render 3d",
+    "visual produk",
+    "sudut kamera",
+    "shot list",
+    "marketplace"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum 30 ml"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Bentuk produk",
+      "required": true,
+      "default": "botol",
+      "choices": [
+        {
+          "v": "botol",
+          "t": "Botol"
+        },
+        {
+          "v": "kotak",
+          "t": "Kotak"
+        },
+        {
+          "v": "pouch",
+          "t": "Sachet/pouch"
+        },
+        {
+          "v": "elektronik",
+          "t": "Barang elektronik"
+        }
+      ]
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Untuk apa visualnya?",
+      "required": true,
+      "default": "marketplace",
+      "choices": [
+        {
+          "v": "marketplace",
+          "t": "Toko online"
+        },
+        {
+          "v": "iklan",
+          "t": "Iklan"
+        },
+        {
+          "v": "katalog",
+          "t": "Katalog"
+        }
+      ]
+    },
+    {
+      "key": "resolusi",
+      "type": "choice",
+      "label": "Resolusi render",
+      "required": true,
+      "default": "2048",
+      "choices": [
+        {
+          "v": "1080",
+          "t": "1080 piksel (cepat)"
+        },
+        {
+          "v": "2048",
+          "t": "2048 piksel"
+        },
+        {
+          "v": "4096",
+          "t": "4096 piksel (detail tinggi)"
+        }
+      ]
+    },
+    {
+      "key": "varian",
+      "type": "number",
+      "label": "Berapa varian (warna/ukuran)?",
+      "required": true,
+      "contoh": "2",
+      "default": "1"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun sudut",
+      "set": {
+        "sudut": "({ botol: [['Depan lurus', 50], ['Tiga perempat kiri', 85], ['Tiga perempat kanan', 85], ['Dekat label', 105], ['Atas', 35]], kotak: [['Depan lurus', 50], ['Tiga perempat', 85], ['Samping', 70], ['Atas terbuka', 50], ['Sudut rendah', 35]], pouch: [['Depan lurus', 50], ['Miring', 70], ['Belakang (label)', 50], ['Dekat zipper', 105], ['Berdiri di meja', 85]], elektronik: [['Depan lurus', 50], ['Tiga perempat', 85], ['Samping tipis', 70], ['Dekat port', 105], ['Atas', 35]] })[input.jenis].concat(input.tujuan === 'iklan' ? [['Suasana (lifestyle)', 85]] : input.tujuan === 'marketplace' ? [['Latar putih polos', 70]] : [['Ukuran dibanding tangan', 85]])",
+        "menit": "({ '1080': 4, '2048': 9, '4096': 25 })[input.resolusi]",
+        "total": "v.sudut.length * Math.max(1, num(input.varian))",
+        "waktu": "v.total * v.menit"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.sudut.length + ' sudut x ' + Math.max(1, num(input.varian)) + ' varian = ' + v.total + ' render, perkiraan ' + v.waktu + ' menit'",
+    "teks": "'# Rencana render ' + input.produk + '\\n\\n' + tabel(['No', 'Sudut', 'Lensa (mm)'], v.sudut.map((s, i) => [i + 1, s[0], s[1]])) + '\\n\\nResolusi ' + input.resolusi + ' piksel, kira-kira ' + v.menit + ' menit per gambar. Total ' + v.waktu + ' menit.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-render'",
+        "isi": "csv([['No', 'Sudut', 'Lensa mm', 'Resolusi', 'Menit']].concat(v.sudut.map((s, i) => [i + 1, s[0], s[1], input.resolusi, v.menit])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum 30 ml",
+      "jenis": "botol",
+      "tujuan": "marketplace",
+      "resolusi": "2048",
+      "varian": "2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "12 render",
+        "108 menit"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "3D Product Visualizer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Susun daftar sudut dan lensa render produk 3D beserta perkiraan waktu render sesuai resolusi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "render 3d"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perencana sudut render 3d produk perlu dibaca bersama: render 3d menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

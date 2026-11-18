@@ -6,6 +6,7 @@ import path from 'node:path';
 
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ray-agent-browser-'));
 process.env.DATA_DIR = dataDir;
+process.env.RAIVERSE_BROWSER_SKIP_LOAD_CHECK = '1';
 process.env.RAIVERSE_BROWSER_MCP_ENTRY = path.resolve('test/fixtures/mock-chrome-mcp.mjs');
 const store = await import('../server/store.js');
 const seed = (await import('../server/seed.js')).buildSeed();
@@ -211,4 +212,27 @@ test('router: profil QA membuka alat diagnostik; komputer berat menunda browser 
     assert.deepEqual((await B.toolDefs(researcher, t6)).map((d) => d.name), ['buka_browser']);
   } finally { delete process.env.RAIVERSE_BROWSER_FORCE_BUSY; }
   await B.stopServer();
+});
+
+test('pintu alat: browser hanya ditawarkan ke agen yang berhak, dan alat browser_* tidak terlihat sebelum dibuka', async () => {
+  B.saveConfig({ enabled: true });
+  const t7 = mkTask('tk-b7');
+  const door = (defs) => defs.find((d) => d.name === 'buka_alat')?.input_schema.properties.kelompok.enum || [];
+  const mine = await engine.visibleTools(researcher, t7, {});
+  const theirs = await engine.visibleTools(outsider, t7, {});
+  assert.ok(door(mine).includes('browser'), 'agen berhak: pintu menawarkan browser');
+  assert.ok(!door(theirs).includes('browser'), 'staf tidak berhak: pintu tidak menawarkan browser');
+  for (const defs of [mine, theirs]) assert.ok(!defs.some((d) => /^browser_|^buka_browser$/.test(d.name)), 'alat browser belum terlihat sebelum kelompok dibuka');
+});
+
+test('pintu buka_alat(browser): satu langkah, alasan lemah ditolak, alasan interaksi langsung membuka alat inti', async () => {
+  const t8 = mkTask('tk-b8');
+  const weak = await B.unlockViaDoor(researcher, t8, 'untuk membaca artikel di situs itu');
+  assert.equal(weak.ok, false);
+  assert.deepEqual((await B.toolDefs(researcher, t8)).map((d) => d.name), ['buka_browser']);
+  const good = await B.unlockViaDoor(researcher, t8, 'perlu klik tombol Start lalu menunggu teks dinamis muncul');
+  assert.equal(good.ok, true);
+  const names = (await B.toolDefs(researcher, t8)).map((d) => d.name);
+  assert.ok(names.includes('browser_new_page') && names.includes('browser_click'));
+  await B.endTask(t8.id); await B.stopServer();
 });

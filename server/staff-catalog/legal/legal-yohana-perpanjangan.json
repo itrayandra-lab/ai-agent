@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "legal-yohana-perpanjangan",
+  "division": "legal",
+  "employeeId": "yohana",
+  "title": "IP & Trademark Specialist",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Pengingat perpanjangan merek dan lisensi",
+  "ringkas": "Daftar aset merek dan lisensi dengan tanggal berakhirnya, kapan harus mulai mengurus, dan biaya yang perlu disiapkan.",
+  "kataKunci": [
+    "perpanjangan",
+    "lisensi",
+    "masa berlaku",
+    "merek",
+    "pengingat"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "lead",
+      "type": "choice",
+      "label": "Mulai mengurus berapa lama sebelum berakhir",
+      "required": true,
+      "default": "180",
+      "choices": [
+        {
+          "v": "90",
+          "t": "3 bulan"
+        },
+        {
+          "v": "180",
+          "t": "6 bulan"
+        },
+        {
+          "v": "365",
+          "t": "1 tahun"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Aset (nama | tanggal berakhir | biaya perpanjangan)",
+      "required": true,
+      "contoh": "Merek Kopikita | 2027-02-10 | 1800000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung masa berlaku",
+      "set": {
+        "rows": "baris(input.data).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const sisa = Math.floor((Date.parse(p[1]) - Date.parse(input.acuan)) / 864e5); return { nama: p[0] || '-', berakhir: p[1], sisa: sisa, biaya: num(p[2]), mulai: new Date(Date.parse(p[1]) - num(input.lead) * 864e5).toISOString().slice(0, 10), status: sisa < 0 ? 'Sudah berakhir' : sisa <= num(input.lead) ? 'Mulai urus sekarang' : 'Aman' }; }).sort((x, y) => x.sisa - y.sisa)",
+        "siapkan": "v.rows.filter((r) => r.status !== 'Aman').reduce((a, b) => a + b.biaya, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.filter((r) => r.status !== 'Aman').length + ' aset perlu diurus, biaya yang disiapkan ' + rp(v.siapkan)",
+    "teks": "'# Pengingat perpanjangan\\n\\n' + tabel(['Aset', 'Berakhir', 'Sisa hari', 'Mulai urus', 'Biaya', 'Status'], v.rows.map((r) => [r.nama, r.berakhir, r.sisa, r.mulai, rp(r.biaya), r.status])) + '\\n\\n**Biaya yang perlu disiapkan segera:** ' + rp(v.siapkan) + '\\n\\n_Periksa tenggat resmi di dokumen merek atau lisensi masing-masing; tanggal di atas hanya hitungan dari data yang Anda isi._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'perpanjangan-aset'",
+        "isi": "csv([['Aset', 'Berakhir', 'Sisa hari', 'Mulai urus', 'Biaya', 'Status']].concat(v.rows.map((r) => [r.nama, r.berakhir, r.sisa, r.mulai, r.biaya, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "lead": "180",
+      "data": "Merek Kopikita | 2027-02-10 | 1800000\nLisensi Font | 2026-10-01 | 500000\nMerek Teh | 2030-01-01 | 1800000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 2.300.000",
+        "Sudah berakhir",
+        "Mulai urus sekarang",
+        "2 aset perlu diurus"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "IP & Trademark Specialist di divisi Legal & Compliance, memakai bahasa awam",
+    "tujuan": "Daftar aset merek dan lisensi dengan tanggal berakhirnya, kapan harus mulai mengurus, dan biaya yang perlu disiapkan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
+      "buruk": "Pasti aman secara hukum."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "perpanjangan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pengingat perpanjangan merek dan lisensi perlu dibaca bersama: perpanjangan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

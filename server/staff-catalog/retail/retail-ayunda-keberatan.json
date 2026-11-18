@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "retail-ayunda-keberatan",
+  "division": "retail",
+  "employeeId": "ayunda",
+  "title": "Retail Beauty Advisor",
+  "version": 1,
+  "name": "Penyusun jawaban untuk keberatan pelanggan",
+  "ringkas": "Siapkan jawaban tiga langkah (akui, jelaskan, tawarkan) untuk keberatan umum pelanggan di toko, disesuaikan dengan produknya.",
+  "kataKunci": [
+    "keberatan",
+    "skrip",
+    "konsultasi toko",
+    "penjualan toko",
+    "jawaban pelanggan"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Produk yang ditawarkan",
+      "required": true,
+      "contoh": "Serum Wajah Niacinamide"
+    },
+    {
+      "key": "keberatan",
+      "type": "choice",
+      "label": "Keberatan pelanggan",
+      "required": true,
+      "default": "mahal",
+      "choices": [
+        {
+          "v": "mahal",
+          "t": "Harganya mahal"
+        },
+        {
+          "v": "ragu",
+          "t": "Ragu cocok atau tidak"
+        },
+        {
+          "v": "punya",
+          "t": "Sudah punya produk serupa"
+        },
+        {
+          "v": "nanti",
+          "t": "Nanti saja belinya"
+        }
+      ]
+    },
+    {
+      "key": "manfaat",
+      "type": "text",
+      "label": "Manfaat utama produk",
+      "required": true,
+      "contoh": "cepat meresap dan tidak lengket"
+    },
+    {
+      "key": "tawaran",
+      "type": "choice",
+      "label": "Yang bisa kita tawarkan",
+      "required": true,
+      "default": "sampel",
+      "choices": [
+        {
+          "v": "sampel",
+          "t": "Sampel kecil"
+        },
+        {
+          "v": "paket",
+          "t": "Paket hemat"
+        },
+        {
+          "v": "garansi",
+          "t": "Boleh dikembalikan bila tidak cocok"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun jawaban",
+      "set": {
+        "akui": "({ mahal: 'Saya mengerti, harga memang jadi pertimbangan penting.', ragu: 'Wajar sekali ragu, kulit tiap orang berbeda.', punya: 'Bagus, berarti Kakak sudah peduli perawatan kulit.', nanti: 'Tentu, tidak perlu terburu-buru.' })[input.keberatan]",
+        "jelaskan": "({ mahal: 'Produk ini ' + input.manfaat + ', dan satu botol cukup untuk pemakaian beberapa minggu, jadi biaya per hari tidak besar.', ragu: 'Produk ini ' + input.manfaat + ', dan kita bisa mulai pelan-pelan dengan uji tempel dulu.', punya: 'Bedanya, produk ini ' + input.manfaat + '; bisa dipakai bergantian atau melengkapi yang sudah ada.', nanti: 'Yang perlu diingat, produk ini ' + input.manfaat + ', dan hasil terbaik terlihat bila dipakai rutin.' })[input.keberatan]",
+        "tawarkan": "({ sampel: 'Bagaimana kalau coba sampel kecilnya dulu, gratis?', paket: 'Ada paket hemat yang bisa mengurangi biaya per produk, mau saya tunjukkan?', garansi: 'Kalau tidak cocok, produknya bisa dikembalikan sesuai ketentuan toko, jadi Kakak tidak perlu khawatir.' })[input.tawaran]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Jawaban untuk keberatan \"' + ({ mahal: 'harga mahal', ragu: 'ragu cocok', punya: 'sudah punya', nanti: 'nanti saja' })[input.keberatan] + '\" untuk ' + input.produk + ' siap dipakai'",
+    "teks": "'# Jawaban keberatan\\n\\n1. **Akui:** ' + v.akui + '\\n2. **Jelaskan:** ' + v.jelaskan + '\\n3. **Tawarkan:** ' + v.tawarkan + '\\n\\nTips: bicara pelan, jangan memaksa, dan catat pertanyaan pelanggan untuk tim.'",
+    "data": "({ akui: v.akui })"
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah Niacinamide",
+      "keberatan": "mahal",
+      "manfaat": "cepat meresap dan tidak lengket",
+      "tawaran": "sampel"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "**Akui:** Saya mengerti",
+        "sampel kecilnya",
+        "harga mahal"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Retail Beauty Advisor di divisi Retail & Beauty Stores, memakai bahasa awam",
+    "tujuan": "Siapkan jawaban tiga langkah (akui, jelaskan, tawarkan) untuk keberatan umum pelanggan di toko, disesuaikan dengan produknya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Toko harus lebih bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "keberatan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun jawaban untuk keberatan pelanggan perlu dibaca bersama: keberatan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

@@ -1,36 +1,190 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "qa-jaya",
   "division": "qa",
   "employeeId": "jaya",
   "title": "Deviation & CAPA Specialist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Jaya",
-    "tugasPeran": [
-      "Investigasi penyimpangan & keluhan mutu",
-      "Memantau efektivitas CAPA"
-    ],
-    "keahlian": [
-      "capa",
-      "deviasi",
-      "root cause"
-    ],
-    "contohTugas": [
-      "Investigasi viskositas batch tidak sesuai",
-      "Laporan status CAPA"
+  "name": "Penyusun laporan penyimpangan dan tindakan perbaikan",
+  "ringkas": "Susun dokumen penyimpangan lengkap: kejadian, akar masalah dengan 5 mengapa, tindakan, penanggung jawab, dan tenggat.",
+  "kataKunci": [
+    "capa",
+    "deviasi",
+    "akar masalah",
+    "5 mengapa",
+    "penyimpangan"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul penyimpangan",
+      "required": true,
+      "contoh": "Bobot isi botol di bawah batas"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal kejadian",
+      "required": true,
+      "contoh": "2026-11-10"
+    },
+    {
+      "key": "berat",
+      "type": "choice",
+      "label": "Seberapa serius?",
+      "required": true,
+      "default": "mayor",
+      "choices": [
+        {
+          "v": "kritis",
+          "t": "Kritis (bisa membahayakan pengguna)"
+        },
+        {
+          "v": "mayor",
+          "t": "Mayor (menyimpang dari spesifikasi)"
+        },
+        {
+          "v": "minor",
+          "t": "Minor (tidak memengaruhi mutu)"
+        }
+      ]
+    },
+    {
+      "key": "kategori",
+      "type": "choice",
+      "label": "Penyebab paling mungkin berasal dari",
+      "required": true,
+      "default": "mesin",
+      "choices": [
+        {
+          "v": "manusia",
+          "t": "Manusia"
+        },
+        {
+          "v": "mesin",
+          "t": "Mesin atau alat"
+        },
+        {
+          "v": "bahan",
+          "t": "Bahan"
+        },
+        {
+          "v": "metode",
+          "t": "Metode atau prosedur"
+        },
+        {
+          "v": "ukur",
+          "t": "Pengukuran"
+        },
+        {
+          "v": "lingkungan",
+          "t": "Lingkungan"
+        }
+      ]
+    },
+    {
+      "key": "kejadian",
+      "type": "longtext",
+      "label": "Apa yang terjadi?",
+      "required": true,
+      "contoh": "Hasil cek bobot batch B-2611 menunjukkan 12% botol kurang dari batas bawah"
+    },
+    {
+      "key": "mengapa",
+      "type": "longtext",
+      "label": "Rantai \"mengapa\" (satu per baris, dari mengapa pertama sampai akar)",
+      "required": true,
+      "contoh": "Mengapa bobot kurang? Nozel pengisian tersumbat sebagian"
+    },
+    {
+      "key": "tindakan",
+      "type": "longtext",
+      "label": "Tindakan (tindakan | koreksi/korektif/pencegahan | penanggung jawab)",
+      "required": true,
+      "contoh": "Tahan batch | koreksi | Supervisor QA"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun laporan",
+      "set": {
+        "hari": "({ kritis: [3, 14], mayor: [7, 30], minor: [14, 60] })[input.berat]",
+        "why": "baris(input.mengapa).slice(0, 8)",
+        "aksi": "baris(input.tindakan).slice(0, 20).map((l) => { const p = l.split('|').map((s) => s.trim()); const jenis = /^koreksi/i.test(p[1] || '') ? 'Koreksi' : /^pencegah/i.test(p[1] || '') ? 'Pencegahan' : 'Korektif'; const n = jenis === 'Koreksi' ? v.hari[0] : v.hari[1]; return { tindakan: p[0] || '-', jenis: jenis, pic: p[2] || '-', tenggat: new Date(Date.parse(input.tanggal) + n * 864e5).toISOString().slice(0, 10) }; })",
+        "verifikasi": "new Date(Date.parse(input.tanggal) + 90 * 864e5).toISOString().slice(0, 10)",
+        "dok": "'# Laporan penyimpangan: ' + input.judul + '\\n\\n- Tanggal kejadian: ' + tgl(input.tanggal) + '\\n- Tingkat: ' + input.berat + '\\n- Kategori penyebab: ' + input.kategori + '\\n\\n## Kejadian\\n' + input.kejadian + '\\n\\n## Analisis akar masalah (5 mengapa)\\n' + v.why.map((w, i) => (i + 1) + '. ' + w).join('\\n') + '\\n\\n**Akar masalah:** ' + (v.why[v.why.length - 1] || '(belum diisi)') + '\\n\\n## Rencana tindakan\\n' + tabel(['Tindakan', 'Jenis', 'Penanggung jawab', 'Tenggat'], v.aksi.map((a) => [a.tindakan, a.jenis, a.pic, a.tenggat])) + '\\n\\n## Verifikasi efektivitas\\nPeriksa ulang pada ' + v.verifikasi + ' (90 hari): apakah penyimpangan serupa muncul lagi?\\n\\n## Persetujuan\\n- Dibuat oleh: ____  Tanggal: ____\\n- Disetujui Kepala Mutu: ____  Tanggal: ____'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Laporan \"' + input.judul + '\" siap: ' + v.aksi.length + ' tindakan, tenggat terakhir ' + v.aksi.map((a) => a.tenggat).sort().slice(-1)[0] + ', verifikasi ' + v.verifikasi",
+    "teks": "v.dok",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'penyimpangan-' + input.judul",
+        "isi": "v.dok"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "judul": "Bobot isi botol di bawah batas",
+      "tanggal": "2026-11-10",
+      "berat": "mayor",
+      "kategori": "mesin",
+      "kejadian": "Hasil cek bobot batch B-2611 menunjukkan 12% botol kurang dari batas bawah",
+      "mengapa": "Mengapa bobot kurang? Volume isi tidak konsisten\nMengapa tidak konsisten? Nozel pengisian tersumbat sebagian\nMengapa tersumbat? Pembersihan akhir shift tidak tuntas",
+      "tindakan": "Tahan batch dan periksa ulang | koreksi | Supervisor QA\nLatih ulang operator pembersihan | korektif | Kepala Produksi\nTambah daftar periksa pembersihan nozel | pencegahan | QA"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2026-11-17",
+        "2026-12-10",
+        "verifikasi 2027-02-08",
+        "Pembersihan akhir shift tidak tuntas"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Deviation & CAPA Specialist di divisi Quality Control & Assurance, memakai bahasa awam",
+    "tujuan": "Susun dokumen penyimpangan lengkap: kejadian, akar masalah dengan 5 mengapa, tindakan, penanggung jawab, dan tenggat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur, tegas pada yang di luar batas",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Mutu kelihatannya baik."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "capa"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun laporan penyimpangan dan tindakan perbaikan perlu dibaca bersama: capa menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

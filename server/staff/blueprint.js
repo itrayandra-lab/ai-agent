@@ -6,7 +6,7 @@
 //   fase "selesaikan": Pulihkan state + teks AI → langkah sesudah AI → Hasil
 import * as C from '../n8n-templates/common.js';
 import * as X from './expr.js';
-import { FRAGMENTS, setT } from './fragments.js';
+import { FRAGMENTS, setT, AI_USES, otakDefaults } from './fragments.js';
 
 export const BLUEPRINT_VERSION = 1;
 export const NAME_PREFIX = '[RAIVERSE][staf] ';
@@ -25,7 +25,7 @@ export function compile(spec, ctx = {}) {
   const uniq = (label) => { let n = String(label).replace(/[^\p{L}\p{N} _–-]/gu, '').slice(0, 40) || 'Langkah', i = 2, base = n; while (used.has(n)) n = `${base} ${i++}`; used.add(n); return n; };
   const add = (n) => { nodes.push(n); used.add(n.name); return n; };
   const steps = spec.steps || [];
-  const ai = steps.findIndex((s) => s.use === 'minta_ai');
+  const ai = steps.findIndex((s) => AI_USES.includes(s.use));
   const path = webhookPath(spec, ctx.token || 'uji'), requiredKeys = (spec.inputs || []).filter((f) => f.required).map((f) => f.key);
   const out = { webhook: add(C.webhookNode('Terima permintaan', path, [0, 0])) };
   const prevOf = { name: 'Terima permintaan' };
@@ -56,7 +56,9 @@ export function compile(spec, ctx = {}) {
     Object.assign(sim, r.sim);
   };
 
-  const before = ai >= 0 ? steps.slice(0, ai) : steps, after = ai >= 0 ? steps.slice(ai + 1) : [];
+  // langkah "otak" di n8n: hanya bagian aturan (cadangan) yang dihitung; jawaban AI terstruktur hanya di mesin native
+  const otakFallback = ai >= 0 && steps[ai].use === 'otak' ? [{ use: 'hitung', label: 'Susun cadangan aturan', set: { [steps[ai].simpan]: `Object.assign(${JSON.stringify(otakDefaults(steps[ai].skema))}, ${steps[ai].cadangan || '({})'}, { dariAI: false })` } }] : [];
+  const before = ai >= 0 ? steps.slice(0, ai) : steps, after = ai >= 0 ? [...otakFallback, ...steps.slice(ai + 1)] : [];
   for (const s of before) runStep(s, 0);
   if (ai >= 0) {
     runStep(steps[ai], 0);   // "Minta AI": berhenti di sini pada fase "jalankan"

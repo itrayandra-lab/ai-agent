@@ -1,0 +1,159 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "it-salsa-kesadaran",
+  "division": "it",
+  "employeeId": "salsa",
+  "title": "Security Analyst",
+  "version": 1,
+  "name": "Pembuat materi kesadaran keamanan",
+  "ringkas": "Susun materi singkat kesadaran keamanan sesuai topik dan peserta, lengkap dengan kuis tiga soal.",
+  "kataKunci": [
+    "security awareness",
+    "pelatihan keamanan",
+    "phishing",
+    "kata sandi",
+    "materi"
+  ],
+  "inputs": [
+    {
+      "key": "topik",
+      "type": "choice",
+      "label": "Topik materi",
+      "required": true,
+      "default": "phishing",
+      "choices": [
+        {
+          "v": "phishing",
+          "t": "Waspada email dan pesan palsu"
+        },
+        {
+          "v": "sandi",
+          "t": "Kata sandi dan login aman"
+        },
+        {
+          "v": "perangkat",
+          "t": "Menjaga laptop dan ponsel"
+        },
+        {
+          "v": "wifi",
+          "t": "Memakai jaringan umum"
+        }
+      ]
+    },
+    {
+      "key": "peserta",
+      "type": "choice",
+      "label": "Untuk siapa?",
+      "required": true,
+      "default": "umum",
+      "choices": [
+        {
+          "v": "umum",
+          "t": "Semua karyawan"
+        },
+        {
+          "v": "keuangan",
+          "t": "Tim keuangan"
+        },
+        {
+          "v": "pimpinan",
+          "t": "Pimpinan"
+        }
+      ]
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Berapa lama sesinya?",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "5",
+          "t": "5 menit"
+        },
+        {
+          "v": "15",
+          "t": "15 menit"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun materi",
+      "set": {
+        "poin": "({ phishing: ['Periksa alamat pengirim, bukan hanya nama yang tampil.', 'Waspada pesan yang mendesak, mengancam, atau menjanjikan hadiah.', 'Arahkan kursor ke tautan sebelum menekan; alamat tujuan harus cocok.', 'Jangan buka lampiran yang tidak diminta.', 'Ragu? Laporkan ke tim IT dan jangan membalas.'], sandi: ['Pakai kata sandi panjang (kalimat) dan berbeda untuk tiap layanan.', 'Pakai pengelola kata sandi, bukan catatan di kertas atau ponsel.', 'Aktifkan verifikasi dua langkah di semua akun penting.', 'Jangan membagikan kata sandi atau kode verifikasi, bahkan ke \"tim IT\" lewat telepon.', 'Ganti segera bila ada tanda akun dipakai orang lain.'], perangkat: ['Kunci layar tiap meninggalkan perangkat.', 'Aktifkan penyandian disk dan pembaruan otomatis.', 'Jangan memasang aplikasi dari sumber tidak resmi.', 'Jangan meminjamkan perangkat kerja ke orang lain.', 'Hilang atau dicuri? Lapor ke IT dalam satu jam.'], wifi: ['Hindari transaksi penting di jaringan umum.', 'Pakai VPN kantor saat di luar kantor.', 'Pastikan nama jaringan benar, jangan menyambung otomatis.', 'Matikan berbagi berkas saat di tempat umum.', 'Lupakan jaringan setelah selesai dipakai.'] })[input.topik]",
+        "tambah": "({ umum: 'Keamanan adalah tugas semua orang: satu klik salah bisa membuka pintu bagi penyerang.', keuangan: 'Khusus tim keuangan: verifikasi setiap perubahan rekening tujuan atau permintaan transfer mendadak lewat telepon ke nomor yang sudah dikenal, bukan nomor dari pesan tersebut.', pimpinan: 'Khusus pimpinan: Anda sering menjadi sasaran penipuan yang menyamar sebagai rekan atau mitra. Biasakan memverifikasi permintaan rahasia lewat jalur kedua.' })[input.peserta]",
+        "kuis": "({ phishing: [['Email dari \"bank\" meminta Anda segera masuk lewat tautan. Apa yang dilakukan?', 'Jangan menekan tautan; buka situs resmi sendiri atau hubungi bank.'], ['Lampiran tak terduga dari rekan kerja. Apa yang dilakukan?', 'Konfirmasi lewat jalur lain sebelum membuka.'], ['Anda tidak sengaja menekan tautan mencurigakan. Lalu?', 'Segera lapor ke tim IT dan ganti kata sandi.']], sandi: [['Apakah satu kata sandi untuk semua akun aman?', 'Tidak; satu kebocoran membuka semua akun.'], ['Seseorang menelepon minta kode verifikasi Anda. Lalu?', 'Jangan berikan, tutup telepon, lapor ke IT.'], ['Kata sandi yang kuat itu seperti apa?', 'Panjang, unik, dan disimpan di pengelola kata sandi.']], perangkat: [['Laptop hilang di kafe. Lalu?', 'Lapor ke IT dalam satu jam agar akses dicabut.'], ['Boleh memasang aplikasi dari situs tidak resmi?', 'Tidak; minta IT memasang yang aman.'], ['Mengapa layar harus dikunci?', 'Agar orang lain tidak mengakses data saat Anda pergi.']], wifi: [['Aman membuka rekening bank di wifi kafe?', 'Sebaiknya tidak, atau pakai VPN.'], ['Ada dua jaringan bernama mirip. Lalu?', 'Tanyakan nama resmi ke pengelola tempat.'], ['Setelah selesai memakai wifi umum?', 'Lupakan jaringan dan matikan sambungan otomatis.']] })[input.topik]",
+        "jumlahPoin": "input.durasi === '5' ? 3 : 5",
+        "dok": "'# Materi kesadaran keamanan: ' + input.topik + '\\n\\nDurasi: ' + input.durasi + ' menit\\n\\n## Pesan utama\\n' + v.poin.slice(0, v.jumlahPoin).map((p, i) => (i + 1) + '. ' + p).join('\\n') + '\\n\\n' + v.tambah + '\\n\\n## Kuis singkat\\n' + v.kuis.map((q, i) => (i + 1) + '. ' + q[0] + '\\n   - Jawaban: ' + q[1]).join('\\n')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Materi ' + input.topik + ' (' + input.durasi + ' menit) untuk ' + input.peserta + ' siap, berisi ' + v.jumlahPoin + ' pesan utama dan 3 soal kuis'",
+    "teks": "v.dok",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'materi-keamanan-' + input.topik",
+        "isi": "v.dok"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "topik": "phishing",
+      "peserta": "keuangan",
+      "durasi": "5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 pesan utama dan 3 soal kuis",
+        "verifikasi setiap perubahan rekening",
+        "Kuis singkat"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Security Analyst di divisi IT & Security, memakai bahasa awam",
+    "tujuan": "Susun materi singkat kesadaran keamanan sesuai topik dan peserta, lengkap dengan kuis tiga soal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Sistem mungkin kurang aman."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "security awareness"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat materi kesadaran keamanan perlu dibaca bersama: security awareness menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

@@ -1,37 +1,107 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "kms-widya",
   "division": "kms",
   "employeeId": "widya",
   "title": "Knowledge Writer & Synthesizer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Widya",
-    "tugasPeran": [
-      "Menyintesis banyak deliverable menjadi panduan evergreen per topik",
-      "Membuat halaman indeks per divisi dengan [[wikilink]]",
-      "Menandai pengetahuan usang untuk diperbarui"
-    ],
-    "keahlian": [
-      "sintesis",
-      "wiki",
-      "panduan"
-    ],
-    "contohTugas": [
-      "Buat panduan evergreen strategi marketplace dari semua riset",
-      "Susun indeks knowledge divisi R&D"
+  "name": "Pembuat halaman indeks bertautan",
+  "ringkas": "Kelompokkan judul catatan menjadi halaman indeks rapi dengan tautan antar catatan.",
+  "kataKunci": [
+    "indeks",
+    "wikilink",
+    "daftar isi",
+    "halaman indeks",
+    "tautan catatan"
+  ],
+  "inputs": [
+    {
+      "key": "topik",
+      "type": "text",
+      "label": "Topik indeks",
+      "required": true,
+      "contoh": "Onboarding"
+    },
+    {
+      "key": "judul",
+      "type": "longtext",
+      "label": "Judul catatan (satu per baris; tulis \"Kelompok - Judul\" untuk dikelompokkan)",
+      "required": true,
+      "contoh": "Onboarding - Checklist hari pertama\nOnboarding - Jadwal minggu pertama\nFAQ: Cuti\nKebijakan kerja"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Kelompokkan",
+      "set": {
+        "grup": "(() => { const g = {}; baris(input.judul).slice(0, 200).forEach((j) => { const m = j.split(/\\s[-:]\\s|:/); const k = m.length > 1 ? m[0].trim() : 'Lainnya'; (g[k] = g[k] || []).push(j); }); return g; })()",
+        "kelompok": "Object.keys(v.grup).sort().map((k) => ({ nama: k, isi: v.grup[k] }))",
+        "jumlah": "baris(input.judul).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Indeks ' + input.topik + ': ' + v.jumlah + ' catatan dalam ' + v.kelompok.length + ' kelompok'",
+    "teks": "'# Indeks ' + input.topik + '\\n\\n' + v.kelompok.map((g) => '## ' + g.nama + '\\n' + g.isi.map((j) => '- [[' + j.replace(/[\\[\\]|#]/g, '') + ']]').join('\\n')).join('\\n\\n')",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'indeks-catatan'",
+        "isi": "'# Indeks ' + input.topik + '\\n\\n' + v.kelompok.map((g) => '## ' + g.nama + '\\n' + g.isi.map((j) => '- [[' + j.replace(/[\\[\\]|#]/g, '') + ']]').join('\\n')).join('\\n\\n') + '\\n'"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Knowledge",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "topik": "Onboarding",
+      "judul": "Onboarding - Checklist hari pertama\nOnboarding - Jadwal minggu pertama\nFAQ: Cuti\nKebijakan kerja"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "[[Onboarding - Checklist hari pertama]]",
+        "## FAQ",
+        "4 catatan dalam 3 kelompok"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Knowledge Writer & Synthesizer di divisi Knowledge & AI Ops, memakai bahasa awam",
+    "tujuan": "Kelompokkan judul catatan menjadi halaman indeks rapi dengan tautan antar catatan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Simpan saja."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "indeks"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat halaman indeks bertautan perlu dibaca bersama: indeks menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

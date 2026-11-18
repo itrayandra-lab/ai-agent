@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-sigit-pembersihan-jalur",
+  "division": "mfg",
+  "employeeId": "sigit",
+  "title": "Production Supervisor",
+  "version": 1,
+  "name": "Daftar periksa pembersihan jalur",
+  "ringkas": "Buat daftar periksa pembersihan jalur saat ganti batch atau produk, makin ketat bila produknya berbeda.",
+  "kataKunci": [
+    "pembersihan jalur",
+    "line clearance",
+    "ganti produk",
+    "checklist",
+    "kebersihan"
+  ],
+  "inputs": [
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Apa yang berganti?",
+      "required": true,
+      "default": "sama",
+      "choices": [
+        {
+          "v": "sama",
+          "t": "Produk sama, nomor batch berbeda"
+        },
+        {
+          "v": "varian",
+          "t": "Varian berbeda (aroma atau warna)"
+        },
+        {
+          "v": "produk",
+          "t": "Produk berbeda"
+        }
+      ]
+    },
+    {
+      "key": "lini",
+      "type": "text",
+      "label": "Nama jalur produksi",
+      "required": true,
+      "contoh": "Jalur Filling 1"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "petugas",
+      "type": "text",
+      "label": "Nama petugas pemeriksa",
+      "required": true,
+      "contoh": "Budi"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun daftar",
+      "set": {
+        "dasar": "['Semua sisa bahan dan kemasan batch lama dikeluarkan', 'Label dan etiket lama disingkirkan', 'Dokumen batch lama dikembalikan', 'Permukaan mesin dan meja dibersihkan', 'Lantai dan area sekitar bersih', 'Alat ukur dan timbangan dicek dari angka nol']",
+        "varian": "['Selang dan nozel dibilas', 'Sisa aroma atau warna dicek dengan mata']",
+        "produk": "['Mesin dibilas penuh dan air bilasan diperiksa', 'Tangki dan pipa dikosongkan', 'Usap sampel permukaan bila diperlukan', 'Izin bagian mutu sebelum mulai']",
+        "items": "v.dasar.concat(input.jenis === 'produk' ? v.varian.concat(v.produk) : input.jenis === 'varian' ? v.varian : [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.items.length + ' butir pemeriksaan untuk ' + input.lini + ' (' + input.tanggal + ')'",
+    "teks": "'# Pembersihan jalur: ' + input.lini + '\\n\\nTanggal: ' + tgl(input.tanggal) + '  \\nPetugas: ' + input.petugas + '\\n\\n' + v.items.map((t, i) => (i + 1) + '. [ ] ' + t).join('\\n') + '\\n\\nTanda tangan petugas: ____________  Pemeriksa mutu: ____________'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pembersihan-jalur-' + input.tanggal",
+        "isi": "csv([['No', 'Pemeriksaan', 'Sudah (Ya/Tidak)', 'Paraf']].concat(v.items.map((t, i) => [i + 1, t, '', ''])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "jenis": "produk",
+      "lini": "Jalur Filling 1",
+      "tanggal": "2026-11-18",
+      "petugas": "Budi"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "12 butir",
+        "Izin bagian mutu"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Production Supervisor di divisi Manufacturing, memakai bahasa awam",
+    "tujuan": "Buat daftar periksa pembersihan jalur saat ganti batch atau produk, makin ketat bila produknya berbeda. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Produksi lancar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "pembersihan jalur"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil daftar periksa pembersihan jalur perlu dibaca bersama: pembersihan jalur menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

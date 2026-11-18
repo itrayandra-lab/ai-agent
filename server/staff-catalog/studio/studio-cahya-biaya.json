@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-cahya-biaya",
+  "division": "studio",
+  "employeeId": "cahya",
+  "title": "Photographer — Product & Lifestyle",
+  "version": 1,
+  "name": "Penghitung biaya sesi foto",
+  "ringkas": "Hitung total biaya sesi foto dari tarif per foto, retouch, properti, dan transport.",
+  "kataKunci": [
+    "biaya foto",
+    "tarif fotografer",
+    "retouch",
+    "anggaran foto",
+    "sesi"
+  ],
+  "inputs": [
+    {
+      "key": "jumlah",
+      "type": "number",
+      "label": "Jumlah foto",
+      "required": true,
+      "contoh": "20"
+    },
+    {
+      "key": "tarif",
+      "type": "number",
+      "label": "Tarif per foto (Rp)",
+      "required": true,
+      "contoh": "25000"
+    },
+    {
+      "key": "retouch",
+      "type": "choice",
+      "label": "Retouch",
+      "required": true,
+      "default": "5000",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa retouch"
+        },
+        {
+          "v": "5000",
+          "t": "Retouch ringan (Rp 5.000/foto)"
+        },
+        {
+          "v": "15000",
+          "t": "Retouch detail (Rp 15.000/foto)"
+        }
+      ]
+    },
+    {
+      "key": "properti",
+      "type": "number",
+      "label": "Biaya properti (Rp)",
+      "required": false,
+      "contoh": "50000",
+      "default": "0"
+    },
+    {
+      "key": "transport",
+      "type": "number",
+      "label": "Biaya transport (Rp)",
+      "required": false,
+      "contoh": "0",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung biaya",
+      "set": {
+        "foto": "num(input.jumlah) * num(input.tarif)",
+        "edit": "num(input.jumlah) * num(input.retouch)",
+        "lain": "num(input.properti) + num(input.transport)",
+        "total": "v.foto + v.edit + v.lain",
+        "perFoto": "num(input.jumlah) ? Math.round(v.total / num(input.jumlah)) : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Total biaya sesi foto ' + rp(v.total) + ' (' + rp(v.perFoto) + ' per foto)'",
+    "teks": "'# Rincian biaya sesi foto\\n\\n' + tabel(['Komponen', 'Biaya'], [['Foto (' + input.jumlah + ' x ' + rp(num(input.tarif)) + ')', rp(v.foto)], ['Retouch', rp(v.edit)], ['Properti dan transport', rp(v.lain)], ['**Total**', '**' + rp(v.total) + '**']])",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'biaya-sesi-foto'",
+        "isi": "csv([['Komponen', 'Biaya'], ['Foto', v.foto], ['Retouch', v.edit], ['Properti dan transport', v.lain], ['Total', v.total]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "jumlah": "20",
+      "tarif": "25000",
+      "retouch": "5000",
+      "properti": "50000",
+      "transport": "0"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 650.000",
+        "Rp 32.500"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Photographer — Product & Lifestyle di divisi Content Studio, memakai bahasa awam",
+    "tujuan": "Hitung total biaya sesi foto dari tarif per foto, retouch, properti, dan transport. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Buat iklan yang keren."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "biaya foto"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung biaya sesi foto perlu dibaca bersama: biaya foto menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

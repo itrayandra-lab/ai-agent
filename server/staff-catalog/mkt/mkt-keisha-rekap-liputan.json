@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-keisha-rekap-liputan",
+  "division": "mkt",
+  "employeeId": "keisha",
+  "title": "PR & Media Relations Specialist",
+  "version": 1,
+  "name": "Perekap liputan media",
+  "ringkas": "Rekap liputan media: jumlah, jangkauan, pembagian positif-netral-negatif, dan media dengan jangkauan terbesar.",
+  "kataKunci": [
+    "liputan media",
+    "media monitoring",
+    "jangkauan",
+    "sentimen",
+    "rekap pr"
+  ],
+  "inputs": [
+    {
+      "key": "periode",
+      "type": "text",
+      "label": "Periode",
+      "required": true,
+      "contoh": "Desember 2026"
+    },
+    {
+      "key": "liputan",
+      "type": "longtext",
+      "label": "Liputan (satu baris: media | judul | tanggal | positif/netral/negatif | jangkauan)",
+      "required": true,
+      "contoh": "Kompas | Ray luncurkan serum | 2026-12-02 | positif | 500000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Rekap",
+      "set": {
+        "rows": "baris(input.liputan).slice(0, 200).map((l) => { const p = l.split('|').map((s) => s.trim()); const s = String(p[3] || '').toLowerCase(); return { media: p[0] || '-', judul: p[1] || '-', tanggal: p[2] || '-', sentimen: s.startsWith('pos') ? 'Positif' : s.startsWith('neg') ? 'Negatif' : 'Netral', jangkauan: num(p[4]) }; }).sort((x, y) => y.jangkauan - x.jangkauan)",
+        "jangkauan": "v.rows.reduce((a, b) => a + b.jangkauan, 0)",
+        "hitungS": "['Positif', 'Netral', 'Negatif'].map((s) => [s, v.rows.filter((r) => r.sentimen === s).length])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' liputan, jangkauan ' + v.jangkauan.toLocaleString('id-ID') + '; ' + v.hitungS.map((s) => s[0] + ' ' + s[1]).join(', ')",
+    "teks": "'# Rekap liputan ' + input.periode + '\\n\\n' + tabel(['Media', 'Judul', 'Tanggal', 'Sentimen', 'Jangkauan'], v.rows.map((r) => [r.media, r.judul, r.tanggal, r.sentimen, r.jangkauan.toLocaleString('id-ID')])) + '\\n\\n' + v.hitungS.map((s) => '- ' + s[0] + ' ' + s[1]).join('\\n') + '\\n- Total jangkauan: ' + v.jangkauan.toLocaleString('id-ID') + '\\n- Terbesar: ' + v.rows[0].media",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rekap-liputan-' + input.periode",
+        "isi": "csv([['Media', 'Judul', 'Tanggal', 'Sentimen', 'Jangkauan']].concat(v.rows.map((r) => [r.media, r.judul, r.tanggal, r.sentimen, r.jangkauan])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "PR",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "periode": "Desember 2026",
+      "liputan": "Kompas | Ray luncurkan serum | 2026-12-02 | positif | 500000\nDetik | Ulasan Ray | 2026-12-03 | netral | 300000\nFemale | Review serum | 2026-12-04 | positif | 200000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 liputan, jangkauan 1.000.000",
+        "Positif 2",
+        "Terbesar: Kompas"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "PR & Media Relations Specialist di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Rekap liputan media: jumlah, jangkauan, pembagian positif-netral-negatif, dan media dengan jangkauan terbesar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "liputan media"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perekap liputan media perlu dibaca bersama: liputan media menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

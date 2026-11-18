@@ -366,4 +366,4 @@ details.folder.grp > summary { font-weight: 650; }
 #gate p { margin: 0; color: var(--muted, #667); font-size: 14px; line-height: 1.5; }
 #gate .gate-btn { justify-content: center; gap: 10px; padding: 12px 16px; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; }
 #gate .gate-note { font-size: 12px; opacity: .8; }
-#gate .gate-err { color: var(--bad, #d33); font-weight: 600; }
+#gate .gate-err { color: var(--bad, #a5532f); font-weight: 600; }

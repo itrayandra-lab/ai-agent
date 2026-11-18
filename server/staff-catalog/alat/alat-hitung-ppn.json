@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-hitung-ppn",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penghitung PPN",
+  "ringkas": "Hitung PPN dari harga: tambahkan PPN ke harga, atau pisahkan PPN dari harga yang sudah termasuk PPN.",
+  "kataKunci": [
+    "ppn",
+    "pajak",
+    "dpp",
+    "harga",
+    "faktur"
+  ],
+  "inputs": [
+    {
+      "key": "nilai",
+      "type": "number",
+      "label": "Nominal (Rp)",
+      "required": true,
+      "contoh": "2500000"
+    },
+    {
+      "key": "mode",
+      "type": "choice",
+      "label": "Nominal ini",
+      "required": true,
+      "default": "tambah",
+      "choices": [
+        {
+          "v": "tambah",
+          "t": "Belum termasuk PPN (tambahkan)"
+        },
+        {
+          "v": "pisah",
+          "t": "Sudah termasuk PPN (pisahkan)"
+        }
+      ]
+    },
+    {
+      "key": "tarif",
+      "type": "choice",
+      "label": "Tarif PPN",
+      "required": true,
+      "default": "11",
+      "choices": [
+        {
+          "v": "11",
+          "t": "11%"
+        },
+        {
+          "v": "12",
+          "t": "12%"
+        },
+        {
+          "v": "0",
+          "t": "Tanpa PPN"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "dpp": "input.mode === 'tambah' ? Math.round(input.nilai) : Math.round(input.nilai / (1 + num(input.tarif) / 100))",
+        "ppn": "Math.round(v.dpp * num(input.tarif) / 100)",
+        "total": "v.dpp + v.ppn"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Dasar ' + rp(v.dpp) + ' + PPN ' + input.tarif + '% ' + rp(v.ppn) + ' = ' + rp(v.total)",
+    "teks": "tabel(['Komponen', 'Nilai'], [['Dasar pengenaan pajak', rp(v.dpp)], ['PPN ' + input.tarif + '%', rp(v.ppn)], ['Total', rp(v.total)]])",
+    "data": "({ dpp: v.dpp, ppn: v.ppn, total: v.total })"
+  },
+  "sample": {
+    "input": {
+      "nilai": "2500000",
+      "mode": "tambah",
+      "tarif": "11"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "2.775.000",
+        "275.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "otakProfil": {
+    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
+    "tujuan": "Hitung PPN dari harga: tambahkan PPN ke harga, atau pisahkan PPN dari harga yang sudah termasuk PPN. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Hasil sudah benar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "ppn"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung ppn perlu dibaca bersama: ppn menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

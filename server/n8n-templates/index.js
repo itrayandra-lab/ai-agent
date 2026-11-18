@@ -4,6 +4,7 @@ import * as C from './common.js';
 const { node, link, clean, lit, js } = C;
 
 const finish = (nodes, conns, trigger, sim, extra = {}) => ({ nodes, connections: conns, trigger, sim, ...extra });
+const EMPTY_SHA = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';   // sha256 dari badan kosong (GET)
 const webhookPath = (ctx) => `rv-${ctx.hookToken.slice(0, 24)}`;
 
 const catat = {
@@ -33,14 +34,20 @@ const ringkasan = {
   kata: /ringkasan|rangkuman|laporan harian|rekap harian|daily|digest/i, keluar: true,
   params: [{ key: 'jam', label: 'Jam berapa dikirim?', type: 'time', default: '08:00' }, ...C.NOTIFY_PARAMS],
   check(p, errs) { p.jam = C.normTime(p.jam, '08:00'); if (!p.jam) errs.jam = 'Jam belum benar (contoh: 08:00).'; C.checkNotify(p, errs); },
-  needs: (p, env) => [...(p.saluran !== 'raiverse' && !env.hook ? [{ kind: 'alamat', pesan: 'Ringkasan lewat WhatsApp atau email butuh alamat publik RAIVERSE (belum diatur). Pakai kabar lewat RAIVERSE dulu.' }] : []), ...C.notifyNeeds(p, env)],
+  needs: (p, env) => [...(p.saluran !== 'raiverse' && !env.hook ? [{ kind: 'alamat', pesan: 'Ringkasan lewat email butuh alamat publik RAIVERSE (belum diatur). Pakai kabar lewat RAIVERSE dulu.' }] : []), ...C.notifyNeeds(p, env)],
   build(p, ctx) {
     const conns = {};
     const t = C.scheduleNode('Jadwal harian', C.cronAt(p.jam), [0, 0]);
-    const g = p.saluran === 'raiverse' ? C.setNode('Ambil ringkasan', { text: '__RINGKASAN__' }, [260, 0]) : node('Ambil ringkasan', 'n8n-nodes-base.httpRequest', 4.2, { method: 'GET', url: `${C.raiverseUrl()}/api/automations/hook/${ctx.hookToken}/digest`, options: { timeout: 15000 } }, [260, 0]);   // kanal RAIVERSE: RAIVERSE sendiri mengisi ringkasannya saat mengambil hasil
+    // kanal lain: panggilan ke RAIVERSE ditandatangani (cap waktu + nonce + HMAC), lihat handleHook di server/n8n.js
+    const sign = p.saluran === 'raiverse' ? null : [
+      C.setNode('Waktu panggilan', { rvTs: '={{ String($now.toMillis()) }}', rvNonce: '={{ Math.random().toString(36).slice(2, 12) + String($now.toMillis()) }}' }, [130, 0]),
+      node('Tanda tangan', 'n8n-nodes-base.crypto', 1, { action: 'hmac', type: 'SHA256', value: '={{ $json.rvTs }}.{{ $json.rvNonce }}.GET.digest.' + EMPTY_SHA, dataPropertyName: 'rvSig', secret: ctx.hookSecret || '', encoding: 'hex' }, [195, 0]),
+    ];
+    const g = p.saluran === 'raiverse' ? C.setNode('Ambil ringkasan', { text: '__RINGKASAN__' }, [260, 0]) : node('Ambil ringkasan', 'n8n-nodes-base.httpRequest', 4.2, { method: 'GET', url: `${C.raiverseUrl()}/api/automations/hook/${ctx.hookToken}/digest`, sendHeaders: true, headerParameters: { parameters: [{ name: 'x-rv-ts', value: '={{ $json.rvTs }}' }, { name: 'x-rv-nonce', value: '={{ $json.rvNonce }}' }, { name: 'x-rv-sig', value: '={{ $json.rvSig }}' }] }, options: { timeout: 15000 } }, [260, 0]);   // kanal RAIVERSE: RAIVERSE sendiri mengisi ringkasannya saat mengambil hasil
     const k = C.notifyNode(p, '$json.text', { ...ctx, subject: 'Ringkasan harian RAIVERSE' }, [520, 0]);
-    link(conns, t.name, g.name); link(conns, g.name, k.node.name);
-    return finish([t, g, k.node], conns, t.name, { 'Ambil ringkasan': { text: 'Ringkasan contoh: 3 tugas selesai, 2 sedang berjalan.' }, ...k.sim });
+    if (sign) { link(conns, t.name, sign[0].name); link(conns, sign[0].name, sign[1].name); link(conns, sign[1].name, g.name); } else link(conns, t.name, g.name);
+    link(conns, g.name, k.node.name);
+    return finish([t, ...(sign || []), g, k.node], conns, t.name, { 'Waktu panggilan': { rvTs: '1', rvNonce: 'contoh1234' }, 'Tanda tangan': { rvSig: 'contoh' }, 'Ambil ringkasan': { text: 'Ringkasan contoh: 3 tugas selesai, 2 sedang berjalan.' }, ...k.sim });
   },
   describe: (p) => ({ langkah: [`Setiap hari jam ${p.jam}`, 'Aku kumpulkan ringkasan kabar perusahaan', `Aku kirim lewat ${C.channelName(p)}`], dampak: [`Mengirim pesan harian ke ${C.channelName(p)}`] }),
   samples: () => [{ body: {} }],

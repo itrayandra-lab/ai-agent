@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "design-tegar-label",
+  "division": "design",
+  "employeeId": "tegar",
+  "title": "Packaging & Motion Designer",
+  "version": 1,
+  "name": "Daftar cek isi label kemasan",
+  "ringkas": "Cocokkan isi label yang sudah ada dengan daftar elemen yang umumnya wajib dicantumkan, tampilkan yang masih kurang.",
+  "kataKunci": [
+    "label kemasan",
+    "checklist kemasan",
+    "netto",
+    "izin edar",
+    "komposisi"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Cerah 30 ml"
+    },
+    {
+      "key": "kategori",
+      "type": "choice",
+      "label": "Jenis produk",
+      "required": true,
+      "default": "kosmetik",
+      "choices": [
+        {
+          "v": "kosmetik",
+          "t": "Kosmetik"
+        },
+        {
+          "v": "makanan",
+          "t": "Makanan"
+        },
+        {
+          "v": "minuman",
+          "t": "Minuman"
+        },
+        {
+          "v": "umum",
+          "t": "Barang umum"
+        }
+      ]
+    },
+    {
+      "key": "sudah",
+      "type": "longtext",
+      "label": "Yang sudah ada di label (satu per baris)",
+      "required": false,
+      "contoh": "Nama produk\nKomposisi lengkap\nIsi bersih (netto)"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Cocokkan",
+      "set": {
+        "daftar": "{\"kosmetik\":[\"Nama produk\",\"Komposisi lengkap\",\"Isi bersih (netto)\",\"Nomor izin edar\",\"Nama dan alamat produsen\",\"Kode produksi\",\"Tanggal kedaluwarsa\",\"Cara pakai\",\"Peringatan\"],\"makanan\":[\"Nama produk\",\"Daftar bahan\",\"Isi bersih (netto)\",\"Nomor izin edar\",\"Nama dan alamat produsen\",\"Tanggal kedaluwarsa\",\"Informasi gizi\",\"Label halal\",\"Cara simpan\"],\"minuman\":[\"Nama produk\",\"Daftar bahan\",\"Isi bersih (netto)\",\"Nomor izin edar\",\"Nama dan alamat produsen\",\"Tanggal kedaluwarsa\",\"Informasi gizi\",\"Label halal\",\"Cara simpan\"],\"umum\":[\"Nama produk\",\"Merek\",\"Isi atau ukuran\",\"Nama dan alamat produsen\",\"Negara asal\",\"Cara pakai\",\"Peringatan keamanan\",\"Kode produksi\"]}[input.kategori].map((e) => ({ elemen: e, ada: baris(input.sudah).some((l) => { const a = l.toLowerCase(); const b = e.toLowerCase(); return a.length >= 4 && (a.includes(b) || b.includes(a)); }) }))",
+        "ada": "v.daftar.filter((d) => d.ada).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ada + ' dari ' + v.daftar.length + ' elemen label sudah ada; ' + (v.daftar.length - v.ada) + ' masih kurang'",
+    "teks": "'# Cek label: ' + input.produk + '\\n\\n' + v.daftar.map((d) => (d.ada ? '- [x] ' : '- [ ] ') + d.elemen).join('\\n') + '\\n\\nDaftar ini panduan umum. Cek aturan resmi terbaru dan minta tim kepatuhan memastikan sebelum cetak.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'cek-label'",
+        "isi": "csv([['Elemen', 'Sudah ada']].concat(v.daftar.map((d) => [d.elemen, d.ada ? 'Ya' : 'Belum'])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Cerah 30 ml",
+      "kategori": "kosmetik",
+      "sudah": "Nama produk\nKomposisi lengkap\nIsi bersih (netto)"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 dari 9",
+        "[ ] Nomor izin edar"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Packaging & Motion Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Cocokkan isi label yang sudah ada dengan daftar elemen yang umumnya wajib dicantumkan, tampilkan yang masih kurang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "label kemasan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil daftar cek isi label kemasan perlu dibaca bersama: label kemasan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

@@ -4,6 +4,8 @@ import { SEED_SKILLS, ensureEmployeeConfig, autoActivate } from './catalog.js';
 import { TEAMS } from './roster-teams.js';
 import { install as installPower, REV as POWER_REV } from './skills-power.js';
 import { DIVISIONS, ROSTER, rosterEmployees, personalAssistant } from './roster.js';
+import { SCHEMA_VERSION, normalizeOrg, flattenMasterBoss } from './org-rules.js';
+import { inferGender } from '../public/js/tts.js';
 const now = () => Date.now();
 
 export { DIVISIONS };
@@ -302,7 +304,7 @@ Terkait: [[Cara Kerja AI + Manusia]]
   ];
 
   const out = {
-    version: 8,
+    version: SCHEMA_VERSION,   // satu sumber dengan migrate() di store.js
     meetings: [],
     company: { name: 'Ray Group', tagline: 'Kerja lebih ringan, bisnis lebih kencang.', language: 'Bahasa Indonesia' },
     divisions: DIVISIONS.map((d) => ({ ...d, teams: (TEAMS[d.id] || []).map((x) => x.name), delegation: 'best_fit', leadId: ROSTER.find((r) => r.div === d.id && r.lead)?.id || null })),
@@ -318,6 +320,9 @@ Terkait: [[Cara Kerja AI + Manusia]]
       staffModel: false,   // bendera P0: staf = workflow n8n; mati = perilaku lama (lihat docs/PAGAR-SINKRONISASI.md)
     },
   };
+  flattenMasterBoss(out);   // master dan PA setara di bawah owner
+  for (const e of out.employees) if (e.type === 'ai') e.voiceGender = inferGender(e.name || e.id);   // suara tersimpan sejak awal
+  normalizeOrg(out);        // role, characterId, staffId, satu manajer per divisi, kontrak 3D
   installPower(out); out.powerRev = POWER_REV;   // paket skill super langsung terpasang ke agen yang relevan
   return out;
 }

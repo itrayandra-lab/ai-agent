@@ -1,40 +1,108 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "kms-arsa",
   "division": "kms",
   "employeeId": "arsa",
   "title": "Knowledge Librarian (Brain Organizer)",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Arsa",
-    "tugasPeran": [
-      "Memindahkan setiap catatan ke folder <Divisi>/<Jenis> yang akurat",
-      "Mengganti nama catatan menjadi judul deskriptif yang konsisten",
-      "Menggabungkan duplikat dan memperbaiki tag",
-      "Menjaga folder Deliverables & Notes tetap kosong dari tumpukan"
-    ],
-    "keahlian": [
-      "kurasi",
-      "folder",
-      "rename",
-      "arsip"
-    ],
-    "contohTugas": [
-      "Rapikan semua catatan di Deliverables",
-      "Gabungkan catatan duplikat tentang UTM",
-      "Standarkan judul catatan riset"
+  "name": "Penata nama dan folder catatan",
+  "ringkas": "Rapikan judul catatan, tentukan folder yang tepat (Divisi/Jenis), dan tandai catatan yang kembar.",
+  "kataKunci": [
+    "folder catatan",
+    "rapikan judul",
+    "penamaan",
+    "pustaka",
+    "duplikat"
+  ],
+  "inputs": [
+    {
+      "key": "divisi",
+      "type": "text",
+      "label": "Nama divisi pemilik catatan",
+      "required": true,
+      "contoh": "Marketing"
+    },
+    {
+      "key": "judul",
+      "type": "longtext",
+      "label": "Judul catatan (satu per baris)",
+      "required": true,
+      "contoh": "laporan kampanye november\nSOP posting instagram\nrencana konten desember\nlaporan  kampanye  november"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Klasifikasi",
+      "set": {
+        "rows": "baris(input.judul).slice(0, 200).map((j) => { const rapi = j.replace(/\\s+/g, ' ').replace(/[.\\s]+$/, '').split(' ').map((w) => w ? w[0].toUpperCase() + w.slice(1) : w).join(' '); const hit = [['SOP', /sop|prosedur|langkah kerja/], ['Policy', /kebijakan|aturan|policy/], ['Meeting', /rapat|notulen|meeting/], ['Report', /laporan|report|ringkasan/], ['Research', /riset|penelitian|survei|survey/], ['Strategy', /strategi|okr|roadmap/], ['Plan', /rencana|jadwal|rancangan|plan/], ['Content', /konten|artikel|caption|naskah/], ['Design', /desain|visual|logo/], ['Analysis', /analisis|evaluasi/], ['Data', /data|dataset|tabel/], ['Technical', /teknis|arsitektur|integrasi|kode/], ['Training', /pelatihan|training|onboarding/]].find((x) => x[1].test(j.toLowerCase())); return { asli: j, rapi: rapi, jenis: hit ? hit[0] : 'Knowledge', kunci: rapi.toLowerCase().replace(/[^a-z0-9]/g, '') }; })",
+        "final": "v.rows.map((r, i) => ({ asli: r.asli, rapi: r.rapi, folder: input.divisi + '/' + r.jenis, kembar: v.rows.findIndex((x) => x.kunci === r.kunci) < i }))",
+        "kembar": "v.final.filter((r) => r.kembar).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.final.length + ' catatan dirapikan, ' + v.kembar + ' kembar'",
+    "teks": "'# Penataan catatan\\n\\n' + tabel(['Judul rapi', 'Folder', 'Catatan'], v.final.map((r) => [r.rapi, r.folder, r.kembar ? 'Kembar: gabungkan' : (r.asli !== r.rapi ? 'Judul dirapikan' : '')]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'penataan-catatan'",
+        "isi": "csv([['Judul asli', 'Judul rapi', 'Folder', 'Kembar']].concat(v.final.map((r) => [r.asli, r.rapi, r.folder, r.kembar ? 'Ya' : 'Tidak'])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Knowledge",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "divisi": "Marketing",
+      "judul": "laporan kampanye november\nSOP posting instagram\nrencana konten desember\nlaporan  kampanye  november"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Marketing/Report",
+        "Marketing/SOP",
+        "1 kembar",
+        "Marketing/Plan"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Knowledge Librarian (Brain Organizer) di divisi Knowledge & AI Ops, memakai bahasa awam",
+    "tujuan": "Rapikan judul catatan, tentukan folder yang tepat (Divisi/Jenis), dan tandai catatan yang kembar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Simpan saja."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "folder catatan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penata nama dan folder catatan perlu dibaca bersama: folder catatan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

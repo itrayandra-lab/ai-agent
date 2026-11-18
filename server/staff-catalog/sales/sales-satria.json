@@ -1,37 +1,161 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "sales-satria",
   "division": "sales",
   "employeeId": "satria",
   "title": "Inside Sales — Clinic & Salon B2B",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Satria",
-    "tugasPeran": [
-      "Prospek klinik kecantikan & salon",
-      "Demo produk professional line",
-      "Menjaga pipeline B2B"
-    ],
-    "keahlian": [
-      "b2b",
-      "klinik",
-      "salon"
-    ],
-    "contohTugas": [
-      "Daftar 30 klinik target di Jakarta",
-      "Sequence email untuk salon"
-    ]
+  "name": "Kalkulator potensi klinik atau salon",
+  "ringkas": "Perkirakan omzet dan kebutuhan produk bulanan sebuah klinik atau salon dari jumlah perawatannya, untuk bahan demo dan penawaran paket awal.",
+  "kataKunci": [
+    "klinik",
+    "salon",
+    "potensi",
+    "paket awal",
+    "professional line"
+  ],
+  "inputs": [
+    {
+      "key": "usaha",
+      "type": "text",
+      "label": "Nama klinik atau salon",
+      "required": true,
+      "contoh": "Klinik Cantik Rina"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis usaha",
+      "required": true,
+      "default": "klinik",
+      "choices": [
+        {
+          "v": "klinik",
+          "t": "Klinik kecantikan"
+        },
+        {
+          "v": "salon",
+          "t": "Salon"
+        }
+      ]
+    },
+    {
+      "key": "perawatan",
+      "type": "number",
+      "label": "Jumlah perawatan per hari",
+      "required": true,
+      "contoh": "8"
+    },
+    {
+      "key": "tarif",
+      "type": "number",
+      "label": "Tarif rata-rata per perawatan (Rp)",
+      "required": true,
+      "contoh": "350000"
+    },
+    {
+      "key": "biaya_produk",
+      "type": "number",
+      "label": "Biaya produk per perawatan saat ini (Rp)",
+      "required": true,
+      "contoh": "70000"
+    },
+    {
+      "key": "hari",
+      "type": "choice",
+      "label": "Hari buka dalam sebulan",
+      "required": true,
+      "default": "26",
+      "choices": [
+        {
+          "v": "22",
+          "t": "22 hari"
+        },
+        {
+          "v": "26",
+          "t": "26 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung potensi",
+      "set": {
+        "jumlah": "num(input.perawatan) * num(input.hari)",
+        "omzet": "v.jumlah * num(input.tarif)",
+        "biaya": "v.jumlah * num(input.biaya_produk)",
+        "hemat": "Math.round(v.biaya * (input.jenis === 'klinik' ? 0.12 : 0.08))",
+        "labaProduk": "v.omzet - v.biaya",
+        "paket": "v.jumlah <= 100 ? 'Paket awal kecil' : v.jumlah <= 200 ? 'Paket awal menengah' : 'Paket awal besar'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.usaha + ': sekitar ' + v.jumlah + ' perawatan, omzet ' + rp(v.omzet) + ' per bulan; disarankan ' + v.paket",
+    "teks": "'# Potensi ' + input.usaha + '\\n\\n- Perawatan per bulan: ' + v.jumlah + '\\n- Omzet: ' + rp(v.omzet) + '\\n- Biaya produk sekarang: ' + rp(v.biaya) + ' (' + Math.round(v.biaya / Math.max(1, v.omzet) * 1000) / 10 + '% dari omzet)\\n- Perkiraan penghematan dengan produk kita: ' + rp(v.hemat) + ' per bulan\\n- Saran: **' + v.paket + '**\\n\\n## Bahan demo\\n- Tunjukkan perbandingan biaya per perawatan\\n- Tawarkan uji coba satu bulan'",
+    "data": "({ omzet: v.omzet, jumlah: v.jumlah })"
+  },
+  "sample": {
+    "input": {
+      "usaha": "Klinik Cantik Rina",
+      "jenis": "klinik",
+      "perawatan": "8",
+      "tarif": "350000",
+      "biaya_produk": "70000",
+      "hari": "26"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "208 perawatan",
+        "Rp 72.800.000",
+        "Paket awal besar",
+        "Rp 1.747.200"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Inside Sales — Clinic & Salon B2B di divisi Sales, memakai bahasa awam",
+    "tujuan": "Perkirakan omzet dan kebutuhan produk bulanan sebuah klinik atau salon dari jumlah perawatannya, untuk bahan demo dan penawaran paket awal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
+      "buruk": "Beli sekarang atau rugi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "klinik"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil kalkulator potensi klinik atau salon perlu dibaca bersama: klinik menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

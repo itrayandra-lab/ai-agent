@@ -37,7 +37,7 @@ export const BrowserView = {
   },
   /** tampilan hanya saat agen menjelajah, atau sekilas setelah Anda membuka situs sendiri */
   active() { const st = this.st; return !!st.session || (st.running && st.frameAt && Date.now() - st.frameAt < 90000); },
-  drawFrame(f) { const img = this.root?.querySelector('#bw-img'); if (img && f.dataUrl) img.src = f.dataUrl; },
+  drawFrame(f) { const img = this.root?.querySelector('#bw-img'); if (img && f.dataUrl) { img.src = f.dataUrl; img.style.display = 'block'; } },
   /** Bahasa manusia untuk keadaan sekarang */
   human() {
     const st = this.st, s = st.session, who = s?.agentName || 'Agen';
@@ -57,7 +57,7 @@ export const BrowserView = {
         <div id="bw-info" class="small muted"></div>
         <div id="bw-live" style="display:none;gap:10px">
           <div id="bw-url" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px"></div>
-          <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--gl-fill-2);aspect-ratio:16/10;max-height:50vh;width:100%;display:grid;place-items:center"><img id="bw-img" alt="Tampilan situs yang sedang dibuka agen" style="width:100%;height:100%;object-fit:contain;display:block"></div>
+          <div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--gl-fill-2);aspect-ratio:16/10;max-height:50vh;width:100%;display:grid;place-items:center"><img id="bw-img" alt="Tampilan situs yang sedang dibuka agen" style="width:100%;height:100%;object-fit:contain;display:none"></div>
           <div class="row wrap" id="bw-ctl" style="gap:8px"></div>
           <div id="bw-manual" class="row wrap" style="gap:8px;display:none"></div>
         </div>

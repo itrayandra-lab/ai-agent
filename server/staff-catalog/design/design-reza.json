@@ -1,38 +1,321 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "design-reza",
   "division": "design",
   "employeeId": "reza",
   "title": "UI/UX Designer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Reza",
-    "tugasPeran": [
-      "Membuat user flow, wireframe deskriptif, dan spesifikasi UI",
-      "Melakukan heuristic review terhadap layar produk",
-      "Merancang uji usability"
-    ],
-    "keahlian": [
-      "wireframe",
-      "user flow",
-      "usability"
-    ],
-    "contohTugas": [
-      "Rancang user flow onboarding 3 langkah",
-      "Heuristic review halaman dashboard",
-      "Spesifikasi UI halaman laporan"
+  "name": "Pemeriksa kemudahan layar",
+  "ringkas": "Nilai satu layar dengan 10 pertanyaan kemudahan pakai, dapatkan skor dan daftar perbaikan yang paling perlu.",
+  "kataKunci": [
+    "ux",
+    "kemudahan",
+    "review layar",
+    "heuristik",
+    "usability"
+  ],
+  "inputs": [
+    {
+      "key": "nama_layar",
+      "type": "text",
+      "label": "Nama layar yang dinilai",
+      "required": true,
+      "contoh": "Halaman pembayaran"
+    },
+    {
+      "key": "h1",
+      "type": "choice",
+      "label": "Layar menunjukkan apa yang sedang terjadi (memuat, berhasil, gagal)?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h2",
+      "type": "choice",
+      "label": "Bahasa di layar mudah dimengerti orang awam?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h3",
+      "type": "choice",
+      "label": "Pengguna bisa membatalkan atau kembali dengan mudah?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h4",
+      "type": "choice",
+      "label": "Tampilan dan istilah sama di semua layar?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h5",
+      "type": "choice",
+      "label": "Layar membantu mencegah salah isi (contoh, batas, konfirmasi)?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h6",
+      "type": "choice",
+      "label": "Pilihan terlihat jelas, pengguna tidak perlu mengingat?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h7",
+      "type": "choice",
+      "label": "Ada jalan pintas untuk pengguna yang sering memakai?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h8",
+      "type": "choice",
+      "label": "Tampilan bersih, tanpa hal yang tidak perlu?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h9",
+      "type": "choice",
+      "label": "Pesan salah menjelaskan masalah dan cara memperbaikinya?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "h10",
+      "type": "choice",
+      "label": "Ada petunjuk singkat bila pengguna bingung?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skor",
+      "set": {
+        "daftar": "[[\"h1\",\"Status terlihat\",\"Tampilkan loading, berhasil, dan gagal dengan jelas.\"],[\"h2\",\"Bahasa awam\",\"Ganti istilah teknis dengan kata sehari-hari.\"],[\"h3\",\"Bisa batal/kembali\",\"Beri tombol kembali atau batalkan di setiap langkah.\"],[\"h4\",\"Konsisten\",\"Samakan istilah, tombol, dan letak di semua layar.\"],[\"h5\",\"Cegah salah isi\",\"Beri contoh isian, batas, dan konfirmasi sebelum aksi penting.\"],[\"h6\",\"Pilihan terlihat\",\"Tampilkan pilihan sebagai tombol, jangan andalkan ingatan pengguna.\"],[\"h7\",\"Jalan pintas\",\"Sediakan cara cepat untuk pengguna yang sering memakai.\"],[\"h8\",\"Tampilan bersih\",\"Buang elemen yang tidak membantu tujuan layar.\"],[\"h9\",\"Pesan salah jelas\",\"Jelaskan masalah dan cara memperbaikinya dengan kalimat sederhana.\"],[\"h10\",\"Ada bantuan\",\"Beri petunjuk singkat di tempat pengguna biasa bingung.\"]].map((x) => ({ nama: x[1], saran: x[2], jawab: input[x[0]], skor: input[x[0]] === 'ya' ? 2 : input[x[0]] === 'sebagian' ? 1 : 0 }))",
+        "total": "v.daftar.reduce((a, b) => a + b.skor, 0)",
+        "persen": "Math.round(v.total / 20 * 100)",
+        "nilai": "v.persen >= 80 ? 'Baik' : v.persen >= 55 ? 'Cukup, perlu perbaikan' : 'Perlu dirombak'",
+        "perbaiki": "v.daftar.filter((d) => d.skor < 2).sort((x, y) => x.skor - y.skor)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Layar \"' + input.nama_layar + '\" bernilai ' + v.persen + '% (' + v.nilai + '), ' + v.perbaiki.length + ' hal perlu diperbaiki'",
+    "teks": "'# Penilaian layar: ' + input.nama_layar + '\\n\\nSkor **' + v.persen + '%** - ' + v.nilai + '\\n\\n' + tabel(['Aspek', 'Jawaban', 'Skor'], v.daftar.map((d) => [d.nama, d.jawab, d.skor + '/2'])) + '\\n\\n## Perbaiki dulu\\n' + (v.perbaiki.length ? v.perbaiki.map((d) => '- **' + d.nama + ':** ' + d.saran).join('\\n') : 'Tidak ada, semua aspek sudah baik.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'nilai-kemudahan-layar'",
+        "isi": "csv([['Aspek', 'Jawaban', 'Skor', 'Saran']].concat(v.daftar.map((d) => [d.nama, d.jawab, d.skor, d.skor < 2 ? d.saran : ''])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama_layar": "Halaman pembayaran",
+      "h1": "ya",
+      "h2": "ya",
+      "h3": "tidak",
+      "h4": "ya",
+      "h5": "ya",
+      "h6": "ya",
+      "h7": "ya",
+      "h8": "ya",
+      "h9": "sebagian",
+      "h10": "ya"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "85%",
+        "Baik",
+        "2 hal perlu diperbaiki"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "UI/UX Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Nilai satu layar dengan 10 pertanyaan kemudahan pakai, dapatkan skor dan daftar perbaikan yang paling perlu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "ux"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kemudahan layar perlu dibaca bersama: ux menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

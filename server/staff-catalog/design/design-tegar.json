@@ -1,37 +1,150 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "design-tegar",
   "division": "design",
   "employeeId": "tegar",
   "title": "Packaging & Motion Designer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Tegar",
-    "tugasPeran": [
-      "Merancang konsep kemasan",
-      "Membuat konsep motion & video pendek",
-      "Spesifikasi cetak"
-    ],
-    "keahlian": [
-      "kemasan",
-      "motion",
-      "video"
-    ],
-    "contohTugas": [
-      "Konsep kemasan serum premium",
-      "Storyboard video 15 detik"
+  "name": "Penghitung ukuran pola kemasan",
+  "ringkas": "Hitung ukuran pola potong kemasan (termasuk bleed), jumlah per lembar cetak, dan biaya bahan.",
+  "kataKunci": [
+    "kemasan",
+    "dieline",
+    "pola kemasan",
+    "cetak",
+    "box"
+  ],
+  "inputs": [
+    {
+      "key": "panjang",
+      "type": "number",
+      "label": "Panjang kemasan jadi (mm)",
+      "required": true,
+      "contoh": "60"
+    },
+    {
+      "key": "lebar",
+      "type": "number",
+      "label": "Lebar kemasan jadi (mm)",
+      "required": true,
+      "contoh": "40"
+    },
+    {
+      "key": "tinggi",
+      "type": "number",
+      "label": "Tinggi kemasan jadi (mm)",
+      "required": true,
+      "contoh": "120"
+    },
+    {
+      "key": "bentuk",
+      "type": "choice",
+      "label": "Bentuk kemasan",
+      "required": true,
+      "default": "lipat",
+      "choices": [
+        {
+          "v": "lipat",
+          "t": "Kotak lipat (tutup atas-bawah)"
+        },
+        {
+          "v": "sleeve",
+          "t": "Selongsong (sleeve)"
+        }
+      ]
+    },
+    {
+      "key": "jumlah",
+      "type": "number",
+      "label": "Jumlah kemasan dicetak",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga satu lembar cetak A3 (Rp)",
+      "required": true,
+      "contoh": "3500"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung pola",
+      "set": {
+        "w": "2 * (num(input.panjang) + num(input.lebar)) + 15 + 6",
+        "h": "(input.bentuk === 'lipat' ? num(input.tinggi) + 2 * num(input.lebar) : num(input.tinggi)) + 6",
+        "perLembar": "Math.max(Math.floor(420 / v.w) * Math.floor(297 / v.h), Math.floor(420 / v.h) * Math.floor(297 / v.w))",
+        "lembar": "v.perLembar > 0 ? Math.ceil(num(input.jumlah) / v.perLembar) : 0",
+        "biaya": "v.lembar * num(input.harga)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.perLembar > 0 ? 'Pola ' + v.w + ' x ' + v.h + ' mm, muat ' + v.perLembar + ' per lembar A3, bahan ' + rp(v.biaya) : 'Pola ' + v.w + ' x ' + v.h + ' mm tidak muat di A3; pakai lembar lebih besar'",
+    "teks": "'# Pola kemasan\\n\\n' + tabel(['Hal', 'Nilai'], [['Ukuran jadi', input.panjang + ' x ' + input.lebar + ' x ' + input.tinggi + ' mm'], ['Pola (sudah bleed 3 mm tiap sisi, lem 15 mm)', v.w + ' x ' + v.h + ' mm'], ['Muat per lembar A3', v.perLembar], ['Lembar dibutuhkan', v.lembar], ['Biaya bahan cetak', rp(v.biaya)]]) + '\\n\\nHitungan pendekatan untuk kotak lurus; minta pola resmi dari percetakan sebelum cetak.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hitungan-kemasan'",
+        "isi": "csv([['Lebar pola', 'Tinggi pola', 'Per lembar', 'Lembar', 'Biaya'], [v.w, v.h, v.perLembar, v.lembar, v.biaya]])"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "panjang": "60",
+      "lebar": "40",
+      "tinggi": "120",
+      "bentuk": "lipat",
+      "jumlah": "1000",
+      "harga": "3500"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "221 x 206",
+        "Rp 1.750.000"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Packaging & Motion Designer di divisi Creative & Design, memakai bahasa awam",
+    "tujuan": "Hitung ukuran pola potong kemasan (termasuk bleed), jumlah per lembar cetak, dan biaya bahan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Desainnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "kemasan"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung ukuran pola kemasan perlu dibaca bersama: kemasan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

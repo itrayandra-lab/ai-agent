@@ -32,6 +32,17 @@ registerCard('namaKartu', {
 
 Klien menampilkan kartu apa pun dari `cards` sebagai judul + tombol besar. Ketukan dikirim ke `POST /api/pemandu/turn` dengan `choiceId: "card:<type>:<optionId>"`. Aturan: 2 sampai 4 tombol, satu `recommended`, bahasa sehari-hari, tanpa istilah teknis.
 
+## Alur percakapan (revisi arah Owner: satu percakapan, bukan wizard)
+
+Layar depan hanya: utas percakapan, kolom ketik (dengan mikrofon), dan keadaan awal berisi sapaan serta beberapa saran pembuka. Tidak ada penunjuk langkah, kartu rencana tiga opsi, atau panel terpisah.
+
+- Pengguna menulis bebas. Pemandu bertanya balik **hanya bila perlu**: permintaan yang sudah jelas (9 kata atau lebih), atau yang jawabannya sudah ada di kalimat atau profil, langsung dikerjakan; selain itu **satu** pertanyaan (paling banyak dua) dengan tombol jawaban, "Serahkan ke kamu", dan "Lainnya (ketik)".
+- Rencana dipilih diam-diam (Seimbang, atau Cepat bila jatah menipis). `kind: "plan"` tetap sah di kontrak tetapi tidak lagi dikirim pada alur biasa; "Ubah sedikit" (lebih singkat, santai, resmi, lengkap, atau ketik) mengatur hasilnya lewat `decideApproval` tolak-dengan-catatan.
+- Kemajuan (`kind: "progress"`), hasil (`kind: "result"`, di dalam balasan yang sama), dan penutup (`kind: "done"`) semuanya muncul sebagai balasan di utas. **Tiap balasan diakhiri satu kalimat ajakan dan 2 sampai 4 tombol** (`options`): Pakai ini, Ubah sedikit, Buat versi lain, Simpan; setelah dipakai: langkah lanjut khusus niat, "Jadwalkan", "Cukup dulu". Tombol hanya aktif di balasan terakhir.
+- `kind: "confirm"` kini khusus **aksi berdampak keluar** (sementara: memasang otomasi). Kartu kecil di utas berisi pratinjau dan tiga tombol: Ya, nyalakan (`oto:on`), Ubah (`oto:edit`), Batal (`oto:no`). Aksi berdampak baru apa pun wajib berhenti di kartu seperti ini.
+- Obrolan ringan (sapaan, terima kasih, "kamu bisa apa") dijawab langsung tanpa membuat pekerjaan.
+- Klien membaca parameter `untuk` dan `mulai` dari `navigate('dashboard', {...})`: "Beri pekerjaan" dari Tim Saya memberi awalan "Minta <nama> untuk …" pada pesan pertama, dan `mulai` langsung dikirim sebagai pesan.
+
 ## Kontrak respons (ringkas)
 
 `{ sessionId, say, kind, options[{id,label,hint?,recommended?}], delegate, freeText, step{now,of}, undo, quota{pct,word}, notes?, learned?, preview?, progress?, result?, saved?, cards? }`

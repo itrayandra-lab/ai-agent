@@ -4,6 +4,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import * as vault from './secure.js';
+import * as limits from './limits.js';
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
 const FILE = path.join(DATA_DIR, 'auth.json');
@@ -19,12 +21,12 @@ const G = () => ({
 export const SCOPES = ['openid', 'email', 'profile', 'https://www.googleapis.com/auth/drive.file'];
 const SESSION_DAYS = 30;
 
-let A = { users: [], sessions: [], workspaces: [] };
+let A = { users: [], sessions: [], workspaces: [], deleted: [] };
 let saveTimer = null;
 const states = new Map();   // login attempts in flight: state -> { verifier, t }
 
 export function load() {
-  try { A = { users: [], sessions: [], workspaces: [], ...JSON.parse(fs.readFileSync(FILE, 'utf8')) }; } catch { /* first run */ }
+  try { A = { users: [], sessions: [], workspaces: [], deleted: [], ...JSON.parse(fs.readFileSync(FILE, 'utf8')) }; } catch { /* first run */ }
   A.sessions = A.sessions.filter((s) => s.expires > Date.now());
   // accounts from the earlier single-company version: the old Owner owns the original office, approved members join it
   if (!A.workspaces.length && A.users.some((u) => u.role === 'owner')) {
@@ -34,30 +36,41 @@ export function load() {
     saveNow();
   }
 }
-function save() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(A, null, 1), { mode: 0o600 }); }, 200);
-}
-export const saveNow = () => { clearTimeout(saveTimer); fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(A, null, 1), { mode: 0o600 }); };
+// auth.json: ditulis atomik (berkas sementara + rename) di bawah kunci berkas, sehingga proses mati di tengah atau dua penulis tidak merusak berkas
+const write = () => vault.withLock(FILE, () => vault.writeAtomic(FILE, JSON.stringify(A, null, 1), { mode: 0o600 }));
+function save() { clearTimeout(saveTimer); saveTimer = setTimeout(write, 200); saveTimer.unref?.(); }
+export const saveNow = () => { clearTimeout(saveTimer); write(); };
 
 export const configured = () => !!(env('GOOGLE_CLIENT_ID') && env('GOOGLE_CLIENT_SECRET') && env('SESSION_SECRET') && env('TOKEN_ENC_KEY'));
+/** (P3) Siapa yang boleh mengklaim kantor utama "main" di server yang belum punya pemilik:
+ *  1) RAIVERSE_ADMIN_EMAILS (daftar email, dipisah koma) = pra-klaim: hanya email itu;
+ *  2) RAIVERSE_CLAIM_CODE (atau kode acak sekali pakai yang dicetak di konsol server saat mode publik) = pemilik server membuka /auth/google?claim=KODE;
+ *  3) tanpa keduanya dan bukan mode publik: pengguna pertama, tetapi HANYA bila login dilakukan dari komputer server itu sendiri (bukan lewat internet).
+ *  Pemilik yang sudah terikat (kantor "main" sudah ada di auth.json) tidak terpengaruh sama sekali. */
+let generatedClaim = '';
+export function claimCode() {
+  if (env('RAIVERSE_CLAIM_CODE')) return env('RAIVERSE_CLAIM_CODE');
+  if (!generatedClaim && limits.publicMode() && !env('RAIVERSE_ADMIN_EMAILS')) generatedClaim = crypto.randomBytes(9).toString('base64url');
+  return generatedClaim;
+}
+/** dipanggil sekali saat boot: bila kantor utama belum diklaim dan perlu kode, cetak kodenya (hanya terlihat oleh pemilik server) */
+export function announceClaim() { if (!mainClaimed() && configured() && !env('RAIVERSE_ADMIN_EMAILS')) { const c = claimCode(); if (c && !env('RAIVERSE_CLAIM_CODE')) console.log(`  Kantor utama belum diklaim. Buka /auth/google?claim=${c} sekali untuk menjadi Owner.`); } }
+export function mayClaimMain(req, email, claim) {
+  const admins = env('RAIVERSE_ADMIN_EMAILS').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+  if (admins.length) return admins.includes(String(email).toLowerCase());
+  const code = claimCode();
+  if (code) return !!claim && vault.safeEqual(claim, code);
+  return limits.isLocalDirect(req);
+}
 /** login becomes mandatory the moment the first person has signed in; before that the app stays open so nobody is locked out by setup */
 export const enforced = () => configured() && !env('AUTH_DISABLED') && A.users.length > 0;
 
 // ── crypto helpers
-const key = () => crypto.createHash('sha256').update(env('TOKEN_ENC_KEY')).digest();
-export function enc(text) {
-  if (!text) return '';
-  const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', key(), iv);
-  const ct = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
-  return [iv, c.getAuthTag(), ct].map((b) => b.toString('base64url')).join('.');
-}
-export function dec(blob) {
-  if (!blob) return '';
-  const [iv, tag, ct] = String(blob).split('.').map((s) => Buffer.from(s, 'base64url'));
-  const d = crypto.createDecipheriv('aes-256-gcm', key(), iv); d.setAuthTag(tag);
-  return Buffer.concat([d.update(ct), d.final()]).toString('utf8');
-}
+// token Google disimpan sebagai amplop berversi (vault.seal). Format lama tanpa versi (sha256 TOKEN_ENC_KEY) tetap terbaca; yang ditulis ulang selalu format baru.
+export const enc = (text) => vault.seal(text, 'drive-token');
+export const dec = (blob) => vault.open(blob, 'drive-token', { legacy: 'auth' });
+/** tulis ulang semua token dengan kunci sekarang (rotasi kunci). Mengembalikan jumlah yang diperbarui. */
+export function rotateTokens() { let n = 0; for (const u of A.users) for (const k of ['refresh', 'access']) if (u[k] && vault.needsReseal(u[k])) { try { u[k] = vault.seal(dec(u[k]), 'drive-token'); n++; } catch { delete u[k]; } } if (n) saveNow(); return n; }
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest('base64url');
 const rand = (n = 32) => crypto.randomBytes(n).toString('base64url');
 const sign = (v) => `${v}.${crypto.createHmac('sha256', env('SESSION_SECRET')).update(v).digest('base64url')}`;
@@ -78,13 +91,18 @@ function redirectUri(req) {
 // ── users & sessions
 const safeUser = (u) => u && ({ id: u.id, email: u.email, name: u.name, picture: u.picture, personalWs: u.personalWs, currentWs: activeWs(u), drive: !!u.refresh, scopes: u.scopes || [], driveFolders: u.drive?.folders ? Object.keys(u.drive.folders) : [], createdAt: u.createdAt, lastLoginAt: u.lastLoginAt });
 export const publicUser = safeUser;
-export const userById = (id) => A.users.find((u) => u.id === id);
+// P7: indeks id → data (O(1) alih-alih menyisir larik tiap permintaan). Dibangun ulang otomatis bila larik diganti atau panjangnya berubah.
+const idx = { users: null, uRef: null, uLen: -1, sess: null, sRef: null, sLen: -1 };
+const userIndex = () => { if (idx.uRef !== A.users || idx.uLen !== A.users.length) { idx.users = new Map(A.users.map((u) => [u.id, u])); idx.uRef = A.users; idx.uLen = A.users.length; } return idx.users; };
+const sessionIndex = () => { if (idx.sRef !== A.sessions || idx.sLen !== A.sessions.length) { idx.sess = new Map(A.sessions.map((x) => [x.id, x])); idx.sRef = A.sessions; idx.sLen = A.sessions.length; } return idx.sess; };
+export const userById = (id) => { const u = userIndex().get(id); return u && u.id === id ? u : A.users.find((x) => x.id === id); };
 export const users = () => A.users.map(safeUser);
 export function sessionUser(req) {
   const sid = unsign(cookies(req).rs);
   if (!sid) return null;
-  const s = A.sessions.find((x) => x.id === sha(sid) && x.expires > Date.now());
-  return s ? userById(s.userId) : null;
+  const s = sessionIndex().get(sha(sid));
+  const u = s && s.expires > Date.now() ? userById(s.userId) : null;
+  return u && !u.suspended ? u : null;   // akun yang ditangguhkan pengelola tidak punya sesi
 }
 // ── workspaces (like Discord servers): every person owns a personal one and can be invited into others
 const bad = (msg, code = 400) => Object.assign(new Error(msg), { code });
@@ -93,29 +111,53 @@ export const memberOf = (u, wsId) => (u && wsById(wsId)?.members.find((m) => m.u
 /** the workspace a signed-in person is looking at (falls back to their personal one if they were removed) */
 export function activeWs(u) { if (!u) return 'main'; return memberOf(u, u.currentWs) ? u.currentWs : u.personalWs || 'main'; }
 export const mainClaimed = () => !!wsById('main');
+/** pemilik platform = Owner kantor utama ("main"); sebelum ada yang login, pengguna lokal tunggal dianggap admin */
+export const isPlatformAdmin = (u) => (u ? wsById('main')?.ownerId === u.id : !enforced());
+/** Izin eksplisit untuk anggota biasa pada rute berdampak. Owner dan Admin selalu boleh; anggota hanya bila Owner memberinya izin itu. */
+export const PERMS = { hire: 'merekrut atau mengubah karyawan', taskDelete: 'menghapus tugas', approve: 'memutuskan persetujuan', routine: 'mengatur rutinitas' };
+export const can = (member, perm) => !enforced() || ['owner', 'admin'].includes(member?.role) || (Array.isArray(member?.perms) && member.perms.includes(perm));
+export function setMemberPerms(u, wsId, userId, perms) {
+  if (!canManage(u, wsId)) throw bad('Hanya Owner/Admin yang bisa mengatur izin', 403);
+  const m = wsById(wsId)?.members.find((x) => x.userId === userId); if (!m) throw bad('Anggota tidak ada', 404);
+  if (m.role !== 'member') throw bad('Izin khusus hanya untuk anggota biasa', 400);
+  m.perms = [...new Set((Array.isArray(perms) ? perms : []).filter((p) => p in PERMS))]; saveNow(); return m.perms;
+}
 export function myWorkspaces(u) {
   return A.workspaces.filter((w) => w.members.some((m) => m.userId === u.id)).map((w) => ({ id: w.id, name: w.name, role: memberOf(u, w.id).role, personal: w.id === u.personalWs, members: w.members.length, ownerName: userById(w.ownerId)?.name || '' }));
 }
 export function switchWs(u, wsId) { if (!memberOf(u, wsId)) throw bad('Anda bukan anggota ruang kerja itu', 403); u.currentWs = wsId; saveNow(); return wsId; }
-export function wsMembers(wsId) { return (wsById(wsId)?.members || []).map((m) => ({ userId: m.userId, role: m.role, employeeId: m.employeeId, name: userById(m.userId)?.name, email: userById(m.userId)?.email, picture: userById(m.userId)?.picture })); }
+export function wsMembers(wsId) { return (wsById(wsId)?.members || []).map((m) => ({ userId: m.userId, role: m.role, perms: m.perms || [], employeeId: m.employeeId, name: userById(m.userId)?.name, email: userById(m.userId)?.email, picture: userById(m.userId)?.picture })); }
 const canManage = (u, wsId) => ['owner', 'admin'].includes(memberOf(u, wsId)?.role);
 export function renameWs(u, wsId, name) { if (memberOf(u, wsId)?.role !== 'owner') throw bad('Hanya Owner ruang kerja', 403); const w = wsById(wsId); w.name = String(name || '').trim().slice(0, 60) || w.name; saveNow(); return w.name; }
-/** an invite link (7 days). Owners and admins can invite. */
-export function createInvite(u, wsId, role = 'member') {
+/** an invite link (7 days, default 10 uses). Owners and admins can invite. Only a hash of the code is stored; the code is shown once. Revocable. */
+export function createInvite(u, wsId, role = 'member', { maxUses = Number(env('INVITE_MAX_USES')) || 10, days = 7 } = {}) {
   if (!canManage(u, wsId)) throw bad('Hanya Owner/Admin yang bisa mengundang', 403);
   if (!['member', 'admin'].includes(role)) role = 'member';
   if (role === 'admin' && memberOf(u, wsId).role !== 'owner') role = 'member';
-  const w = wsById(wsId), code = rand(12);
-  w.invites = [...(w.invites || []).filter((i) => i.exp > Date.now()), { code, role, by: u.id, exp: Date.now() + 7 * 864e5 }];
-  saveNow(); return { code, role, exp: Date.now() + 7 * 864e5 };
+  const w = wsById(wsId), code = rand(12), exp = Date.now() + Math.min(30, Math.max(1, days)) * 864e5;
+  const open = (w.invites || []).filter((i) => i.exp > Date.now() && !i.revoked);
+  if (open.length >= 20) throw bad('Terlalu banyak undangan aktif. Cabut yang tidak dipakai dulu.', 429);
+  w.invites = [...open, { id: rand(5), hash: sha(code), role, by: u.id, exp, uses: 0, maxUses: Math.min(100, Math.max(1, Math.floor(maxUses))) }];
+  saveNow(); return { code, id: w.invites.at(-1).id, role, exp, maxUses: w.invites.at(-1).maxUses };
+}
+const inviteMatches = (i, code) => (i.hash ? vault.safeEqual(i.hash, sha(code)) : typeof i.code === 'string' && vault.safeEqual(i.code, code));   // undangan lama (kode polos) masih diterima sampai kedaluwarsa
+const inviteLive = (i) => i.exp > Date.now() && !i.revoked && (i.uses || 0) < (i.maxUses || Infinity);
+const inviteId = (i) => i.id || sha(i.code || '').slice(0, 8);
+export function listInvites(u, wsId) { if (!canManage(u, wsId)) throw bad('Hanya Owner/Admin', 403); return (wsById(wsId)?.invites || []).filter((i) => i.exp > Date.now()).map((i) => ({ id: inviteId(i), role: i.role, uses: i.uses || 0, maxUses: i.maxUses || null, exp: i.exp, revoked: !!i.revoked })); }
+export function revokeInvite(u, wsId, id) {
+  if (!canManage(u, wsId)) throw bad('Hanya Owner/Admin yang bisa mencabut undangan', 403);
+  const i = (wsById(wsId)?.invites || []).find((x) => inviteId(x) === id); if (!i) throw bad('Undangan tidak ada', 404);
+  i.revoked = true; saveNow(); return { id, revoked: true };
 }
 export function join(u, code, hooks = {}) {
-  const w = A.workspaces.find((x) => (x.invites || []).some((i) => i.code === code && i.exp > Date.now()));
-  if (!w) throw bad('Link undangan tidak berlaku atau sudah kedaluwarsa', 404);
+  code = String(code || '').slice(0, 64);
+  const w = A.workspaces.find((x) => !x.deletedAt && (x.invites || []).some((i) => inviteMatches(i, code) && inviteLive(i)));
+  if (!w) throw bad('Link undangan tidak berlaku, sudah dicabut, habis dipakai, atau kedaluwarsa', 404);
   if (!memberOf(u, w.id)) {
-    const inv = w.invites.find((i) => i.code === code);
+    const inv = w.invites.find((i) => inviteMatches(i, code) && inviteLive(i));
     const employeeId = hooks.joinWorkspace ? hooks.joinWorkspace(w.id, u) : null;
     w.members.push({ userId: u.id, role: inv.role, employeeId, joinedAt: Date.now() });
+    inv.uses = (inv.uses || 0) + 1;
   }
   u.currentWs = w.id; saveNow(); return w.id;   // membership changes are written at once (a crash must not lose them)
 }
@@ -134,7 +176,8 @@ export function startLogin(req, res) {
   if (!configured()) { res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Login Google belum dikonfigurasi (.env: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET, TOKEN_ENC_KEY).'); }
   for (const [k, v] of states) if (Date.now() - v.t > 600000) states.delete(k);
   const state = rand(24), verifier = rand(48);
-  states.set(state, { verifier, t: Date.now(), redirect: redirectUri(req) });
+  let claim = ''; try { claim = String(new URL(req.url, 'http://x').searchParams.get('claim') || '').slice(0, 80); } catch { /* tanpa kode */ }
+  states.set(state, { verifier, t: Date.now(), redirect: redirectUri(req), claim });
   const known = sessionUser(req);
   const q = new URLSearchParams({
     client_id: env('GOOGLE_CLIENT_ID'), redirect_uri: redirectUri(req), response_type: 'code', scope: SCOPES.join(' '),
@@ -170,11 +213,24 @@ export async function callback(req, res, url, hooks = {}) {
     if (info.email_verified === false) return fail('Email Google belum terverifikasi');
     const email = String(info.email || '').toLowerCase();
     let u = A.users.find((x) => x.sub === info.sub);
+    if (u?.suspended) return fail('Akun ini sedang ditangguhkan. Hubungi pengelola.');
+    const needsWs = !u || !u.personalWs || !wsById(u.personalWs);
+    const asOwner = needsWs && !mainClaimed() && mayClaimMain(req, email, st.claim);   // (P3) bukan lagi "siapa pun yang pertama"
+    if (needsWs && !asOwner) {
+      // ruang kerja baru: dibatasi SEBELUM akun dibuat (pendaftaran ditutup / kuota harian / batas seumur hidup per akun Google / per alamat IP)
+      if (env('RAIVERSE_SIGNUP') === 'closed' && !unsign(cookies(req).rs_join)) return fail('Pendaftaran akun baru sedang ditutup');
+      try {
+        limits.lifetime('wscreate:' + info.sub, Number(env('WS_LIFETIME_PER_ACCOUNT')) || 3, 'Akun Google ini sudah terlalu sering membuat ruang kerja.');
+        limits.charge('ws_create', { account: info.sub });
+        const ipw = limits.hit('wsip:' + limits.clientIp(req), { limit: Number(env('WS_PER_IP_DAY')) || 5, windowMs: 864e5, persist: true });
+        if (!ipw.ok) throw new limits.LimitError('Terlalu banyak ruang kerja baru dari alamat ini hari ini.', ipw.retryAfter);
+      } catch (err) { if (err instanceof limits.LimitError) return fail(err.message); throw err; }
+    }
     if (!u) { u = { id: 'u-' + rand(9), sub: info.sub, email, createdAt: Date.now() }; A.users.push(u); }
     Object.assign(u, { email, name: info.name || email, picture: info.picture || '', lastLoginAt: Date.now() });
-    // everyone owns a personal workspace. The very first person claims the original office ("main"); everybody else gets a fresh one.
-    if (!u.personalWs || !wsById(u.personalWs)) {
-      if (!mainClaimed()) {
+    // everyone owns a personal workspace. The person the server owner pre-claimed (or who holds the claim code) takes the original office ("main"); everybody else gets a fresh one.
+    if (needsWs) {
+      if (asOwner) {
         A.workspaces.push({ id: 'main', name: hooks.mainName ? hooks.mainName() : 'Kantor utama', ownerId: u.id, members: [{ userId: u.id, role: 'owner', employeeId: hooks.linkOwner ? hooks.linkOwner(u) : 'owner', joinedAt: Date.now() }], invites: [], createdAt: Date.now() });
         u.personalWs = 'main';
       } else {
@@ -232,5 +288,56 @@ export async function accessToken(userId) {
     throw err;
   }
 }
+// ── privasi (P3): ekspor data akun dan hapus akun. Data ruang kerja (karyawan, tugas, pesan) ditangani server/privacy.js lewat store.
+/** Semua yang disimpan tentang akun ini di auth.json. Tidak pernah memuat token, hash sesi, atau kode undangan. */
+export function exportAccount(u) {
+  return {
+    akun: { id: u.id, email: u.email, nama: u.name, foto: u.picture, dibuat: u.createdAt, loginTerakhir: u.lastLoginAt, izinGoogle: u.scopes || [], driveTersambung: !!u.refresh, folderDrive: u.drive?.folders ? Object.keys(u.drive.folders) : [] },
+    ruangKerja: A.workspaces.filter((w) => w.members.some((m) => m.userId === u.id)).map((w) => { const m = memberOf(u, w.id); return { id: w.id, nama: w.name, peran: m.role, izinKhusus: m.perms || [], bergabung: m.joinedAt, pribadi: w.id === u.personalWs }; }),
+    sesiAktif: A.sessions.filter((x) => x.userId === u.id).map((x) => ({ dibuat: x.created, kedaluwarsa: x.expires, perangkat: x.ua })),
+  };
+}
+/** Hapus akun: cabut izin Google (sebaik mungkin), hapus sesi dan keanggotaan, tandai ruang kerja pribadinya terhapus. Kantor utama platform tidak bisa dihapus lewat jalur ini.
+ *  Mengembalikan { ownedWs, memberWs, email } agar server/privacy.js membersihkan data ruang kerja. */
+export async function deleteAccount(u) {
+  if (wsById('main')?.ownerId === u.id) throw bad('Owner kantor utama tidak bisa dihapus lewat sini. Serahkan kepemilikan atau hapus lewat server.', 403);
+  const owned = [], member = [];
+  for (const w of A.workspaces) {
+    const m = w.members.find((x) => x.userId === u.id); if (!m) continue;
+    if (w.ownerId === u.id) { owned.push(w.id); w.deletedAt = Date.now(); w.members = []; w.invites = []; A.deleted.push({ id: w.id, at: Date.now() }); }
+    else { member.push({ ws: w.id, employeeId: m.employeeId }); w.members = w.members.filter((x) => x !== m); }
+  }
+  A.workspaces = A.workspaces.filter((w) => !w.deletedAt);
+  const tok = u.refresh ? (() => { try { return dec(u.refresh); } catch { return ''; } })() : '';
+  const email = u.email;
+  A.sessions = A.sessions.filter((x) => x.userId !== u.id);
+  A.users = A.users.filter((x) => x.id !== u.id);
+  saveNow();
+  if (tok) { try { await fetch(G().revoke, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ token: tok }), signal: AbortSignal.timeout(5000) }); } catch { /* izin dicabut sebaik mungkin; token sudah terhapus dari sini */ } }
+  return { ownedWs: owned, memberWs: member, email };
+}
+export const pendingDeletedWs = () => A.deleted.slice();
+export function clearDeletedWs(id) { A.deleted = A.deleted.filter((x) => x.id !== id); saveNow(); }
+/** tutup semua sesi akun ini (mis. setelah kebocoran) */
+export function revokeSessions(u) { const n = A.sessions.filter((x) => x.userId === u.id).length; A.sessions = A.sessions.filter((x) => x.userId !== u.id); saveNow(); return n; }
+
 export function setDrive(userId, drive) { const u = userById(userId); if (u) { u.drive = { ...(u.drive || {}), ...drive }; save(); } return u?.drive; }
 export const driveOf = (userId) => userById(userId)?.drive || null;
+
+// ── konsol pengelola (server/admin.js): daftar akun, tangguhkan, sesi. Tidak pernah mengembalikan token, hash sesi penuh, atau kode undangan.
+export const adminUsers = () => A.users.map((u) => ({ id: u.id, email: u.email, nama: u.name, dibuat: u.createdAt, masukTerakhir: u.lastLoginAt, ditangguhkan: !!u.suspended, drive: !!u.refresh, utama: wsById('main')?.ownerId === u.id,
+  ruangKerja: A.workspaces.filter((w) => w.members.some((m) => m.userId === u.id)).map((w) => ({ id: w.id, peran: w.members.find((m) => m.userId === u.id).role })), sesi: A.sessions.filter((s) => s.userId === u.id).length }));
+export const adminWorkspaces = () => A.workspaces.map((w) => ({ id: w.id, nama: w.name, pemilik: userById(w.ownerId)?.email || '', anggota: w.members.length, dibuat: w.createdAt, utama: w.id === 'main' }));
+export function setSuspended(id, on) {
+  const u = userById(id); if (!u) throw bad('Akun tidak ada', 404);
+  if (wsById('main')?.ownerId === u.id) throw bad('Pemilik kantor utama tidak bisa ditangguhkan.', 403);
+  u.suspended = !!on; if (on) A.sessions = A.sessions.filter((s) => s.userId !== u.id);   // ditangguhkan = semua sesinya ditutup seketika
+  saveNow(); return { id: u.id, ditangguhkan: !!u.suspended };
+}
+export const adminSessions = () => A.sessions.map((s) => ({ ref: s.id.slice(0, 12), email: userById(s.userId)?.email || '', dibuat: s.created, kedaluwarsa: s.expires, perangkat: s.ua || '' }));
+export function revokeSessionRef(ref) {
+  ref = String(ref || ''); if (!/^[\w-]{8,24}$/.test(ref)) throw bad('Rujukan sesi tidak valid');
+  const hit = A.sessions.filter((s) => s.id.startsWith(ref)); if (hit.length !== 1) throw bad('Sesi tidak ditemukan', 404);
+  A.sessions = A.sessions.filter((s) => s !== hit[0]); saveNow(); return { ditutup: 1 };
+}
+export const revokeUserSessions = (id) => { const u = userById(id); if (!u) throw bad('Akun tidak ada', 404); return { ditutup: revokeSessions(u) }; };

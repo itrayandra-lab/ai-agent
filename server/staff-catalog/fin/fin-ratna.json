@@ -111,5 +111,32 @@
         "PT Maju Jaya"
       ]
     }
+  },
+  "otakProfil": {
+    "peran": "Accountant di divisi Finance, memakai bahasa awam",
+    "tujuan": "Susun faktur lengkap dengan PPN dari daftar barang, siap diunduh sebagai CSV dan catatan rapi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "teliti, netral, sebut angka seperti apa adanya, tandai risiko uang dengan jelas",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Piutang lewat 60 hari bernilai Rp 12 juta; hubungi dua klien terbesar minggu ini.",
+      "buruk": "Keuangan perlu diperbaiki."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "faktur"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembuat faktur penjualan perlu dibaca bersama: faktur menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

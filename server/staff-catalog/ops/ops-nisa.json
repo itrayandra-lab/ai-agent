@@ -1,38 +1,119 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "ops-nisa",
   "division": "ops",
   "employeeId": "nisa",
   "title": "Procurement Officer",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Nisa",
-    "tugasPeran": [
-      "Membandingkan vendor dan harga pasar",
-      "Menyiapkan dokumen pengadaan",
-      "Mengevaluasi performa vendor"
-    ],
-    "keahlian": [
-      "vendor",
-      "pengadaan",
-      "negosiasi harga"
-    ],
-    "contohTugas": [
-      "Bandingkan 3 penyedia cloud",
-      "Cari vendor laptop untuk 10 karyawan",
-      "Evaluasi vendor kurir"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Pembanding penawaran vendor",
+  "ringkas": "Bandingkan penawaran beberapa vendor dari harga, waktu kirim, dan mutu sesuai prioritas Anda, lalu pilih yang terbaik.",
+  "kataKunci": [
+    "vendor",
+    "penawaran",
+    "perbandingan harga",
+    "pengadaan",
+    "pemasok"
+  ],
+  "inputs": [
+    {
+      "key": "prioritas",
+      "type": "choice",
+      "label": "Yang paling penting",
+      "required": true,
+      "default": "seimbang",
+      "choices": [
+        {
+          "v": "seimbang",
+          "t": "Seimbang"
+        },
+        {
+          "v": "harga",
+          "t": "Harga murah"
+        },
+        {
+          "v": "mutu",
+          "t": "Mutu terbaik"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Penawaran (vendor | harga satuan | waktu kirim hari | garansi bulan | nilai mutu 1-5)",
+      "required": true,
+      "contoh": "Vendor A | 10000 | 7 | 12 | 4"
+    }
+  ],
+  "steps": [
+    {
+      "id": "nilai",
+      "use": "hitung",
+      "label": "Nilai vendor",
+      "set": {
+        "rows": "baris(input.data).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); return { vendor: p[0] || '-', harga: num(p[1]), hari: Math.max(1, num(p[2])), garansi: num(p[3]), mutu: num(p[4]) }; })",
+        "hasil": "(() => { const w = ({ seimbang: [0.4, 0.3, 0.3], harga: [0.6, 0.2, 0.2], mutu: [0.2, 0.2, 0.6] })[input.prioritas]; const mh = Math.min.apply(null, v.rows.map((r) => r.harga || 1e12)); const mw = Math.min.apply(null, v.rows.map((r) => r.hari)); return v.rows.map((r) => { const sh = r.harga ? mh / r.harga * 100 : 0; const sw = mw / r.hari * 100; const sm = Math.min(5, r.mutu) / 5 * 100; return { vendor: r.vendor, harga: r.harga, hari: r.hari, garansi: r.garansi, mutu: r.mutu, skor: Math.round(w[0] * sh + w[1] * sw + w[2] * sm) }; }).sort((x, y) => y.skor - x.skor); })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Terbaik: ' + v.hasil[0].vendor + ' (skor ' + v.hasil[0].skor + ' dari 100)'",
+    "teks": "'# Perbandingan vendor (prioritas: ' + input.prioritas + ')\\n\\n' + tabel(['Peringkat', 'Vendor', 'Harga', 'Waktu kirim', 'Garansi (bulan)', 'Mutu', 'Skor'], v.hasil.map((r, i) => [i + 1, r.vendor, rp(r.harga), r.hari + ' hari', r.garansi, r.mutu, r.skor])) + '\\n\\nSkor menggabungkan harga, waktu kirim, dan mutu sesuai prioritas. Garansi ditampilkan untuk pertimbangan tambahan.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'banding-vendor'",
+        "isi": "csv([['Peringkat', 'Vendor', 'Harga', 'Waktu kirim', 'Garansi', 'Mutu', 'Skor']].concat(v.hasil.map((r, i) => [i + 1, r.vendor, r.harga, r.hari, r.garansi, r.mutu, r.skor])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "prioritas": "seimbang",
+      "data": "Vendor A | 10000 | 7 | 12 | 4\nVendor B | 9000 | 14 | 6 | 3\nVendor C | 11000 | 5 | 24 | 5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Terbaik: Vendor C (skor 93 dari 100)",
+        "Vendor B"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Procurement Officer di divisi Operations, memakai bahasa awam",
+    "tujuan": "Bandingkan penawaran beberapa vendor dari harga, waktu kirim, dan mutu sesuai prioritas Anda, lalu pilih yang terbaik. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
+      "buruk": "Operasional perlu rapi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "vendor"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pembanding penawaran vendor perlu dibaca bersama: vendor menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

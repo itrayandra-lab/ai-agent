@@ -1,35 +1,114 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "qa-fitri",
   "division": "qa",
   "employeeId": "fitri",
   "title": "Microbiologist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Fitri",
-    "tugasPeran": [
-      "Uji cemaran mikroba bahan & produk",
-      "Challenge test pengawet"
-    ],
-    "keahlian": [
-      "mikrobiologi",
-      "challenge test"
-    ],
-    "contohTugas": [
-      "Rencana uji mikroba batch serum",
-      "Protokol challenge test"
+  "name": "Penilai hasil uji cemaran mikroba",
+  "ringkas": "Bandingkan hasil hitung mikroba tiap sampel dengan batas dari spesifikasi Anda dan tandai yang tidak memenuhi.",
+  "kataKunci": [
+    "mikroba",
+    "cemaran",
+    "alt",
+    "kapang khamir",
+    "patogen"
+  ],
+  "inputs": [
+    {
+      "key": "sampel",
+      "type": "longtext",
+      "label": "Hasil (sampel | angka lempeng total koloni/g | kapang khamir koloni/g | patogen ada atau tidak)",
+      "required": true,
+      "contoh": "Serum B1 | 120 | 10 | tidak"
+    },
+    {
+      "key": "batas_alt",
+      "type": "number",
+      "label": "Batas angka lempeng total di spesifikasi (koloni/g)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "batas_kk",
+      "type": "number",
+      "label": "Batas kapang dan khamir di spesifikasi (koloni/g)",
+      "required": true,
+      "contoh": "100"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai tiap sampel",
+      "set": {
+        "rows": "baris(input.sampel).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const alt = num(p[1]); const kk = num(p[2]); const pat = /^(ada|positif|ya)/i.test(p[3] || ''); const masalah = [alt > num(input.batas_alt) ? 'angka lempeng total melebihi batas' : '', kk > num(input.batas_kk) ? 'kapang khamir melebihi batas' : '', pat ? 'patogen terdeteksi' : ''].filter(Boolean); return { nama: p[0] || '-', alt: alt, kk: kk, pat: pat ? 'Ada' : 'Tidak ada', status: masalah.length ? 'Tidak memenuhi' : 'Memenuhi', alasan: masalah.join('; ') || '-' }; })",
+        "ok": "v.rows.filter((r) => r.status === 'Memenuhi').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ok + ' dari ' + v.rows.length + ' sampel memenuhi batas mikroba' + (v.ok < v.rows.length ? '; yang tidak memenuhi perlu investigasi' : '')",
+    "teks": "'# Hasil uji mikroba\\n\\nBatas: angka lempeng total ≤ ' + num(input.batas_alt) + ' koloni/g, kapang khamir ≤ ' + num(input.batas_kk) + ' koloni/g, patogen tidak ada.\\n\\n' + tabel(['Sampel', 'Angka lempeng total', 'Kapang khamir', 'Patogen', 'Status', 'Alasan'], v.rows.map((r) => [r.nama, r.alt, r.kk, r.pat, r.status, r.alasan])) + '\\n\\n_Batas berasal dari spesifikasi yang Anda isi. Hasil tidak memenuhi harus diuji ulang dan diinvestigasi sesuai prosedur, bukan langsung diulang._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-uji-mikroba'",
+        "isi": "csv([['Sampel', 'Angka lempeng total', 'Kapang khamir', 'Patogen', 'Status', 'Alasan']].concat(v.rows.map((r) => [r.nama, r.alt, r.kk, r.pat, r.status, r.alasan])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "sampel": "Serum B1 | 120 | 10 | tidak\nKrim B2 | 2500 | 5 | tidak\nToner B3 | 30 | 0 | ada",
+      "batas_alt": "1000",
+      "batas_kk": "100"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 dari 3 sampel memenuhi",
+        "patogen terdeteksi",
+        "angka lempeng total melebihi batas"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Microbiologist di divisi Quality Control & Assurance, memakai bahasa awam",
+    "tujuan": "Bandingkan hasil hitung mikroba tiap sampel dengan batas dari spesifikasi Anda dan tandai yang tidak memenuhi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur, tegas pada yang di luar batas",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Mutu kelihatannya baik."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "mikroba"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penilai hasil uji cemaran mikroba perlu dibaca bersama: mikroba menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

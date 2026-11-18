@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-arsa-duplikat",
+  "division": "kms",
+  "employeeId": "arsa",
+  "title": "Knowledge Librarian (Brain Organizer)",
+  "version": 1,
+  "name": "Pencari catatan yang mirip",
+  "ringkas": "Temukan pasangan judul catatan yang mirip supaya bisa digabung dan pustaka tetap rapi.",
+  "kataKunci": [
+    "duplikat",
+    "catatan mirip",
+    "gabung catatan",
+    "judul kembar",
+    "kemiripan"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "longtext",
+      "label": "Judul catatan (satu per baris)",
+      "required": true,
+      "contoh": "Panduan Onboarding Karyawan Baru\nPanduan Onboarding Pegawai Baru\nSOP Refund"
+    },
+    {
+      "key": "ambang",
+      "type": "choice",
+      "label": "Seberapa mirip dianggap kembar?",
+      "required": true,
+      "default": "0.5",
+      "choices": [
+        {
+          "v": "0.5",
+          "t": "Mirip sedang"
+        },
+        {
+          "v": "0.7",
+          "t": "Sangat mirip"
+        },
+        {
+          "v": "0.85",
+          "t": "Hampir sama"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Bandingkan",
+      "set": {
+        "item": "baris(input.judul).slice(0, 120).map((j) => ({ judul: j, kata: j.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2) }))",
+        "pasang": "v.item.flatMap((a, i) => v.item.slice(i + 1).map((b) => { const inter = a.kata.filter((w) => b.kata.includes(w)).length; const uni = a.kata.length + b.kata.length - inter; return { a: a.judul, b: b.judul, skor: uni ? Math.round(inter / uni * 100) / 100 : 0 }; })).filter((p) => p.skor >= num(input.ambang)).sort((x, y) => y.skor - x.skor)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.pasang.length + ' pasang catatan mirip dari ' + v.item.length + ' judul'",
+    "teks": "'# Catatan yang mirip\\n\\n' + (v.pasang.length ? tabel(['Catatan A', 'Catatan B', 'Kemiripan'], v.pasang.map((p) => [p.a, p.b, p.skor])) : 'Tidak ada pasangan yang mirip pada batas ini.') + '\\n\\nGabungkan ke satu catatan utama dan arsipkan yang lain.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'catatan-mirip'",
+        "isi": "csv([['Catatan A', 'Catatan B', 'Kemiripan']].concat(v.pasang.map((p) => [p.a, p.b, p.skor])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Knowledge",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "judul": "Panduan Onboarding Karyawan Baru\nPanduan Onboarding Pegawai Baru\nSOP Refund",
+      "ambang": "0.5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 pasang catatan mirip",
+        "0.6"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Knowledge Librarian (Brain Organizer) di divisi Knowledge & AI Ops, memakai bahasa awam",
+    "tujuan": "Temukan pasangan judul catatan yang mirip supaya bisa digabung dan pustaka tetap rapi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Simpan saja."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "duplikat"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pencari catatan yang mirip perlu dibaca bersama: duplikat menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

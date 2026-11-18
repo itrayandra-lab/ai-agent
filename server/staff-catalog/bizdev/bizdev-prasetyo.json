@@ -1,39 +1,183 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "bizdev-prasetyo",
   "division": "bizdev",
   "employeeId": "prasetyo",
   "title": "Corporate Sales & B2B Gifting Specialist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Prasetyo",
-    "tugasPeran": [
-      "Menjual paket hampers dan gifting Ray Beauty ke perusahaan untuk hari raya dan event",
-      "Menawarkan langganan RayFlow ke korporat dan grup usaha",
-      "Menyusun penawaran, harga volume, dan jadwal pengiriman korporat"
-    ],
-    "keahlian": [
-      "corporate sales",
-      "gifting",
-      "hampers",
-      "b2b"
-    ],
-    "contohTugas": [
-      "Katalog hampers Lebaran untuk korporat",
-      "Daftar 30 perusahaan target gifting akhir tahun",
-      "Penawaran RayFlow untuk grup ritel 10 cabang"
+  "name": "Penyusun penawaran paket hampers perusahaan",
+  "ringkas": "Hitung harga hampers untuk perusahaan dengan diskon jumlah, biaya kartu atau logo, dan PPN, lengkap dengan tanggal terakhir pemesanan dan produksi.",
+  "kataKunci": [
+    "hampers",
+    "gifting",
+    "paket korporat",
+    "hari raya",
+    "penawaran perusahaan"
+  ],
+  "inputs": [
+    {
+      "key": "klien",
+      "type": "text",
+      "label": "Nama perusahaan",
+      "required": true,
+      "contoh": "PT Maju Jaya"
+    },
+    {
+      "key": "paket",
+      "type": "choice",
+      "label": "Pilihan paket",
+      "required": true,
+      "default": "250000",
+      "choices": [
+        {
+          "v": "150000",
+          "t": "Silver, Rp 150 ribu"
+        },
+        {
+          "v": "250000",
+          "t": "Gold, Rp 250 ribu"
+        },
+        {
+          "v": "400000",
+          "t": "Platinum, Rp 400 ribu"
+        }
+      ]
+    },
+    {
+      "key": "jumlah",
+      "type": "number",
+      "label": "Jumlah paket",
+      "required": true,
+      "contoh": "120"
+    },
+    {
+      "key": "kustom",
+      "type": "choice",
+      "label": "Kartu atau logo perusahaan",
+      "required": true,
+      "default": "5000",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa"
+        },
+        {
+          "v": "5000",
+          "t": "Kartu ucapan, Rp 5 ribu per paket"
+        },
+        {
+          "v": "12000",
+          "t": "Kartu dan logo di kemasan, Rp 12 ribu per paket"
+        }
+      ]
+    },
+    {
+      "key": "kirim",
+      "type": "date",
+      "label": "Tanggal paket harus tiba",
+      "required": true,
+      "contoh": "2027-03-01"
+    },
+    {
+      "key": "ppn",
+      "type": "choice",
+      "label": "Kena PPN?",
+      "required": true,
+      "default": "11",
+      "choices": [
+        {
+          "v": "11",
+          "t": "Ya, 11%"
+        },
+        {
+          "v": "0",
+          "t": "Tidak"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung penawaran",
+      "set": {
+        "diskon": "num(input.jumlah) >= 250 ? 12 : num(input.jumlah) >= 100 ? 8 : num(input.jumlah) >= 50 ? 5 : 0",
+        "satuan": "num(input.paket) + num(input.kustom)",
+        "kotor": "v.satuan * num(input.jumlah)",
+        "potong": "Math.round(v.kotor * v.diskon / 100)",
+        "dpp": "v.kotor - v.potong",
+        "pajak": "Math.round(v.dpp * num(input.ppn) / 100)",
+        "total": "v.dpp + v.pajak",
+        "pesanPaling": "new Date(Date.parse(input.kirim) - 21 * 864e5).toISOString().slice(0, 10)",
+        "produksiMulai": "new Date(Date.parse(input.kirim) - 14 * 864e5).toISOString().slice(0, 10)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Hampers ' + input.jumlah + ' paket untuk ' + input.klien + ': total ' + rp(v.total) + ' (diskon jumlah ' + v.diskon + '%)'",
+    "teks": "'# Penawaran hampers ' + input.klien + '\\n\\n- Jumlah: ' + input.jumlah + ' paket, harga dasar ' + rp(input.paket) + ' + kustom ' + rp(input.kustom) + ' per paket\\n- Jumlah sebelum diskon: ' + rp(v.kotor) + '\\n- Diskon jumlah ' + v.diskon + '%: -' + rp(v.potong) + '\\n- PPN ' + input.ppn + '%: ' + rp(v.pajak) + '\\n- **Total: ' + rp(v.total) + '**\\n\\n## Jadwal\\n- Pesan paling lambat: ' + tgl(v.pesanPaling) + '\\n- Mulai produksi: ' + tgl(v.produksiMulai) + '\\n- Paket tiba: ' + tgl(input.kirim)",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hampers-' + input.klien",
+        "isi": "csv([['Uraian', 'Nilai'], ['Jumlah paket', num(input.jumlah)], ['Harga per paket', v.satuan], ['Sebelum diskon', v.kotor], ['Diskon %', v.diskon], ['PPN', v.pajak], ['Total', v.total], ['Pesan paling lambat', v.pesanPaling], ['Paket tiba', input.kirim]])"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "klien": "PT Maju Jaya",
+      "paket": "250000",
+      "jumlah": "120",
+      "kustom": "5000",
+      "kirim": "2027-03-01",
+      "ppn": "11"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "diskon jumlah 8%",
+        "Rp 31.248.720",
+        "8 Februari 2027"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Corporate Sales & B2B Gifting Specialist di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Hitung harga hampers untuk perusahaan dengan diskon jumlah, biaya kartu atau logo, dan PPN, lengkap dengan tanggal terakhir pemesanan dan produksi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "hampers"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun penawaran paket hampers perusahaan perlu dibaca bersama: hampers menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

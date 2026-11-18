@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-tania-laporan-bug",
+  "division": "eng",
+  "employeeId": "tania",
+  "title": "QA Engineer",
+  "version": 1,
+  "name": "Penyusun laporan bug rapi",
+  "ringkas": "Susun laporan bug yang jelas dan hitung tingkat keparahan serta prioritas perbaikannya.",
+  "kataKunci": [
+    "bug",
+    "laporan bug",
+    "keparahan",
+    "prioritas",
+    "reproduksi"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul singkat masalah",
+      "required": true,
+      "contoh": "Tombol Bayar tidak bereaksi"
+    },
+    {
+      "key": "langkah",
+      "type": "longtext",
+      "label": "Langkah untuk memunculkan masalah (satu per baris)",
+      "required": true,
+      "contoh": "Buka keranjang\nTekan tombol Bayar"
+    },
+    {
+      "key": "nyata",
+      "type": "text",
+      "label": "Apa yang terjadi?",
+      "required": true,
+      "contoh": "Tidak ada yang terjadi"
+    },
+    {
+      "key": "harusnya",
+      "type": "text",
+      "label": "Seharusnya apa?",
+      "required": true,
+      "contoh": "Halaman pembayaran terbuka"
+    },
+    {
+      "key": "dampak",
+      "type": "choice",
+      "label": "Seberapa berat dampaknya?",
+      "required": true,
+      "default": "blok",
+      "choices": [
+        {
+          "v": "blok",
+          "t": "Pengguna tidak bisa lanjut sama sekali"
+        },
+        {
+          "v": "sebagian",
+          "t": "Ada jalan pintas tapi mengganggu"
+        },
+        {
+          "v": "tampilan",
+          "t": "Hanya masalah tampilan"
+        }
+      ]
+    },
+    {
+      "key": "sering",
+      "type": "choice",
+      "label": "Seberapa sering terjadi?",
+      "required": true,
+      "default": "selalu",
+      "choices": [
+        {
+          "v": "selalu",
+          "t": "Selalu"
+        },
+        {
+          "v": "kadang",
+          "t": "Kadang-kadang"
+        },
+        {
+          "v": "jarang",
+          "t": "Jarang"
+        }
+      ]
+    },
+    {
+      "key": "siapa",
+      "type": "choice",
+      "label": "Siapa yang terkena?",
+      "required": true,
+      "default": "semua",
+      "choices": [
+        {
+          "v": "semua",
+          "t": "Semua pengguna"
+        },
+        {
+          "v": "sebagian",
+          "t": "Sebagian pengguna"
+        },
+        {
+          "v": "sedikit",
+          "t": "Sedikit pengguna"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai keparahan",
+      "set": {
+        "skor": "({ blok: 3, sebagian: 2, tampilan: 1 })[input.dampak] * 2 + ({ selalu: 3, kadang: 2, jarang: 1 })[input.sering] + ({ semua: 3, sebagian: 2, sedikit: 1 })[input.siapa]",
+        "level": "v.skor >= 10 ? 'Kritis' : v.skor >= 7 ? 'Tinggi' : v.skor >= 5 ? 'Sedang' : 'Rendah'",
+        "prioritas": "({ Kritis: 'P0: perbaiki hari ini', Tinggi: 'P1: perbaiki dalam sprint ini', Sedang: 'P2: jadwalkan sprint berikutnya', Rendah: 'P3: perbaiki bila sempat' })[v.level]",
+        "lap": "'# [' + v.level + '] ' + input.judul + '\\n\\n**Prioritas:** ' + v.prioritas + '\\n\\n## Langkah memunculkan\\n' + baris(input.langkah).map((s, i) => (i + 1) + '. ' + s).join('\\n') + '\\n\\n## Hasil nyata\\n' + input.nyata + '\\n\\n## Hasil yang diharapkan\\n' + input.harusnya + '\\n\\n## Penilaian\\n- Dampak: ' + input.dampak + '\\n- Frekuensi: ' + input.sering + '\\n- Pengguna terkena: ' + input.siapa + '\\n- Skor: ' + v.skor + ' dari 12\\n\\n## Informasi tambahan\\n- (isi versi aplikasi, perangkat, tangkapan layar)'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Bug \"' + input.judul + '\" tingkat ' + v.level + ' (skor ' + v.skor + '/12): ' + v.prioritas",
+    "teks": "v.lap",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'bug-' + input.judul",
+        "isi": "v.lap"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "judul": "Tombol Bayar tidak bereaksi",
+      "langkah": "Buka keranjang\nTekan tombol Bayar",
+      "nyata": "Tidak ada yang terjadi",
+      "harusnya": "Halaman pembayaran terbuka",
+      "dampak": "blok",
+      "sering": "selalu",
+      "siapa": "semua"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "tingkat Kritis (skor 12/12)",
+        "P0: perbaiki hari ini"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "QA Engineer di divisi Product & Engineering, memakai bahasa awam",
+    "tujuan": "Susun laporan bug yang jelas dan hitung tingkat keparahan serta prioritas perbaikannya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Coba perbaiki kodenya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "bug"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun laporan bug rapi perlu dibaca bersama: bug menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

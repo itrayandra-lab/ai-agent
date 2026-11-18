@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-aldi-balasan-komunitas",
+  "division": "mkt",
+  "employeeId": "aldi",
+  "title": "Community Manager",
+  "version": 1,
+  "name": "Penyusun balasan standar komunitas",
+  "ringkas": "Beri contoh balasan sopan sesuai jenis komentar (keluhan, pertanyaan, pujian, spam, konflik) beserta batas waktu dan siapa yang dilibatkan.",
+  "kataKunci": [
+    "moderasi",
+    "balasan komentar",
+    "keluhan",
+    "komunitas",
+    "spam"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama anggota yang dibalas",
+      "required": true,
+      "contoh": "Bu Rina"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis komentar",
+      "required": true,
+      "default": "keluhan",
+      "choices": [
+        {
+          "v": "keluhan",
+          "t": "Keluhan"
+        },
+        {
+          "v": "tanya",
+          "t": "Pertanyaan"
+        },
+        {
+          "v": "puji",
+          "t": "Pujian"
+        },
+        {
+          "v": "spam",
+          "t": "Spam atau iklan"
+        },
+        {
+          "v": "konflik",
+          "t": "Perdebatan atau komentar kasar"
+        }
+      ]
+    },
+    {
+      "key": "brand",
+      "type": "text",
+      "label": "Nama brand",
+      "required": true,
+      "contoh": "Ray Beauty"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Pilih balasan",
+      "set": {
+        "aturan": "({ keluhan: { balas: 'Halo ' + input.nama + ', mohon maaf atas ketidaknyamanannya. Boleh kirim detail pesanan lewat pesan pribadi supaya kami bantu secepatnya?', tindakan: 'Eskalasi ke layanan pelanggan, batas balas 2 jam', sla: 2 }, tanya: { balas: 'Halo ' + input.nama + ', terima kasih sudah bertanya. Jawabannya: [isi jawaban]. Ada lagi yang ingin ditanyakan?', tindakan: 'Jawab sendiri bila ada di panduan, jika tidak teruskan ke tim produk', sla: 6 }, puji: { balas: 'Terima kasih ' + input.nama + ', senang sekali kamu suka! Salam dari seluruh tim ' + input.brand + '.', tindakan: 'Suka komentarnya dan simpan sebagai bahan cerita pelanggan', sla: 24 }, spam: { balas: '', tindakan: 'Tidak dibalas: sembunyikan atau hapus, blokir bila berulang', sla: 24 }, konflik: { balas: 'Halo ' + input.nama + ', kami menghargai pendapatmu. Mari kita jaga diskusi tetap sopan agar nyaman untuk semua.', tindakan: 'Eskalasi ke admin senior; sembunyikan komentar kasar dan catat kejadiannya', sla: 1 } })[input.jenis]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.jenis + ': ' + v.aturan.tindakan",
+    "teks": "'# Balasan untuk ' + input.nama + '\\n\\n**Jenis:** ' + input.jenis + '  \\n**Tindakan:** ' + v.aturan.tindakan + '  \\n**Batas waktu:** ' + v.aturan.sla + ' jam\\n\\n' + (v.aturan.balas ? '## Draf balasan\\n' + v.aturan.balas : '## Draf balasan\\n(tidak perlu dibalas)')",
+    "berkas": []
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Community",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Bu Rina",
+      "jenis": "keluhan",
+      "brand": "Ray Beauty"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Eskalasi ke layanan pelanggan",
+        "Halo Bu Rina"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Community Manager di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Beri contoh balasan sopan sesuai jenis komentar (keluhan, pertanyaan, pujian, spam, konflik) beserta batas waktu dan siapa yang dilibatkan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "moderasi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun balasan standar komunitas perlu dibaca bersama: moderasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

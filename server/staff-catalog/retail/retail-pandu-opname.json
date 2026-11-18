@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "retail-pandu-opname",
+  "division": "retail",
+  "employeeId": "pandu",
+  "title": "Retail Operations & Inventory Analyst",
+  "version": 1,
+  "name": "Penghitung selisih stock opname",
+  "ringkas": "Bandingkan stok di sistem dengan hitungan fisik, hitung nilai barang hilang atau lebih, dan tandai produk yang selisihnya melewati batas wajar.",
+  "kataKunci": [
+    "stock opname",
+    "selisih stok",
+    "shrinkage",
+    "barang hilang",
+    "penghitungan fisik"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Hasil hitung (satu baris: kode | stok sistem | stok fisik | harga pokok)",
+      "required": true,
+      "contoh": "SRM-30 | 100 | 95 | 30000"
+    },
+    {
+      "key": "toleransi",
+      "type": "choice",
+      "label": "Selisih wajar",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1%"
+        },
+        {
+          "v": "2",
+          "t": "2%"
+        },
+        {
+          "v": "5",
+          "t": "5%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung selisih",
+      "set": {
+        "rows": "baris(input.data).slice(0, 200).map((l) => { const p = l.split('|').map((s) => s.trim()); const s = num(p[1]); const f = num(p[2]); const h = num(p[3]); const d = f - s; return { kode: p[0] || '-', sistem: s, fisik: f, selisih: d, nilai: d * h, persen: s ? Math.round(d / s * 1000) / 10 : 0, nilaiSistem: s * h, status: d === 0 ? 'Cocok' : Math.abs(s ? d / s * 100 : 100) > num(input.toleransi) ? 'Selidiki' : 'Wajar' }; }).sort((a, b) => a.nilai - b.nilai)",
+        "hilang": "v.rows.filter((r) => r.nilai < 0).reduce((a, b) => a + b.nilai, 0)",
+        "lebih": "v.rows.filter((r) => r.nilai > 0).reduce((a, b) => a + b.nilai, 0)",
+        "nilaiTotal": "Math.max(1, v.rows.reduce((a, b) => a + b.nilaiSistem, 0))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Barang hilang ' + rp(Math.abs(v.hilang)) + ' (' + Math.round(Math.abs(v.hilang) / v.nilaiTotal * 1000) / 10 + '% dari nilai stok), kelebihan ' + rp(v.lebih) + '; ' + v.rows.filter((r) => r.status === 'Selidiki').length + ' produk perlu diselidiki'",
+    "teks": "'# Selisih stock opname\\n\\n' + tabel(['Kode', 'Sistem', 'Fisik', 'Selisih', 'Nilai', '%', 'Status'], v.rows.map((r) => [r.kode, r.sistem, r.fisik, r.selisih, rp(r.nilai), r.persen, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'selisih-opname'",
+        "isi": "csv([['Kode', 'Sistem', 'Fisik', 'Selisih', 'Nilai', 'Persen', 'Status']].concat(v.rows.map((r) => [r.kode, r.sistem, r.fisik, r.selisih, r.nilai, r.persen, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "SRM-30 | 100 | 95 | 30000\nTNR-100 | 50 | 50 | 20000\nKRM-50 | 200 | 210 | 10000",
+      "toleransi": "2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Barang hilang Rp 150.000",
+        "kelebihan Rp 100.000",
+        "2 produk perlu diselidiki"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Retail Operations & Inventory Analyst di divisi Retail & Beauty Stores, memakai bahasa awam",
+    "tujuan": "Bandingkan stok di sistem dengan hitungan fisik, hitung nilai barang hilang atau lebih, dan tandai produk yang selisihnya melewati batas wajar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Toko harus lebih bagus."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "stock opname"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung selisih stock opname perlu dibaca bersama: stock opname menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

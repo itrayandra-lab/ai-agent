@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-cindy-audit",
+  "division": "ecom",
+  "employeeId": "cindy",
+  "title": "Catalog & Content Specialist",
+  "version": 1,
+  "name": "Pemeriksa kelengkapan katalog produk",
+  "ringkas": "Beri skor kelengkapan tiap produk (judul, foto, deskripsi, variasi) dan daftar yang harus dibenahi lebih dulu.",
+  "kataKunci": [
+    "audit katalog",
+    "kelengkapan",
+    "sku",
+    "foto produk",
+    "listing"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data produk (satu baris: sku | judul | jumlah foto | jumlah kata deskripsi | jumlah variasi)",
+      "required": true,
+      "contoh": "SRM-30 | Serum Niacinamide 30ml | 6 | 120 | 2"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai katalog",
+      "set": {
+        "rows": "baris(input.data).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const j = p[1] || ''; const foto = num(p[2]); const kata = num(p[3]); const vr = num(p[4]); const cek = [['Judul 30 sampai 80 huruf', j.length >= 30 && j.length <= 80], ['Foto minimal 5', foto >= 5], ['Deskripsi minimal 80 kata', kata >= 80], ['Ada variasi', vr >= 1]]; return { sku: p[0] || '-', skor: cek.filter((c) => c[1]).length * 25, kurang: cek.filter((c) => !c[1]).map((c) => c[0]).join('; ') || 'Lengkap' }; }).sort((a, b) => a.skor - b.skor)",
+        "rata": "v.rows.length ? Math.round(v.rows.reduce((a, b) => a + b.skor, 0) / v.rows.length) : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' produk diperiksa, rata-rata skor ' + v.rata + ' dari 100; ' + v.rows.filter((r) => r.skor < 100).length + ' perlu dibenahi'",
+    "teks": "'# Kelengkapan katalog\\n\\n' + tabel(['SKU', 'Skor', 'Yang kurang'], v.rows.map((r) => [r.sku, r.skor, r.kurang]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'audit-katalog'",
+        "isi": "csv([['SKU', 'Skor', 'Yang kurang']].concat(v.rows.map((r) => [r.sku, r.skor, r.kurang])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "SRM-30 | Serum Niacinamide 30ml dari Ray Beauty | 6 | 120 | 2\nTNR-100 | Toner | 2 | 40 | 0"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 produk diperiksa, rata-rata skor 50",
+        "Foto minimal 5",
+        "Lengkap"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Catalog & Content Specialist di divisi E-commerce & Marketplace, memakai bahasa awam",
+    "tujuan": "Beri skor kelengkapan tiap produk (judul, foto, deskripsi, variasi) dan daftar yang harus dibenahi lebih dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jualan perlu ditingkatkan."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "audit katalog"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kelengkapan katalog produk perlu dibaca bersama: audit katalog menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

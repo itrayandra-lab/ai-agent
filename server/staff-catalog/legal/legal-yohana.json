@@ -1,37 +1,130 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "legal-yohana",
   "division": "legal",
   "employeeId": "yohana",
   "title": "IP & Trademark Specialist",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Yohana",
-    "tugasPeran": [
-      "Cek & daftarkan merek produk baru",
-      "Memantau pelanggaran merek",
-      "Perjanjian lisensi"
-    ],
-    "keahlian": [
-      "merek",
-      "hki",
-      "djki"
-    ],
-    "contohTugas": [
-      "Cek ketersediaan merek untuk lini serum baru",
-      "Strategi perlindungan desain kemasan"
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Pemeriksa kemiripan nama merek",
+  "ringkas": "Bandingkan nama merek baru dengan merek lain yang Anda ketahui dan lihat mana yang terlalu mirip.",
+  "kataKunci": [
+    "merek",
+    "nama merek",
+    "kemiripan",
+    "trademark",
+    "hak kekayaan"
+  ],
+  "inputs": [
+    {
+      "key": "baru",
+      "type": "text",
+      "label": "Nama merek baru",
+      "required": true,
+      "contoh": "Kopikita"
+    },
+    {
+      "key": "lain",
+      "type": "longtext",
+      "label": "Merek lain untuk dibandingkan (satu per baris)",
+      "required": true,
+      "contoh": "Kopi Kita"
+    },
+    {
+      "key": "ambang",
+      "type": "choice",
+      "label": "Seberapa ketat?",
+      "required": true,
+      "default": "0.45",
+      "choices": [
+        {
+          "v": "0.45",
+          "t": "Sangat ketat"
+        },
+        {
+          "v": "0.6",
+          "t": "Sedang"
+        },
+        {
+          "v": "0.75",
+          "t": "Longgar"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "banding",
+      "use": "hitung",
+      "label": "Bandingkan nama",
+      "set": {
+        "rows": "(() => { const bg = (s) => { const t = String(s).toLowerCase().replace(/[^a-z0-9]/g, ''); return t.split('').map((c, i) => t[i + 1] ? c + t[i + 1] : '').filter(Boolean); }; const a = bg(input.baru); return baris(input.lain).slice(0, 80).map((m) => { const b = bg(m); const sama = a.filter((x) => b.includes(x)).length; const nilai = a.length + b.length ? Math.round(2 * sama / (a.length + b.length) * 100) / 100 : 0; return { merek: m, nilai: nilai, status: nilai >= 0.75 ? 'Sangat mirip' : nilai >= num(input.ambang) ? 'Mirip' : 'Berbeda' }; }).sort((x, y) => y.nilai - x.nilai); })()",
+        "mirip": "v.rows.filter((r) => r.status !== 'Berbeda').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.mirip + ' dari ' + v.rows.length + ' merek tampak mirip dengan ' + input.baru",
+    "teks": "'# Pemeriksaan kemiripan merek: ' + input.baru + '\\n\\n' + tabel(['Merek pembanding', 'Kemiripan (0-1)', 'Status'], v.rows.map((r) => [r.merek, r.nilai, r.status])) + '\\n\\n_Ini pemeriksaan awal berdasarkan ejaan, bukan pengganti pemeriksaan resmi di pangkalan data merek dan bukan nasihat hukum._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kemiripan-merek-' + input.baru",
+        "isi": "csv([['Merek pembanding', 'Kemiripan', 'Status']].concat(v.rows.map((r) => [r.merek, r.nilai, r.status])))"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "baru": "Kopikita",
+      "lain": "Kopi Kita\nKopitiam\nTehsegar",
+      "ambang": "0.45"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Sangat mirip",
+        "Mirip",
+        "0.57",
+        "bukan pengganti pemeriksaan resmi",
+        "2 dari 3 merek"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "IP & Trademark Specialist di divisi Legal & Compliance, memakai bahasa awam",
+    "tujuan": "Bandingkan nama merek baru dengan merek lain yang Anda ketahui dan lihat mana yang terlalu mirip. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
+      "buruk": "Pasti aman secara hukum."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "merek"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kemiripan nama merek perlu dibaca bersama: merek menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

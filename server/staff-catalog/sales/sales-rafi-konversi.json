@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-rafi-konversi",
+  "division": "sales",
+  "employeeId": "rafi",
+  "title": "Sales Ops & CRM Analyst",
+  "version": 1,
+  "name": "Laporan konversi antar tahap penjualan",
+  "ringkas": "Hitung berapa persen calon pelanggan yang lanjut di tiap tahap dan temukan tahap yang paling banyak membuat calon pelanggan hilang.",
+  "kataKunci": [
+    "konversi",
+    "funnel",
+    "tahap penjualan",
+    "bottleneck",
+    "laporan sales"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Jumlah per tahap, berurutan dari awal (satu baris: tahap | jumlah)",
+      "required": true,
+      "contoh": "Prospek | 200\nKualifikasi | 120\nDemo | 70\nPenawaran | 40\nClosing | 18"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung konversi",
+      "set": {
+        "rows": "baris(input.data).slice(0, 12).map((l) => { const p = l.split('|').map((s) => s.trim()); return { tahap: p[0] || '-', jumlah: num(p[1]) }; })",
+        "antar": "v.rows.map((r, i) => ({ dari: i ? v.rows[i - 1].tahap : '-', ke: r.tahap, lanjut: i && v.rows[i - 1].jumlah ? Math.round(r.jumlah / v.rows[i - 1].jumlah * 1000) / 10 : 100 })).slice(1)",
+        "terburuk": "v.antar.slice().sort((a, b) => a.lanjut - b.lanjut)[0] || { dari: '-', ke: '-', lanjut: 0 }",
+        "total": "v.rows.length > 1 && v.rows[0].jumlah ? Math.round(v.rows[v.rows.length - 1].jumlah / v.rows[0].jumlah * 1000) / 10 : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Dari awal sampai akhir ' + v.total + '% lanjut; paling banyak hilang di ' + v.terburuk.dari + ' ke ' + v.terburuk.ke + ' (hanya ' + v.terburuk.lanjut + '% lanjut)'",
+    "teks": "'# Konversi antar tahap\\n\\n' + tabel(['Dari', 'Ke', 'Yang lanjut'], v.antar.map((a) => [a.dari, a.ke, a.lanjut + '%'])) + '\\n\\n**Prioritas perbaikan:** tahap ' + v.terburuk.dari + ' ke ' + v.terburuk.ke + '.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'konversi-tahap'",
+        "isi": "csv([['Dari', 'Ke', 'Lanjut %']].concat(v.antar.map((a) => [a.dari, a.ke, a.lanjut])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Prospek | 200\nKualifikasi | 120\nDemo | 70\nPenawaran | 40\nClosing | 18"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "9% lanjut",
+        "Penawaran ke Closing",
+        "hanya 45%"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Sales Ops & CRM Analyst di divisi Sales, memakai bahasa awam",
+    "tujuan": "Hitung berapa persen calon pelanggan yang lanjut di tiap tahap dan temukan tahap yang paling banyak membuat calon pelanggan hilang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
+      "buruk": "Beli sekarang atau rugi."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "konversi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil laporan konversi antar tahap penjualan perlu dibaca bersama: konversi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

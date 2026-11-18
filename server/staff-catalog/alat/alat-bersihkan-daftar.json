@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-bersihkan-daftar",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Perapi daftar",
+  "ringkas": "Rapikan sebuah daftar: buang baris kosong dan duplikat, urutkan, dan hitung jumlahnya.",
+  "kataKunci": [
+    "daftar",
+    "duplikat",
+    "urutkan",
+    "rapikan",
+    "unik"
+  ],
+  "inputs": [
+    {
+      "key": "teks",
+      "type": "longtext",
+      "label": "Daftar (satu baris satu isi)",
+      "required": true,
+      "contoh": "apel"
+    },
+    {
+      "key": "urut",
+      "type": "choice",
+      "label": "Urutan hasil",
+      "required": true,
+      "default": "abjad",
+      "choices": [
+        {
+          "v": "abjad",
+          "t": "Urut abjad"
+        },
+        {
+          "v": "asli",
+          "t": "Tetap seperti aslinya"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Rapikan",
+      "set": {
+        "semua": "baris(input.teks)",
+        "unik": "v.semua.filter((x, i) => v.semua.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i)",
+        "hasil": "input.urut === 'abjad' ? v.unik.slice().sort((p, q) => p.localeCompare(q, 'id')) : v.unik"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Unik: ' + v.hasil.length + ' dari ' + v.semua.length + ' baris'",
+    "teks": "v.hasil.map((x) => '- ' + x).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "txt",
+        "nama": "'daftar-rapi'",
+        "isi": "v.hasil.join('\\n')"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "teks": "apel\nPisang\napel \njeruk",
+      "urut": "abjad"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Unik: 3 dari 4"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "otakProfil": {
+    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
+    "tujuan": "Rapikan sebuah daftar: buang baris kosong dan duplikat, urutkan, dan hitung jumlahnya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Hasil sudah benar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "daftar"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perapi daftar perlu dibaca bersama: daftar menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

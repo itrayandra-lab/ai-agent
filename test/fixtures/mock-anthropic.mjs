@@ -11,7 +11,7 @@ const flat = (c) => (typeof c === 'string' ? c : (c || []).map((b) => (b.type ==
 const uidOf = (snap, re) => (snap.match(new RegExp(`uid=(\\S+)\\s+[^\\n]*${re}`, 'i')) || [])[1];
 
 const MEMO = {}; const SEEN = [];
-function plan(messages) {
+function plan(messages, tools = []) {
   const first = flat(messages[0].content);
   const results = [];   // [{name, text}] dalam urutan
   const calls = [];
@@ -36,7 +36,10 @@ Sumber: ${target}
 ${last.replace(/s+/g, ' ').slice(0, 300)}` } };
     return { name: 'complete_task', input: { summary: `Halaman ${target} dibaca lewat visit_url.`, output: `Isi ${target} dibaca tanpa membuka browser dan diringkas ke Brain.`, evidence: [target], gaps: '' } };
   }
-  if (!done('buka_browser')) return { name: 'buka_browser', input: { alasan: 'perlu klik tombol dan isi formulir di halaman yang dirender JavaScript', url: target } };
+  const door = tools.some((t) => t.name === 'buka_alat');   // alur P2: pintu buka_alat('browser') membuka browser dalam satu langkah
+  const alasan = 'perlu klik tombol dan isi formulir di halaman yang dirender JavaScript';
+  if (door && !done('buka_alat')) return { name: 'buka_alat', input: { kelompok: 'browser', alasan } };
+  if (!door && !done('buka_browser')) return { name: 'buka_browser', input: { alasan, url: target } };
   if (!done('browser_new_page')) return { name: 'browser_new_page', input: { url: target } };
   if (!done('browser_take_snapshot')) return { name: 'browser_take_snapshot', input: { pageId } };
   if (!injection) {
@@ -70,7 +73,7 @@ http.createServer((req, res) => {
     const wantsTools = (p.tools || []).some((t) => t.name === 'complete_task');
     let content, stop = 'end_turn';
     if (wantsTools && /SKENARIO:/.test(flat(p.messages[0].content))) {
-      const step = plan(p.messages);
+      const step = plan(p.messages, p.tools);
       content = [{ type: 'text', text: `Langkah: ${step.name}` }, { type: 'tool_use', id: 'toolu_' + Math.random().toString(36).slice(2, 10), name: step.name, input: step.input }]; stop = 'tool_use';
     } else content = [{ type: 'text', text: '{}' }];
     res.writeHead(200, { 'Content-Type': 'application/json' });

@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-elang-hitung-kata",
+  "division": "studio",
+  "employeeId": "elang",
+  "title": "Scriptwriter & Storyboard Artist",
+  "version": 1,
+  "name": "Pengukur durasi naskah",
+  "ringkas": "Hitung jumlah kata naskah dan perkiraan lama dibacakan, per paragraf dan total.",
+  "kataKunci": [
+    "durasi naskah",
+    "hitung kata",
+    "voice over",
+    "narasi",
+    "waktu baca"
+  ],
+  "inputs": [
+    {
+      "key": "naskah",
+      "type": "longtext",
+      "label": "Isi naskah (pisahkan paragraf dengan baris kosong)",
+      "required": true,
+      "contoh": "Halo semua selamat datang di toko kami\n\nHari ini kami punya promo besar untuk kamu"
+    },
+    {
+      "key": "kecepatan",
+      "type": "choice",
+      "label": "Kecepatan membaca",
+      "required": true,
+      "default": "2.5",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Pelan (2 kata/detik)"
+        },
+        {
+          "v": "2.5",
+          "t": "Normal (2,5 kata/detik)"
+        },
+        {
+          "v": "3",
+          "t": "Cepat (3 kata/detik)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "para": "String(input.naskah).split(/\\n\\s*\\n/).map((p) => p.trim()).filter(Boolean).map((p, i) => ({ no: i + 1, kata: p.split(/\\s+/).length, detik: Math.round(p.split(/\\s+/).length / num(input.kecepatan)), awal: p.slice(0, 40) }))",
+        "kata": "v.para.reduce((a, b) => a + b.kata, 0)",
+        "detik": "Math.round(v.kata / num(input.kecepatan))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kata + ' kata, sekitar ' + v.detik + ' detik'",
+    "teks": "'# Durasi naskah\\n\\n' + tabel(['Paragraf', 'Kata', 'Detik', 'Awal'], v.para.map((p) => [p.no, p.kata, p.detik, p.awal])) + '\\n\\nTotal ' + v.kata + ' kata = sekitar ' + v.detik + ' detik.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'durasi-naskah'",
+        "isi": "csv([['Paragraf', 'Kata', 'Detik']].concat(v.para.map((p) => [p.no, p.kata, p.detik])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "naskah": "Halo semua selamat datang di toko kami\n\nHari ini kami punya promo besar untuk kamu",
+      "kecepatan": "2.5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "15 kata",
+        "6 detik"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Scriptwriter & Storyboard Artist di divisi Content Studio, memakai bahasa awam",
+    "tujuan": "Hitung jumlah kata naskah dan perkiraan lama dibacakan, per paragraf dan total. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Buat iklan yang keren."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "durasi naskah"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pengukur durasi naskah perlu dibaca bersama: durasi naskah menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

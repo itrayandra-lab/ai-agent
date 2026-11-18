@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "reg-raisa-daftar",
+  "division": "reg",
+  "employeeId": "raisa",
+  "title": "Regulatory Intelligence Analyst",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Pemantau daftar aturan yang akan berlaku",
+  "ringkas": "Urutkan daftar aturan menurut tanggal berlaku dan tandai yang tinggal sebentar lagi.",
+  "kataKunci": [
+    "daftar regulasi",
+    "tanggal berlaku",
+    "pemantauan",
+    "aturan baru",
+    "tenggat"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Daftar aturan (nama | tanggal berlaku | pemilik)",
+      "required": true,
+      "contoh": "Aturan label baru | 2026-12-10 | Kevin"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Urutkan aturan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const sisa = Math.floor((Date.parse(p[1]) - Date.parse(input.acuan)) / 864e5); return { nama: p[0] || '-', tanggal: p[1], pemilik: p[2] || '-', sisa: sisa, status: sisa < 0 ? 'Sudah berlaku' : sisa <= 30 ? 'Kurang dari 30 hari' : sisa <= 90 ? 'Kurang dari 90 hari' : 'Terpantau' }; }).sort((x, y) => x.sisa - y.sisa)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.filter((r) => r.status === 'Kurang dari 30 hari').length + ' aturan berlaku dalam 30 hari, ' + v.rows.filter((r) => r.status === 'Sudah berlaku').length + ' sudah berlaku, dari ' + v.rows.length + ' aturan'",
+    "teks": "'# Daftar aturan per ' + tgl(input.acuan) + '\\n\\n_' + \"Ini alat bantu pemeriksaan awal, bukan keputusan resmi atau nasihat hukum. Tetap konfirmasikan dengan penanggung jawab regulasi dan aturan terbaru.\" + '_\\n\\n' + tabel(['Aturan', 'Berlaku', 'Sisa hari', 'Pemilik', 'Status'], v.rows.map((r) => [r.nama, r.tanggal, r.sisa, r.pemilik, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'daftar-aturan-' + input.acuan",
+        "isi": "csv([['Aturan', 'Berlaku', 'Sisa hari', 'Pemilik', 'Status']].concat(v.rows.map((r) => [r.nama, r.tanggal, r.sisa, r.pemilik, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "data": "Aturan label baru | 2026-12-10 | Kevin\nBatas bahan Y | 2027-01-15 | Raisa\nAturan lama | 2026-01-01 | Zahra"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Kurang dari 30 hari",
+        "Kurang dari 90 hari",
+        "Sudah berlaku",
+        "1 aturan berlaku dalam 30 hari"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Regulatory Intelligence Analyst di divisi Regulatory Affairs, memakai bahasa awam",
+    "tujuan": "Urutkan daftar aturan menurut tanggal berlaku dan tandai yang tinggal sebentar lagi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat, tanpa menjanjikan persetujuan",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua dokumen belum lengkap; lengkapi sebelum diajukan.",
+      "buruk": "Pasti disetujui."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "daftar regulasi"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemantau daftar aturan yang akan berlaku perlu dibaca bersama: daftar regulasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

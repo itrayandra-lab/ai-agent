@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "exec-dewi-agenda",
+  "division": "exec",
+  "employeeId": "dewi",
+  "title": "Executive Assistant",
+  "version": 1,
+  "name": "Penyusun agenda rapat",
+  "ringkas": "Susun agenda rapat dengan jam tiap topik, penanggung jawab, dan peringatan bila waktu melebihi durasi.",
+  "kataKunci": [
+    "agenda",
+    "jadwal rapat",
+    "durasi rapat",
+    "topik rapat",
+    "pimpinan rapat"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul rapat",
+      "required": true,
+      "contoh": "Rapat Perencanaan Promo"
+    },
+    {
+      "key": "mulai",
+      "type": "text",
+      "label": "Jam mulai (contoh 09:00)",
+      "required": true,
+      "contoh": "09:00"
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama rapat",
+      "required": true,
+      "default": "60",
+      "choices": [
+        {
+          "v": "30",
+          "t": "30 menit"
+        },
+        {
+          "v": "60",
+          "t": "60 menit"
+        },
+        {
+          "v": "90",
+          "t": "90 menit"
+        },
+        {
+          "v": "120",
+          "t": "2 jam"
+        }
+      ]
+    },
+    {
+      "key": "topik",
+      "type": "longtext",
+      "label": "Topik (satu baris: topik | menit | pemimpin)",
+      "required": true,
+      "contoh": "Laporan penjualan | 15 | Sinta\nRencana promo | 25 | Maya\nTanya jawab | 10 | Semua"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Atur waktu",
+      "set": {
+        "slot": "(() => { const m = String(input.mulai).match(/^(\\d{1,2})[:.](\\d{2})$/); let t = m ? Number(m[1]) * 60 + Number(m[2]) : 9 * 60; const fmt = (x) => String(Math.floor(x / 60) % 24).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); return baris(input.topik).slice(0, 20).map((l) => { const p = l.split('|').map((s) => s.trim()); const mnt = Math.max(1, num(p[1])); const r = { topik: p[0], mulai: fmt(t), selesai: fmt(t + mnt), menit: mnt, pemimpin: p[2] || '-' }; t += mnt; return r; }); })()",
+        "total": "v.slot.reduce((a, b) => a + b.menit, 0)",
+        "sisa": "num(input.durasi) - v.total"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Agenda ' + v.slot.length + ' topik, ' + (v.sisa >= 0 ? 'sisa ' + v.sisa + ' menit' : 'kelebihan ' + (-v.sisa) + ' menit') + ' dari ' + input.durasi + ' menit'",
+    "teks": "'# Agenda: ' + input.judul + '\\n\\n' + tabel(['Mulai', 'Selesai', 'Topik', 'Pemimpin'], v.slot.map((s) => [s.mulai, s.selesai, s.topik, s.pemimpin])) + '\\n\\n' + (v.sisa >= 0 ? 'Masih ada sisa ' + v.sisa + ' menit untuk penutup atau waktu cadangan.' : 'Waktu melebihi durasi rapat; kurangi topik atau perpanjang rapat.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'agenda-rapat'",
+        "isi": "csv([['Mulai', 'Selesai', 'Topik', 'Menit', 'Pemimpin']].concat(v.slot.map((s) => [s.mulai, s.selesai, s.topik, s.menit, s.pemimpin])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Meeting",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "judul": "Rapat Perencanaan Promo",
+      "mulai": "09:00",
+      "durasi": "60",
+      "topik": "Laporan penjualan | 15 | Sinta\nRencana promo | 25 | Maya\nTanya jawab | 10 | Semua"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "09:40",
+        "sisa 10 menit"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Executive Assistant di divisi Executive Office, memakai bahasa awam",
+    "tujuan": "Susun agenda rapat dengan jam tiap topik, penanggung jawab, dan peringatan bila waktu melebihi durasi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan, lalu keputusan yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
+      "buruk": "Ada banyak hal yang perlu dibahas."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "agenda"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun agenda rapat perlu dibaca bersama: agenda menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "it-salsa-risiko",
+  "division": "it",
+  "employeeId": "salsa",
+  "title": "Security Analyst",
+  "version": 1,
+  "name": "Penyusun peta risiko keamanan",
+  "ringkas": "Beri skor tiap risiko dari kemungkinan dan dampaknya, hitung sisa risiko setelah pengendalian, dan urutkan.",
+  "kataKunci": [
+    "risiko",
+    "matriks risiko",
+    "keamanan informasi",
+    "penilaian risiko",
+    "pengendalian"
+  ],
+  "inputs": [
+    {
+      "key": "risiko",
+      "type": "longtext",
+      "label": "Risiko (nama | kemungkinan 1-5 | dampak 1-5 | sudah ada pengendalian ya/tidak)",
+      "required": true,
+      "contoh": "Laptop hilang | 3 | 4 | ya"
+    },
+    {
+      "key": "selera",
+      "type": "choice",
+      "label": "Sisa risiko mulai perlu tindakan di tingkat",
+      "required": true,
+      "default": "10",
+      "choices": [
+        {
+          "v": "5",
+          "t": "Sedang ke atas"
+        },
+        {
+          "v": "10",
+          "t": "Tinggi ke atas"
+        },
+        {
+          "v": "15",
+          "t": "Kritis saja"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai risiko",
+      "set": {
+        "rows": "baris(input.risiko).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const k = Math.min(5, Math.max(1, num(p[1]))); const d = Math.min(5, Math.max(1, num(p[2]))); const ada = /^y/i.test(p[3] || ''); const awal = k * d; const sisa = ada ? Math.ceil(awal / 2) : awal; const lv = (x) => x >= 15 ? 'Kritis' : x >= 10 ? 'Tinggi' : x >= 5 ? 'Sedang' : 'Rendah'; return { nama: p[0] || '-', k: k, d: d, ada: ada, awal: awal, sisa: sisa, level: lv(sisa), tindakan: sisa >= num(input.selera) ? 'Perlu tindakan' : 'Pantau' }; }).sort((a, b) => b.sisa - a.sisa)",
+        "perlu": "v.rows.filter((r) => r.tindakan === 'Perlu tindakan').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.perlu + ' dari ' + v.rows.length + ' risiko perlu tindakan; tertinggi: ' + v.rows[0].nama + ' (' + v.rows[0].level + ')'",
+    "teks": "'# Peta risiko\\n\\n' + tabel(['Risiko', 'Kemungkinan', 'Dampak', 'Skor awal', 'Pengendalian', 'Sisa risiko', 'Tingkat', 'Tindakan'], v.rows.map((r) => [r.nama, r.k, r.d, r.awal, r.ada ? 'Ada' : 'Belum', r.sisa, r.level, r.tindakan])) + '\\n\\n_Pengendalian yang ada dianggap menurunkan skor setengahnya; ganti dengan penilaian nyata bila datanya tersedia._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'peta-risiko'",
+        "isi": "csv([['Risiko', 'Kemungkinan', 'Dampak', 'Skor awal', 'Pengendalian', 'Sisa risiko', 'Tingkat', 'Tindakan']].concat(v.rows.map((r) => [r.nama, r.k, r.d, r.awal, r.ada ? 'Ada' : 'Belum', r.sisa, r.level, r.tindakan])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "risiko": "Laptop hilang | 3 | 4 | ya\nSerangan phishing | 4 | 5 | tidak\nServer mati | 2 | 5 | ya",
+      "selera": "10"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 dari 3 risiko perlu tindakan",
+        "tertinggi: Serangan phishing (Kritis)"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Security Analyst di divisi IT & Security, memakai bahasa awam",
+    "tujuan": "Beri skor tiap risiko dari kemungkinan dan dampaknya, hitung sisa risiko setelah pengendalian, dan urutkan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
+    "skema": {
+      "pembahasan": "teks",
+      "risiko": "pilihan:rendah|sedang|tinggi",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Sistem mungkin kurang aman."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "risiko"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penyusun peta risiko keamanan perlu dibaca bersama: risiko menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-reno-titik-impas-iklan",
+  "division": "mkt",
+  "employeeId": "reno",
+  "title": "Digital Marketing Strategist",
+  "version": 1,
+  "name": "Penghitung batas aman biaya iklan",
+  "ringkas": "Hitung keuntungan per pesanan, balik modal minimal (titik impas), dan biaya iklan maksimal per pesanan agar tidak rugi.",
+  "kataKunci": [
+    "titik impas",
+    "break even",
+    "roas minimal",
+    "biaya per pesanan",
+    "margin iklan"
+  ],
+  "inputs": [
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga jual (Rp)",
+      "required": true,
+      "contoh": "150000"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Harga pokok per produk (Rp)",
+      "required": true,
+      "contoh": "50000"
+    },
+    {
+      "key": "lain",
+      "type": "number",
+      "label": "Biaya lain per pesanan: kemasan, ongkir, admin (Rp)",
+      "required": true,
+      "contoh": "20000"
+    },
+    {
+      "key": "target",
+      "type": "choice",
+      "label": "Berapa untung yang kamu mau dari tiap pesanan?",
+      "required": true,
+      "default": "0",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Cukup impas"
+        },
+        {
+          "v": "10",
+          "t": "Sisakan 10% dari harga"
+        },
+        {
+          "v": "20",
+          "t": "Sisakan 20% dari harga"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung batas",
+      "set": {
+        "margin": "Number(input.harga) - Number(input.hpp) - Number(input.lain)",
+        "sisihan": "Math.round(Number(input.harga) * Number(input.target) / 100)",
+        "batasIklan": "Math.max(0, v.margin - v.sisihan)",
+        "roasImpas": "v.batasIklan > 0 ? Math.round(Number(input.harga) / v.batasIklan * 100) / 100 : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.batasIklan > 0 ? 'Biaya iklan maksimal ' + rp(v.batasIklan) + ' per pesanan; balik modal minimal ' + v.roasImpas + 'x' : 'Margin terlalu tipis: tidak ada ruang untuk iklan'",
+    "teks": "'# Batas aman biaya iklan\\n\\n' + tabel(['Komponen', 'Rupiah'], [['Harga jual', rp(input.harga)], ['Harga pokok', rp(input.hpp)], ['Biaya lain', rp(input.lain)], ['Keuntungan sebelum iklan', rp(v.margin)], ['Untung yang disisakan', rp(v.sisihan)], ['**Biaya iklan maksimal per pesanan**', '**' + rp(v.batasIklan) + '**']]) + '\\n\\nBalik modal minimal (titik impas): **' + v.roasImpas + 'x**. Jika iklanmu menghasilkan di bawah angka ini, kamu rugi.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'batas-iklan'",
+        "isi": "csv([['Komponen', 'Rupiah'], ['Harga jual', input.harga], ['Harga pokok', input.hpp], ['Biaya lain', input.lain], ['Keuntungan sebelum iklan', v.margin], ['Biaya iklan maksimal', v.batasIklan], ['Balik modal minimal', v.roasImpas]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Strategy",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "harga": 150000,
+      "hpp": 50000,
+      "lain": 20000,
+      "target": "0"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 80.000 per pesanan",
+        "1.88x"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Digital Marketing Strategist di divisi Marketing, memakai bahasa awam",
+    "tujuan": "Hitung keuntungan per pesanan, balik modal minimal (titik impas), dan biaya iklan maksimal per pesanan agar tidak rugi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Produk terbaik sedunia!"
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "titik impas"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil penghitung batas aman biaya iklan perlu dibaca bersama: titik impas menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+  }
+}

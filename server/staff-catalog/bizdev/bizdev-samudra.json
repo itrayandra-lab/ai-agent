@@ -1,39 +1,191 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "bizdev-samudra",
   "division": "bizdev",
   "employeeId": "samudra",
   "title": "Export & International Expansion Analyst",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Samudra",
-    "tugasPeran": [
-      "Menganalisis pasar ekspor prioritas (Malaysia, Singapura, Timur Tengah) untuk Ray Beauty dan RayFlow",
-      "Memetakan regulasi kosmetik, halal, dan pajak di negara tujuan",
-      "Menyusun model harga ekspor dan rekomendasi distributor"
-    ],
-    "keahlian": [
-      "ekspor",
-      "internasional",
-      "asean",
-      "regulasi"
-    ],
-    "contohTugas": [
-      "Analisis kesiapan ekspor Ray Beauty ke Malaysia",
-      "Hitung landed cost serum ke Singapura",
-      "Bandingkan 3 pasar ASEAN untuk RayFlow"
+  "name": "Kalkulator harga ekspor",
+  "ringkas": "Hitung harga jual ke luar negeri dari harga pabrik, kemasan, ongkos kirim, asuransi, dan bea yang Anda isi, dalam rupiah dan mata uang tujuan.",
+  "kataKunci": [
+    "ekspor",
+    "harga ekspor",
+    "fob",
+    "cif",
+    "bea masuk"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "negara",
+      "type": "text",
+      "label": "Negara tujuan",
+      "required": true,
+      "contoh": "Malaysia"
+    },
+    {
+      "key": "pabrik",
+      "type": "number",
+      "label": "Harga pabrik per satuan (Rp)",
+      "required": true,
+      "contoh": "45000"
+    },
+    {
+      "key": "kemasan",
+      "type": "number",
+      "label": "Biaya kemasan ekspor per satuan (Rp)",
+      "required": true,
+      "contoh": "3000"
+    },
+    {
+      "key": "ongkir",
+      "type": "number",
+      "label": "Ongkos kirim ke pelabuhan atau bandara per satuan (Rp)",
+      "required": true,
+      "contoh": "2500"
+    },
+    {
+      "key": "kurs",
+      "type": "number",
+      "label": "Nilai tukar: berapa rupiah untuk 1 mata uang tujuan",
+      "required": true,
+      "contoh": "3400"
+    },
+    {
+      "key": "untung",
+      "type": "number",
+      "label": "Untung yang diinginkan (%)",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "bea",
+      "type": "number",
+      "label": "Bea masuk dan pajak di negara tujuan (%) menurut informasi resmi yang Anda punya",
+      "required": true,
+      "contoh": "5",
+      "default": "0"
+    },
+    {
+      "key": "syarat",
+      "type": "choice",
+      "label": "Syarat penyerahan",
+      "required": true,
+      "default": "cif",
+      "choices": [
+        {
+          "v": "fob",
+          "t": "Sampai pelabuhan kita (FOB)"
+        },
+        {
+          "v": "cif",
+          "t": "Sampai pelabuhan tujuan, termasuk kirim dan asuransi (CIF)"
+        },
+        {
+          "v": "ddp",
+          "t": "Sampai gudang pembeli, bea ditanggung kita (DDP)"
+        }
+      ]
+    },
+    {
+      "key": "laut",
+      "type": "number",
+      "label": "Ongkos kirim internasional per satuan (Rp), untuk CIF dan DDP",
+      "required": false,
+      "contoh": "4000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung harga",
+      "set": {
+        "biaya": "num(input.pabrik) + num(input.kemasan) + num(input.ongkir)",
+        "fob": "Math.round(v.biaya * (100 + num(input.untung)) / 100)",
+        "asuransi": "input.syarat === 'fob' ? 0 : Math.round((v.fob + num(input.laut)) * 0.005)",
+        "cif": "input.syarat === 'fob' ? v.fob : v.fob + num(input.laut) + v.asuransi",
+        "beaRp": "input.syarat === 'ddp' ? Math.round(v.cif * num(input.bea) / 100) : 0",
+        "akhir": "v.cif + v.beaRp",
+        "mataUang": "Math.round(v.akhir / Math.max(1, num(input.kurs)) * 100) / 100"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Harga ke ' + input.negara + ' (' + input.syarat.toUpperCase() + '): ' + rp(v.akhir) + ' per satuan, sekitar ' + v.mataUang + ' mata uang tujuan'",
+    "teks": "'# Harga ekspor ' + input.produk + ' ke ' + input.negara + '\\n\\n' + tabel(['Komponen', 'Per satuan'], [['Harga pabrik', rp(input.pabrik)], ['Kemasan ekspor', rp(input.kemasan)], ['Ongkos ke pelabuhan', rp(input.ongkir)], ['Biaya total', rp(v.biaya)], ['Harga FOB (untung ' + input.untung + '%)', rp(v.fob)], ['Kirim internasional', input.syarat === 'fob' ? '-' : rp(input.laut)], ['Asuransi (0,5%)', rp(v.asuransi)], ['Bea masuk dan pajak', rp(v.beaRp)], ['**Harga akhir**', rp(v.akhir)]]) + '\\n\\nCatatan: tarif bea dan aturan izin kosmetik, halal, dan label di negara tujuan harus diperiksa pada sumber resmi sebelum menawarkan harga.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'harga-ekspor-' + input.negara",
+        "isi": "csv([['Komponen', 'Per satuan'], ['Harga pabrik', num(input.pabrik)], ['Kemasan', num(input.kemasan)], ['Ongkos ke pelabuhan', num(input.ongkir)], ['FOB', v.fob], ['Asuransi', v.asuransi], ['Bea dan pajak', v.beaRp], ['Harga akhir', v.akhir], ['Mata uang tujuan', v.mataUang]])"
+      }
     ]
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "negara": "Malaysia",
+      "pabrik": "45000",
+      "kemasan": "3000",
+      "ongkir": "2500",
+      "kurs": "3400",
+      "untung": "30",
+      "bea": "5",
+      "syarat": "cif",
+      "laut": "4000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 69.998",
+        "20.59",
+        "CIF"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "otakProfil": {
+    "peran": "Export & International Expansion Analyst di divisi Business Development & Partnerships, memakai bahasa awam",
+    "tujuan": "Hitung harga jual ke luar negeri dari harga pabrik, kemasan, ongkos kirim, asuransi, dan bea yang Anda isi, dalam rupiah dan mata uang tujuan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
+    "skema": {
+      "pembahasan": "teks",
+      "ide": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
+      "buruk": "Peluangnya besar."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "ekspor"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil kalkulator harga ekspor perlu dibaca bersama: ekspor menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }

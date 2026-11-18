@@ -499,7 +499,24 @@ export async function visitUrl(url) {
 const sessions = new Map(); // serverId -> { sid, initialized }
 const toolCache = new Map(); // serverId -> { at, tools }
 let rpcId = 0;
+/** (P3) URL server MCP: ruang kerja pengguna publik tidak boleh mengarahkan server ini ke alamat lokal/privat/metadata awan (SSRF); lolos browser.checkUrl (termasuk DNS).
+ *  Kantor utama (milik pemilik platform) boleh memakai MCP di komputernya sendiri, tetapi tetap tidak boleh ke metadata awan atau ke aplikasi ini sendiri. MCP_BLOCK_PRIVATE=1 memperketat juga untuk kantor utama. */
+export async function assertMcpUrl(raw, wsId = store.current()) {
+  let u; try { u = new URL(String(raw || '')); } catch { throw new Error('URL server MCP tidak valid.'); }
+  if (!/^https?:$/.test(u.protocol) || u.username || u.password) throw new Error('URL server MCP harus http/https tanpa kredensial di alamat.');
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (wsId === 'main' && process.env.MCP_BLOCK_PRIVATE !== '1') {
+    if (/^(169\.254\.|metadata\.google\.internal$|fd00:ec2::)/.test(host)) throw new Error('Alamat metadata awan tidak diizinkan untuk server MCP.');
+    if (/^(localhost|127\.0\.0\.1|::1)$/.test(host) && Number(u.port || 80) === Number(process.env.PORT || 4317)) throw new Error('Server MCP tidak boleh mengarah ke aplikasi ini sendiri.');
+    return u.href;
+  }
+  const { checkUrl } = await import('./browser.js');
+  const r = await checkUrl(u.href, undefined, { resolve: true });
+  if (!r.ok) throw new Error(`Server MCP ditolak: ${r.reason}`);
+  return u.href;
+}
 async function rpc(server, method, params, notify = false) {
+  await assertMcpUrl(server.url);
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', ...(server.headers || {}) };
   const s = sessions.get(store.current() + ':' + server.id);
   if (s?.sid) headers['mcp-session-id'] = s.sid;

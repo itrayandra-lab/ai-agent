@@ -1,37 +1,129 @@
 {
   "schema": 1,
-  "status": "todo",
+  "status": "siap",
   "key": "rnd-farhan",
   "division": "rnd",
   "employeeId": "farhan",
   "title": "Clinical & Efficacy Researcher",
-  "name": "todo",
-  "ringkas": "todo",
-  "kataKunci": "todo",
   "version": 1,
-  "inputs": "todo",
-  "steps": "todo",
-  "output": "todo",
-  "schedule": "todo",
-  "risk": "todo",
-  "confirm": "todo",
-  "brain": "todo",
-  "sample": "todo",
-  "konteks": {
-    "karakter": "Farhan",
-    "tugasPeran": [
-      "Merancang uji efikasi & keamanan",
-      "Merangkum literatur ilmiah bahan aktif",
-      "Menyiapkan data pendukung klaim"
-    ],
-    "keahlian": [
-      "uji klinis",
-      "efikasi",
-      "literatur"
-    ],
-    "contohTugas": [
-      "Ringkas bukti ilmiah niacinamide 5%",
-      "Rancang uji pemakaian 28 hari"
+  "name": "Perangkum hasil uji sebelum dan sesudah",
+  "ringkas": "Ringkas hasil uji pemakaian: perubahan tiap subjek, persen yang membaik, rata-rata perbaikan, dan angka uji dasar.",
+  "kataKunci": [
+    "uji klinis",
+    "efikasi",
+    "sebelum sesudah",
+    "hasil uji",
+    "subjek"
+  ],
+  "inputs": [
+    {
+      "key": "parameter",
+      "type": "text",
+      "label": "Apa yang diukur?",
+      "required": true,
+      "contoh": "Jumlah jerawat"
+    },
+    {
+      "key": "arah",
+      "type": "choice",
+      "label": "Angka yang lebih baik",
+      "required": true,
+      "default": "turun",
+      "choices": [
+        {
+          "v": "turun",
+          "t": "Lebih kecil lebih baik (jerawat, kerutan)"
+        },
+        {
+          "v": "naik",
+          "t": "Lebih besar lebih baik (kelembapan)"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data (satu baris: subjek | sebelum | sesudah)",
+      "required": true,
+      "contoh": "S1 | 20 | 15"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung perubahan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 300).map((l) => { const p = l.split('|').map((s) => s.trim()); const a = num(p[1]); const b = num(p[2]); const d = input.arah === 'turun' ? a - b : b - a; return { subjek: p[0] || '-', sebelum: a, sesudah: b, ubah: d, persen: a ? Math.round(d / a * 1000) / 10 : 0 }; })",
+        "n": "v.rows.length",
+        "rata": "Math.round(v.rows.reduce((s, r) => s + r.ubah, 0) / v.n * 100) / 100",
+        "membaik": "v.rows.filter((r) => r.ubah > 0).length",
+        "persenMembaik": "Math.round(v.membaik / v.n * 100)",
+        "rataPersen": "Math.round(v.rows.reduce((s, r) => s + r.persen, 0) / v.n * 10) / 10",
+        "sd": "v.n > 1 ? Math.sqrt(v.rows.reduce((s, r) => s + (r.ubah - v.rata) * (r.ubah - v.rata), 0) / (v.n - 1)) : 0",
+        "t": "v.sd ? Math.round(v.rata / (v.sd / Math.sqrt(v.n)) * 100) / 100 : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n + ' subjek: ' + v.persenMembaik + '% membaik, rata-rata perbaikan ' + v.rataPersen + '% pada ' + input.parameter",
+    "teks": "'# Ringkasan hasil uji: ' + input.parameter + '\\n\\n' + tabel(['Subjek', 'Sebelum', 'Sesudah', 'Perubahan', 'Persen'], v.rows.map((r) => [r.subjek, r.sebelum, r.sesudah, r.ubah, r.persen + '%'])) + '\\n\\n- Subjek yang membaik: ' + v.membaik + ' dari ' + v.n + ' (' + v.persenMembaik + '%)\\n- Rata-rata perubahan: ' + v.rata + ' (' + v.rataPersen + '%)\\n- Angka uji berpasangan (t): ' + v.t + '\\n\\n_Ini ringkasan awal. Analisis statistik resmi dan penilaian klaim tetap dilakukan oleh peneliti dan bagian regulasi._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-uji-' + input.parameter",
+        "isi": "csv([['Subjek', 'Sebelum', 'Sesudah', 'Perubahan', 'Persen']].concat(v.rows.map((r) => [r.subjek, r.sebelum, r.sesudah, r.ubah, r.persen])))"
+      }
     ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Clinical",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "parameter": "Jumlah jerawat",
+      "arah": "turun",
+      "data": "S1 | 20 | 15\nS2 | 18 | 14\nS3 | 25 | 20\nS4 | 22 | 21"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "4 subjek: 100% membaik",
+        "3.75"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "Clinical & Efficacy Researcher di divisi R&D & Formulation, memakai bahasa awam",
+    "tujuan": "Ringkas hasil uji pemakaian: perubahan tiap subjek, persen yang membaik, rata-rata perbaikan, dan angka uji dasar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Formula B pasti terbaik."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "uji klinis"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil perangkum hasil uji sebelum dan sesudah perlu dibaca bersama: uji klinis menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
   }
 }
