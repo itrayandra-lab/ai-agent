@@ -1,3 +1,5 @@
 node_modules/
 data/
 .env
+arsip-dummy/
+docs/client_secret_*.json

@@ -4,12 +4,18 @@ import { slug } from './seed.js';
 
 export const linksOf = (content) => [...String(content).matchAll(/\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/g)].map((m) => m[1].trim());
 
+/** where a note came from decides whether agents may treat it as fact: owner/drive/system = verified, agent = draft, dummy = archived (never used) */
+export const TRUST = { owner: 'terverifikasi · Owner', drive: 'terverifikasi · Google Drive', system: 'terverifikasi · Sistem', agent: 'draf hasil agen (belum diverifikasi)' };
+export const isVerified = (n) => ['owner', 'drive', 'system'].includes(n?.kb);
+const trustOf = (n) => TRUST[n.kb] || TRUST.agent;
+
 const tokenize = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^\w\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2);
 
-export function search(query, { limit = 5, scopeEmployeeId } = {}) {
+export function search(query, { limit = 5, scopeEmployeeId, verifiedOnly = false, audience = 'internal' } = {}) {
   const q = tokenize(query);
   if (!q.length) return [];
-  const notes = store.get().notes;
+  // archived demo notes are never searched; private notes never reach agents; a public-facing agent sees public notes only
+  const notes = store.get().notes.filter((n) => !n.archived && (!verifiedOnly || isVerified(n)) && n.visibility !== 'private' && (audience !== 'public' || n.visibility === 'public'));
   return notes
     .map((n) => {
       const title = n.title.toLowerCase();
@@ -23,21 +29,24 @@ export function search(query, { limit = 5, scopeEmployeeId } = {}) {
       }
       if (scopeEmployeeId && n.folder === `Memori` && n.authorId === scopeEmployeeId) score += 2;
       if (n.folder === 'SOP' || n.folder === 'Company') score *= 1.2;
+      if (isVerified(n)) score *= 1.6;   // facts from the Owner, Drive or the system rank above agent drafts
       return { n, score };
     })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit)
-    .map(({ n }) => ({ title: n.title, folder: n.folder, snippet: n.content.replace(/\s+/g, ' ').slice(0, 280) }));
+    .map(({ n }) => ({ title: n.title, folder: n.folder, trust: trustOf(n), verified: isVerified(n), snippet: n.content.replace(/\s+/g, ' ').slice(0, 280) }));
 }
 
-export function findNote(title) {
+export function findNote(title, { archived = false } = {}) {
   const s = slug(title);
-  const notes = store.get().notes;
+  const notes = store.get().notes.filter((n) => archived || !n.archived);
   return notes.find((n) => n.id === s) || notes.find((n) => n.title.toLowerCase() === String(title).toLowerCase());
 }
 
-export function writeNote({ title, content, folder = 'Notes', tags = [], authorId, append = false }) {
+export function writeNote({ title, content, folder = 'Notes', tags = [], authorId, append = false, kb, visibility }) {
+  const author = store.get().employees.find((e) => e.id === authorId);
+  kb = kb || (author?.type === 'human' ? 'owner' : authorId === 'system' ? 'system' : 'agent');
   title = String(title).replace(/[[\]|#]/g, '').replace(/\s+/g, ' ').trim().slice(0, 140) || 'Tanpa judul'; // keep titles wikilink-safe
   const existing = findNote(title);
   const t = Date.now();
@@ -46,11 +55,12 @@ export function writeNote({ title, content, folder = 'Notes', tags = [], authorI
     existing.tags = [...new Set([...(existing.tags || []), ...tags])];
     existing.updatedAt = t;
     existing.lastEditorId = authorId;
+    if (kb === 'owner' || kb === 'drive') existing.kb = kb;   // a human edit makes the note a verified fact; an agent edit never downgrades one
     return store.upsert('notes', existing);
   }
   let id = slug(title);
   while (store.get().notes.some((n) => n.id === id)) id += '-' + Math.random().toString(36).slice(2, 4);
-  return store.upsert('notes', { id, title, folder, content, tags, authorId, pinned: false, createdAt: t, updatedAt: t });
+  return store.upsert('notes', { id, title, folder, content, tags, authorId, kb, visibility: visibility || 'internal', pinned: false, createdAt: t, updatedAt: t });
 }
 
 export function remember(employee, text) {

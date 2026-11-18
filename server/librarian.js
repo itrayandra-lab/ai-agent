@@ -8,7 +8,9 @@ import { trainingFile } from './collab.js';
 
 const db = () => store.get();
 /** Folders that are already curated and stay top-level. */
-export const SYSTEM_FOLDERS = new Set(['Company', 'SOP', 'Memori', 'Meetings', 'Playbooks', 'Archive']);
+export const SYSTEM_FOLDERS = new Set(['Company', 'SOP', 'Memori', 'Meetings', 'Playbooks', 'Archive', 'Sistem']);
+/** the system SOP and everything that came from Google Drive keep the place the Owner gave them: no librarian or agent re-files them */
+const pinned = (n) => n && (n.kb === 'system' || n.kb === 'drive' || n.archived);
 const LOOSE = new Set(['Deliverables', 'Reports', 'Notes', 'Knowledge', 'Approvals', 'Research', 'Marketing', '']);
 
 const TYPES = [
@@ -64,6 +66,7 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export function moveNote(idOrTitle, folder, byId) {
   const n = note(idOrTitle); if (!n) throw new Error(`Catatan "${idOrTitle}" tidak ditemukan`);
+  if (pinned(n)) throw new Error(`"${n.title}" berasal dari ${n.kb === 'drive' ? 'Google Drive' : 'Sistem'}; foldernya mengikuti sumbernya dan tidak dipindah`);
   const f = String(folder || '').split('/').map((p) => p.trim()).filter(Boolean).slice(0, 3).join('/');
   if (!f) throw new Error('Folder wajib');
   const from = n.folder; n.folder = f; n.updatedAt = Date.now(); n.lastEditorId = byId;
@@ -73,6 +76,7 @@ export function moveNote(idOrTitle, folder, byId) {
 
 export function renameNote(idOrTitle, newTitle, byId) {
   const n = note(idOrTitle); if (!n) throw new Error(`Catatan "${idOrTitle}" tidak ditemukan`);
+  if (pinned(n)) throw new Error(`"${n.title}" berasal dari ${n.kb === 'drive' ? 'Google Drive' : 'Sistem'}; judulnya mengikuti sumbernya`);
   const title = cleanTitle(newTitle); if (!title) throw new Error('Judul baru tidak valid');
   if (title.toLowerCase() !== n.title.toLowerCase() && note(title)) throw new Error(`Judul "${title}" sudah dipakai — gunakan merge_notes bila duplikat`);
   const old = n.title; n.title = title; n.updatedAt = Date.now(); n.lastEditorId = byId;
@@ -119,7 +123,7 @@ export function audit(limit = 25) {
 export function autoOrganize(byId = 'arsa') {
   const r = { moved: 0, renamed: 0 };
   for (const n of [...db().notes]) {
-    if (n.folder === 'Archive') continue;
+    if (n.folder === 'Archive' || pinned(n)) continue;   // Drive and system notes keep their place
     const author = empOf(n.authorId);
     if (badTitle(n.title)) {
       let t = cleanTitle(n.title, author?.name) || cleanTitle(`${classifyType(n.title, n.content)} ${author?.name || ''} ${new Date(n.createdAt || Date.now()).toLocaleDateString('id-ID')}`);

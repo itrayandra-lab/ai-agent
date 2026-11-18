@@ -129,7 +129,7 @@ async function liveTurn({ topic, agenda, people, chair, transcript, ownerText, o
   if (!llm.isLive()) return [{ speaker_id: chair.id, text: `Arahan dicatat di notulen. Mode simulasi (tanpa AI) aktif, jadi peserta tidak memberi pendapat karangan. Aktifkan Groq di Pengaturan agar diskusi berjalan.` }];
   if (llm.budgetLeft() <= 0) return failMsg('anggaran harian habis');
   const tail = (transcript || []).slice(-8).map((x) => `${x.speakerId === chair.id ? chair.name : emp(x.speakerId)?.type === 'human' ? owner : emp(x.speakerId)?.name || x.speakerId}: ${clip(x.text, 220)}`).join('\n');
-  const notes = brain.search(`${topic} ${ownerText}`, { limit: 6 }).filter((n) => !/^(Memori|Playbooks?|Meetings)\b/.test(n.folder)).slice(0, 2).map((n) => `- [${n.folder}] ${n.title}: ${clip(n.snippet, 200)}`).join('\n');
+  const notes = brain.search(`${topic} ${ownerText}`, { limit: 6, verifiedOnly: true }).filter((n) => !/^(Memori|Playbooks?|Meetings)\b/.test(n.folder)).slice(0, 2).map((n) => `- [${n.folder}] ${n.title}: ${clip(n.snippet, 200)}`).join('\n');
   const roster = speakers.map((p) => `${p.id} | ${p.name} | ${p.title} | ${div(p.divisionId)?.name || '-'} | ${stateLine(p)}`).join('\n');
   const prompt = `RAPAT: ${clip(topic, 120)}${agenda ? `\nAgenda: ${clip(agenda, 200)}` : ''}
 PESERTA (id | nama | jabatan | divisi | keadaan nyata):
@@ -156,9 +156,10 @@ Tulis giliran bicara berikutnya. ATURAN:
   const schema = { type: 'object', additionalProperties: false, required: ['lines', 'decision'], properties: { lines: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['speaker_id', 'text'], properties: { speaker_id: { type: 'string', enum: speakers.map((p) => p.id) }, text: { type: 'string' } } } }, decision: { type: 'string' } } };
   const system = `Kamu menulis giliran bicara rapat ${db().company.name} yang jujur dan kritis. Keluarkan JSON sesuai skema.`;
   let lastErr = null;
-  for (const model of [llm.defaultModels().small, llm.defaultModels().worker]) {   // the small model first; one retry on the larger one (it truncates JSON less often)
+  const dm = llm.defaultModels(), heavy = engine.isComplex?.(ownerText);   // same router as chat: 120B first only for complex directions
+  for (const model of heavy ? [dm.smart || dm.worker, dm.small] : [dm.small, dm.smart || dm.worker]) {   // the small model first; one retry on the larger one (it truncates JSON less often)
     try {
-      const out = await llm.json({ system, prompt, schema, employee: chair, effort: 'low', model, maxTokens: 1800 });
+      const out = await llm.json({ system, prompt, schema, employee: chair, effort: heavy && model !== dm.small ? 'medium' : 'low', model, maxTokens: heavy ? 2600 : 1800 });
       const lines = (out?.lines || []).filter((l) => speakers.some((s) => s.id === l.speaker_id) && String(l.text || '').trim()).slice(0, 3).map((l) => ({ speaker_id: l.speaker_id, text: clip(String(l.text).trim(), 320) }));
       if (!lines.length) throw new Error('jawaban kosong');
       lines.decision = clip(String(out.decision || '').trim(), 200);
@@ -499,12 +500,12 @@ const toolCache = new Map(); // serverId -> { at, tools }
 let rpcId = 0;
 async function rpc(server, method, params, notify = false) {
   const headers = { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', ...(server.headers || {}) };
-  const s = sessions.get(server.id);
+  const s = sessions.get(store.current() + ':' + server.id);
   if (s?.sid) headers['mcp-session-id'] = s.sid;
   const body = notify ? { jsonrpc: '2.0', method, params } : { jsonrpc: '2.0', id: ++rpcId, method, params };
   const res = await fetch(server.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(30000) });
   const sid = res.headers.get('mcp-session-id');
-  if (sid) sessions.set(server.id, { ...(sessions.get(server.id) || {}), sid });
+  if (sid) sessions.set(store.current() + ':' + server.id, { ...(sessions.get(store.current() + ':' + server.id) || {}), sid });
   if (notify) return null;
   if (!res.ok) throw new Error(`MCP ${server.name}: HTTP ${res.status}`);
   const type = res.headers.get('content-type') || '';
@@ -518,20 +519,20 @@ async function rpc(server, method, params, notify = false) {
   return msg.result;
 }
 async function ensureInit(server) {
-  if (sessions.get(server.id)?.initialized) return;
+  if (sessions.get(store.current() + ':' + server.id)?.initialized) return;
   await rpc(server, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'ray-agent-office', version: '1.2.0' } });
   await rpc(server, 'notifications/initialized', {}, true).catch(() => {});
-  sessions.set(server.id, { ...(sessions.get(server.id) || {}), initialized: true });
+  sessions.set(store.current() + ':' + server.id, { ...(sessions.get(store.current() + ':' + server.id) || {}), initialized: true });
 }
 const servers = () => (db().settings.mcpServers || []).filter((s) => s.enabled !== false && s.url);
 const toolName = (sid, name) => `mcp__${sid}__${name}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
 export async function mcpListTools(server, fresh = false) {
-  const c = toolCache.get(server.id);
+  const c = toolCache.get(store.current() + ':' + server.id);
   if (!fresh && c && Date.now() - c.at < 300000) return c.tools;
   await ensureInit(server);
   const r = await rpc(server, 'tools/list', {});
   const tools = r?.tools || [];
-  toolCache.set(server.id, { at: Date.now(), tools });
+  toolCache.set(store.current() + ':' + server.id, { at: Date.now(), tools });
   return tools;
 }
 /** Tool definitions (Anthropic shape) for every configured MCP server; failures are skipped, not fatal. */
@@ -546,7 +547,7 @@ export async function mcpToolDefs() {
 }
 export async function mcpCall(name, args) {
   for (const s of servers()) {
-    const tools = toolCache.get(s.id)?.tools || [];
+    const tools = toolCache.get(store.current() + ':' + s.id)?.tools || [];
     const t = tools.find((x) => toolName(s.id, x.name) === name);
     if (!t) continue;
     await ensureInit(s);

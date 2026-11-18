@@ -2,9 +2,48 @@
 import { knowledgeNotes, attachKnowledge } from './knowledge/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { buildSeed } from './seed.js';
 import { SEED_SKILLS, ensureEmployeeConfig, defaultTools, autoActivate, grantUniversalSkills, CAP_IDS } from './catalog.js';
 import { personalAssistant } from './roster.js';
+import { systemNotes } from './sop.js';
+
+/** v11: the archived demo notes leave the Brain for good. Each one is written as a Markdown file under <project>/arsip-dummy/<original folder>/
+ *  (nothing is lost; the files can be read or re-imported any time), then removed from the database. The system SOP goes back to "Sistem". */
+function exportArchive(db) {
+  // the real server (data/ in the project) exports to <project>/arsip-dummy; tests with their own DATA_DIR export inside it and never touch the project
+  const dir = path.resolve(process.env.ARCHIVE_DIR || (process.env.DATA_DIR ? path.join(DATA_DIR, 'arsip-dummy') : 'arsip-dummy'));
+  const safe = (s) => String(s || '').replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'tanpa-judul';
+  const keep = [], used = new Set();
+  let written = 0;
+  for (const n of db.notes) {
+    if (!(n.archived && n.kb === 'dummy')) { keep.push(n); continue; }
+    const folder = String(n.origFolder || 'Notes').split('/').map(safe).join(path.sep);
+    let file = path.join(dir, folder, safe(n.title) + '.md');
+    if (used.has(file.toLowerCase())) file = path.join(dir, folder, `${safe(n.title)} (${n.id.slice(-6)}).md`);
+    used.add(file.toLowerCase());
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `---\njudul: ${JSON.stringify(n.title)}\nfolder_asal: ${JSON.stringify(n.origFolder || '')}\npenulis: ${JSON.stringify(n.authorId || '')}\ndibuat: ${new Date(n.createdAt || Date.now()).toISOString()}\nstatus: arsip dummy (contoh/rekaan, bukan data asli)\n---\n\n${n.content || ''}\n`);
+    written++;
+  }
+  db.notes = keep;
+  for (const n of db.notes) if (n.kb === 'system') n.folder = 'Sistem';
+  for (const e of db.employees) { delete e.archivedKnowledgeIds; e.knowledgeIds = (e.knowledgeIds || []).filter((id) => keep.some((n) => n.id === id)); }
+  if (written) console.log(`  Arsip Dummy: ${written} catatan disimpan ke ${dir} dan dikeluarkan dari Brain`);
+}
+
+/** v10 "fakta bersih": every existing note was demo/invented content. Archive it (readable and restorable, never deleted), detach it from agents,
+ *  and start the Brain from the only true knowledge: how the system works. Company facts arrive later from the Owner or Google Drive. */
+function cleanSlate(db) {
+  for (const n of db.notes) {
+    if (n.archived || n.kb === 'system') continue;
+    Object.assign(n, { archived: true, kb: 'dummy', origFolder: n.folder || 'Notes', folder: 'Arsip Dummy/' + (n.folder || 'Notes'), pinned: false });
+  }
+  for (const e of db.employees) if (e.type === 'ai' && (e.knowledgeIds || []).length) { e.archivedKnowledgeIds = e.knowledgeIds; e.knowledgeIds = []; }
+  for (const s of systemNotes()) { const have = db.notes.find((n) => n.id === s.id); if (have) Object.assign(have, s); else db.notes.push(s); }
+  for (const e of db.employees) if (e.type === 'ai') e.knowledgeIds = [...new Set([...(e.knowledgeIds || []), 'aturan-kejujuran-agen', 'status-data-perusahaan'])];
+  db.kbResetAt = Date.now();
+}
 
 const DATA_DIR = process.env.DATA_DIR || path.resolve('data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
@@ -13,6 +52,45 @@ const LIMITS = { events: 600, messages: 3000 };
 const listeners = new Set();
 let db;
 let saveTimer = null;
+
+// ───────────────────────── workspaces (like Discord servers) ─────────────────────────
+// Every workspace has its OWN database file. "main" is the original office (data/db.json); others live in data/ws/<id>/db.json.
+// The workspace of the current request/job travels with the async call chain (AsyncLocalStorage), so every store.get() in every
+// module reads the right workspace without passing ids around, and one workspace can never read another's data.
+const ALS = new AsyncLocalStorage();
+const WS = new Map([['main', { id: 'main', file: DB_FILE, timer: null, get db() { return db; } }]]);
+const wsEntry = () => WS.get(ALS.getStore() || 'main') || WS.get('main');
+const cur = () => wsEntry().db;
+export const current = () => ALS.getStore() || 'main';
+export const run = (wsId, fn) => { if (!WS.has(wsId)) throw new Error(`Ruang kerja ${wsId} tidak ada`); return ALS.run(wsId, fn); };
+export const ids = () => [...WS.keys()];
+export const exists = (wsId) => WS.has(wsId);
+const wsFile = (id) => path.join(DATA_DIR, 'ws', id, 'db.json');
+/** read every saved workspace at boot (main is loaded by load()) */
+export function loadWorkspaces() {
+  const dir = path.join(DATA_DIR, 'ws');
+  if (!fs.existsSync(dir)) return [];
+  for (const id of fs.readdirSync(dir)) {
+    const file = wsFile(id);
+    if (!/^[\w-]{3,40}$/.test(id) || !fs.existsSync(file)) continue;
+    try {
+      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+      data.settings = { ...buildSeed().settings, ...data.settings };
+      for (const e of data.employees) if (e.status !== 'offline') Object.assign(e, { status: 'idle', statusText: 'Siap bekerja', currentTaskId: null });
+      for (const t of data.tasks) if (t.status === 'in_progress') t.status = 'todo';
+      WS.set(id, { id, file, timer: null, db: data });
+    } catch (err) { console.error(`[ruang kerja ${id}] gagal dimuat:`, err.message); }
+  }
+  return ids();
+}
+/** a brand-new workspace with its own database */
+export function createWorkspace(id, data) {
+  if (!/^[\w-]{3,40}$/.test(id) || WS.has(id)) throw new Error('ID ruang kerja tidak valid atau sudah ada');
+  fs.mkdirSync(path.dirname(wsFile(id)), { recursive: true });
+  WS.set(id, { id, file: wsFile(id), timer: null, db: data });
+  ALS.run(id, () => saveNow());
+  return id;
+}
 
 export function load({ reset = false } = {}) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -112,9 +190,12 @@ export function load({ reset = false } = {}) {
         }
         attachKnowledge(db.employees, db.notes);
       }
-      if (!db.notes.some((n) => n.folder?.startsWith('Knowledge Library'))) { for (const n of knowledgeNotes()) if (!db.notes.some((y) => y.id === n.id)) db.notes.push(n); attachKnowledge(db.employees, db.notes); }
+      if ((db.version || 1) < 10) cleanSlate(db);
+      if ((db.version || 1) < 11) exportArchive(db);
+      else for (const s of systemNotes()) if (!db.notes.some((n) => n.id === s.id)) db.notes.push(s);   // the system SOP is always there
+      if (!db.kbResetAt && !db.notes.some((n) => n.folder?.startsWith('Knowledge Library'))) { for (const n of knowledgeNotes()) if (!db.notes.some((y) => y.id === n.id)) db.notes.push(n); attachKnowledge(db.employees, db.notes); }
       for (const e of db.employees) if (e.type === 'ai' && !e.team && !e.isLead && !e.isPA && !e.isMaster) e.team = db.divisions.find((d) => d.id === e.divisionId)?.teams?.[0] || null;
-      db.version = 9;
+      db.version = 11;
       // Agents that were mid-task when the server stopped resume from todo.
       for (const e of db.employees) if (e.status !== 'offline') Object.assign(e, { status: 'idle', statusText: 'Siap bekerja', currentTaskId: null });
       for (const t of db.tasks) if (t.status === 'in_progress' && isAI(t.assigneeId)) t.status = 'todo';
@@ -130,14 +211,19 @@ export function load({ reset = false } = {}) {
   return db;
 }
 
-export const get = () => db;
-export const isAI = (id) => db.employees.find((e) => e.id === id)?.type === 'ai';
+export const get = () => cur();
+export const isAI = (id) => cur().employees.find((e) => e.id === id)?.type === 'ai';
 
 export function save() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveNow, 400);
+  const w = wsEntry();
+  clearTimeout(w.timer);
+  w.timer = setTimeout(() => saveEntry(w), 400);
 }
-export function saveNow() {
+export function saveNow() { const w = wsEntry(); clearTimeout(w.timer); saveEntry(w); }
+/** save every workspace now (shutdown) */
+export function saveAll() { for (const w of WS.values()) { clearTimeout(w.timer); if (w.db) saveEntry(w); } }
+function saveEntry(w) {
+  const DB_FILE = w.file, db = w.db;
   const tmp = DB_FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(db));
   let lastError;
@@ -159,9 +245,11 @@ export function saveNow() {
 }
 
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-export function broadcast(msg) { for (const fn of listeners) fn(msg); }
+/** every change is tagged with its workspace, so the stream only reaches people inside that workspace (msg.all = everyone, e.g. host stats) */
+export function broadcast(msg) { if (!msg.all && !msg.ws) msg.ws = current(); for (const fn of listeners) fn(msg); }
 
 export function upsert(coll, item) {
+  const db = cur();
   const arr = db[coll];
   const i = arr.findIndex((x) => x.id === item.id);
   if (i >= 0) arr[i] = item; else arr.push(item);
@@ -173,13 +261,14 @@ export function upsert(coll, item) {
 }
 
 export function patch(coll, id, changes) {
-  const item = db[coll].find((x) => x.id === id);
+  const item = cur()[coll].find((x) => x.id === id);
   if (!item) return null;
   Object.assign(item, changes, { updatedAt: Date.now() });
   return upsert(coll, item);
 }
 
 export function remove(coll, id) {
+  const db = cur();
   const i = db[coll].findIndex((x) => x.id === id);
   if (i < 0) return false;
   db[coll].splice(i, 1);
@@ -189,13 +278,13 @@ export function remove(coll, id) {
 }
 
 export function setRoot(key, value) {
-  db[key] = value;
+  cur()[key] = value;
   save();
   broadcast({ kind: 'root', key, value: key === 'settings' ? publicSettings() : value });
 }
 
 export function publicSettings() {
-  const s = { ...db.settings };
+  const s = { ...cur().settings };
   s.hasApiKey = !!(s.apiKey || process.env.ANTHROPIC_API_KEY);
   s.apiKey = s.apiKey ? '••••' + s.apiKey.slice(-4) : '';
   s.hasGroqKey = !!(s.groqApiKey || process.env.GROQ_API_KEY);
@@ -207,7 +296,7 @@ export function publicSettings() {
 }
 
 export function snapshot() {
-  return { ...db, settings: publicSettings() };
+  return { ...cur(), settings: publicSettings() };
 }
 
 let seq = 0;

@@ -136,7 +136,7 @@ document.addEventListener('keydown', (e) => {
   const [view, query] = location.hash.slice(1).split('?');
   if (view && VIEWS[view]) { S.view = view; S.params = Object.fromEntries(new URLSearchParams(query || '')); }
   try { await loadState(); }
-  catch { $('#view').innerHTML = '<div class="empty">Server tidak terjangkau. Jalankan <code>npm start</code>.</div>'; return; }
+  catch (err) { if (err?.gate) return; $('#view').innerHTML = '<div class="empty">Server tidak terjangkau. Jalankan <code>npm start</code>.</div>'; return; }   // gate: the sign-in card is already on screen
   route();
   window.addEventListener('hashchange', () => {
     const [v, q] = location.hash.slice(1).split('?');

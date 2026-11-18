@@ -7,7 +7,7 @@ import * as store from './store.js';
 const PRICES = {
   'claude-fable-5-1': [10, 50], 'claude-opus-5-5': [4, 20], 'claude-sonnet-5-5': [2, 10], 'claude-haiku-5-5': [0.1, 0.5],
   'openai/gpt-oss-120b': [0.15, 0.6], 'openai/gpt-oss-20b': [0.075, 0.3], 'llama-3.3-70b-versatile': [0.59, 0.79],
-  'llama-3.1-8b-instant': [0.05, 0.08], 'qwen/qwen3.6-27b': [0.6, 3], 'groq/compound': [0.15, 0.6], 'groq/compound-mini': [0.1, 0.3],
+  'llama-3.1-8b-instant': [0.05, 0.08], 'qwen/qwen3.6-27b': [0.6, 3], 'qwen/qwen3.8-27b': [0.6, 3], 'groq/compound': [0.15, 0.6], 'groq/compound-mini': [0.1, 0.3],
 };
 export const CLAUDE_MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-1'];
 // This is only the offline fallback. With an API key, /models replaces it with
@@ -88,8 +88,8 @@ export function provider() {
 export const isLive = () => provider() !== 'sim';
 export function defaultModels(p = provider()) {
   const s = S();
-  return p === 'groq' ? { lead: s.groqModel || 'openai/gpt-oss-120b', worker: s.groqWorkerModel || 'openai/gpt-oss-120b', small: 'openai/gpt-oss-20b' }
-    : { lead: s.model || 'claude-opus-5-5', worker: s.workerModel || s.model, small: 'claude-haiku-5-5' };
+  return p === 'groq' ? { lead: s.groqModel || 'openai/gpt-oss-120b', worker: s.groqWorkerModel || 'openai/gpt-oss-120b', small: 'openai/gpt-oss-20b', smart: s.groqSmartModel || 'openai/gpt-oss-120b', vision: s.groqVisionModel || 'qwen/qwen3.8-27b' }
+    : { lead: s.model || 'claude-opus-5-5', worker: s.workerModel || s.model, small: 'claude-haiku-5-5', smart: s.model || 'claude-opus-5-5', vision: s.model || 'claude-opus-5-5' };
 }
 
 let client = null, clientKey = null;
@@ -188,6 +188,12 @@ function toOpenAI(system, messages) {
         if (b.type === 'tool_result') out.push({ role: 'tool', tool_call_id: b.tool_use_id, content: typeof b.content === 'string' ? b.content : JSON.stringify(b.content) });
         else if (b.type === 'text') out.push({ role: 'user', content: b.text });
       }
+      // a user turn with pictures goes as ONE multimodal message (text + image_url parts) for vision models
+      const imgs = m.content.filter((b) => b.type === 'image');
+      if (imgs.length) {
+        while (out.length && out[out.length - 1].role === 'user' && typeof out[out.length - 1].content === 'string' && m.content.some((b) => b.type === 'text' && b.text === out[out.length - 1].content)) out.pop();
+        out.push({ role: 'user', content: [...m.content.filter((b) => b.type === 'text').map((b) => ({ type: 'text', text: b.text })), ...imgs.map((b) => ({ type: 'image_url', image_url: { url: `data:${b.source.media_type};base64,${b.source.data}` } }))] });
+      }
     }
   }
   return out;
@@ -195,7 +201,8 @@ function toOpenAI(system, messages) {
 function fromOpenAI(j, model) {
   const msg = j.choices?.[0]?.message || {};
   const content = [];
-  if (msg.content) content.push({ type: 'text', text: msg.content });
+  const said = String(msg.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();   // Qwen thinks out loud inside <think>; the reader only gets the answer
+  if (said) content.push({ type: 'text', text: said });
   for (const c of msg.tool_calls || []) {
     let input = {};
     try { input = JSON.parse(c.function.arguments || '{}'); } catch { input = { _raw: c.function.arguments }; }

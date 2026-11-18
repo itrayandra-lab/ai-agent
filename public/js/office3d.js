@@ -615,13 +615,15 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   function updateDome() {
     if (!domeG) return; const c = camera.position, d = Math.hypot(c.x - hallX, c.z);
     const surf = d < domeR ? domeH * Math.sqrt(1 - (d / domeR) ** 2) : 0;
-    domeG.visible = !(player || (d < domeR - 1 && c.y < surf - 1));
+    domeG.visible = !(d < domeR - 1 && c.y < surf - 1);
   }
+  /** Play: the glass roof stays on while you and the camera are outside the pod; it lifts only when you step in, so the rooms stay clear. */
+  const podOutside = (w, c, p) => Math.hypot(c.x - w.x, c.z - w.z) > 10.2 && Math.hypot(p.x - w.x, p.z - w.z) > 10.2;
   /** Pod domes: shown from far away or from above, hidden when you are close, so the rooms stay clear. */
   function updateRoof() {
     if (!podDomes.length) return;
     const c = camera.position;
-    for (const d of podDomes) { const w = d.userData.c; d.visible = roofMode === 'on' ? true : roofMode === 'off' ? false : (!player && (c.y > 22 || Math.hypot(c.x - w.x, c.z - w.z) > 15)); }
+    for (const d of podDomes) { const w = d.userData.c; d.visible = roofMode === 'on' ? true : roofMode === 'off' ? false : (player ? podOutside(w, c, player.a.g.position) : (c.y > 22 || Math.hypot(c.x - w.x, c.z - w.z) > 15)); }
   }
   /** Standing spots that ended up inside furniture (or a desk) move to the nearest free floor of their own room. */
   function freeSpots(only) {

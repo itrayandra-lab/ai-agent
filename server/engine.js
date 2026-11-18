@@ -1,4 +1,6 @@
 // Autonomous work engine: schedules tasks, runs agents (Claude or simulation), delegation, approvals, routines, chat.
+import fs from 'node:fs';
+import path from 'node:path';
 import * as store from './store.js';
 import * as brain from './brain.js';
 import * as llm from './llm.js';
@@ -19,7 +21,7 @@ const OPEN = new Set(['todo', 'in_progress', 'waiting', 'review', 'blocked']);
 
 const jobs = new Map(); // taskId -> { empId, mode, steps, i }
 let timer = null;
-let budgetWarned = false;
+const budgetWarnedWs = new Set();   // per workspace
 
 // ───────────────────────── primitives ─────────────────────────
 export function event(type, actorId, text, refs = {}) {
@@ -117,7 +119,8 @@ export function start() {
   stop();
   if (db().settings.autoApprove !== false) autoApprovePending();
   const loop = async () => {
-    try { await tick(); } catch (err) { console.error('tick error', err); }
+    // one pass per workspace, each inside its own data context; one failing workspace never stops the others
+    for (const ws of store.ids()) { try { await store.run(ws, tick); } catch (err) { console.error(`tick error [${ws}]`, err); } }
     timer = setTimeout(loop, Math.max(800, db().settings.tickMs || 2500));
   };
   timer = setTimeout(loop, 1000);
@@ -171,20 +174,20 @@ async function tick() {
     if (slots <= 0) break;
     const e = emp(t.assigneeId);
     if (!e || e.type !== 'ai' || e.status === 'offline') continue;
-    if ([...jobs.values()].some((j) => j.empId === e.id)) continue;
+    if ([...jobs.values()].some((j) => j.empId === e.id && (j.ws || 'main') === store.current())) continue;   // same ids exist in other workspaces
     if (e.status === 'meeting' && e.meetingUntil && e.meetingUntil > now) continue;   // an agent in a meeting does not start a job in the middle of it
     if (live && llm.budgetLeft() <= 0) {
-      if (!budgetWarned) { budgetWarned = true; event('alert', 'system', `Budget harian $${settings.dailyBudgetUSD} habis — agen live dijeda. Naikkan budget di Pengaturan.`); }
+      if (!budgetWarnedWs.has(store.current())) { budgetWarnedWs.add(store.current()); event('alert', 'system', `Budget harian $${settings.dailyBudgetUSD} habis — agen live dijeda. Naikkan budget di Pengaturan.`); }
       break;
     }
-    budgetWarned = false;
+    budgetWarnedWs.delete(store.current());
     slots--;
     startJob(e, t, live ? 'live' : 'sim');
   }
 
   // advance simulation jobs one step each
   for (const [taskId, j] of jobs) {
-    if (j.mode !== 'sim' || j.busy) continue;
+    if (j.mode !== 'sim' || j.busy || (j.ws || 'main') !== store.current()) continue;   // each workspace advances only its own jobs
     if (Math.random() < 0.25) continue; // natural jitter so the office doesn't move in lockstep
     j.busy = true;
     try {
@@ -221,10 +224,10 @@ function startJob(e, t, mode) {
   setStatus(e, 'working', t.synth ? 'Menyusun hasil tim' : 'Membaca brief', t.id);
   event('task_started', e.id, `${e.name} mulai mengerjakan "${t.title}"`, { taskId: t.id });
   if (mode === 'live') {
-    jobs.set(t.id, { empId: e.id, mode });
+    jobs.set(t.id, { empId: e.id, mode, ws: store.current() });
     runLive(e, t).catch((err) => failTask(e, t, err)).finally(() => endJob(t.id));
   } else {
-    jobs.set(t.id, { empId: e.id, mode, i: 0, steps: simSteps(e, t) });
+    jobs.set(t.id, { empId: e.id, mode, i: 0, steps: simSteps(e, t), ws: store.current() });
   }
 }
 
@@ -283,7 +286,8 @@ function verifyEvidence(list, toolEvidence = 0) {
   const items = (Array.isArray(list) ? list : String(list || '').split(/\n|;/)).map((x) => String(x || '').trim()).filter((x) => x && !/^(-|tidak ada|none|n\/a)$/i.test(x)).slice(0, 12);
   const checked = items.map((text) => {
     const title = text.replace(/^\[\[|\]\]$/g, '').replace(/^.*\[\[([^\]|]+).*$/, '$1').trim();
-    const ok = /https?:\/\/\S+/.test(text) || !!brain.findNote(title) || /\b(receipt|spreadsheetId|documentId|eventId|range)\b|docs\.google|drive\.google/i.test(text);
+    // a verified note (Owner / Drive / System), a URL or an integration receipt; an agent's own draft note is NOT evidence (it could cite what it just wrote)
+    const ok = /https?:\/\/\S+/.test(text) || brain.isVerified(brain.findNote(title)) || /\b(receipt|spreadsheetId|documentId|eventId|range)\b|docs\.google|drive\.google/i.test(text);
     return { text: text.slice(0, 200), ok };
   });
   return { checked, verified: checked.filter((x) => x.ok).length + (toolEvidence > 0 ? 1 : 0) };
@@ -474,7 +478,7 @@ export function systemPrompt(e, currentTask = null) {
   const chans = db().channels.filter((c) => c.kind === 'channel').map((c) => `#${c.id}`).join(', ');
   const skills = promptSkills(e, currentTask);
   const caps = CAPABILITIES.filter((c) => (c.required || (e.tools || CAP_IDS).includes(c.id)) && !(currentTask?.kind === 'routine' && ROUTINE_BLOCK.has(c.id)) && !(currentTask?.massMode && MASS_BLOCK.has(c.id)));
-  const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter(Boolean);
+  const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter((n) => n && !n.archived);   // archived demo notes never reach a prompt
   let kbBudget = orchestrator ? 9000 : 6000; // characters; the rest of a note is one Brain search away
   const kbText = kb.map((n) => { const body = n.content.slice(0, Math.max(0, Math.min(2400, kbBudget))).replace(/^#{1,6}\s+/gm, '### '); kbBudget -= body.length; return body ? `## ${n.title}\n${body}` : ''; }).filter(Boolean).join('\n\n');
   const canDelegate = caps.some((c) => c.id === 'create_subtask');
@@ -504,7 +508,7 @@ function retrievedContext(e, t) {
   const mem = brain.findNote(`Memori ${e.name}`);
   const memLines = mem ? mem.content.split('\n').slice(2).filter(Boolean).slice(-6).join('\n') : '';
   return [
-    hits.length && `## Catatan Brain yang mungkin relevan\n${hits.map((h) => `- [[${h.title}]] (${h.folder}): ${h.snippet}`).join('\n')}`,
+    hits.length && `## Catatan Brain yang mungkin relevan (hanya yang "terverifikasi" boleh dipakai sebagai fakta)\n${hits.map((h) => `- [[${h.title}]] (${h.folder}; ${h.trust}): ${h.snippet}`).join('\n')}`,
     memLines && `## Memori kerjamu terbaru\n${memLines}`,
   ].filter(Boolean).join('\n\n');
 }
@@ -556,7 +560,7 @@ async function runTool(e, t, name, input, state) {
     case 'search_brain': {
       const r = brain.search(input.query, { scopeEmployeeId: e.id, limit: 6 });
       logTask(t, e.id, 'tool', `🔎 search_brain("${input.query}") → ${r.length} hasil`, { results: r.map((x) => x.title) });
-      return r.length ? r.map((x) => `[[${x.title}]] (${x.folder}): ${x.snippet}`).join('\n\n') : 'Tidak ada hasil.';
+      return r.length ? r.map((x) => `[[${x.title}]] (${x.folder}; ${x.trust}): ${x.snippet}`).join('\n\n') + (r.some((x) => x.verified) ? '' : '\n\nCATATAN: tidak ada hasil terverifikasi. Jangan sajikan isi draf di atas sebagai fakta.') : 'Tidak ada hasil. Data ini belum ada di Brain: katakan "data belum tersedia", jangan mengarang.';
     }
     case 'read_note': {
       const n = brain.findNote(input.title);
@@ -1133,7 +1137,8 @@ async function replyAs(e, ch, msg) {
   // every reply is also SAID in the office: a speech bubble over the agent who answers
   const reply = (text, extra = {}) => { const m = postMessage(ch.id, e.id, text, extra); event('message', e.id, `${e.name} → ${emp(msg.authorId)?.name || ''}: ${String(text).replace(/s+/g, ' ').slice(0, 180)}`, { targetId: msg.authorId, channelId: ch.id }); return m; };
   const prev = { status: e.status, text: e.statusText };
-  chatBusy.set(e.id, (chatBusy.get(e.id) || 0) + 1);
+  const busyKey = store.current() + ':' + e.id;   // the same id can exist in several workspaces
+  chatBusy.set(busyKey, (chatBusy.get(busyKey) || 0) + 1);
   // "ikuti saya" / "berhenti ikut": the agent walks with the person who asked (and stops when asked)
   const wantsFollow = /\b(ikut(i)?\s+(saya|aku|gue|kami)|ayo\s+ikut|ikut\s+jalan|follow\s+me|jalan[- ]jalan|(?:datangi|hampiri|dekati|temui)\s+(?:saya|aku|gue|kami)|(?:sini|kemari|ke\s+sini|ke\s+tempat\s+(?:saya|aku))|come\s+(?:here|to\s+me))\b/i.test(msg.text);
   const wantsStop = /\b(berhenti\s+(ikut|mengikuti)|stop\s+ikut|kembali\s+(ke\s+)?(meja|kerja)|balik\s+kerja)\b/i.test(msg.text);
@@ -1153,14 +1158,21 @@ async function replyAs(e, ch, msg) {
         name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, expected: { type: 'string', description: 'Hasil yang diharapkan / definisi selesai' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description', 'expected'] },
       }]);
       const named = namesIn(msg.text).filter((id) => id !== e.id).slice(0, 4).map(emp).filter(Boolean);
+      // the company's own documents most relevant to this message ride along automatically: the model no longer has to remember to search
+      const brainFacts = relevantFacts(msg.text, 3);
+      const brainBlock = brainFacts ? `FAKTA DARI BRAIN PERUSAHAAN (dokumen asli Owner; kutip judulnya bila dipakai):\n${brainFacts}\n\n` : `BRAIN: tidak ada dokumen terverifikasi yang cocok dengan pesan ini. Jangan mengarang; katakan belum ada datanya dan tawarkan mencari dengan kata lain.\n\n`;
       const goalRoot = ch.goalId ? task(ch.goalId) : null;
       const goalFacts = goalRoot ? `KEADAAN NYATA GOAL INI (dari papan tugas; jangan mengarang progres di luar ini):\n${goalStatus(goalRoot)}\nDefinisi selesai: ${goalRoot.expected || '-'}\nBila Owner memberi arahan baru untuk goal ini, buat tugas lewat create_task dan sebutkan siapa pengerjanya.\n\n` : '';
-      const facts = goalFacts + (named.length ? `KEADAAN NYATA rekan yang disebut (pakai ini bila ditanya tentang mereka; jangan menjawab tentang dirimu sendiri):\n${named.map((x) => `- ${x.name} (${x.title || '-'}): ${colleagueState(x)}`).join('\n')}\n\n` : '');
+      const facts = brainBlock + goalFacts + (named.length ? `KEADAAN NYATA rekan yang disebut (pakai ini bila ditanya tentang mereka; jangan menjawab tentang dirimu sendiri):\n${named.map((x) => `- ${x.name} (${x.title || '-'}): ${colleagueState(x)}`).join('\n')}\n\n` : '');
       const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : ch.kind === 'group' ? 'diskusi grup (' + ch.name + ')' : '#' + ch.name}:\n${convo}\n\n${facts}${wantsFollow ? 'Kamu SEKARANG ikut berjalan bersama orang ini di kantor 3D. Jawab singkat bahwa kamu ikut sambil mengobrol, jangan bilang tidak bisa ikut.\n\n' : ''}${wantsStop ? 'Kamu berhenti ikut dan kembali bekerja di meja. Jawab singkat.\n\n' : ''}Balas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu.${ch.kind === 'group' ? ' Ini diskusi grup: baca jawaban peserta lain di atas, jangan mengulang isinya; tambahkan sudut pandang divisimu atau setuju/tidak setuju dengan singkat.' : ''} Jawab langsung dan natural seperti rekan kerja; JANGAN menyebut nama tool atau istilah teknis (mis. create_task) kepada manusia. Untuk sapaan atau obrolan ringan, balas satu atau dua kalimat saja. Jika diminta pekerjaan besar, panggil tool create_task lalu konfirmasi singkat apa yang sudah kamu buat dan siapa yang mengerjakan.` }];
       const pseudo = { id: 'chat', title: 'chat', log: [], transient: true };
+      // model router: 20B (low reasoning) for everyday talk, 120B (medium reasoning) for complex questions, Qwen vision when pictures are attached
+      const route = chatRoute(msg, ch);
+      const pics = route.tier === 'vision' ? imageBlocks(msg) : [];
+      if (pics.length) messages[0].content = [{ type: 'text', text: messages[0].content + '\n\nPesan terakhir menyertakan gambar (terlampir). Jelaskan apa yang benar-benar terlihat; jangan menebak hal yang tidak tampak.' }, ...pics];
       let posted = false;
       for (let i = 0; i < 5; i++) {
-        const res = await llm.call({ system: chatSystem(e), messages, tools: chatTools, model: e.model || llm.defaultModels()[e.isPA || e.isMaster || e.isLead ? 'worker' : 'small'], employee: e, maxTokens: 1200 });
+        const res = await llm.call({ system: chatSystem(e), messages, tools: pics.length ? [] : chatTools, model: e.model && !pics.length ? e.model : llm.defaultModels()[route.tier], effort: route.effort, employee: e, maxTokens: route.tier === 'small' ? 1200 : 2400 });
         messages.push({ role: 'assistant', content: res.content });
         const uses = res.content.filter((b) => b.type === 'tool_use');
         if (!uses.length) { reply((llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); posted = true; break; }
@@ -1202,12 +1214,12 @@ async function replyAs(e, ch, msg) {
     }
     if (!quick && String(msg.text || '').trim().split(/\s+/).length >= 6) { try { brain.remember(e, `${/^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : (emp(msg.authorId)?.name || 'Pengguna')} berkata kepadaku: "${String(msg.text).replace(/\s+/g, ' ').slice(0, 110)}"`); } catch { /* memory is best effort */ } }
   } finally {
-    const left = (chatBusy.get(e.id) || 1) - 1; chatBusy.set(e.id, left);
+    const left = (chatBusy.get(busyKey) || 1) - 1; chatBusy.set(busyKey, left);
     if (left === 0 && e.status === 'chatting') setStatus(e, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);
   }
 }
 
-export const running = () => [...jobs.entries()].map(([taskId, j]) => ({ taskId, empId: j.empId, mode: j.mode }));
+export const running = () => [...jobs.entries()].filter(([, j]) => (j.ws || 'main') === store.current()).map(([taskId, j]) => ({ taskId, empId: j.empId, mode: j.mode }));
 
 // ───────────────────────── meetings and quick replies from chat ─────────────────────────
 // A chat sentence that asks for a meeting must REALLY start one (agents walk to the Conference Hall and talk in 3D). Before, the PA model only claimed it had.
@@ -1289,6 +1301,9 @@ Keahlian: ${(e.skills || []).slice(0, 4).join(', ') || '-'}.
 
 ${memLines ? `# INGATANMU (kejadian nyata yang kamu alami; bukan berarti masih kamu kerjakan)\n${memLines}\n\n` : ''}# ATURAN
 - Jawab 1-3 kalimat, natural, ${c.language}, seperti rekan kerja.
+- Format: untuk 2 hal atau lebih pakai daftar Markdown (satu baris per butir, "- " atau "1. "), bukan kalimat panjang bersambung. Perbandingan/angka berderet pakai tabel Markdown. Untuk grafik tulis blok \`\`\`chart berisi JSON {"type":"bar|line|pie","title":"…","labels":[…],"data":[…]} hanya dengan angka NYATA dari data di atas.
+- Data perusahaan yang sebenarnya (produk, harga, pelanggan, angka, target) ${db().notes.some((n) => n.kb === 'owner' || n.kb === 'drive') ? 'hanya yang ada di catatan Brain bertanda terverifikasi; selain itu belum ada' : 'BELUM diisi Owner'}. Jangan menebaknya; bila ditanya, katakan datanya belum ada.
+- Jawab dari blok "FAKTA DARI BRAIN" bila ada dan sebut judul dokumennya. DILARANG menyebut nama folder, file, atau dokumen yang tidak tercantum di pesan ini (jangan mengarang folder seperti "Data Perusahaan").
 - JANGAN mengarang pekerjaan, proyek, angka, atau status yang tidak tertulis di atas. Bila ditanya sedang apa atau di mana, jawab sesuai keadaan nyata; bila tidak ada tugas, katakan sedang luang.
 - Bila tidak tahu atau datanya tidak ada, katakan terus terang dan sebutkan cara mendapatkannya (cari di Brain, tanya rekan, riset). Jangan pura-pura sudah mengerjakan sesuatu.
 - Kritis, bukan penurut: bila permintaan kabur, tanyakan SATU hal yang paling penting dulu; bila ada risiko atau asumsi lemah, sebutkan singkat beserta alasannya.
@@ -1298,6 +1313,55 @@ ${memLines ? `# INGATANMU (kejadian nyata yang kamu alami; bukan berarti masih k
 }
 
 /** one true sentence about a colleague, from the database (never invented) */
+// ───────────────────────── model router: cheap by default, strong only when it matters ─────────────────────────
+const COMPLEX_RE = /\b(analisis|analisa|analisislah|bandingkan|perbandingan|strategi|rencana|rancang|rancangan|susun(?:kan)?|evaluasi|hitung|proyeksi|kenapa|mengapa|jelaskan|uraikan|rangkum(?:kan)?|ringkas(?:kan)?|prioritas(?:kan)?|risiko|rekomendasi(?:kan)?|solusi|bagaimana cara|langkah[- ]langkah|pro(?:s)? (?:dan|&) kontra|kelebihan|kekurangan|tren|forecast|anggaran|budget)\b/i;
+/** a message worth the big model: long, analytical, or several questions at once */
+export const isComplex = (text) => { const t = String(text || ''); return t.split(/\s+/).length > 40 || COMPLEX_RE.test(t) || (t.match(/\?/g) || []).length >= 2; };
+/** pictures → vision model (Qwen); complex → 120B with medium reasoning; everything else → 20B with low reasoning (it still reasons, just briefly) */
+export function chatRoute(msg, ch = {}) {
+  if ((msg.attachments || []).some((a) => a.type === 'image')) return { tier: 'vision', effort: 'low', why: 'gambar' };
+  if (isComplex(msg.text) || ch.goalId) return { tier: 'smart', effort: 'medium', why: 'kompleks' };
+  return { tier: 'small', effort: 'low', why: 'biasa' };
+}
+// ── chat pictures: stored as files per workspace (never inside the database that is streamed to every browser)
+const uploadDir = () => path.join(process.env.DATA_DIR || path.resolve('data'), 'uploads', store.current());
+const IMG_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
+export function saveImages(list = []) {
+  const out = [];
+  for (const img of (Array.isArray(list) ? list : []).slice(0, 3)) {
+    const m = /^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(img?.dataUrl || ''));
+    if (!m) continue;
+    const buf = Buffer.from(m[2], 'base64');
+    if (buf.length > 4 * 1048576) throw Object.assign(new Error('Gambar terlalu besar (maks 4 MB)'), { code: 413 });
+    const id = uid('img') + '.' + IMG_TYPES[m[1]];
+    fs.mkdirSync(uploadDir(), { recursive: true });
+    fs.writeFileSync(path.join(uploadDir(), id), buf);
+    out.push({ id, type: 'image', mime: m[1], name: String(img.name || 'gambar').slice(0, 80), url: `/api/files/${id}` });
+  }
+  return out;
+}
+export function readUpload(id) {
+  if (!/^img-[\w-]+\.(png|jpg|webp|gif)$/.test(String(id))) return null;
+  const f = path.join(uploadDir(), id);
+  return fs.existsSync(f) ? { data: fs.readFileSync(f), mime: Object.keys(IMG_TYPES).find((k) => IMG_TYPES[k] === id.split('.').pop()) } : null;
+}
+const imageBlocks = (msg) => (msg.attachments || []).filter((a) => a.type === 'image').map((a) => readUpload(a.id)).filter(Boolean).map((f) => ({ type: 'image', source: { type: 'base64', media_type: f.mime, data: f.data.toString('base64') } }));
+
+/** what the company's verified knowledge actually contains (Drive + Owner + System), grouped by folder; this is the only truthful answer to "data apa saja yang ada?" */
+export function brainOverview({ groups = 12, examples = 3 } = {}) {
+  const notes = db().notes.filter((n) => !n.archived && brain.isVerified(n) && n.visibility !== 'private');
+  if (!notes.length) return { total: 0, text: 'Brain belum berisi data terverifikasi. Isi lewat Google Drive (Pengaturan → Ambil dari Drive) atau tulis catatan sendiri di Brain.' };
+  const key = (n) => { const p = String(n.folder || '').split('/'); return p[0] === 'Drive' ? p.slice(1, 4).join(' › ') : p[0]; };   // Drive/Perusahaan/Raycorp/… → "Perusahaan › Raycorp › …"
+  const by = new Map();
+  for (const n of notes) { const k = key(n); if (!by.has(k)) by.set(k, []); by.get(k).push(n); }
+  const rows = [...by.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, groups);
+  const text = `Brain berisi ${notes.length} catatan terverifikasi:\n` + rows.map(([k, l]) => `- **${k}** (${l.length}): ${l.slice(0, examples).map((n) => n.title).join('; ')}${l.length > examples ? '; …' : ''}`).join('\n') + (by.size > groups ? `\n- …dan ${by.size - groups} folder lain.` : '');
+  return { total: notes.length, text };
+}
+/** the few verified notes most relevant to a question, as short facts for the prompt (keeps tokens low, keeps answers grounded) */
+function relevantFacts(text, limit = 3) {
+  return brain.search(text, { limit, verifiedOnly: true }).map((h) => `- [[${h.title}]] (${h.folder}): ${h.snippet}`).join('\n');
+}
 function colleagueState(x) {
   const open = db().tasks.filter((t) => t.assigneeId === x.id && OPEN.has(t.status) && t.status !== 'blocked');
   const mtg = db().meetings.find((m) => (m.status === 'running' || m.status === 'waiting_owner') && (m.participants || []).includes(x.id));
@@ -1326,6 +1390,21 @@ function quickReply(e, msg, ch) {
     if (words.length === 1 && words[0] === first) return pick([`Ya, ${who}? Saya di sini.`, `Iya ${who}, saya dengar.`, `Siap, ${who}. Ada yang bisa saya bantu?`]);
     return pick([`Halo lagi, ${who}. ${state}`, `Hai ${who}! Ada yang bisa saya bantu?`, `Siap ${who}. Mau mulai dari mana?`, `Hai! ${state} Silakan beri arahan.`]);
   }
+  // "list semua", "daftar lengkap", "apa lagi": EVERY document title, grouped by folder, straight from the Brain (complete and true, zero tokens)
+  if (words.length <= 10 && /\b(list|daftar|daftarkan|sebutkan)\b.*\b(semua|semuanya|lengkap|seluruh)\b|\b(semua|semuanya|seluruh)\b.*\b(list|daftar|judul|dokumen)\b|\bapa\s?lagi\b|\bapalgi\b/.test(raw)) {
+    const notes = db().notes.filter((n) => !n.archived && brain.isVerified(n) && n.visibility !== 'private');
+    if (!notes.length) return brainOverview().text;
+    const by = new Map();
+    for (const n of notes) { const k = String(n.folder || '').replace(/^Drive\//, '').split('/').join(' › '); if (!by.has(k)) by.set(k, []); by.get(k).push(n.title); }
+    const MAX = 150; let shown = 0;
+    const parts = [...by.entries()].sort((a, b) => a[0].localeCompare(b[0], 'id', { numeric: true })).map(([k, l]) => { const take = l.slice(0, Math.max(0, MAX - shown)); shown += take.length; return take.length ? `**${k}** (${l.length})\n${take.map((t) => `- ${t}`).join('\n')}` : ''; }).filter(Boolean);
+    return `Semua dokumen terverifikasi di Brain (${notes.length}):\n\n${parts.join('\n\n')}${notes.length > MAX ? `\n\n…dan ${notes.length - MAX} lagi. Buka halaman Brain untuk melihat semuanya.` : ''}`;
+  }
+  // "ada data apa aja?", "isi drive apa?": the Brain answers itself, zero tokens, no invented folders
+  if (words.length <= 10 && (/\b(data|dokumen|file|catatan|knowledge|pengetahuan|isi)\b.*\b(apa|apa aja|apa saja|aja|saja)\b/.test(raw) || /\b(isi|ada apa)\b.*\b(drive|brain|otak)\b|\b(drive|brain)\b.*\b(isi|ada apa|apa aja|apa saja)\b|\bdi folder drive\b/.test(raw))) {
+    const o = brainOverview();
+    return o.text + (o.total ? '\n\nTanya isi salah satunya, mis. "jelaskan struktur organisasi RayCorp", dan saya jawab dari dokumennya.' : '');
+  }
   // "progresnya gimana?": answered straight from the task tree, zero tokens, nothing invented
   if (/\b(progres\w*|progress\w*|status\w*|sampai\s+mana|sudah\s+sampai|update\w*|perkembangan\w*|kabar\w*)\b/.test(raw) && words.length <= 8) {
     const root = ch.goalId ? task(ch.goalId) : (e.isPA ? db().tasks.filter((x) => x.kind === 'goal' && !x.parentId && x.createdBy === msg.authorId).at(-1) : null);
@@ -1342,13 +1421,16 @@ function quickReply(e, msg, ch) {
 
 // ───────────────────────── orchestrator entry point (one chat box for everything) ─────────────────────────
 /** One message from the Owner. mode: 'auto' | 'chat' | 'goal'. auto = goal when it reads like work and nobody was addressed, otherwise a chat (DM with one agent, group with several). */
-export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto', channelId = null }) {
+export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto', channelId = null, images = [] }) {
   text = String(text || '').trim().slice(0, 8000);
-  if (!text) throw new Error('Pesan kosong');
+  const attachments = saveImages(images);   // pictures become files; the message only carries links
+  if (!text && !attachments.length) throw new Error('Pesan kosong');
+  if (!text) text = '(gambar)';
+  if (attachments.length && mode === 'goal') mode = 'chat';   // a picture is something to look at and talk about, not a new goal
   // replying inside a goal thread: the message stays in that thread (PA answers, named heads join), it is not a new goal
   const thread = channelId && db().channels.find((c) => c.id === channelId && c.goalId && c.members.includes(userId));
   if (thread && !(Array.isArray(to) && to.length)) {
-    const m = postMessage(thread.id, userId, text);
+    const m = postMessage(thread.id, userId, text, attachments.length ? { attachments } : {});
     onHumanMessage(m).catch((err) => { console.error('[orchestrate] goal thread', err); postMessage(thread.id, task(thread.goalId)?.assigneeId || userId, '⚠️ Maaf, ada galat: ' + err.message); });
     return { action: 'chat', channelId: thread.id, members: thread.members.filter((x) => x !== userId), orchestrator: task(thread.goalId)?.assigneeId };
   }
@@ -1356,8 +1438,8 @@ export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto', ch
   const mentioned = [...text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase()).map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter(Boolean).map((e) => e.id);
   const ids = [...new Set([...(Array.isArray(to) ? to : []), ...mentioned])].filter((id) => emp(id)?.type === 'ai');
   // a goal only when nobody was addressed, no meeting is going on or asked for, and the sentence reads like work (or the Owner picked "Goal")
-  const meet = mode === 'goal' ? null : meetingIntent(text, ids, userId);
-  const action = mode === 'goal' ? 'goal' : mode === 'chat' || meet ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
+  const meet = mode === 'goal' || attachments.length ? null : meetingIntent(text, ids, userId);
+  const action = mode === 'goal' ? 'goal' : mode === 'chat' || meet || attachments.length ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
   if (action === 'goal') {
     const t = submitGoal({ title: text.replace(/@[\w-]+/g, '').trim().slice(0, 150) || 'Goal dari Owner', description: text, userId });
     const chId = ensureGoalThread(t) || ensureDM(userId, pa.id);
@@ -1369,7 +1451,7 @@ export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto', ch
   // everything else is a message in a conversation; onHumanMessage decides meeting / broadcast / reply in ONE place
   const members = ids.length ? ids : [pa.id];
   const chId = members.length === 1 ? ensureDM(userId, members[0]) : ensureGroup(userId, members);
-  const m = postMessage(chId, userId, text);
+  const m = postMessage(chId, userId, text, attachments.length ? { attachments } : {});
   onHumanMessage(m).catch((err) => { console.error('[orchestrate] chat error', err); postMessage(chId, pa.id, '⚠️ Maaf, ada galat saat memproses pesan: ' + err.message); });
   return { action: meet && (meet !== 'say' || !ids.length) ? 'meeting' : 'chat', channelId: chId, members, orchestrator: pa.id };
 }

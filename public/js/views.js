@@ -189,7 +189,7 @@ export const OfficeView = {
       <div class="ptalk glass" id="ptalk" hidden></div>
       <div class="pmobile" id="pmobile" hidden><div class="pjoy">◎<small>geser</small></div><div class="pbtns"><button class="btn glass" data-pm="talk">E</button><button class="btn glass" data-pm="wave">👋</button><button class="btn glass" data-pm="exit">✕</button></div></div>
       <div class="cmdbar-hint">drag = geser · kiri + drag = geser (pan) · C / Z = tengok kiri / kanan · klik kanan + drag = orbit · Q E = naik turun · Shift = cepat · scroll = zoom · klik agen = menu · P = main sebagai karakter · <b>H</b> bantuan</div>
-      <div class="odock glass" id="odock"><div class="od-h"><b>Orkestrator</b><span class="od-to" id="odto"></span><button class="btn sm ghost" id="odadd" title="Tambah agen ke diskusi">＋ Agen</button><button class="btn sm ghost od-needb" id="odneed" title="Review hasil, persetujuan, tugas macet dan lewat tenggat">Butuh kamu<span class="od-n" id="odneedn"></span></button><button class="btn sm ghost" id="odmode" title="Otomatis: kalimat kerja = goal, selain itu obrolan">Otomatis</button><button class="btn sm ghost" id="odtog" title="Kecilkan / besarkan">▾</button><button class="btn sm ghost" id="odinfo" title="Info">i</button></div><div class="od-pick" id="odpick" hidden><input id="odq" placeholder="Cari agen… nama atau jabatan" autocomplete="off"><div class="od-list" id="odlist"></div></div><div class="od-need" id="odneedp" hidden></div><div class="od-info small muted" id="odinfotxt" hidden>Tulis di bawah. Tanpa @nama, pesan ini ke orkestrator yang membagi pekerjaan ke manajer dan staf. Tambahkan agen dengan ＋ untuk diskusi grup.</div><div class="od-body" id="odbody"><div class="od-msgs" id="odmsgs"></div><div class="od-work" id="odwork"></div></div><div class="cmdbar"><input id="goalq" placeholder="Tanya, beri tugas, atau diskusi… (@nama untuk menambah agen)" maxlength="2000" autocomplete="off"><button class="btn" id="meetgo" title="Adakan rapat multi-agen">Rapat</button><button class="btn primary" id="goalgo">Kirim</button></div></div>`;
+      <div class="odock glass" id="odock"><div class="od-h"><b>Orkestrator</b><span class="od-to" id="odto"></span><button class="btn sm ghost" id="odadd" title="Tambah agen ke diskusi">＋ Agen</button><button class="btn sm ghost od-needb" id="odneed" title="Review hasil, persetujuan, tugas macet dan lewat tenggat">Butuh kamu<span class="od-n" id="odneedn"></span></button><button class="btn sm ghost" id="odmode" title="Otomatis: kalimat kerja = goal, selain itu obrolan">Otomatis</button><button class="btn sm ghost" id="odtog" title="Kecilkan / besarkan">▾</button><button class="btn sm ghost" id="odinfo" title="Info">i</button></div><div class="od-pick" id="odpick" hidden><input id="odq" placeholder="Cari agen… nama atau jabatan" autocomplete="off"><div class="od-list" id="odlist"></div></div><div class="od-need" id="odneedp" hidden></div><div class="od-info small muted" id="odinfotxt" hidden>Tulis di bawah. Tanpa @nama, pesan ini ke orkestrator yang membagi pekerjaan ke manajer dan staf. Tambahkan agen dengan ＋ untuk diskusi grup.</div><div class="od-body" id="odbody"><div class="od-msgs" id="odmsgs"></div><div class="od-work" id="odwork"></div></div><div class="od-imgs" id="odimgs"></div><div class="cmdbar"><input id="goalq" placeholder="Tanya, beri tugas, atau diskusi… (@nama untuk menambah agen)" maxlength="2000" autocomplete="off"><label class="btn icon" id="odimg" title="Lampirkan gambar (atau tempel dengan Ctrl+V)">🖼️<input type="file" accept="image/*" multiple hidden id="odimgf"></label><button class="btn" id="meetgo" title="Adakan rapat multi-agen">Rapat</button><button class="btn primary" id="goalgo">Kirim</button></div></div>`;
     root.appendChild(ov);
     ov.querySelector('#osim').onclick = () => OfficeView.characterPicker();
     const send = () => OfficeView.dockSend();
@@ -312,6 +312,8 @@ export const OfficeView = {
   async dockInit() {
     const ov = this.ov, dk = this.dock; if (!ov) return;
     ov.querySelector('#odtog').onclick = () => { dk.open = !dk.open; this.dockRender(); };
+    ov.querySelector('#odimgf').onchange = (e) => { this.dockAddImages(e.target.files); e.target.value = ''; };
+    ov.querySelector('#goalq').addEventListener('paste', (e) => { const imgs = [...(e.clipboardData?.files || [])].filter((x) => /^image\//.test(x.type)); if (imgs.length) { e.preventDefault(); this.dockAddImages(imgs); } });
     ov.querySelector('#odneed').onclick = () => { dk.need = !dk.need; this._odNeed = null; this.dockRender(); };
     ov.querySelector('#odinfo').onclick = () => { const t = ov.querySelector('#odinfotxt'); t.hidden = !t.hidden; };
     ov.querySelector('#odmode').onclick = () => { dk.mode = dk.mode === 'auto' ? 'chat' : dk.mode === 'chat' ? 'goal' : 'auto'; this.dockRender(); };
@@ -333,6 +335,23 @@ export const OfficeView = {
     if (!dk.ch) { const pa = this.orchestrator(); if (pa) { try { dk.ch = (await api('POST', '/api/dm', { with: pa.id, userId: S.me })).id; } catch { /* retry on send */ } } }
     this.dockRender();
   },
+  /** attached pictures waiting to be sent: shrunk in the browser first (max 1600 px, JPEG) so they are light for the vision model */
+  async dockAddImages(files) {
+    const dk = this.dock; dk.images = dk.images || [];
+    const shrink = (file) => new Promise((ok, no) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok({ dataUrl: c.toDataURL('image/jpeg', 0.85), name: file.name || 'gambar' }); };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error('bukan gambar')); };
+      img.src = url;
+    });
+    for (const f of [...files].filter((x) => /^image\//.test(x.type)).slice(0, 3 - dk.images.length)) { try { dk.images.push(await shrink(f)); } catch { toast('File itu bukan gambar', 'warn'); } }
+    this.dockImgs();
+  },
+  dockImgs() {
+    const box = this.ov?.querySelector('#odimgs'), dk = this.dock; if (!box) return;
+    box.innerHTML = (dk.images || []).map((im, i) => `<button class="od-thumb" data-imx="${i}" title="Hapus gambar ini"><img src="${im.dataUrl}" alt=""><span>✕</span></button>`).join('');
+    box.querySelectorAll('[data-imx]').forEach((b) => (b.onclick = () => { dk.images.splice(+b.dataset.imx, 1); this.dockImgs(); }));
+  },
   dockPick(text) {
     const ov = this.ov, list = ov?.querySelector('#odlist'); if (!list) return; const t = text.trim().toLowerCase(), dk = this.dock;
     const rows = D().employees.filter((e) => e.type === 'ai' && !dk.to.includes(e.id) && (!t || (e.name + ' ' + e.title + ' ' + (e.team || '')).toLowerCase().includes(t))).slice(0, 8);
@@ -341,11 +360,12 @@ export const OfficeView = {
   },
   async dockSend() {
     const ov = this.ov, dk = this.dock, q = ov?.querySelector('#goalq'); if (!q) return;
-    const text = q.value.trim(); if (!text) return q.focus();
+    const text = q.value.trim(); const images = dk.images || [];
+    if (!text && !images.length) return q.focus();
     if (/^\/rapat\b/i.test(text)) { q.value = ''; return meetingModal({ topic: text.replace(/^\/rapat\s*/i, '') }); }
-    q.value = ''; dk.sentAt = Date.now();
+    q.value = ''; dk.sentAt = Date.now(); dk.images = []; this.dockImgs();
     try {
-      const r = await api('POST', '/api/orchestrate', { text, userId: S.me, to: dk.to, mode: dk.mode, channelId: !dk.to.length && dk.thread ? dk.thread : undefined });
+      const r = await api('POST', '/api/orchestrate', { text, images, userId: S.me, to: dk.to, mode: dk.mode, channelId: !dk.to.length && dk.thread ? dk.thread : undefined });
       dk.ch = r.channelId; dk.lastAction = r.action; dk.lastMembers = r.members || [];
       dk.thread = String(r.channelId || '').startsWith('goal-') ? r.channelId : dk.to.length ? null : dk.thread;
       if (r.action === 'goal') toast('🎯 Goal diterima orkestrator — lihat tim yang bergerak', 'ok');
@@ -360,7 +380,7 @@ export const OfficeView = {
           this.dockRender(); q.focus(); return;
         } catch (err2) { err = err2; }
       }
-      q.value = text; toast('Gagal mengirim: ' + err.message, 'warn');
+      q.value = text; dk.images = images; this.dockImgs(); toast('Gagal mengirim: ' + err.message, 'warn');   // nothing is lost on failure
     }
     this.dockRender(); q.focus();   /* the caret stays in the box so the discussion can continue */
   },
@@ -403,7 +423,7 @@ export const OfficeView = {
     const el = ov.querySelector('#odmsgs'), sig = msgs.map((m) => m.id).join(',');
     if (el && sig !== this._odSig) {
       this._odSig = sig; const near = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-      el.innerHTML = msgs.map((m) => { const a = emp(m.authorId), me = m.authorId === S.me; return `<div class="od-m ${me ? 'me' : ''}">${me ? '' : avatar(a)}<div class="od-b"><div class="od-w">${me ? 'Anda' : esc(a?.name || m.authorId)}</div><div class="md">${md(String(m.text).slice(0, 4000))}</div></div></div>`; }).join('');
+      el.innerHTML = msgs.map((m) => { const a = emp(m.authorId), me = m.authorId === S.me; return `<div class="od-m ${me ? 'me' : ''}">${me ? '' : avatar(a)}<div class="od-b"><div class="od-w">${me ? 'Anda' : esc(a?.name || m.authorId)}</div><div class="md">${md(String(m.text).slice(0, 4000))}</div>${(m.attachments || []).filter((x) => x.type === 'image').map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><img class="od-att" src="${esc(x.url)}" alt="${esc(x.name || 'gambar')}" loading="lazy"></a>`).join('')}</div></div>`; }).join('');
       if (near || !this._odInit) el.scrollTop = el.scrollHeight; this._odInit = true;
     }
     /* who is busy right now: chips + spotlight in the 3D world */
@@ -1266,19 +1286,31 @@ export const BrainView = {
   renderTree() {
     const q = this.q; const tree = this.root.querySelector('#btree');
     const notes = D().notes.filter((n) => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
-    const SYS = ['Company', 'SOP', 'Meetings', 'Playbooks', 'Memori', 'Archive'];
+    const SYS = ['Drive', 'Company', 'SOP', 'Sistem', 'Meetings', 'Playbooks', 'Memori', 'Archive'];   // Google Drive (the real company data) first
     const tops = [...new Set(notes.map((n) => n.folder.split('/')[0]))].sort((a, b) => (SYS.indexOf(a) + 1 || 99) - (SYS.indexOf(b) + 1 || 99) || a.localeCompare(b));
-    const open = this.openFolders || (this.openFolders = new Set(['Company']));
+    const open = this.openFolders || (this.openFolders = new Set(['Company', 'Drive', 'Drive/Perusahaan']));
     const loose = D().notes.filter((n) => ['Deliverables', 'Reports', 'Notes', 'Knowledge', 'Approvals'].includes(n.folder)).length;
     const item = (n) => `<div class="note-item ${n.id === this.sel && this.mode === 'note' ? 'active' : ''}" data-open="${n.id}" title="${esc(n.title)}">${esc(n.title)}</div>`;
     const byRecent = (a, b) => b.updatedAt - a.updatedAt;
     tree.innerHTML = `<div class="row" style="gap:6px;margin-bottom:6px"><div class="note-item ${this.mode === 'graph' ? 'active' : ''}" style="padding-left:8px;flex:1" id="bgraph">🕸️ Graph view</div><button class="btn sm" id="borg" title="Klasifikasikan & rapikan semua catatan">🗂️ Rapikan${loose ? ` <span class="badge">${loose}</span>` : ''}</button></div>
       <div class="small faint" style="margin:0 6px 8px">${D().notes.length} catatan · ${tops.length} folder · disusun otomatis per Divisi/Jenis</div>` + bucketize(tops, SYS, (top) => {
       const inTop = notes.filter((n) => n.folder.split('/')[0] === top);
-      const direct = inTop.filter((n) => !n.folder.includes('/')).sort(byRecent);
-      const subs = [...new Set(inTop.filter((n) => n.folder.includes('/')).map((n) => n.folder.split('/').slice(1).join('/')))].sort();
       const dv = D().divisions.find((x) => x.name === top);
-      return `<details class="folder" ${open.has(top) || q ? 'open' : ''} data-f="${esc(top)}"><summary><span style="color:${dv?.color || folderColor(top)}">${dv ? dv.icon : '●'}</span> ${esc(top)} <span class="faint small" style="margin-left:auto">${inTop.length}</span></summary>${direct.map(item).join('')}${subs.map((sub) => { const key = top + '/' + sub; const l = inTop.filter((n) => n.folder === key).sort(byRecent); return `<details class="folder sub" ${open.has(key) || q ? 'open' : ''} data-f="${esc(key)}"><summary>${esc(sub)} <span class="faint small" style="margin-left:auto">${l.length}</span></summary>${l.map(item).join('')}</details>`; }).join('')}</details>`;
+      const TOP_LABEL = { Drive: '☁️ Google Drive', Sistem: '⚙️ Sistem' };
+      /* a real folder tree (like Obsidian): sub-folders nest, folders before notes; a chain of folders with a single child is shown as one row ("04-deployment › business-units") */
+      const under = (path) => inTop.filter((n) => n.folder === path || n.folder.startsWith(path + '/'));
+      const node = (path, label, depth) => {
+        const list = under(path);
+        let p = path, lab = label;
+        for (;;) {   // collapse single-child chains
+          const direct = list.filter((n) => n.folder === p);
+          const kids = [...new Set(list.filter((n) => n.folder.startsWith(p + '/')).map((n) => n.folder.slice(p.length + 1).split('/')[0]))];
+          if (depth > 0 && !direct.length && kids.length === 1) { p = p + '/' + kids[0]; lab = lab + ' › ' + kids[0]; continue; }
+          const head = depth === 0 ? `<span style="color:${dv?.color || folderColor(top)}">${dv ? dv.icon : TOP_LABEL[top] ? '' : '●'}</span> ${esc(TOP_LABEL[top] || top)}` : `📁 ${esc(lab)}`;
+          return `<details class="folder ${depth ? 'sub' : ''}" ${open.has(p) || q ? 'open' : ''} data-f="${esc(p)}"><summary>${head} <span class="faint small" style="margin-left:auto">${list.length}</span></summary>${kids.sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map((k) => node(p + '/' + k, k, depth + 1)).join('')}${direct.sort(byRecent).map(item).join('')}</details>`;
+        }
+      };
+      return node(top, top, 0);
     }, !!q, open);
     tree.querySelector('#borg').onclick = async (ev) => { ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`🗂️ Brain dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
     tree.querySelectorAll('details').forEach((dt) => (dt.ontoggle = () => (dt.open ? open.add(dt.dataset.f) : open.delete(dt.dataset.f))));
@@ -1469,6 +1501,67 @@ export const ApprovalsView = {
 };
 
 // ═════════════════════ SETTINGS ═════════════════════
+/** Account, workspaces (like Discord servers), members & invite links, and Google Drive (only in a workspace you own) */
+async function accountCard(box) {
+  if (!box) return;
+  let me, cfg;
+  try { [me, cfg] = await Promise.all([api('GET', '/api/auth/me'), api('GET', '/api/drive/config')]); } catch { box.innerHTML = '<div class="small muted">Tidak bisa memuat status akun.</div>'; return; }
+  if (!me.configured) { box.innerHTML = '<div class="small muted">Login Google belum dikonfigurasi. Isi <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>SESSION_SECRET</code>, <code>TOKEN_ENC_KEY</code> di <code>.env</code>, lalu restart server. Panduan: docs/GOOGLE-DRIVE-DAN-LOGIN.md</div>'; return; }
+  const u = me.user, ws = me.workspace || {}, role = ws.role, owner = role === 'owner', manage = owner || role === 'admin';
+  const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Anggota' };
+  if (!u) { box.innerHTML = `<div class="small muted">Belum login. Setiap orang yang login otomatis mendapat <b>ruang kerja sendiri</b> dan bisa mengundang orang lain ke dalamnya.</div><div><a class="btn primary" href="/auth/google">Login dengan Google</a></div>`; return; }
+  box.innerHTML = `<div class="row">${u.picture ? `<img src="${esc(u.picture)}" alt="" width="34" height="34" style="border-radius:50%" referrerpolicy="no-referrer">` : ''}<div style="flex:1;min-width:0"><b>${esc(u.name || u.email)}</b><div class="small muted">${esc(u.email)}</div></div><a class="btn sm" href="/auth/logout">Keluar</a></div>
+    <div class="sec" style="margin:0"><h4>Ruang kerja</h4><div style="display:grid;gap:6px">${me.workspaces.map((w) => `<div class="row" style="padding:7px 9px;border:1px solid var(--line);border-radius:12px;${w.id === ws.id ? 'background:var(--gl-fill-2, #0000000a)' : ''}"><span style="flex:1;min-width:0"><b>${esc(w.name)}</b> <span class="small muted">${ROLE[w.role] || w.role}${w.personal ? ' · milik Anda' : ` · milik ${esc(w.ownerName)}`} · ${w.members} orang</span></span>${w.id === ws.id ? '<span class="chip">aktif</span>' : `<button class="btn sm" data-ws="${esc(w.id)}">Buka</button>`}</div>`).join('')}</div></div>
+    ${owner ? `<div class="row"><input class="input" id="wsname" value="${esc(ws.name || '')}" placeholder="Nama ruang kerja"><button class="btn" id="wsrename">Ganti nama</button></div>` : ''}
+    <div class="sec" style="margin:0"><h4>Anggota ruang kerja ini</h4><div id="wsmembers" class="small muted">Memuat…</div>
+      ${manage ? `<div class="row wrap" style="margin-top:8px"><select class="input" id="invrole" style="width:auto">${opt('member', 'sebagai Anggota', 'member')}${owner ? opt('admin', 'sebagai Admin', '') : ''}</select><button class="btn primary" id="invgo">🔗 Buat link undangan</button></div><div class="small" id="invout"></div>` : ''}</div>
+    <div class="sec" style="margin:0"><h4>Google Drive</h4>${!owner ? '<div class="small muted">Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri, supaya isi Drive pribadi tidak masuk ke ruang kerja orang lain.</div>'
+      : `<div class="small">${u.drive ? `✅ Tersambung${cfg.root ? ` · <a href="https://drive.google.com/drive/folders/${esc(cfg.root)}" target="_blank" rel="noopener">buka folder RAIVERSE ↗</a>` : ''}` : '⚠️ Belum tersambung: <a href="/auth/google">login ulang dengan Google</a> dan centang izin Drive.'}</div>
+      ${u.drive ? `<div class="row wrap" style="margin-top:6px"><button class="btn" data-dr="setup">📁 Siapkan folder</button><button class="btn" data-dr="push">⬆ Kirim Brain ke Drive</button><button class="btn" data-dr="pull">⬇ Ambil dari Drive</button><button class="btn" id="drpick" ${cfg.pickerKey ? '' : 'disabled title="GOOGLE_PICKER_API_KEY belum diisi"'}>📎 Pilih file dari Drive</button></div>
+      <div class="small muted">Folder <b>Perusahaan</b> = internal, <b>Publik</b> = boleh untuk agen layanan luar, <b>Pribadi</b> = tidak dibaca agen, <b>Hasil Agen</b> = draf agen. Isi Drive menjadi <b>fakta terverifikasi</b> di Brain ruang kerja ini.</div><div class="small" id="drres"></div>` : ''}`}</div>`;
+  box.querySelectorAll('[data-ws]').forEach((b) => (b.onclick = async () => { await api('POST', '/api/ws/switch', { id: b.dataset.ws }); location.reload(); }));
+  box.querySelector('#wsrename')?.addEventListener('click', async () => { await api('POST', '/api/ws/rename', { name: box.querySelector('#wsname').value }); toast('Nama ruang kerja diganti', 'ok'); accountCard(box); });
+  const drawMembers = async () => {
+    const { members } = await api('GET', '/api/ws/members');
+    const el = box.querySelector('#wsmembers');
+    el.innerHTML = members.map((m) => `<div class="row" style="padding:3px 0"><span style="flex:1;min-width:0">${esc(m.name || m.email)} <span class="muted">${esc(m.email || '')}</span></span>${m.role === 'owner' || !manage || m.userId === u.id ? `<span class="chip">${ROLE[m.role] || m.role}</span>` : `${owner ? `<select class="input" data-mrole="${esc(m.userId)}" style="width:auto">${opt('member', 'Anggota', m.role)}${opt('admin', 'Admin', m.role)}</select>` : `<span class="chip">${ROLE[m.role]}</span>`}<button class="btn sm danger" data-mdel="${esc(m.userId)}">Keluarkan</button>`}</div>`).join('') || 'Belum ada';
+    el.querySelectorAll('[data-mrole]').forEach((s) => (s.onchange = async () => { await api('POST', '/api/ws/member', { accountId: s.dataset.mrole, role: s.value }); toast('Peran diperbarui', 'ok'); }));
+    el.querySelectorAll('[data-mdel]').forEach((b) => (b.onclick = async () => { await api('POST', '/api/ws/member', { accountId: b.dataset.mdel, role: 'remove' }); toast('Anggota dikeluarkan', 'ok'); drawMembers(); }));
+  };
+  drawMembers().catch(() => {});
+  box.querySelector('#invgo')?.addEventListener('click', async () => {
+    const r = await api('POST', '/api/ws/invite', { role: box.querySelector('#invrole').value });
+    const link = location.origin + r.path;
+    box.querySelector('#invout').innerHTML = `<div class="row" style="margin-top:6px"><input class="input mono" readonly value="${esc(link)}" style="flex:1"><button class="btn sm" id="invcopy">Salin</button></div><div class="muted">Berlaku 7 hari. Siapa pun yang membuka link ini dan login dengan Google akan masuk ke ruang kerja ini.</div>`;
+    box.querySelector('#invcopy').onclick = () => { navigator.clipboard?.writeText(link); toast('Link disalin', 'ok'); };
+  });
+  const res = box.querySelector('#drres');
+  const say = (t) => { if (res) res.textContent = t; };
+  box.querySelectorAll('[data-dr]').forEach((b) => (b.onclick = async () => {
+    b.disabled = true; say('Memproses…');
+    try {
+      let r = await api('POST', '/api/drive/' + b.dataset.dr);
+      if (b.dataset.dr === 'pull') {   /* big imports run in the background: show progress until done */
+        while (r.running) { say(`Mengambil dari Drive… ${r.done || 0}/${r.total || '?'} file`); await new Promise((ok) => setTimeout(ok, 2000)); r = await api('GET', '/api/drive/pull-status'); }
+        if (r.error) throw new Error(r.error);
+        r = { ...r.result, same: r.result?.same ?? 0 };
+      }
+      say(b.dataset.dr === 'setup' ? `Folder siap: ${Object.keys(r.folders).join(', ')}` : b.dataset.dr === 'push' ? `Terkirim: ${r.created} baru, ${r.updated} diperbarui, ${r.skipped} tidak berubah` : `Diambil: ${r.added} baru, ${r.changed} berubah, ${r.same} sama, ${r.skipped} dilewati (bukan teks)`);
+    } catch (err) { say('Gagal: ' + err.message); } finally { b.disabled = false; }
+  }));
+  box.querySelector('#drpick')?.addEventListener('click', () => openPicker(cfg).then((ids) => ids.length && api('POST', '/api/drive/picked', { ids }).then((r) => say(`Dari file terpilih: ${r.added} baru, ${r.changed} berubah, ${r.skipped} dilewati`))).catch((err) => say('Picker: ' + err.message)));
+}
+/** Google Picker: the user chooses existing Drive files; drive.file then lets the app read exactly those */
+function openPicker(cfg) {
+  const load = (src) => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('gagal memuat ' + src)); document.head.appendChild(s); });
+  return load('https://apis.google.com/js/api.js').then(() => new Promise((ok) => window.gapi.load('picker', ok))).then(() => api('GET', '/api/drive/token')).then(({ token }) => new Promise((ok) => {
+    const P = window.google.picker;
+    const view = new P.DocsView(P.ViewId.DOCS).setIncludeFolders(false).setSelectFolderEnabled(false).setMimeTypes('application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,text/plain,text/markdown,text/csv');
+    new P.PickerBuilder().setAppId(cfg.appId).setOAuthToken(token).setDeveloperKey(cfg.pickerKey).addView(view).enableFeature(P.Feature.MULTISELECT_ENABLED).setLocale('id')
+      .setCallback((d) => { if (d.action === P.Action.PICKED) ok(d.docs.map((x) => x.id)); else if (d.action === P.Action.CANCEL) ok([]); }).build().setVisible(true);
+  }));
+}
+
 export const SettingsView = {
   mount(root) {
     const s = D().settings; const c = D().company; const u = D().usage;
@@ -1520,9 +1613,11 @@ export const SettingsView = {
         <div class="grid2"><input class="input" id="mcpn" placeholder="Nama, mis. github"><input class="input" id="mcpu" placeholder="https://…/mcp"></div>
         <div class="row"><input class="input" id="mcph" placeholder='Header opsional (JSON), mis. {"Authorization":"Bearer …"}'><button class="btn primary" id="mcpadd">＋ Tambah</button></div>
       </div></div>
+      <div class="card" id="acct"><div class="card-h">🔐 Akun & Google Drive</div><div class="card-b" style="display:grid;gap:10px"><div class="small muted">Memuat…</div></div></div>
       <div class="card"><div class="card-h">💾 Data</div><div class="card-b row wrap"><button class="btn" id="exp">⬇ Ekspor JSON</button><label class="btn">⬆ Impor JSON<input type="file" accept="application/json" id="imp" hidden></label><span style="flex:1"></span><button class="btn danger" id="reset">Reset ke awal</button></div></div>
     </div>`;
     const $ = (q) => root.querySelector(q);
+    accountCard(root.querySelector('#acct .card-b'));
     $('#saveai').onclick = async () => { const b = formData(root.querySelector('.card .card-b')); await api('PATCH', '/api/settings', b); toast('Pengaturan AI disimpan', 'ok'); setTimeout(() => this.mount(root), 300); };
     $('#testkey').onclick = async () => { $('#testkey').disabled = true; try { const r = await api('POST', '/api/test-key'); toast(`✅ Terhubung ke ${r.provider === "groq" ? "Groq" : "Claude"} (${esc(r.model)}): “${esc(r.reply.slice(0, 40))}”`, 'ok'); } finally { $('#testkey').disabled = false; } };
     $('#refreshgroq').onclick = async () => { $('#refreshgroq').disabled = true; try { const r = await api('POST', '/api/groq-models/refresh'); const extra = r.unavailable.length ? ` · ${r.unavailable.length} diblokir organisasi` : ''; toast(`✅ ${r.models.length} model chat Groq dapat dipakai${extra}`, 'ok'); setTimeout(() => this.mount(root), 150); } finally { $('#refreshgroq').disabled = false; } };

@@ -283,3 +283,6 @@ Tujuan: pengguna "malas" — satu langkah, tanpa duplikasi. Rinci:
 
 ## X. Render chat yang rapi (daftar, tabel, grafik, kode)
 `public/js/md.js`: kalimat bersambung "(1) a; (2) b" otomatis jadi daftar bernomor, "• x" jadi poin; tabel dengan perataan kolom; blok ` ```chart ` JSON (`bar|line|pie|donut`, `labels`, `data` atau `series`) dirender sebagai SVG; kode punya bilah bahasa + tombol Salin; callout `> [!tip]`; ~~coret~~ dan tautan otomatis. Dock Orkestrator memakai renderer yang sama (batas 4000 karakter). Prompt chat (`server/engine.js` chatSystem) kini meminta agen memakai daftar/tabel/chart Markdown dan hanya angka nyata.
+
+## Y. Atap kaca ruangan tetap ada di mode Play
+Sebelumnya kubah kaca tiap ruangan (dan kubah besar) disembunyikan total begitu Play aktif (`!player && …`), sehingga bangunan tampak tanpa kaca/atap. Kini di Play kubah ruangan tetap tampil selama pemain DAN kamera berada di luar ruangan itu (>10,2 satuan dari pusat), dan hanya terangkat saat masuk (`podOutside`). Kubah besar memakai aturan "kamera di bawah permukaan" yang sama dengan kamera bebas. Terverifikasi: 26/27 kubah tampil di titik awal Play, yang terdekat tersembunyi saat berada di dalam, dan tampil lagi saat keluar.

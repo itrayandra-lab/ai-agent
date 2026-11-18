@@ -357,3 +357,13 @@ details.folder.grp > summary { font-weight: 650; }
 .od-m .od-b .md p { margin: .15em 0; }
 .od-m .od-b .md ol, .od-m .od-b .md ul { margin: .25em 0; }
 .od-m .od-b .md .chart, .od-m .od-b .md .tablewrap { max-width: 100%; }
+
+/* ── sign-in gate (Google) ── */
+#gate { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 16px; background: radial-gradient(1200px 600px at 20% 10%, #c9b8ff55, transparent), radial-gradient(900px 500px at 90% 90%, #ffc8dd55, transparent), var(--bg, #f6f4fb); }
+#gate .gate-card { width: min(420px, 100%); padding: 28px 26px; border-radius: 26px; display: grid; gap: 12px; text-align: center; }
+#gate .gate-logo { width: 54px; height: 54px; margin: 0 auto; border-radius: 18px; display: grid; place-items: center; font-size: 26px; color: #fff; background: linear-gradient(135deg, #7c6cff, #ff8fc8); }
+#gate h2 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.02em; }
+#gate p { margin: 0; color: var(--muted, #667); font-size: 14px; line-height: 1.5; }
+#gate .gate-btn { justify-content: center; gap: 10px; padding: 12px 16px; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; }
+#gate .gate-note { font-size: 12px; opacity: .8; }
+#gate .gate-err { color: var(--bad, #d33); font-weight: 600; }

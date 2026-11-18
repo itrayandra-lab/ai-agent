@@ -19,8 +19,26 @@ export const onEvent = (fn) => { eventSubs.add(fn); return () => eventSubs.delet
 export async function api(method, url, body) {
   const res = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && data.login) loginGate(data);   // session ended: back to the sign-in screen
   if (!res.ok) { toast(data.error || `Error ${res.status}`, 'bad'); throw new Error(data.error || res.status); }
   return data;
+}
+
+/** full-screen sign-in card (Google). Also used for "waiting for the Owner's approval". */
+export function loginGate(info = {}) {
+  if (document.getElementById('gate')) return;
+  const err = new URLSearchParams(location.search).get('login');
+  const el = document.createElement('div');
+  el.id = 'gate';
+  el.innerHTML = `<div class="gate-card glass">
+    <div class="gate-logo">✦</div>
+    <h2>Masuk ke RAIVERSE</h2>
+    <p>Masuk dengan akun Google. Anda langsung mendapat <b>ruang kerja sendiri</b> berisi tim AI inti, dan bisa diundang ke ruang kerja orang lain lewat link.</p>
+    ${err ? `<p class="gate-err">${esc(err)}</p>` : ''}
+    <a class="btn primary gate-btn" href="/auth/google"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#fff" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.5 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#fff" opacity=".85" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#fff" opacity=".7" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.8-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6z"/><path fill="#fff" opacity=".55" d="M24 48c6.5 0 11.9-2.1 15.8-5.8l-7.4-5.7c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6C6.6 42.6 14.6 48 24 48z"/></svg> Login dengan Google</a>
+    <p class="gate-note">Aplikasi hanya meminta: nama, email, dan akses ke file Google Drive <b>yang dibuat atau Anda pilih</b> di aplikasi ini.</p>
+  </div>`;
+  document.body.appendChild(el);
 }
 
 /** Any colour → the pastel of the same hue (greys stay grey). Running it twice gives the same result. */
@@ -36,9 +54,11 @@ export function soften(hex) {
 const softDiv = (d) => { if (d && d.color) d.color = soften(d.color); return d; };
 
 export async function loadState() {
-  S.data = await (await fetch('/api/state')).json();
+  const r = await fetch('/api/state');
+  if (r.status === 401 || r.status === 403) { loginGate(await r.json().catch(() => ({}))); throw Object.assign(new Error('Perlu login'), { gate: true }); }
+  S.data = await r.json();
   (S.data.divisions || []).forEach(softDiv);
-  S.me = S.data.settings.currentUserId || 'owner';
+  S.me = S.data.me || S.data.settings.currentUserId || 'owner';   // the signed-in person (from the server session)
   notify('*');
 }
 
@@ -65,7 +85,7 @@ export function connect(setConn) {
     } else if (msg.kind === 'root') {
       d[msg.key] = msg.value;
       if (msg.key === 'divisions') msg.value.forEach(softDiv);
-      if (msg.key === 'settings') S.me = msg.value.currentUserId || S.me;
+      if (msg.key === 'settings') S.me = S.data.me || msg.value.currentUserId || S.me;
       notify(msg.key);
     }
   };

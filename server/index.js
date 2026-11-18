@@ -14,6 +14,9 @@ import { personalAssistant } from './roster.js';
 import * as collab from './collab.js';
 import * as org from './org.js';
 import os from 'node:os';
+import * as auth from './auth.js';
+import * as gdrive from './gdrive.js';
+import { starterDb } from './workspace.js';
 
 // Local secrets (GROQ_API_KEY / ANTHROPIC_API_KEY) live in .env, never in the repo.
 try { process.loadEnvFile(path.resolve('.env')); } catch { /* no .env */ }
@@ -26,10 +29,12 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 if (process.argv.includes('--reset-only')) { store.load({ reset: true }); console.log('Data direset.'); process.exit(0); }
 store.load();
+store.loadWorkspaces();
+auth.load();
 if (store.get().needsOrganize) { const r = lib.autoOrganize('arsa'); delete store.get().needsOrganize; store.save(); console.log(`Brain dirapikan: ${r.moved} dipindah, ${r.renamed} diganti nama`); }
 engine.start();
 
-const clients = new Set();
+const clients = new Map();   // SSE response -> workspace id
 const BOOT = Date.now();
 let lastCpu = os.cpus().map((c) => c.times);
 let lastProc = process.cpuUsage(), lastProcT = Date.now();
@@ -48,9 +53,9 @@ function hostStats() {
     node: process.version, sessions: engine.running().length, llm: llm.health(),
   };
 }
-setInterval(() => store.broadcast({ kind: 'root', key: 'host', value: hostStats() }), 5000);
-store.subscribe((msg) => { const line = `data: ${JSON.stringify(msg)}\n\n`; for (const res of clients) res.write(line); });
-setInterval(() => { for (const res of clients) res.write(': ping\n\n'); }, 20000);
+setInterval(() => store.broadcast({ kind: 'root', key: 'host', value: hostStats(), all: true }), 5000);
+store.subscribe((msg) => { const line = `data: ${JSON.stringify(msg)}\n\n`; for (const [res, ws] of clients) if (msg.all || msg.ws === ws) res.write(line); });   // a workspace's changes reach only that workspace
+setInterval(() => { for (const res of clients.keys()) res.write(': ping\n\n'); }, 20000);
 
 const db = () => store.get();
 const json = (res, code, data) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
@@ -67,9 +72,9 @@ async function body(req) {
 const routes = [];
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
 
-on('GET', '/api/state', async () => {
+on('GET', '/api/state', async (b, p, url, me, member) => {
   if (llm.hasGroq()) try { await llm.refreshGroqModels(); } catch (err) { console.warn(`Daftar model Groq memakai cache: ${err.message}`); }
-  return { ...store.snapshot(), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats() };
+  return { ...store.snapshot(), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats(), me: member?.employeeId || db().settings.currentUserId, account: auth.publicUser(me), workspace: me ? wsInfo(me) : null };
 });
 
 on('POST', '/api/goals', (b) => { if (/^\s*(\/\w+|saya selesai)\s*$/i.test(String(b.title || ''))) throw new Error('Itu perintah chat rapat, bukan goal. Ketik di chat rapatnya.'); return engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }); });
@@ -106,14 +111,17 @@ on('POST', '/api/messages', (b) => {
   engine.onHumanMessage(m).catch((err) => console.error('[onHumanMessage]', err));
   return m;
 });
-on('POST', '/api/orchestrate', (b) => engine.orchestrate({ text: need(b.text, 'Pesan kosong'), userId: b.userId || db().settings.currentUserId, to: b.to || [], mode: b.mode || 'auto', channelId: b.channelId || null }));
+on('POST', '/api/orchestrate', (b) => engine.orchestrate({ images: b.images || [], text: b.images?.length ? b.text || '' : need(b.text, 'Pesan kosong'), userId: b.userId || db().settings.currentUserId, to: b.to || [], mode: b.mode || 'auto', channelId: b.channelId || null }));
 on('POST', '/api/dm', (b) => ({ id: engine.ensureDM(b.userId || db().settings.currentUserId, need(b.with, 'with wajib')) }));
 on('POST', '/api/channels', (b) => store.upsert('channels', { id: slug(need(b.name, 'Nama wajib')), name: slug(b.name), kind: 'channel', divisionId: b.divisionId || null, topic: b.topic || '' }));
 
 on('POST', '/api/notes', (b) => brain.writeNote({ title: need(b.title, 'Judul wajib'), content: b.content || `# ${b.title}\n`, folder: b.folder || 'Notes', tags: b.tags || [], authorId: b.userId || db().settings.currentUserId }));
 on('PUT', '/api/notes/:id', (b, p) => {
   const n = db().notes.find((x) => x.id === p.id) || (() => { throw bad('Catatan tidak ada', 404); })();
-  Object.assign(n, pick(b, ['title', 'content', 'folder', 'tags', 'pinned']), { updatedAt: Date.now(), lastEditorId: b.userId || db().settings.currentUserId });
+  const editor = db().employees.find((e) => e.id === (b.userId || db().settings.currentUserId));
+  Object.assign(n, pick(b, ['title', 'content', 'folder', 'tags', 'pinned', 'visibility']), { updatedAt: Date.now(), lastEditorId: editor?.id || 'owner' });
+  // a human who edits a note vouches for it: it becomes a verified fact, and an archived demo note comes back from the archive
+  if (editor?.type === 'human' && b.content !== undefined) { n.kb = 'owner'; if (n.archived) { n.archived = false; if (!b.folder) n.folder = n.origFolder || 'Notes'; } }
   return store.upsert('notes', n);
 });
 on('DELETE', '/api/notes/:id', (b, p) => ({ ok: store.remove('notes', p.id) }));
@@ -274,7 +282,8 @@ on('PATCH', '/api/routines/:id', (b, p) => store.patch('routines', p.id, pick(b,
 on('DELETE', '/api/routines/:id', (b, p) => ({ ok: store.remove('routines', p.id) }));
 on('POST', '/api/routines/:id/run', (b, p) => engine.runRoutine(db().routines.find((x) => x.id === p.id), { priority: 'medium' }));
 
-on('PATCH', '/api/settings', async (b) => {
+on('PATCH', '/api/settings', async (b, p, url, me, member) => {
+  ownerOnly(me, member);
   const s = db().settings;
   const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize']);
   if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = b.apiKey.trim();
@@ -334,6 +343,45 @@ on('POST', '/api/reset', () => {
   return { ok: true };
 });
 
+// ───────────────────────── accounts & Google Drive ─────────────────────────
+/** Workspaces like Discord servers: the first person claims the original office ("main"); everyone else gets a fresh personal workspace
+ *  with a small core team; invited people join someone's workspace as a human employee with their own PA. */
+const AUTH_HOOKS = {
+  mainName: () => store.run('main', () => db().company?.name || 'Kantor utama'),
+  linkOwner: (u) => store.run('main', () => { const e = db().employees.find((x) => x.id === 'owner'); if (e) { e.email = u.email; store.upsert('employees', e); } return 'owner'; }),
+  createWorkspace: (id, u) => {
+    const budget = store.run('main', () => db().settings.workspaceBudgetUSD ?? 0.5);   // daily AI quota per workspace, set by the platform owner
+    const data = starterDb({ ownerName: u.name || u.email.split('@')[0], budgetUSD: budget });
+    data.employees.find((e) => e.id === 'owner').email = u.email;
+    store.createWorkspace(id, data);
+    return { name: data.company.name, employeeId: 'owner' };
+  },
+  joinWorkspace: (wsId, u) => store.run(wsId, () => {
+    const have = db().employees.find((x) => x.type === 'human' && x.email === u.email);
+    if (have) return have.id;
+    return org.hire({ type: 'human', name: u.name || u.email.split('@')[0], title: 'Anggota tim', divisionId: db().divisions.find((d) => d.id === 'exec')?.id || db().divisions[0].id, email: u.email, avatar: 'human' }, 'owner').id;
+  }),
+};
+/** owners and admins of the CURRENT workspace manage it (before anyone has signed in, the local single user does) */
+const ownerOnly = (me, member) => { if (auth.enforced() && !['owner', 'admin'].includes(member?.role)) throw bad('Hanya Owner/Admin ruang kerja ini yang boleh melakukan ini', 403); };
+const signedIn = (me) => { if (!me) throw bad('Login dengan Google dulu', 401); return me; };
+/** Drive belongs to a person, so it may only feed a workspace that person OWNS (never someone else's shared workspace) */
+const driveOwner = (me, member) => { signedIn(me); if (member?.role !== 'owner') throw bad('Google Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri', 403); return me; };
+const wsInfo = (me) => { const id = auth.activeWs(me), w = auth.wsById(id); return { id, name: w?.name || db().company?.name || 'Kantor', role: auth.memberOf(me, id)?.role || (auth.enforced() ? null : 'owner') }; };
+on('GET', '/api/auth/me', (b, p, url, me, member) => ({ configured: auth.configured(), enforced: auth.enforced(), user: auth.publicUser(me), employeeId: member?.employeeId || db().settings.currentUserId, workspace: me ? wsInfo(me) : null, workspaces: me ? auth.myWorkspaces(me) : [], scopes: auth.SCOPES }));
+on('POST', '/api/ws/switch', (b, p, url, me) => ({ id: auth.switchWs(signedIn(me), need(b.id, 'id wajib')) }));
+on('GET', '/api/ws/members', (b, p, url, me) => { signedIn(me); return { members: auth.wsMembers(auth.activeWs(me)) }; });
+on('POST', '/api/ws/invite', (b, p, url, me) => { const r = auth.createInvite(signedIn(me), auth.activeWs(me), b.role); return { ...r, path: '/join/' + r.code }; });
+on('POST', '/api/ws/member', (b, p, url, me) => auth.setMemberRole(signedIn(me), auth.activeWs(me), need(b.accountId, 'accountId wajib'), need(b.role, 'role wajib')));
+on('POST', '/api/ws/rename', (b, p, url, me) => { const name = auth.renameWs(signedIn(me), auth.activeWs(me), b.name); store.setRoot('company', { ...db().company, name }); return { name }; });
+on('GET', '/api/drive/config', (b, p, url, me) => ({ clientId: process.env.GOOGLE_CLIENT_ID || '', pickerKey: process.env.GOOGLE_PICKER_API_KEY || '', appId: String(process.env.GOOGLE_CLIENT_ID || '').split('-')[0], connected: !!me && auth.publicUser(me).drive, folders: auth.driveOf(me?.id)?.folders || null, root: auth.driveOf(me?.id)?.root || null }));
+on('GET', '/api/drive/token', async (b, p, url, me) => ({ token: await auth.accessToken(signedIn(me).id) }));   // short-lived, for the Picker in THIS user's browser only
+on('POST', '/api/drive/setup', (b, p, url, me, member) => gdrive.ensureFolders(driveOwner(me, member).id));
+on('POST', '/api/drive/push', (b, p, url, me, member) => gdrive.push(driveOwner(me, member).id));
+on('POST', '/api/drive/pull', (b, p, url, me, member) => gdrive.startPull(driveOwner(me, member).id));   // runs in the background (hundreds of files)
+on('GET', '/api/drive/pull-status', (b, p, url, me, member) => gdrive.pullStatus(driveOwner(me, member).id) || { running: false });
+on('POST', '/api/drive/picked', (b, p, url, me, member) => gdrive.addPicked(driveOwner(me, member).id, b.ids || []));
+
 function serveStatic(req, res, urlPath) {
   let base = ROOT; let rel = urlPath;
   for (const [prefix, dir] of Object.entries(VENDOR)) if (urlPath.startsWith(prefix)) { base = dir; rel = urlPath.slice(prefix.length - 1); }
@@ -352,19 +400,40 @@ function serveStatic(req, res, urlPath) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+  // ── sign-in with Google
+  if (url.pathname === '/auth/google') return auth.startLogin(req, res);
+  if (url.pathname === '/auth/google/callback') return auth.callback(req, res, url, AUTH_HOOKS);
+  if (url.pathname === '/auth/logout') return auth.logout(req, res);
+  if (url.pathname.startsWith('/join/')) return auth.joinLink(req, res, url.pathname.slice(6), AUTH_HOOKS);
+  // ── gate: once anyone has signed in, every API call needs a session (the page itself loads and shows the sign-in card)
+  const me = auth.sessionUser(req);
+  if (url.pathname.startsWith('/api/') && auth.enforced() && url.pathname !== '/api/auth/me' && !me) return json(res, 401, { error: 'Silakan login dengan Google', login: '/auth/google' });
+  // ── which workspace this request belongs to: the person's active one (membership checked); before any sign-in, the original office
+  const ws = me && auth.enforced() ? auth.activeWs(me) : 'main';
+  const member = me ? auth.memberOf(me, ws) : null;
+  if (!store.exists(ws)) return json(res, 500, { error: `Ruang kerja ${ws} tidak ditemukan di server` });
   if (url.pathname === '/api/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.write('retry: 2000\n\n');
-    clients.add(res);
+    clients.set(res, ws);
     req.on('close', () => clients.delete(res));
     return;
   }
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url.pathname);
+  if (req.method === 'GET' && url.pathname.startsWith('/api/files/')) {   // chat pictures: only inside the workspace they belong to (the gate above already checked the session)
+    const f = store.run(ws, () => engine.readUpload(decodeURIComponent(url.pathname.slice(11))));
+    if (!f) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400' }); return res.end(f.data);
+  }
   for (const r of routes) {
     if (r.method !== req.method) continue;
     const m = url.pathname.match(r.re);
     if (!m) continue;
-    try { return json(res, 200, await r.fn(await body(req), m.groups || {}, url)); }
+    try {
+      const b = await body(req);
+      if (member?.employeeId) b.userId = member.employeeId;   // who is acting comes from the session + workspace, never from what the browser claims
+      return json(res, 200, await store.run(ws, () => r.fn(b, m.groups || {}, url, me, member)));   // everything inside runs on THIS workspace's data
+    }
     catch (err) {
       const code = err.code && Number.isInteger(err.code) ? err.code : (err.status || 500);
       if (code >= 500) console.error(err);
@@ -385,4 +454,4 @@ server.listen(PORT, HOST, () => {
   console.log(`  Mesin AI: ${{ groq: 'LIVE · Groq', claude: 'LIVE · Claude', sim: 'SIMULASI (isi GROQ_API_KEY atau ANTHROPIC_API_KEY di .env / Pengaturan)' }[llm.provider()]}`);
   if (HOST === '127.0.0.1') console.log('  Akses dari HP di jaringan yang sama: jalankan dengan HOST=0.0.0.0\n');
 });
-process.on('SIGINT', () => { store.saveNow(); process.exit(0); });
+process.on('SIGINT', () => { store.saveAll(); auth.saveNow(); process.exit(0); });
