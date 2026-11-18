@@ -2,7 +2,7 @@
 import { esc } from './md.js';
 export { esc };
 
-export const S = { data: null, view: 'office', params: {}, me: 'owner' };
+export const S = { data: null, view: 'dashboard', params: {}, me: 'owner' };
 const subs = new Set();
 export const onChange = (fn) => { subs.add(fn); return () => subs.delete(fn); };
 let pending = new Set();
@@ -31,7 +31,7 @@ export function loginGate(info = {}) {
   const el = document.createElement('div');
   el.id = 'gate';
   el.innerHTML = `<div class="gate-card glass">
-    <div class="gate-logo">✦</div>
+    <div class="gate-logo"><img src="/assets/brand/logo-mark-white.webp" alt="RAIVERSE" width="54" height="54"></div>
     <h2>Masuk ke RAIVERSE</h2>
     <p>Masuk dengan akun Google. Anda langsung mendapat <b>ruang kerja sendiri</b> berisi tim AI inti, dan bisa diundang ke ruang kerja orang lain lewat link.</p>
     ${err ? `<p class="gate-err">${esc(err)}</p>` : ''}

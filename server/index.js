@@ -1,4 +1,5 @@
 // HTTP server: REST API, Server-Sent Events stream, static frontend. No framework.
+import * as edgeTts from './tts-edge.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,6 +17,7 @@ import * as org from './org.js';
 import os from 'node:os';
 import * as auth from './auth.js';
 import * as gdrive from './gdrive.js';
+import * as browser from './browser.js';
 import { starterDb } from './workspace.js';
 
 // Local secrets (GROQ_API_KEY / ANTHROPIC_API_KEY) live in .env, never in the repo.
@@ -25,7 +27,7 @@ const PORT = Number(process.env.PORT || 4317);
 const HOST = process.env.HOST || '127.0.0.1';
 const ROOT = path.resolve('public');
 const VENDOR = { '/vendor/three/': path.resolve('node_modules/three/') };
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.wasm': 'application/wasm', '.mjs': 'text/javascript; charset=utf-8', '.onnx': 'application/octet-stream', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 
 if (process.argv.includes('--reset-only')) { store.load({ reset: true }); console.log('Data direset.'); process.exit(0); }
 store.load();
@@ -54,7 +56,7 @@ function hostStats() {
   };
 }
 setInterval(() => store.broadcast({ kind: 'root', key: 'host', value: hostStats(), all: true }), 5000);
-store.subscribe((msg) => { const line = `data: ${JSON.stringify(msg)}\n\n`; for (const [res, ws] of clients) if (msg.all || msg.ws === ws) res.write(line); });   // a workspace's changes reach only that workspace
+store.subscribe((msg) => { const line = `data: ${JSON.stringify(msg)}\n\n`; for (const [res, ws] of clients) if (msg.all || msg.ws === ws) { if (msg.coll === 'notes' && msg.kind === 'upsert' && !store.run(ws, () => brain.canRead(msg.item, { employeeId: res.employeeId }))) res.write(`data: ${JSON.stringify({ kind: 'remove', coll: 'notes', id: msg.item.id })}\n\n`); else res.write(line); } });   // a workspace's changes reach only that workspace
 setInterval(() => { for (const res of clients.keys()) res.write(': ping\n\n'); }, 20000);
 
 const db = () => store.get();
@@ -74,7 +76,7 @@ const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + p
 
 on('GET', '/api/state', async (b, p, url, me, member) => {
   if (llm.hasGroq()) try { await llm.refreshGroqModels(); } catch (err) { console.warn(`Daftar model Groq memakai cache: ${err.message}`); }
-  return { ...store.snapshot(), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats(), me: member?.employeeId || db().settings.currentUserId, account: auth.publicUser(me), workspace: me ? wsInfo(me) : null };
+  return { ...store.snapshot(), notes: db().notes.filter(n => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId })), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats(), me: member?.employeeId || db().settings.currentUserId, account: auth.publicUser(me), workspace: me ? wsInfo(me) : null };
 });
 
 on('POST', '/api/goals', (b) => { if (/^\s*(\/\w+|saya selesai)\s*$/i.test(String(b.title || ''))) throw new Error('Itu perintah chat rapat, bukan goal. Ketik di chat rapatnya.'); return engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }); });
@@ -199,7 +201,7 @@ on('GET', '/api/knowledge/spaces', () => {
   });
   return { library: lib2.length, areas, divisions, totalNotes: notes.length, agents: emps.length };
 });
-on('GET', '/api/knowledge/library', () => db().notes.filter((n) => n.folder?.startsWith('Knowledge Library/')).map((n) => ({ id: n.id, title: n.title, folder: n.folder, tags: n.tags, words: n.content.split(/\s+/).length, attached: db().employees.filter((e) => e.type === 'ai' && (e.knowledgeIds || []).includes(n.id)).length })));
+on('GET', '/api/knowledge/library', () => db().notes.filter(n => brain.canRead(n)).filter((n) => n.folder?.startsWith('Knowledge Library/')).map((n) => ({ id: n.id, title: n.title, folder: n.folder, tags: n.tags, words: n.content.split(/\s+/).length, attached: db().employees.filter((e) => e.type === 'ai' && (e.knowledgeIds || []).includes(n.id)).length })));
 on('POST', '/api/knowledge/assign', (b) => {
   const n = db().notes.find((x) => x.id === b.noteId); if (!n) throw bad('Catatan tidak ditemukan', 404);
   const ids = b.divisionId ? db().employees.filter((e) => e.type === 'ai' && e.divisionId === b.divisionId).map((e) => e.id) : (b.employeeIds || []);
@@ -290,7 +292,7 @@ on('PATCH', '/api/settings', async (b, p, url, me, member) => {
   if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = b.groqApiKey.trim();
   for (const k of ['tickMs', 'maxConcurrent', 'dailyBudgetUSD']) if (k in ch) ch[k] = Number(ch[k]);
   if ('uiKeys' in ch) { const u = ch.uiKeys || {}, clean = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).slice(0, 60).filter(([a, v]) => typeof v === 'string' && v.length < 24).map(([a, v]) => [String(a).slice(0, 32), v])); ch.uiKeys = { free: clean(u.free), play: clean(u.play), invert: !!u.invert }; }
-  if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); collab.resetMcp(); }
+  if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.map(m => { const old = (s.mcpServers || []).find(x => x.id === m.id); return old && m.configured && !m.url ? { ...m, url: old.url, headers: old.headers } : m; }); ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); collab.resetMcp(); }
   if (ch.googleAppsScript) {
     const prev = s.googleAppsScript || {};
     const next = ch.googleAppsScript || {};
@@ -325,12 +327,12 @@ on('POST', '/api/test-key', async () => {
   const res = await llm.call({ system: 'Balas satu kata.', messages: [{ role: 'user', content: 'ping' }], maxTokens: 32 });
   return { ok: true, provider: llm.provider(), model: res.usedModel, reply: llm.textOf(res), usage: res.usage };
 });
-on('GET', '/api/export', () => ({ ...db(), settings: { ...db().settings, apiKey: '' } }));
+on('GET', '/api/export', (b, p, url, me, member) => { ownerOnly(me, member); return { ...db(), settings: store.exportSettings(), notes: db().notes.filter(n => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId })) }; });
 on('POST', '/api/import', (b) => {
   if (!Array.isArray(b.employees) || !Array.isArray(b.notes)) throw bad('Format file tidak valid');
-  const key = db().settings.apiKey;
+  const key = db().settings.apiKey, savedSettings = structuredClone(db().settings);
   const fresh = store.load({ reset: true });
-  Object.assign(fresh, b, { settings: { ...fresh.settings, ...b.settings, apiKey: key } });
+  Object.assign(fresh, b, { settings: { ...fresh.settings, ...b.settings, apiKey: key, groqApiKey: savedSettings.groqApiKey, googleAppsScript: savedSettings.googleAppsScript, mcpServers: savedSettings.mcpServers } });
   store.saveNow();
   store.broadcast({ kind: 'reload' });
   return { ok: true };
@@ -368,6 +370,8 @@ const signedIn = (me) => { if (!me) throw bad('Login dengan Google dulu', 401); 
 /** Drive belongs to a person, so it may only feed a workspace that person OWNS (never someone else's shared workspace) */
 const driveOwner = (me, member) => { signedIn(me); if (member?.role !== 'owner') throw bad('Google Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri', 403); return me; };
 const wsInfo = (me) => { const id = auth.activeWs(me), w = auth.wsById(id); return { id, name: w?.name || db().company?.name || 'Kantor', role: auth.memberOf(me, id)?.role || (auth.enforced() ? null : 'owner') }; };
+// Browser agen (Chrome DevTools MCP): hanya Owner/Admin yang boleh melihat dan mengendalikan
+for (const [m, p, fn] of browser.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });
 on('GET', '/api/auth/me', (b, p, url, me, member) => ({ configured: auth.configured(), enforced: auth.enforced(), user: auth.publicUser(me), employeeId: member?.employeeId || db().settings.currentUserId, workspace: me ? wsInfo(me) : null, workspaces: me ? auth.myWorkspaces(me) : [], scopes: auth.SCOPES }));
 on('POST', '/api/ws/switch', (b, p, url, me) => ({ id: auth.switchWs(signedIn(me), need(b.id, 'id wajib')) }));
 on('GET', '/api/ws/members', (b, p, url, me) => { signedIn(me); return { members: auth.wsMembers(auth.activeWs(me)) }; });
@@ -381,6 +385,9 @@ on('POST', '/api/drive/push', (b, p, url, me, member) => gdrive.push(driveOwner(
 on('POST', '/api/drive/pull', (b, p, url, me, member) => gdrive.startPull(driveOwner(me, member).id));   // runs in the background (hundreds of files)
 on('GET', '/api/drive/pull-status', (b, p, url, me, member) => gdrive.pullStatus(driveOwner(me, member).id) || { running: false });
 on('POST', '/api/drive/picked', (b, p, url, me, member) => gdrive.addPicked(driveOwner(me, member).id, b.ids || []));
+
+on('GET', '/api/tts/status', () => edgeTts.status());
+on('POST', '/api/tts', async (b) => { const r = await edgeTts.synthesize(b.text, { voice: b.voice, rate: b.rate, pitch: b.pitch }); return { mime: r.mime, audio: r.audio.toString('base64'), cached: !!r.cached }; });   // opt-in Microsoft voice; the line of text leaves the server
 
 function serveStatic(req, res, urlPath) {
   let base = ROOT; let rel = urlPath;
@@ -415,6 +422,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.write('retry: 2000\n\n');
+    res.employeeId = member?.employeeId || store.run(ws, () => db().settings.currentUserId);
     clients.set(res, ws);
     req.on('close', () => clients.delete(res));
     return;
@@ -431,6 +439,13 @@ const server = http.createServer(async (req, res) => {
     if (!m) continue;
     try {
       const b = await body(req);
+      const sensitive = /^\/api\/(?:import|reset|training|mcp|google-workspace|groq-models|test-key)(?:\/|$)/.test(url.pathname);
+      if (sensitive) ownerOnly(me, member);
+      if (/^\/api\/(import|reset)$/.test(url.pathname) && store.run(ws, () => engine.running().length || db().meetings.some(m => collab.liveLoops.has(m.id)))) throw bad('Tunggu pekerjaan dan rapat aktif selesai sebelum mengganti data', 409);
+      if (/^\/api\/notes\//.test(url.pathname)) {
+        const n = store.run(ws, () => db().notes.find(n => n.id === m.groups?.id));
+        if (n && !store.run(ws, () => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId }))) throw bad('Catatan tidak tersedia', 404);
+      }
       if (member?.employeeId) b.userId = member.employeeId;   // who is acting comes from the session + workspace, never from what the browser claims
       return json(res, 200, await store.run(ws, () => r.fn(b, m.groups || {}, url, me, member)));   // everything inside runs on THIS workspace's data
     }

@@ -9,13 +9,15 @@ export const TRUST = { owner: 'terverifikasi · Owner', drive: 'terverifikasi ·
 export const isVerified = (n) => ['owner', 'drive', 'system'].includes(n?.kb);
 const trustOf = (n) => TRUST[n.kb] || TRUST.agent;
 
+export const canRead = (n, { employeeId, audience = 'internal' } = {}) => !!n && !n.archived && (n.visibility !== 'private' || (!!employeeId && n.authorId === employeeId && store.get().employees.find(e => e.id === employeeId)?.type === 'human')) && (audience !== 'public' || n.visibility === 'public');
+
 const tokenize = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^\w\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2);
 
 export function search(query, { limit = 5, scopeEmployeeId, verifiedOnly = false, audience = 'internal' } = {}) {
   const q = tokenize(query);
   if (!q.length) return [];
   // archived demo notes are never searched; private notes never reach agents; a public-facing agent sees public notes only
-  const notes = store.get().notes.filter((n) => !n.archived && (!verifiedOnly || isVerified(n)) && n.visibility !== 'private' && (audience !== 'public' || n.visibility === 'public'));
+  const notes = store.get().notes.filter((n) => canRead(n, { audience }) && (!verifiedOnly || isVerified(n)));
   return notes
     .map((n) => {
       const title = n.title.toLowerCase();
@@ -51,6 +53,7 @@ export function writeNote({ title, content, folder = 'Notes', tags = [], authorI
   const existing = findNote(title);
   const t = Date.now();
   if (existing) {
+    if (author?.type === 'ai' && (isVerified(existing) || existing.visibility === 'private')) throw new Error('Agen tidak boleh menimpa catatan terverifikasi atau pribadi. Buat draf dengan judul baru.');
     existing.content = append ? `${existing.content}\n\n${content}` : content;
     existing.tags = [...new Set([...(existing.tags || []), ...tags])];
     existing.updatedAt = t;

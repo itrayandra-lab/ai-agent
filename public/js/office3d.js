@@ -12,6 +12,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { buildLife } from './life.js';
 import { sfx } from './sfx.js';
+import { tts } from './tts.js';
 import { makeProps } from './props.js';
 import { chat } from './chatter.js';
 import { buildSpace, GradeShader } from './environment.js';
@@ -2338,10 +2339,11 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
         if (ev.type === 'task_created') { sfx.play('task'); if (brainCore) { brainHit(0x8fd0ff, 'brain'); if (b) packet(brainFlat(), b.desk.seat, 0x8fd0ff); } } else if (ev.type === 'delegated') sfx.play('task');
         if (a && b) { packet(a.g.position, b.desk.seat, col(a), () => { burst(b.desk.seat, col(a)); emote(b, '📥', 2200); feel(b, 'surprised', 900); setTimeout(() => feel(b, 'focus', 3000), 900); }); if (ev.type !== 'task_created') { gesture(a, 'point', 1600); emote(a, '📨', 2000); if (Math.random() < 0.55) visit(a, b); } }
         break;
-      case 'message': sfx.play('msg'); if (a) { const txt = String(ev.text).split(': ').slice(1).join(': ') || ev.text; if (a.mode !== 'talk') speak(a, txt, 2); a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45); a.speechUntil = a.talkUntil;
+      case 'message': sfx.play('msg'); if (a) { const txt = String(ev.text).split(': ').slice(1).join(': ') || ev.text; if (a.mode !== 'talk') speak(a, txt, 2); if (b && (b.player || b.id === 'owner') && a.id !== 'owner') tts.speak(a.id, txt, { interrupt: true }); a.talkUntil = performance.now() + Math.min(9000, 1800 + txt.length * 45); a.speechUntil = a.talkUntil;
         if (/haha|wkwk|😂|🎉|mantap|selamat|keren/i.test(txt)) { feel(a, 'laugh', 2500); gesture(a, 'laugh', 1800); } else if (/maaf|gagal|sayang|kendala|masalah/i.test(txt)) feel(a, 'sad', 3000); else if (/\?/.test(txt)) gesture(a, 'shrug', 1500); else if (Math.random() < 0.4) gesture(a, 'present', 2500); if (b) { packet(a.g.position, b.g.position, 0x9ecbff); a.lookAt = b.g.position; setTimeout(() => { if (a.lookAt === b.g.position) a.lookAt = null; }, 4000); if (Math.random() < 0.3) visit(a, b); } } break;
       case 'reasoning': if (a) { say(a, '💭 ' + ev.text, 7000, true); a.talkUntil = performance.now() + 6500; gesture(a, 'think', 4200); feel(a, 'focus', 5000); emote(a, '💭', 2600); } break;
       case 'meeting_say': if (a) {
+        if (a.id !== 'owner' && !a.player) tts.speak(a.id, ev.text);   /* meeting lines are read in order; each agent keeps their own voice */
         say(a, ev.text, 9000, true); a.speechUntil = performance.now() + 9000; a.talkUntil = performance.now() + 6000; gesture(a, 'present', 4000);
         for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.35) gesture(o, 'observe', 4000);
         if (/setuju|sepakat|bagus|tepat|agree/i.test(ev.text)) for (const o of avatars.values()) if (o !== a && o.mode === 'meeting' && Math.random() < 0.5) gesture(o, 'nod', 2500);
@@ -2475,6 +2477,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       setTimeout(() => {
         if (a.speakId !== mine || !avatars.has(a.id)) return;
         say(a, c, Math.max(2800, 1500 + c.length * 60), true); a.talkUntil = performance.now() + 1200 + c.length * 45; sfx.play('msg'); reactTo(a, c, i === 0);
+        if (player?.a) { const dd = camera.position.distanceTo(a.g.position); if (dd < 16) { if (Math.random() < 0.5) tts.speak(a.id, c, { ambient: true, vol: 0.9 * (1 - dd / 20) }); else if (Math.random() < 0.35) tts.hum(a.id, 1 - dd / 20); } }   /* nearby NPC chatter: spoken or hummed, never queued behind real replies */
         if (player?.a) a.lookAt = player.a.g.position;
       }, t);
       t += Math.max(2600, 1400 + c.length * 55);

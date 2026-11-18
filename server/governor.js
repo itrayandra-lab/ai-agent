@@ -16,7 +16,7 @@ function similar(a, b) {
   return inter / Math.min(A.size, B.size);
 }
 
-const recent = []; // timestamps of tasks created by AI without a parent (free-floating initiatives)
+const recentByWorkspace = new Map(); // timestamps of tasks created by AI without a parent (free-floating initiatives)
 
 /** Validate a task before it exists. Humans and the scheduler are trusted; AI-created work is rate-limited and deduplicated. */
 export function checkCreate({ title, createdBy, parentId, kind, assigneeId }) {
@@ -33,6 +33,7 @@ export function checkCreate({ title, createdBy, parentId, kind, assigneeId }) {
   const dup = open.find((x) => !ancestors.has(x.id) && similar(x.title, t) >= 0.8 && (parentId ? x.assigneeId === assigneeId && (x.parentId === parentId || !x.parentId) : !x.parentId));
   if (dup) throw new GovernorError(`Tugas serupa sudah ada: ${dup.id} "${dup.title}" (${emp(dup.assigneeId)?.name}). Gunakan itu, jangan duplikasi.`);
   if (!parentId && kind !== 'routine') {
+    const recent = recentByWorkspace.get(store.current()) || []; recentByWorkspace.set(store.current(), recent);
     const hour = Date.now() - 3600e3;
     while (recent.length && recent[0] < hour) recent.shift();
     if (recent.length >= (g.maxAgentInitiativesPerHour ?? 8)) throw new GovernorError('Batas inisiatif baru per jam tercapai. Fokus ke tugas yang sudah ada.');
@@ -72,7 +73,7 @@ export function modelTier(e, t, purpose = 'task') {
 // small TTL caches for repeated research (saves tokens when several agents research the same thing)
 const caches = { web: new Map(), url: new Map() };
 export function cached(kind, key, ttlMs, fn) {
-  const k = String(key).toLowerCase().replace(/\s+/g, ' ').trim();
+  const k = store.current() + ':' + String(key).toLowerCase().replace(/\s+/g, ' ').trim();
   const c = caches[kind].get(k);
   if (c && Date.now() - c.at < ttlMs) return Promise.resolve(c.value + '\n\n(hasil cache riset sebelumnya)');
   return fn().then((value) => { if (!/^GAGAL|^Gagal/.test(value)) caches[kind].set(k, { at: Date.now(), value }); if (caches[kind].size > 300) caches[kind].delete(caches[kind].keys().next().value); return value; });

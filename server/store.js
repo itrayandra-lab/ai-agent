@@ -93,6 +93,11 @@ export function createWorkspace(id, data) {
 }
 
 export function load({ reset = false } = {}) {
+  if (current() !== 'main') {
+    const w = wsEntry();
+    if (reset) { w.db = buildSeed(); saveNow(); }
+    return w.db;
+  }
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!reset && fs.existsSync(DB_FILE)) {
     try {
@@ -283,6 +288,13 @@ export function setRoot(key, value) {
   broadcast({ kind: 'root', key, value: key === 'settings' ? publicSettings() : value });
 }
 
+export function exportSettings() {
+  const s = structuredClone(cur().settings);
+  s.apiKey = ''; s.groqApiKey = '';
+  if (s.googleAppsScript) s.googleAppsScript.secret = '';
+  if (s.mcpServers) s.mcpServers = s.mcpServers.map(m => ({ ...m, url: '', headers: {} }));
+  return s;
+}
 export function publicSettings() {
   const s = { ...cur().settings };
   s.hasApiKey = !!(s.apiKey || process.env.ANTHROPIC_API_KEY);
@@ -292,6 +304,7 @@ export function publicSettings() {
   if (s.googleAppsScript) {
     s.googleAppsScript = { ...s.googleAppsScript, secret: s.googleAppsScript.secret ? '••••' + s.googleAppsScript.secret.slice(-4) : '', hasSecret: !!s.googleAppsScript.secret };
   }
+  if (s.mcpServers) s.mcpServers = s.mcpServers.map(m => ({ ...m, headers: {}, url: '', configured: !!m.url }));
   return s;
 }
 

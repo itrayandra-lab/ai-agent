@@ -7,8 +7,14 @@ import { KnowledgeView } from './knowledge-view.js';
 import { bindAppearance } from './appearance-ui.js';
 import { resolveAppearance } from './assets3d.js';
 import { sfx } from './sfx.js';
+import { tts } from './tts.js';
+import { icon, goldIcon } from './icons.js';
+// Tombol PLAY/EXIT Kantor 3D: ikon emas + label; saat aktif memakai penanda stop (tidak ada segitiga Play).
+const playBtn = (on) => `${on ? '<span class="gi-stop" aria-hidden="true"></span>' : goldIcon('play', 22)}<span class="pl-lbl">${on ? 'EXIT' : 'PLAY'}</span>`;
+import { BrowserView } from './browser-view.js';
 
 const D = () => S.data;
+tts.bind((id) => emp(id));
 const me = () => emp(S.me) || emp('owner');
 const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
 const EV_ICON = { task_created: '📥', delegated: '➡️', task_started: '⚡', task_done: '✅', note_written: '📝', message: '💬', reasoning: '💭', learned: '💡', approval_requested: '🛑', approved: '🎉', rejected: '✏️', meeting: '👥', alert: '⚠️', hired: '🎊', handoff: '📦' };
@@ -157,24 +163,24 @@ export const OfficeView = {
       </div>
       <div class="ov-right">
         <div class="cam-btns">
-          <button class="btn glass primary-play" title="Masuk ke kantor sebagai karakter Anda (WASD)" data-cam="play" style="width:auto;padding:0 12px">▶ PLAY</button>
-          <button class="btn glass" title="Layar penuh" data-cam="full">⛶</button>
-          <button class="btn glass tp-open" title="Teleport ke tempat atau agen mana pun (tombol V)" data-cam="tele" style="width:auto;padding:0 10px">⚡</button>
-          <button class="btn glass" title="Tampilkan / sembunyikan petunjuk kontrol" data-cam="hint">?</button>
-          <button class="btn glass" title="Menu lainnya" data-cam="more">⋯</button>
+          <button class="btn glass primary-play" title="Masuk ke kantor sebagai karakter Anda (WASD)" aria-label="Masuk mode Play" data-cam="play" style="width:auto;padding:0 12px">${playBtn(false)}</button>
+          <button class="btn glass" title="Layar penuh" aria-label="Layar penuh" data-cam="full">${goldIcon('full', 24)}</button>
+          <button class="btn glass" title="Menu lainnya" aria-label="Menu lainnya" data-cam="more">${goldIcon('more', 24)}</button>
         </div>
         <div class="glass cam-menu" hidden>
-          <button class="cm-i" data-cam="labels"><i>Aa</i>Label nama</button>
-          <button class="cm-i" data-cam="apps"><i>🗂</i>Aplikasi</button>
-          <button class="cm-i" data-cam="visual"><i>🎛</i>Visual</button>
-          <button class="cm-i" data-cam="me"><i>👤</i>Karakter saya</button>
-          <button class="cm-i" data-cam="settings"><i>⚙</i>Pengaturan</button>
-          <button class="cm-i" data-cam="info"><i>!</i>Info sistem</button>
+          <button class="cm-i" data-cam="labels"><i>${goldIcon('labels', 24)}</i>Label nama</button>
+          <button class="cm-i" data-cam="visual"><i>${goldIcon('visual', 24)}</i>Visual</button>
+          <button class="cm-i" data-cam="sound"><i>${goldIcon('settings', 24)}</i>Pengaturan</button>
+          <button class="cm-i" data-cam="apps"><i>${goldIcon('apps', 24)}</i>Aplikasi</button>
+          <button class="cm-i" data-cam="me"><i>${goldIcon('me', 24)}</i>Karakter saya</button>
+          <button class="cm-i" data-cam="info"><i>${goldIcon('info', 24)}</i>Info sistem</button>
+          <button class="cm-i" data-cam="hint"><i>${goldIcon('hint', 24)}</i>Bantuan</button>
+          <button class="cm-i" data-cam="tele" title="Teleport ke tempat atau agen mana pun (tombol V)"><i>${goldIcon('tele', 24)}</i>Teleport</button>
         </div>
         <div class="glass hud" id="ohud"></div>
       </div>
       <div class="ov ov-br glass"><div class="card-h" style="padding:7px 10px;gap:6px"><div class="tabs" style="padding:2px"><button data-ft="comms" class="active">Percakapan</button><button data-ft="events">Aktivitas</button></div><span class="badge soft" id="feedcount">0</span><span style="flex:1"></span><span class="muted small" id="feedtoggle" style="cursor:pointer;padding:4px">▾</span></div><div class="feed" id="ofeed"></div></div>
-      <div class="phud glass mono" id="phud" hidden><b>MODE PEMAIN</b> · WASD gerak · Shift lari · <b>gerakkan mouse = arah kamera & jalan</b> (tanpa klik) · <b>E</b> panggil & bicara · <b>F</b> beri tugas · Spasi lompat · <b>V</b> teleport · G lambai · M suara · H bantuan · <b>Esc</b> keluar</div>
+      <div class="phud glass mono" id="phud" hidden><b>MODE PEMAIN</b> · WASD gerak · Shift lari · <b>gerakkan mouse = arah kamera & jalan</b> (tanpa klik) · <b>E</b> panggil & bicara · <b>F</b> beri tugas · Spasi lompat · <b>V</b> teleport · G lambai · M suara · <b>Esc</b> keluar</div>
       <div class="follow-card glass" id="ofollow" hidden></div>
       <div class="pie" id="opie" hidden></div>
       <div class="help-panel glass" id="ohelp" hidden></div>
@@ -188,7 +194,7 @@ export const OfficeView = {
       <div class="oapps glass" id="oapps" hidden></div>
       <div class="ptalk glass" id="ptalk" hidden></div>
       <div class="pmobile" id="pmobile" hidden><div class="pjoy">◎<small>geser</small></div><div class="pbtns"><button class="btn glass" data-pm="talk">E</button><button class="btn glass" data-pm="wave">👋</button><button class="btn glass" data-pm="exit">✕</button></div></div>
-      <div class="cmdbar-hint">drag = geser · kiri + drag = geser (pan) · C / Z = tengok kiri / kanan · klik kanan + drag = orbit · Q E = naik turun · Shift = cepat · scroll = zoom · klik agen = menu · P = main sebagai karakter · <b>H</b> bantuan</div>
+      <div class="cmdbar-hint">drag = geser · kiri + drag = geser (pan) · C / Z = tengok kiri / kanan · klik kanan + drag = orbit · Q E = naik turun · Shift = cepat · scroll = zoom · klik agen = menu · P = main sebagai karakter</div>
       <div class="odock glass" id="odock"><div class="od-h"><b>Orkestrator</b><span class="od-to" id="odto"></span><button class="btn sm ghost" id="odadd" title="Tambah agen ke diskusi">＋ Agen</button><button class="btn sm ghost od-needb" id="odneed" title="Review hasil, persetujuan, tugas macet dan lewat tenggat">Butuh kamu<span class="od-n" id="odneedn"></span></button><button class="btn sm ghost" id="odmode" title="Otomatis: kalimat kerja = goal, selain itu obrolan">Otomatis</button><button class="btn sm ghost" id="odtog" title="Kecilkan / besarkan">▾</button><button class="btn sm ghost" id="odinfo" title="Info">i</button></div><div class="od-pick" id="odpick" hidden><input id="odq" placeholder="Cari agen… nama atau jabatan" autocomplete="off"><div class="od-list" id="odlist"></div></div><div class="od-need" id="odneedp" hidden></div><div class="od-info small muted" id="odinfotxt" hidden>Tulis di bawah. Tanpa @nama, pesan ini ke orkestrator yang membagi pekerjaan ke manajer dan staf. Tambahkan agen dengan ＋ untuk diskusi grup.</div><div class="od-body" id="odbody"><div class="od-msgs" id="odmsgs"></div><div class="od-work" id="odwork"></div></div><div class="od-imgs" id="odimgs"></div><div class="cmdbar"><input id="goalq" placeholder="Tanya, beri tugas, atau diskusi… (@nama untuk menambah agen)" maxlength="2000" autocomplete="off"><label class="btn icon" id="odimg" title="Lampirkan gambar (atau tempel dengan Ctrl+V)">🖼️<input type="file" accept="image/*" multiple hidden id="odimgf"></label><button class="btn" id="meetgo" title="Adakan rapat multi-agen">Rapat</button><button class="btn primary" id="goalgo">Kirim</button></div></div>`;
     root.appendChild(ov);
     ov.querySelector('#osim').onclick = () => OfficeView.characterPicker();
@@ -212,7 +218,7 @@ export const OfficeView = {
       if (c === 'more') { const m = ov.querySelector('.cam-menu'); m.hidden = !m.hidden; if (!m.hidden) setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('.ov-right')) { m.hidden = true; document.removeEventListener('click', off); } }), 0); }
       if (c === 'info') { const r = ov.querySelector('.ov-right'); r.classList.toggle('info'); if (r.classList.contains('info')) setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('.ov-right')) { r.classList.remove('info'); document.removeEventListener('click', off); } }), 0); }
       if (c === 'roof') { const m = office.toggleRoof(); toast('🏠 Atap: ' + ({ auto: 'otomatis (terpotong saat melihat ke dalam)', on: 'selalu tampil', off: 'selalu sembunyi' })[m], 'ok'); }
-      if (c === 'sound') { const o = sfx.toggle(); b.textContent = o ? '🔊' : '🔇'; if (o) sfx.play('click'); }
+      if (c === 'sound') OfficeView.help();   // gear = office settings: Navigasi, Mode Karakter, Atur Tombol, Grafis, Suara
       if (c === 'help') OfficeView.help();
       if (c === 'settings') return navigate('settings');
       if (c === 'hint') { this.hintOn = !this.hintOn; ov.querySelector('#phud').hidden = !this.hintOn; b.classList.toggle('on', this.hintOn); return; }
@@ -451,7 +457,8 @@ export const OfficeView = {
     const ov = this.ov; if (!ov) return;
     ov.querySelector('#phud').hidden = !(on && this.hintOn); // petunjuk hanya tampil saat tombol ? ditekan
     ov.querySelector('#pmobile').hidden = !on || !matchMedia('(pointer: coarse)').matches;
-    ov.querySelector('[data-cam="play"]').textContent = on ? '■ EXIT' : '▶ PLAY';
+    const pb = ov.querySelector('[data-cam="play"]'); pb.innerHTML = playBtn(on);
+    pb.setAttribute('aria-label', on ? 'Keluar dari mode Play' : 'Masuk mode Play');
     ov.classList.toggle('playing', on); office?.setInset?.(on ? 0 : (this.dock?.open && innerWidth > 900 ? 392 : 0));
     if (!on) { ov.querySelector('#phint').hidden = true; ov.querySelector('#ptalk').hidden = true; this.talkId = null; }
   },
@@ -698,7 +705,7 @@ export const OfficeView = {
     const k = (...ks) => ks.map((x) => `<span class="kbd">${x}</span>`).join('');
     const ka = office?.keyActions?.() || [], kn = (c) => String(c).replace(/^Key/, '').replace(/^Digit/, '').replace('Arrow', 'Panah '), kk = (m, id, d) => kn((ka.find((a) => a.mode === m && a.id === id) || { key: d }).key);
     const rows = (title, list) => `<div class="hp-sec">${title}</div>` + list.map(([l, keys]) => `<div class="hp-row"><span>${l}</span><span>${keys}</span></div>`).join('');
-    el.innerHTML = `<div class="row" style="margin-bottom:6px"><b style="flex:1">Bantuan [H]</b><button class="btn sm ghost" data-hx>✕</button></div>
+    el.innerHTML = `<div class="row" style="margin-bottom:6px"><b style="flex:1">Pengaturan</b><button class="btn sm ghost" data-hx>✕</button></div>
       <div class="hp-tabs"><button class="on" data-hp="nav">Navigasi</button><button data-hp="play">Mode Karakter</button><button data-hp="keys">Atur Tombol</button><button data-hp="gfx">Grafis</button><button data-hp="snd">Suara</button></div>
       <div data-hpv="nav">${rows('Dasar', [['Geser (pan)', '🖱 kiri + drag / ' + k('W', 'A', 'S', 'D')], ['Tengok kiri / kanan', k(kk('free', 'Act:lookLeft', 'KeyZ'), kk('free', 'Act:lookRight', 'KeyC')) + ' (menoleh di tempat)'], ['Orbit', '🖱 kanan + drag'], ['Naik / Turun', k(kk('free', 'Act:up', 'KeyQ'), kk('free', 'Act:down', 'KeyE'))], ['Lebih cepat', 'tahan ' + k('Shift')], ['Zoom ke kursor', '🖱 scroll'], ['Mode jalan / terbang', k('Space')], ['Teleport', '🖱 klik ganda lantai'], ['Ikuti agen', '🖱 klik agen'], ['Agen berikutnya', k('Tab')]])}
         ${rows('Lanjutan', [['Keluar / tutup', k('Esc')], ['Gerak cepat', k('⇧')], ['Gerak sangat cepat', k('Alt')], ['Tampilan standar', k('8', '4', '5', '6', '2')], ['Posisi awal', k('0')], ['Waktu (pagi ↔ malam)', k('U') + ' / ' + k('I')], ['Sudut matahari', k('⇧') + '+' + k('U') + ' / ' + k('I')], ['Simpan tampilan favorit', k('B')], ['Favorit sebelumnya / berikutnya', k('PgUp', 'PgDn')], ['Label nama', k('L')]])}</div>
@@ -729,9 +736,29 @@ export const OfficeView = {
       const st = sfx.state(), row = (k, l, d) => '<div class="hp-row"><span><b>' + l + '</b><br><small class="muted">' + d + '</small></span><button class="btn sm ' + (st[k] ? '' : 'ghost') + '" data-s="' + k + '">' + (st[k] ? 'Nyala' : 'Mati') + '</button></div>';
       sp.innerHTML = '<div class="small muted" style="margin:4px 0 8px">Musik latar yang menenangkan dibuat langsung di browser (tanpa file). Matikan kapan saja bila mengganggu. Tombol <b>M</b> menyalakan atau mematikan semuanya.</div>' +
         row('on', 'Semua suara', 'saklar utama') + row('music', 'Musik latar', 'pad lembut & lonceng pelan') + row('fx', 'Efek suara', 'lonceng tugas, air, langkah, dll') +
-        '<div class="hp-row"><span><b>Volume</b></span><input type="range" min="0" max="100" value="' + Math.round(st.vol * 100) + '" data-sv style="width:140px"></div>';
-      sp.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { sfx.set({ [b.dataset.s]: !sfx.state()[b.dataset.s] }); drawSnd(); const sb = document.querySelector('[data-cam="sound"]'); if (sb) sb.textContent = sfx.isOn() ? '🔊' : '🔇'; }));
+        '<div class="hp-row"><span><b>Volume</b></span><input type="range" min="0" max="100" value="' + Math.round(st.vol * 100) + '" data-sv style="width:140px"></div>' +
+        (() => { const t = tts.state(); return '<div class="small muted" style="margin:14px 0 8px"><b>Suara agen (bicara)</b>: agen membacakan balasannya dalam bahasa Indonesia memakai suara bawaan browser. Tidak ada unduhan. Setiap agen punya nada dan kecepatan sendiri.</div>' +
+          (t.available ? '<div class="hp-row"><span><b>Agen bicara</b><br><small class="muted">' + (t.hasIndonesian ? t.voiceCount + ' suara Indonesia ditemukan' : 'belum ada suara Indonesia di perangkat ini, jadi kalimat dibaca dengan logat asing. Pasang paket suara Indonesia di Windows (Bahasa, Bicara) atau pakai Edge') + '</small></span><button class="btn sm ' + (t.on ? '' : 'ghost') + '" data-tts="on">' + (t.on ? 'Nyala' : 'Mati') + '</button></div>' +
+          '<div class="hp-row"><span><b>Mesin suara</b><br><small class="muted">' + (t.engine === 'edge' ? 'Microsoft (suara Gadis dan Ardi lewat server; natural dan ringan, butuh internet; teks yang dibacakan dikirim ke Microsoft)' : 'Browser (suara bawaan perangkat; tanpa pihak ketiga, tetapi kurang natural)') + '</small></span><span style="display:flex;gap:6px"><button class="btn sm ' + (t.engine === 'edge' ? '' : 'ghost') + '" data-te="edge">' + (t.engine === 'edge' ? icon('check', 14) + ' ' : '') + 'Microsoft</button><button class="btn sm ' + (t.engine === 'browser' ? '' : 'ghost') + '" data-te="browser">' + (t.engine === 'browser' ? icon('check', 14) + ' ' : '') + 'Browser</button></span></div>' +
+          (t.edge.avail === false ? '<div class="small" style="margin:0 0 8px;color:var(--warn,#b45309)">Microsoft belum bisa dipakai: ' + esc(t.edge.availErr || 'Python edge-tts belum terpasang di server') + '. Sementara suara browser yang dipakai.</div>' : '') + (t.engine === 'edge' && t.edge.avail !== false ? '<div class="small muted" style="margin:0 0 8px">' + (t.edge.avail === false ? '' : t.edge.ok === false ? 'Server suara tidak menjawab beberapa kali: memakai suara browser. Pilih Microsoft lagi untuk mencoba ulang. ' + esc(t.edge.err) : t.edge.ok ? 'Berjalan. Kalimat pertama terdengar ' + t.edge.ms + ' ms setelah dikirim.' : 'Dicoba saat pertama dipakai; kalau gagal otomatis pakai suara browser.') + '</div>' : '') +
+          '<div class="hp-row"><span><b>Volume suara agen</b></span><input type="range" min="0" max="100" value="' + Math.round(t.vol * 100) + '" data-tv style="width:140px"></div>' +
+          (() => { const pr = tts.pron(); return '<div class="small muted" style="margin:14px 0 8px"><b>Pengucapan suara browser</b>: kalau ada huruf yang hilang (misalnya "sedang" terdengar "edang"), dengarkan cara-cara di bawah lalu pilih nomor yang terdengar benar. Pilihannya dipakai untuk semua agen.</div>' +
+            '<div class="hp-row"><span><b>Uji huruf S</b><br><small class="muted">memutar ' + pr.options.length + ' cara, berurutan</small></span><span style="display:flex;gap:6px"><button class="btn sm" data-pa="1">' + icon('sound', 15) + ' Dengarkan</button><button class="btn sm ghost" data-pa="0">Berhenti</button></span></div>' +
+            '<div class="hp-row" style="flex-wrap:wrap;gap:6px"><span><b>Pilih yang benar</b><br><small class="muted">' + esc(pr.options.find((o) => o.id === pr.strategy)?.label || '') + ' dipakai sekarang</small></span><span style="display:flex;gap:6px;flex-wrap:wrap">' + pr.options.map((o, i) => '<button class="btn sm ' + (o.id === pr.strategy ? '' : 'ghost') + '" data-ps="' + o.id + '" title="' + esc(o.label) + '">' + (i + 1) + '</button>').join('') + '</span></div>' +
+            '<div class="hp-row" style="flex-wrap:wrap;gap:6px"><span><b>Kamus ucapan</b><br><small class="muted">kata yang salah diucapkan, dan cara menulisnya agar benar</small></span><span style="display:flex;gap:6px;flex-wrap:wrap"><input class="input" data-pw placeholder="kata (sedang)" style="width:110px"><input class="input" data-py placeholder="ditulis (sudang)" style="width:110px"><button class="btn sm" data-pd="1">Tambah</button></span></div>' +
+            (Object.keys(pr.dict).length ? '<div class="small" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">' + Object.entries(pr.dict).map(([k, v]) => '<button class="btn sm ghost" data-pk="' + esc(k) + '" title="Hapus">' + esc(k) + ' → ' + esc(v) + ' ×</button>').join('') + '</div>' : ''); })() +
+          '<div class="hp-row"><span><b>Uji suara</b><br><small class="muted">dengarkan 3 agen berbeda</small></span><button class="btn sm" data-tt="1">' + icon('sound', 15) + ' Uji</button></div>' : '<div class="small muted">Browser ini tidak mendukung suara bicara.</div>'); })();
+      sp.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { sfx.set({ [b.dataset.s]: !sfx.state()[b.dataset.s] }); drawSnd(); }));
       sp.querySelector('[data-sv]').oninput = (e) => sfx.set({ vol: e.target.value / 100 });
+      sp.querySelector('[data-tts]')?.addEventListener('click', () => { tts.set({ on: !tts.isOn() }); drawSnd(); });
+      sp.querySelectorAll('[data-te]').forEach((b) => b.addEventListener('click', () => { tts.set({ engine: b.dataset.te }); drawSnd(); if (b.dataset.te === 'edge') tts.checkEdge().then(() => sp.isConnected && drawSnd()); }));
+      if (tts.state().edge.avail === undefined) tts.checkEdge().then(() => sp.isConnected && drawSnd());
+      sp.querySelector('[data-tv]')?.addEventListener('input', (e) => tts.set({ vol: e.target.value / 100 }));
+      sp.querySelectorAll('[data-pa]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.pa === '1') tts.audition(); else tts.stopAudition(); }));
+      sp.querySelectorAll('[data-ps]').forEach((b) => b.addEventListener('click', () => { tts.setPron({ strategy: b.dataset.ps }); drawSnd(); }));
+      sp.querySelector('[data-pd]')?.addEventListener('click', () => { const w = sp.querySelector('[data-pw]').value, v = sp.querySelector('[data-py]').value; if (w.trim() && v.trim()) { tts.setPron({ word: w, say: v }); drawSnd(); } });
+      sp.querySelectorAll('[data-pk]').forEach((b) => b.addEventListener('click', () => { tts.setPron({ word: b.dataset.pk, say: '' }); drawSnd(); }));
+      sp.querySelector('[data-tt]')?.addEventListener('click', () => { const ids = (D().employees || []).filter((x) => x.type === 'ai').slice(0, 3).map((x) => x.id); const lines = ['Halo, saya agen RAIVERSE. Tugas hari ini sudah selesai, sembilan puluh lima persen sesuai target.', 'Saya setuju. Biar saya cek dulu datanya.', 'Rapat dimulai pukul sepuluh. Mohon siapkan laporan.']; tts.stop(); (ids.length ? ids : ['a', 'b', 'c']).forEach((id, i) => tts.speak(id, lines[i], { force: true })); });
     };
     drawSnd();
     const gp = el.querySelector('[data-hpv="gfx"]');
@@ -792,27 +819,37 @@ export const OfficeView = {
 // ═════════════════════ DASHBOARD ═════════════════════
 export const DashboardView = {
   mount(root) {
-    root.innerHTML = `<div class="page simple">
-      <div class="hero"><div><div class="hero-k">${esc(D().company.name)}</div><h2>Halo, ${esc(me().name.split(' ')[0])} 👋</h2><div class="hero-s" id="dhs"></div></div><div class="hero-a"><button class="btn primary" id="hgo">▶ Masuk Kantor 3D</button></div></div>
+    root.innerHTML = `<div class="page simple home">
+      <div class="hero"><div><div class="hero-k">${esc(D().company.name)}</div><h2>Apa yang ingin kamu kerjakan?</h2><p class="home-intro">Ceritakan tujuannya. Tim AI membantu mengerjakan langkah berikutnya.</p><div class="hero-s" id="dhs"></div></div><div class="hero-a"><button class="btn ghost" id="hgo">${icon('office')} Lihat kantor 3D</button><button class="btn ghost" id="hfind" title="Cari karyawan, pekerjaan, catatan (Ctrl K)">${icon('search')} Cari <kbd>Ctrl K</kbd></button></div></div>
+      <ol class="flow" aria-label="Alur kerja"><li><button type="button" data-flow="ask"><b>1</b><span>Ceritakan tujuan</span></button></li><li><button type="button" data-flow="tasks"><b>2</b><span>Tim mengerjakan</span></button></li><li><button type="button" data-flow="brain"><b>3</b><span>Tinjau &amp; simpan hasil</span></button></li></ol>
       <div class="card ask"><div class="card-b" style="display:grid;gap:10px">
-        <div class="row"><input class="input big" id="gt" placeholder="Mau dikerjakan apa hari ini? mis. Naikkan penjualan paket Growth 30%" style="flex:1"><button class="btn primary" id="gsend">🚀 Jalankan</button></div>
-        <details class="more"><summary>Tambah detail (opsional)</summary><div style="display:grid;gap:8px;margin-top:8px"><textarea class="input" id="gd" rows="2" placeholder="Konteks, batasan, target, tenggat"></textarea><select class="input" id="gp" style="width:auto">${opt('high', PRIO.high, 'high')}${opt('medium', PRIO.medium)}${opt('low', PRIO.low)}</select></div></details>
+        <label class="sr-only" for="gt">Tugas untuk tim AI</label><div class="row home-compose"><textarea class="input big" id="gt" rows="2" placeholder="Misalnya, siapkan rencana konten untuk minggu depan…" style="flex:1"></textarea><button class="btn primary" id="gsend">${icon('play')} Mulai</button></div>
+        <details class="more"><summary>Detail tugas <span class="muted">· opsional</span></summary><div style="display:grid;gap:8px;margin-top:8px"><label class="f" for="gd">Konteks dan hasil yang diharapkan</label><textarea class="input" id="gd" rows="2" placeholder="Tambahkan batasan, target, atau tenggat"></textarea><label class="f" for="gp">Prioritas</label><select class="input" id="gp" style="width:auto">${opt('high', PRIO.high, 'high')}${opt('medium', PRIO.medium)}${opt('low', PRIO.low)}</select></div></details><p class="compose-hint">Enter untuk mulai · Shift + Enter untuk baris baru</p>
       </div></div>
+      <div class="home-suggestions" aria-label="Contoh tugas"><button class="btn" data-prompt="Siapkan rencana konten untuk minggu depan">${icon('brain')} Rencana konten</button><button class="btn" data-prompt="Riset kompetitor dan rangkum peluang untuk bisnis kita">${icon('search')} Riset kompetitor</button><button class="btn" data-prompt="Susun langkah untuk meluncurkan produk baru">${icon('goal')} Rencana peluncuran</button></div>
       <div id="dapw"></div>
-      <div class="card"><div class="card-h">🎯 Pekerjaan terbaru<span style="flex:1"></span><button class="btn sm ghost" data-nav="tasks">Semua tugas →</button></div><div class="card-b" id="goals" style="display:grid;gap:8px"></div></div>
-      <details class="card acc"><summary class="card-h">📡 Aktivitas terbaru</summary><div class="feed" id="dfeed" style="max-height:360px"></div></details>
-      <details class="card acc"><summary class="card-h">🏢 Divisi <span class="muted small" id="dvn"></span></summary><div class="card-b"><div class="div-grid compact" id="dd"></div></div></details>
+      <div class="card"><div class="card-h">${icon('tasks')} Pekerjaan terbaru<span style="flex:1"></span><button class="btn sm ghost" data-nav="tasks">Lihat semua →</button></div><div class="card-b" id="goals" style="display:grid;gap:8px"></div></div>
+      <details class="card acc"><summary class="card-h">${icon('bolt')} Jejak aktivitas</summary><div class="feed" id="dfeed" style="max-height:360px"></div></details>
     </div>`;
     root.querySelector('#gsend').onclick = async () => {
       const title = root.querySelector('#gt').value.trim();
       if (!title) return root.querySelector('#gt').focus();
-      await api('POST', '/api/goals', { title, description: root.querySelector('#gd').value, priority: root.querySelector('#gp').value, userId: S.me });
-      root.querySelector('#gt').value = ''; root.querySelector('#gd').value = '';
-      toast('🎯 Diterima. Tim mulai bekerja.', 'ok');
+      const button = root.querySelector('#gsend');
+      if (button.disabled) return;
+      button.disabled = true; button.setAttribute('aria-busy', 'true'); button.textContent = 'Mengirim…';
+      try {
+        await api('POST', '/api/goals', { title, description: root.querySelector('#gd').value, priority: root.querySelector('#gp').value, userId: S.me });
+        root.querySelector('#gt').value = ''; root.querySelector('#gd').value = '';
+        toast('Tugas diterima. Pantau hasilnya di Pekerjaan terbaru.', 'ok');
+      } catch { /* api displays the error; preserve the draft for retry */ }
+      finally { button.disabled = false; button.removeAttribute('aria-busy'); button.innerHTML = `${icon('play')} Mulai`; }
     };
-    root.querySelector('#gt').onkeydown = (e) => { if (e.key === 'Enter') root.querySelector('#gsend').click(); };
+    root.querySelector('#gt').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); root.querySelector('#gsend').click(); } };
+    root.querySelectorAll('[data-prompt]').forEach((button) => { button.onclick = () => { const input = root.querySelector('#gt'); input.value = button.dataset.prompt; input.focus(); }; });
     root.querySelector('[data-nav]').onclick = () => navigate('tasks');
+    root.querySelectorAll('[data-flow]').forEach((b) => (b.onclick = () => (b.dataset.flow === 'ask' ? root.querySelector('#gt').focus() : navigate(b.dataset.flow))));
     root.querySelector('#hgo').onclick = () => navigate('office');
+    root.querySelector('#hfind').onclick = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
     bindCommon(root);
     this.root = root; this.update();
   },
@@ -829,13 +866,13 @@ export const DashboardView = {
       const pct = g.status === 'done' ? 100 : all.length ? Math.round((done / all.length) * 90) : 5;
       return `<div class="tcard" data-task="${g.id}" style="--c:var(--accent)"><div class="row"><div class="tt" style="flex:1">${esc(g.title)}</div>${statusChip(g.status)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="meta">${all.length ? `${done}/${all.length} langkah · ` : ''}${ago(g.createdAt)}</div></div>`;
     }).join('') || '<div class="muted small">Belum ada. Ketik di atas, mis. “Siapkan peluncuran fitur integrasi WhatsApp”.</div>';
-    r.querySelector('#dvn').textContent = `· ${d.divisions.length}`;
+    if (r.querySelector('#dd')) { r.querySelector('#dvn').textContent = `· ${d.divisions.length}`;
     r.querySelector('#dd').innerHTML = d.divisions.map((x) => {
       const members = d.employees.filter((e) => e.divisionId === x.id);
       const act = members.filter((e) => e.status === 'working').length;
       return `<button class="div-chip" style="--c:${x.color}" data-div="${x.id}"><span>${x.icon} ${esc(x.name)}</span><em>${act ? act + ' aktif' : members.length + ' agen'}</em></button>`;
     }).join('');
-    r.querySelectorAll('[data-div]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.div)));
+    r.querySelectorAll('[data-div]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.div))); }
     r.querySelector('#dfeed').innerHTML = d.events.slice(-12).reverse().map((e) => feedItem(e)).join('') || '<div class="empty">Belum ada aktivitas</div>';
   },
 };
@@ -873,10 +910,10 @@ export const TasksView = {
   mount(root) {
     this.f = this.f || { q: '', div: '', who: '', top: false, lens: '', view: 'kanban', month: Date.now(), sort: 'due' };
     root.innerHTML = `<div class="page simple wide"><div class="toolbar">
-        <input class="input" id="tq" placeholder="🔎 Cari tugas…" style="min-width:160px;flex:1;max-width:360px" value="${esc(this.f.q)}">
-        <div class="view-switch" id="tview">${[['kanban', '▥ Papan'], ['list', '☰ Daftar'], ['calendar', '📅 Kalender']].map(([v, l]) => `<button data-v="${v}" class="${this.f.view === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <input class="input" id="tq" placeholder="Cari pekerjaan…" style="min-width:160px;flex:1;max-width:360px" value="${esc(this.f.q)}">
+        <div class="view-switch" id="tview">${[['kanban', 'Papan'], ['list', 'Daftar'], ['calendar', 'Kalender']].map(([v, l]) => `<button data-v="${v}" class="${this.f.view === v ? 'on' : ''}">${l}</button>`).join('')}</div>
         <span style="flex:1"></span>
-        <button class="btn primary" id="tnew">＋ Tugas</button>
+        <button class="btn primary" id="tnew">${icon('plus', 16)} Pekerjaan baru</button>
       </div>
       <details class="more" ${this.f.div || this.f.who || this.f.top ? 'open' : ''}><summary>Filter</summary><div class="toolbar" style="margin-top:8px">
         <select class="input" id="tdiv"><option value="">Semua divisi</option>${D().divisions.map((d) => opt(d.id, d.icon + ' ' + d.name, this.f.div)).join('')}</select>
@@ -920,7 +957,7 @@ export const TasksView = {
     const scrolls = [...kb.querySelectorAll('.col-b')].map((c) => c.scrollTop);
     const colsShown = TASK_COLS.filter((c) => c.id === 'done' || list.some((t) => t.status === c.id || c.also?.includes(t.status)));
     const noActive = !list.some((t) => t.status !== 'done' && t.status !== 'cancelled');
-    kb.innerHTML = (noActive ? '<div class="card calm"><div class="card-b" style="text-align:center"><div style="font-size:28px">🎉</div><b>Semua beres</b><div class="small muted">Tidak ada tugas berjalan. Buat yang baru dengan tombol “＋ Tugas”, atau ketik perintah di Beranda.</div></div></div>' : '') + colsShown.map((c) => {
+    kb.innerHTML = (noActive ? '<div class="card calm"><div class="card-b" style="text-align:center"><div style="font-size:28px">🎉</div><b>Semua beres</b><div class="small muted">Tidak ada tugas berjalan. Mulai yang baru dari Beranda atau tombol “Pekerjaan baru”.</div></div></div>' : '') + colsShown.map((c) => {
       let items = list.filter((t) => t.status === c.id || c.also?.includes(t.status));
       items.sort((a, b) => (c.id === 'done' ? (b.completedAt || 0) - (a.completedAt || 0) : b.updatedAt - a.updatedAt));
       const cap = c.id === 'done' ? 8 : 40;
@@ -1141,20 +1178,25 @@ export const ChatView = {
     this.ch = S.params.ch || this.ch || 'general';
     root.style.overflow = 'hidden';
     root.innerHTML = `<div class="chat has-sel" id="chat"><div class="chat-list" id="cl"></div><div class="chat-main"><div class="chat-h" id="chh"></div><div class="msgs" id="msgs"></div>
-      <div class="quick" id="cquick">${[['/goal ', '🎯 Goal'], ['/rapat ', '👥 Rapat'], ['/tugas @', '📋 Tugas'], ['@all ', '📣 Semua agen'], ['/status', '📊 Status']].map(([c, l]) => `<button class="chip" data-cmd="${c}">${l}</button>`).join('')}</div>
+      <details class="chat-tools"><summary>Aksi percakapan</summary><div class="quick" id="cquick">${[['/goal ', 'Tujuan baru', 'goal'], ['/rapat ', 'Rapat', 'team'], ['/tugas @', 'Tugas', 'tasks'], ['@all ', 'Semua agen', 'team'], ['/status', 'Status', 'dashboard']].map(([c, l, ic]) => `<button class="chip" data-cmd="${c}">${icon(ic, 14)} ${l}</button>`).join('')}</div></details>
       <div class="mention-pop" id="cpop" hidden></div>
-      <div class="composer"><textarea class="input" id="cin" rows="1" placeholder="Tulis pesan… (@nama untuk menyebut seseorang)"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
+      <div class="composer"><textarea class="input" id="cin" rows="1" aria-label="Pesan" placeholder="Tulis pesan… gunakan @ untuk menyebut agen"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
     const send = async () => {
-      const i = root.querySelector('#cin'); const text = i.value.trim(); if (!text) return;
-      i.value = ''; i.style.height = ''; root.querySelector('#cpop').hidden = true;
-      if (text.startsWith('/') && await this.command(text)) return;
-      await api('POST', '/api/messages', { channelId: this.ch, text, userId: S.me });
+      const i = root.querySelector('#cin'); const button = root.querySelector('#csend'); const text = i.value.trim(); if (!text || button.disabled) return;
+      button.disabled = true; button.textContent = 'Mengirim…'; button.setAttribute('aria-busy', 'true'); i.readOnly = true;
+      root.querySelector('#cpop').hidden = true;
+      try {
+        if (!(text.startsWith('/') && await this.command(text))) await api('POST', '/api/messages', { channelId: this.ch, text, userId: S.me });
+        i.value = ''; i.style.height = '';
+      } catch { /* Keep the message so a failed request can be retried. */ }
+      finally { button.disabled = false; button.textContent = 'Kirim'; button.removeAttribute('aria-busy'); i.readOnly = false; }
     };
     root.querySelector('#csend').onclick = send;
     const cin = root.querySelector('#cin');
     const pop = root.querySelector('#cpop');
     const pick = (el) => { const v = cin.value, at = v.lastIndexOf('@', cin.selectionStart - 1); cin.value = v.slice(0, at) + '@' + el.dataset.name + ' ' + v.slice(cin.selectionStart); pop.hidden = true; cin.focus(); };
     cin.onkeydown = (e) => {
+      if (e.isComposing) return;
       if (!pop.hidden && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key)) {
         const items = [...pop.querySelectorAll('.mi')]; let i = items.findIndex((x) => x.classList.contains('on'));
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[i]?.classList.remove('on'); i = (i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length; items[i].classList.add('on'); return; }
@@ -1199,17 +1241,18 @@ export const ChatView = {
       const cur = d.channels.find((c) => c.id === this.ch);
       const curG = !cur ? 'dm' : cur.kind === 'channel' ? 'ch' : cur.kind === 'dm' ? (cur.members.includes(S.me) ? 'dm' : 'ag') : cur.kind === 'meeting' ? 'mt' : 'gr';
       this.gopen.add(curG);
-      const row = (c, ic, label, small) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}">${ic}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" ${small ? 'class="small"' : ''}>${label}</span></div>`;
+      const row = (c, ic, label, small, extra) => `<button type="button" class="ch-item ${extra ? 'x' : ''} ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}">${ic}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" ${small ? 'class="small"' : ''}>${label}</span></button>`;
       const grp = (key, title, rows, n) => `<details class="chg" data-g="${key}" ${this.gopen.has(key) ? 'open' : ''}><summary>${title}<em>${n}</em></summary>${rows.join('') || '<div class="small faint" style="padding:0 9px 6px">Belum ada</div>'}</details>`;
       const chans = d.channels.filter((c) => c.kind === 'channel');
-      r.querySelector('#cl').innerHTML = `<button class="btn sm primary" id="newdm" style="width:100%">＋ Chat baru</button><input class="input" id="clq" placeholder="🔎 Cari percakapan…" style="width:100%">
-      ${grp('dm', '💬 Karyawan', sortedDMs.map((c) => { const o = emp(c.members.find((m) => m !== S.me)); return row(c, avatar(o), esc(o?.name || '')); }), sortedDMs.length)}
-      ${grp('gr', '🎯 Goal & grup', groups.map((c) => row(c, '<span>' + (c.goalId ? '🎯' : '💬') + '</span>', esc(String(c.name).replace(/^🎯\s*|^Diskusi:\s*/, '')), true)), groups.length)}
-      ${grp('mt', '👥 Rapat', meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return row(c, '<span>' + (m?.status === 'waiting_owner' ? '🎙️' : m?.status === 'running' ? '🔴' : '👥') + '</span>', esc(c.name.replace(/^Rapat: /, '')), true); }), meetings.length)}
-      ${grp('ch', '# Channel divisi', chans.map((c) => row(c, '<span>#</span>', esc(c.name))), chans.length)}
-      ${grp('ag', '👀 Antar agen (pantau)', agentDMs.map((c) => row(c, '<span>👀</span>', esc(c.name), true)), agentDMs.length)}`;
+      r.querySelector('#cl').innerHTML = `<button class="btn sm primary" id="newdm" style="width:100%">${icon('plus', 16)} Chat baru</button><input class="input" id="clq" aria-label="Cari percakapan" placeholder="Cari percakapan…" style="width:100%">
+      ${grp('dm', 'Percakapan pribadi', [...sortedDMs.map((c, i) => { const o = emp(c.members.find((m) => m !== S.me)); return row(c, avatar(o), esc(o?.name || ''), false, i >= 6 && c.id !== this.ch); }), sortedDMs.length > 6 ? `<button type="button" class="btn sm ghost dm-all" data-allx>Lihat semua (${sortedDMs.length})</button>` : ''], sortedDMs.length)}
+      ${grp('gr', 'Pekerjaan & grup', groups.map((c) => row(c, '<span>' + (c.goalId ? '🎯' : '💬') + '</span>', esc(String(c.name).replace(/^🎯\s*|^Diskusi:\s*/, '')), true)), groups.length)}
+      ${grp('mt', 'Rapat', meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return row(c, '<span>' + (m?.status === 'waiting_owner' ? '🎙️' : m?.status === 'running' ? '🔴' : '👥') + '</span>', esc(c.name.replace(/^Rapat: /, '')), true); }), meetings.length)}
+      ${grp('ch', 'Ruang divisi', chans.map((c) => row(c, '<span>#</span>', esc(c.name))), chans.length)}
+      ${grp('ag', 'Aktivitas antar agen', agentDMs.map((c) => row(c, '<span>👀</span>', esc(c.name), true)), agentDMs.length)}`;
+      r.querySelectorAll('[data-allx]').forEach((b) => (b.onclick = () => { b.closest('details').classList.add('showall'); b.remove(); }));
       r.querySelectorAll('#cl details.chg').forEach((x) => (x.ontoggle = () => { x.open ? this.gopen.add(x.dataset.g) : this.gopen.delete(x.dataset.g); }));
-      r.querySelector('#clq').oninput = (e) => { const q = e.target.value.toLowerCase().trim(); r.querySelectorAll('#cl details.chg').forEach((g) => { let any = false; g.querySelectorAll('.ch-item').forEach((it) => { const ok = !q || it.textContent.toLowerCase().includes(q); it.style.display = ok ? '' : 'none'; any = any || ok; }); if (q) g.open = any; else g.open = this.gopen.has(g.dataset.g); g.style.display = !q || any ? '' : 'none'; }); };
+      r.querySelector('#clq').oninput = (e) => { const q = e.target.value.toLowerCase().trim(); r.querySelectorAll('#cl details.chg').forEach((g) => { let any = false; g.querySelectorAll('.ch-item').forEach((it) => { const ok = !q || it.textContent.toLowerCase().includes(q); it.style.display = ok ? '' : 'none'; any = any || ok; }); g.classList.toggle('showall', !!q || g.classList.contains('showall')); if (q) g.open = any; else g.open = this.gopen.has(g.dataset.g); g.style.display = !q || any ? '' : 'none'; }); };
     }
     r.querySelectorAll('[data-ch]').forEach((x) => (x.onclick = () => { this.ch = x.dataset.ch; r.querySelector('#chat').classList.add('has-sel'); this.lastCount = -1; this.update(); }));
     }
@@ -1220,11 +1263,12 @@ export const ChatView = {
     r.querySelector('#chh').innerHTML = `<button class="btn ghost icon" id="chback" title="Kembali">‹</button>${other ? `${avatar(other)}<div style="flex:1;min-width:0"><b data-agent="${other.id}" style="cursor:pointer">${esc(other.name)}</b><div class="small muted">${esc(other.title)} · ${esc(other.statusText || '')}</div></div>` : `<div style="flex:1;min-width:0"><b>${ch.kind === 'dm' ? '👀 ' + esc(ch.name) : ch.kind === 'meeting' ? '👥 ' + esc(ch.name) : '# ' + esc(ch.name)}</b><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ch.kind === 'meeting' ? (() => { const m = d.meetings?.find((x) => x.id === ch.meetingId); return `${m?.status === 'waiting_owner' ? '🎙️ peserta diam—kirim /selesai saat Anda selesai' : m?.status === 'running' ? '🔴 berlangsung' : m?.status === 'failed' ? 'gagal' : 'selesai'} · ${m?.representedParticipants?.length || m?.participants?.length || 0} peserta diwakili`; })() : esc(ch.topic || (ch.kind === 'dm' ? 'Percakapan antar agen' : ''))}</div></div>${ch.kind === 'meeting' && d.meetings?.find((x) => x.id === ch.meetingId)?.noteId ? `<button class="btn sm" data-note="${d.meetings.find((x) => x.id === ch.meetingId).noteId}">Notulen</button>` : ''}`}`;
     r.querySelector('#chback').onclick = () => r.querySelector('#chat').classList.remove('has-sel');
     const msgs = d.messages.filter((m) => m.channelId === ch.id).slice(-150);
-    if (msgs.length === this.lastCount && this.lastCh === ch.id) return;
+    if (msgs.length === this.lastCount && this.lastCh === ch.id && this.lastTts === tts.isOn()) return;
     const box = r.querySelector('#msgs');
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80 || this.lastCh !== ch.id;
-    this.lastCount = msgs.length; this.lastCh = ch.id;
-    box.innerHTML = msgs.map((m) => { const a = emp(m.authorId); return `<div class="msg">${avatar(a)}<div class="body"><div class="who"><span data-agent="${a?.id}" style="cursor:pointer;margin:0;font-size:13px;font-weight:650;color:var(--text)">${esc(a?.name || m.authorId)}</span><span>${a?.type === 'ai' ? '🤖 ' : ''}${clock(m.t)}</span></div><div class="md">${md(m.text)}</div>${m.broadcast ? `<span class="chip" style="color:var(--ok)">📣 diterima ${m.deliveredTo || 0} agen/koordinator</span>` : ''}${m.taskId ? `<button class="btn sm" data-task="${m.taskId}" style="margin-top:4px">📋 Lihat tugas</button>` : ''}</div></div>`; }).join('') || `<div class="empty">Mulai percakapan. ${other?.type === 'ai' ? `${esc(other.name)} akan membalas otomatis.` : '#general selalu dijawab PA; gunakan @all untuk seluruh perusahaan.'}</div>`;
+    this.lastCount = msgs.length; this.lastCh = ch.id; this.lastTts = tts.isOn();
+    box.innerHTML = msgs.map((m) => { const a = emp(m.authorId); return `<div class="msg">${avatar(a)}<div class="body"><div class="who"><span data-agent="${a?.id}" style="cursor:pointer;margin:0;font-size:13px;font-weight:650;color:var(--text)">${esc(a?.name || m.authorId)}</span><span>${a?.type === 'ai' ? '🤖 ' : ''}${clock(m.t)}</span></div><div class="md">${md(m.text)}</div>${a?.type === 'ai' && tts.isOn() ? `<button class="btn ghost sm icon" data-say="${m.id}" title="Dengarkan balasan ini" aria-label="Dengarkan balasan ini">${icon('sound', 15)}</button>` : ''}${m.broadcast ? `<span class="chip" style="color:var(--ok)">📣 diterima ${m.deliveredTo || 0} agen/koordinator</span>` : ''}${m.taskId ? `<button class="btn sm" data-task="${m.taskId}" style="margin-top:4px">📋 Lihat tugas</button>` : ''}</div></div>`; }).join('') || `<div class="empty">Mulai percakapan. ${other?.type === 'ai' ? `${esc(other.name)} akan membalas otomatis.` : '#general selalu dijawab PA; gunakan @all untuk seluruh perusahaan.'}</div>`;
+    box.onclick = (ev) => { const b = ev.target.closest('[data-say]'); if (!b) return; const m = msgs.find((x) => x.id === b.dataset.say); if (m) tts.speak(m.authorId, m.text, { interrupt: true }); };
     if (atBottom) box.scrollTop = box.scrollHeight;
   },
   /** Slash commands act directly instead of posting a message. Returns true when handled. */
@@ -1686,14 +1730,15 @@ export const SettingsView = {
 
 export const VIEWS = {
   office: { title: 'Kantor 3D', icon: '🏢', view: OfficeView },
-  dashboard: { title: 'Dashboard', icon: '📊', view: DashboardView },
-  tasks: { title: 'Tugas', icon: '📋', view: TasksView },
+  dashboard: { title: 'Beranda', icon: '📊', view: DashboardView },
+  tasks: { title: 'Pekerjaan', icon: '📋', view: TasksView },
   chat: { title: 'Chat', icon: '💬', view: ChatView },
-  brain: { title: 'Brain', icon: '🧠', view: BrainView },
+  brain: { title: 'Second Brain', short: 'Brain', icon: '🧠', view: BrainView },
   studio: { title: 'Agent Studio', icon: '✨', view: StudioView },
   team: { title: 'Tim & Divisi', icon: '👥', view: TeamView },
   knowledge: { title: 'Ruang Pengetahuan', icon: '🏛️', view: KnowledgeView },
   approvals: { title: 'Persetujuan', icon: '🛑', view: ApprovalsView },
+  browser: { title: 'Browser Agen', short: 'Browser', icon: '🌐', ic: 'browser', view: BrowserView },
   settings: { title: 'Pengaturan', icon: '⚙️', view: SettingsView },
 };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && OfficeView.wins?.size && !/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName)) { const top = [...OfficeView.wins.values()].sort((a, b) => (+b.el.style.zIndex || 0) - (+a.el.style.zIndex || 0))[0]; if (top && !document.querySelector('.modal:not([hidden]), .drawer.open')) OfficeView.closeApp(top.id); } });

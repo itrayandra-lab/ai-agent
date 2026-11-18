@@ -7,6 +7,7 @@ import * as llm from './llm.js';
 import { CAPABILITIES, CAP_IDS, autoActivate } from './catalog.js';
 import * as lib from './librarian.js';
 import * as collab from './collab.js';
+import * as browser from './browser.js';
 import * as gov from './governor.js';
 import * as org from './org.js';
 llm.setTaskCostHook(gov.addCost);
@@ -371,6 +372,12 @@ function completeTask(e, t) {
 export function decideApproval(approvalId, { decision, feedback = '', userId = 'owner' }) {
   const a = db().approvals.find((x) => x.id === approvalId);
   if (!a || a.status !== 'pending') throw new Error('Approval tidak ditemukan atau sudah diputuskan');
+  if (a.kind === 'browser_action') {   // persetujuan aksi browser: hanya membuka/menutup satu aksi, tidak menyelesaikan atau merevisi tugasnya
+    Object.assign(a, { status: decision === 'approve' ? 'approved' : 'rejected', decidedBy: userId, decidedAt: Date.now(), feedback });
+    store.upsert('approvals', a);
+    event(decision === 'approve' ? 'approved' : 'rejected', userId, `${emp(userId)?.name || 'Owner'} ${decision === 'approve' ? 'menyetujui' : 'menolak'} aksi browser "${a.title}"`, { taskId: a.taskId, targetId: a.requesterId });
+    return a;
+  }
   const t = task(a.taskId);
   const e = emp(a.requesterId);
   Object.assign(a, { status: decision === 'approve' ? 'approved' : 'rejected', decidedBy: userId, decidedAt: Date.now(), feedback });
@@ -393,7 +400,7 @@ export function decideApproval(approvalId, { decision, feedback = '', userId = '
 
 export function autoApprovePending() {
   if (db().settings.autoApprove === false) return 0;
-  const pending = db().approvals.filter((a) => a.status === 'pending' && a.kind !== 'review');   // Owner reviews are never auto-approved
+  const pending = db().approvals.filter((a) => a.status === 'pending' && a.kind !== 'review' && a.kind !== 'browser_action');   // Owner reviews are never auto-approved
   let count = 0;
   for (const a of pending) {
     try { decideApproval(a.id, { decision: 'approve', feedback: 'Auto-approve diaktifkan', userId: 'system-auto' }); count++; }
@@ -478,7 +485,7 @@ export function systemPrompt(e, currentTask = null) {
   const chans = db().channels.filter((c) => c.kind === 'channel').map((c) => `#${c.id}`).join(', ');
   const skills = promptSkills(e, currentTask);
   const caps = CAPABILITIES.filter((c) => (c.required || (e.tools || CAP_IDS).includes(c.id)) && !(currentTask?.kind === 'routine' && ROUTINE_BLOCK.has(c.id)) && !(currentTask?.massMode && MASS_BLOCK.has(c.id)));
-  const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter((n) => n && !n.archived);   // archived demo notes never reach a prompt
+  const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter((n) => brain.canRead(n, { audience: e.audience || 'internal' }));   // enforce visibility on attached knowledge too
   let kbBudget = orchestrator ? 9000 : 6000; // characters; the rest of a note is one Brain search away
   const kbText = kb.map((n) => { const body = n.content.slice(0, Math.max(0, Math.min(2400, kbBudget))).replace(/^#{1,6}\s+/gm, '### '); kbBudget -= body.length; return body ? `## ${n.title}\n${body}` : ''; }).filter(Boolean).join('\n\n');
   const canDelegate = caps.some((c) => c.id === 'create_subtask');
@@ -489,6 +496,7 @@ export function systemPrompt(e, currentTask = null) {
     `# TUGAS & FUNGSI\n${e.taskAndFunction || ''}\nMisi divisi: ${d.mission}`,
     skills.length && `# SKILL\nKamu memiliki akses ke seluruh ${e.skillRefs?.length || 0} skill perusahaan. Demi fokus, berikut metode paling relevan untuk pekerjaan ini:\n${skills.map((r) => `## ${r.s.name} · proficiency ${r.proficiency}/10\n${r.s.promptSnippet}${r.s.usageGuide ? `\nKapan dipakai: ${r.s.usageGuide}` : ''}`).join('\n\n')}`,
     `# TOOL YANG BOLEH KAMU PAKAI\n${caps.map((c) => `- ${c.id}: ${c.guide}`).join('\n')}`,
+    browser.promptSection(e),
     kbText && `# KNOWLEDGE WAJIB (sudah dilampirkan untukmu)\n${kbText}`,
     orchestrator && `# HIERARKI KOMANDO\n${e.isPA ? `Kamu asisten pribadi ${emp(e.ownerId)?.name}. Kamu memahami maksud user, merencanakan, lalu menggerakkan seluruh perusahaan: goal lintas divisi → serahkan ke Master Orchestrator (${db().employees.find((x) => x.isMaster)?.name}); pekerjaan satu divisi → orkestrator divisinya; pekerjaan spesifik → langsung ke individu. Gunakan convene_meeting untuk keputusan bersama dan schedule_job untuk pekerjaan berulang. Laporkan hasil akhir dengan ringkas ke user.` : 'Kamu Master Orchestrator: tunduk pada asisten pribadi user, mengoordinasikan semua orkestrator divisi, memecah goal lintas divisi, memimpin rapat lintas divisi, dan menyintesis hasil.'}\nSemua karyawan AI yang bisa kamu tugaskan:\n${everyone}`,
     `# ORGANISASI\nRekan satu divisi:\n${team}\nHead divisi lain:\n${heads}\nChannel: ${chans}`,
@@ -503,7 +511,7 @@ export function systemPrompt(e, currentTask = null) {
 /** Task-specific context retrieved from the brain (kept out of the cached system prompt). */
 function retrievedContext(e, t) {
   const attached = new Set(e.knowledgeIds || []);
-  const hits = brain.search(`${t.title} ${t.description}`, { scopeEmployeeId: e.id, limit: 6 })
+  const hits = brain.search(`${t.title} ${t.description}`, { scopeEmployeeId: e.id, limit: 6, audience: e.audience || 'internal' })
     .filter((h) => !attached.has(brain.findNote(h.title)?.id)).slice(0, 3);
   const mem = brain.findNote(`Memori ${e.name}`);
   const memLines = mem ? mem.content.split('\n').slice(2).filter(Boolean).slice(-6).join('\n') : '';
@@ -555,17 +563,22 @@ async function runTool(e, t, name, input, state) {
     logTask(t, e.id, 'tool', `🔌 ${name}(${JSON.stringify(input).slice(0, 120)})`);
     return collab.mcpCall(name, input).catch((err) => `MCP error: ${err.message}`);
   }
+  if (browser.isBrowserTool(name)) {
+    if (t.transient || t.kind === 'routine') return 'Tool browser tidak tersedia untuk chat atau tugas rutin.';
+    logTask(t, e.id, 'tool', `🌐 ${name}(${JSON.stringify(input).slice(0, 120)})`);
+    return browser.call(e, t, name, input);
+  }
   if (name !== 'complete_task' && !(e.tools || CAP_IDS).includes(name)) return 'Tool ' + name + ' tidak diizinkan untuk ' + e.name + '.';
   switch (name) {
     case 'search_brain': {
-      const r = brain.search(input.query, { scopeEmployeeId: e.id, limit: 6 });
+      const r = brain.search(input.query, { scopeEmployeeId: e.id, limit: 6, audience: e.audience || 'internal' });
       logTask(t, e.id, 'tool', `🔎 search_brain("${input.query}") → ${r.length} hasil`, { results: r.map((x) => x.title) });
       return r.length ? r.map((x) => `[[${x.title}]] (${x.folder}; ${x.trust}): ${x.snippet}`).join('\n\n') + (r.some((x) => x.verified) ? '' : '\n\nCATATAN: tidak ada hasil terverifikasi. Jangan sajikan isi draf di atas sebagai fakta.') : 'Tidak ada hasil. Data ini belum ada di Brain: katakan "data belum tersedia", jangan mengarang.';
     }
     case 'read_note': {
       const n = brain.findNote(input.title);
       logTask(t, e.id, 'tool', `📖 read_note("${input.title}")${n ? '' : ' — tidak ditemukan'}`);
-      return n ? n.content.slice(0, 12000) : 'Catatan tidak ditemukan. Coba search_brain.';
+      return brain.canRead(n, { audience: e.audience || 'internal' }) ? n.content.slice(0, 12000) : 'Catatan tidak ditemukan. Coba search_brain.';
     }
     case 'write_note': {
       const f = String(input.folder || '');
@@ -774,7 +787,7 @@ async function runTool(e, t, name, input, state) {
 }
 
 /** tool results that are real evidence (Brain, web, live status, integrations), not chatter like send_message */
-const realEvidence = (state) => (state?.evidence || []).filter((x) => /^### (search_brain|read_note|web_search|company_status|calculate|visit_url|ask_colleague|google_|mcp__)/.test(x) && !/Tidak ada hasil|tidak ditemukan|GAGAL/i.test(x.slice(0, 200))).length;
+const realEvidence = (state) => (state?.evidence || []).filter((x) => /^### (search_brain|read_note|web_search|company_status|calculate|visit_url|ask_colleague|google_|mcp__|browser_)/.test(x) && !/Tidak ada hasil|tidak ditemukan|GAGAL/i.test(x.slice(0, 200))).length;
 
 async function runLive(e, t) {
   const ctx = retrievedContext(e, t);
@@ -784,7 +797,9 @@ async function runLive(e, t) {
   const tier = gov.modelTier(e, t);
   const model = e.model || dm[tier] || dm.worker;
   const mcpDefs = (e.tools || []).includes('mcp') && t.kind !== 'routine' ? (await collab.mcpToolDefs()).map(({ _mcp, ...d }) => d) : [];
-  const tools = [...toolsFor(e, t), ...mcpDefs];
+  const wantsBrowser = t.kind !== 'routine' && !t.massMode && !t.transient;
+  const buildTools = async () => [...toolsFor(e, t), ...mcpDefs, ...(wantsBrowser ? await browser.toolDefs(e, t) : [])];   // dihitung ulang tiap giliran: alat browser_* baru muncul setelah buka_browser lolos
+  let tools = await buildTools();
   t.liveRun = true;
   const maxTurns = t.massMode ? 6 : t.kind === 'routine' ? 5 : 10;
   for (let turn = 0; turn < maxTurns && !state.finished; turn++) {
@@ -798,6 +813,7 @@ async function runLive(e, t) {
     if (finalTurn) messages.push({ role: 'user', content: 'Ini giliran final. Satu-satunya tool yang tersedia adalah complete_task. Panggil complete_task sekarang dengan hasil akhir lengkap berdasarkan pekerjaan dan bukti yang sudah terkumpul.' });
     gov.compact(messages);
     setStatus(e, 'working', turn === 0 ? 'Berpikir…' : 'Melanjutkan…', t.id);
+    tools = await buildTools();
     const res = await llm.call({ system: systemPrompt(e, t), messages, tools, model, employee: e, effort: e.effort, maxTokens: t.massMode ? 5000 : t.kind === 'routine' ? 4500 : 8000, taskId: t.id });
     const said = llm.textOf(res);
     if (said) {
@@ -818,7 +834,7 @@ async function runLive(e, t) {
     }
     const results = [];
     for (const u of uses) {
-      setStatus(e, 'working', STATUS_FOR_TOOL[u.name] || u.name, t.id);
+      setStatus(e, 'working', STATUS_FOR_TOOL[u.name] || (browser.isBrowserTool(u.name) ? 'Menjelajah web' : u.name), t.id);
       let out;
       try {
         const signature = `${u.name}:${JSON.stringify(u.input || {})}`;
@@ -833,6 +849,7 @@ async function runLive(e, t) {
     messages.push({ role: 'user', content: results });
     store.upsert('employees', e);
   }
+  browser.endTask(t.id).catch(() => {});   // tutup tab dan lepas browser untuk tugas ini
   if (!state.finished) {
     if (state.delegated) {
       t.status = 'waiting'; delete t.synth;

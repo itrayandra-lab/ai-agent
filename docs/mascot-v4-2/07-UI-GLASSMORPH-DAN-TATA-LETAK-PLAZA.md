@@ -286,3 +286,21 @@ Tujuan: pengguna "malas" — satu langkah, tanpa duplikasi. Rinci:
 
 ## Y. Atap kaca ruangan tetap ada di mode Play
 Sebelumnya kubah kaca tiap ruangan (dan kubah besar) disembunyikan total begitu Play aktif (`!player && …`), sehingga bangunan tampak tanpa kaca/atap. Kini di Play kubah ruangan tetap tampil selama pemain DAN kamera berada di luar ruangan itu (>10,2 satuan dari pusat), dan hanya terangkat saat masuk (`podOutside`). Kubah besar memakai aturan "kamera di bawah permukaan" yang sama dengan kamera bebas. Terverifikasi: 26/27 kubah tampil di titik awal Play, yang terdekat tersembunyi saat berada di dalam, dan tampil lagi saat keluar.
+
+## Z. Audit akses dan workspace (2026-11-18)
+- Snapshot/SSE menyaring catatan pribadi berdasarkan penulis manusia; pembacaan tool dan lampiran prompt memakai kebijakan akses yang sama. Agen tidak boleh menimpa fakta terverifikasi atau catatan pribadi.
+- Ekspor menghapus kunci AI, secret Apps Script, URL/header MCP; konfigurasi publik menyembunyikan header/URL MCP. Penyimpanan form mempertahankan konektor yang disamarkan. Import mempertahankan kredensial lokal.
+- Reset/import memakai database workspace aktif; ditolak saat pekerjaan atau rapat aktif. Endpoint administrasi ekspor/import/reset/training/konektor dibatasi Owner/Admin.
+- Training baru disimpan di data/training/workspaces/<workspace>; cache riset dan penghitung inisiatif dipisahkan. Dataset lama di data/training tidak dipindahkan otomatis karena asal workspace tidak dapat dibuktikan.
+- Cadangan: 3D karakter/_backup_runtime_before_v42_logic/pass-access-20261118.
+- Verifikasi: 15 tes lolos (10 lama + 5 regresi akses/isolation), pemeriksaan sintaks server dan 109 penjaga V4.2 lolos. Belum diuji OAuth/Drive live atau browser end-to-end. Server Owner tidak direstart.
+
+## AA. Penyederhanaan antarmuka — 18 November 2026
+
+- Identitas visual baru di `public/css/identity.css`: navy–ivory, aksen hangat, garis ikon konsisten, permukaan tenang, fokus keyboard, dan dukungan reduced motion. Lapisan dimuat setelah glass.css untuk menjaga aturan layout kantor lama.
+- Halaman awal menjadi Beranda. URL lama (#dashboard, #brain, #office) tetap berlaku; Catatan menggantikan label Brain. Kantor 3D tetap tersedia dari navigasi dan beranda.
+- Beranda berfokus pada satu kolom tugas dengan contoh yang hanya mengisi draf (tidak langsung mengirim), detail opsional, dan aksi utama Mulai. Enter mengirim, Shift+Enter membuat baris baru; input komposisi tidak mengirim prematur.
+- Chat menyimpan pesan sampai permintaan berhasil, mencegah pengiriman ganda saat menunggu, memakai tombol semantik untuk daftar percakapan, dan menyimpan pintasan tambahan di Aksi percakapan.
+- Backup sebelum edit: `3D karakter/_backup_runtime_before_v42_logic/pass-ui-20261118`. Tidak ada perubahan model, kamera, atau aset karakter.
+- Verifikasi: 15 tes Node lulus; 109 pemeriksaan V4.2 lulus; syntax check app/core/views dan git diff --check lulus. Browser simulasi terpisah port 4499: contoh tugas, kirim tugas, kirim chat, pencarian/ganti tema, halaman Catatan, dan pemuatan kantor 3D berhasil. Beranda diuji pada 390×844 tanpa overflow horizontal; tema terang dan gelap diperiksa. Tidak ada error console yang tercatat saat pemeriksaan tersebut.
+- Batas validasi: layanan AI/konektor produksi tidak dipanggil. Ini bukan pengujian menyeluruh setiap dialog/aksi 3D. Screenshot hasil berada di `artifacts/ui-audit/beranda.jpg`.

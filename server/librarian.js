@@ -4,13 +4,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import * as store from './store.js';
-import { trainingFile } from './collab.js';
+import { trainingFile, trainingDir } from './collab.js';
 
 const db = () => store.get();
 /** Folders that are already curated and stay top-level. */
 export const SYSTEM_FOLDERS = new Set(['Company', 'SOP', 'Memori', 'Meetings', 'Playbooks', 'Archive', 'Sistem']);
 /** the system SOP and everything that came from Google Drive keep the place the Owner gave them: no librarian or agent re-files them */
-const pinned = (n) => n && (n.kb === 'system' || n.kb === 'drive' || n.archived);
+const pinned = (n) => n && (n.kb === 'system' || n.kb === 'drive' || n.visibility === 'private' || n.archived);
 const LOOSE = new Set(['Deliverables', 'Reports', 'Notes', 'Knowledge', 'Approvals', 'Research', 'Marketing', '']);
 
 const TYPES = [
@@ -90,9 +90,11 @@ export function renameNote(idOrTitle, newTitle, byId) {
 
 export function mergeNotes(primary, others = [], byId) {
   const p = note(primary); if (!p) throw new Error(`Catatan utama "${primary}" tidak ditemukan`);
+  if (pinned(p)) throw new Error('Catatan sumber tidak boleh digabung oleh agen');
   const merged = [];
   for (const o of others) {
     const x = note(o); if (!x || x.id === p.id) continue;
+    if (pinned(x) || x.visibility === 'private' || p.visibility === 'private') throw new Error('Catatan terlindungi tidak boleh digabung');
     p.content += `\n\n---\n## Digabung dari: ${x.title}\n${x.content.replace(/^# .*\n?/, '')}`;
     p.tags = [...new Set([...(p.tags || []), ...(x.tags || [])])];
     x.folder = 'Archive'; x.content = `Catatan ini digabung ke [[${p.title}]].`; x.updatedAt = Date.now();
@@ -108,7 +110,7 @@ const badTitle = (t) => /undefined|null|["“”]| — [A-Z][a-z]+$/.test(t) || 
 
 /** Health report the librarian agents work from. */
 export function audit(limit = 25) {
-  const notes = db().notes.filter((n) => n.folder !== 'Archive');
+  const notes = db().notes.filter((n) => n.folder !== 'Archive' && n.visibility !== 'private');
   const folders = {};
   for (const n of notes) folders[n.folder] = (folders[n.folder] || 0) + 1;
   const loose = notes.filter((n) => LOOSE.has(n.folder) || (!n.folder.includes('/') && !SYSTEM_FOLDERS.has(n.folder)));
@@ -151,7 +153,7 @@ export function buildTrainingSet({ divisionId, employeeId, minQuality = 7, evalS
   }
   const split = Math.floor(rows.length * (1 - evalShare));
   const name = `${divisionId || employeeId || 'company'}-${new Date().toISOString().slice(0, 10)}`;
-  const dir = path.join(process.env.DATA_DIR || path.resolve('data'), 'training', 'sets');
+  const dir = path.join(trainingDir(), 'sets');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, `${name}.train.jsonl`), rows.slice(0, split).map((r) => JSON.stringify(r)).join('\n'));
   fs.writeFileSync(path.join(dir, `${name}.eval.jsonl`), rows.slice(split).map((r) => JSON.stringify(r)).join('\n'));

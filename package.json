@@ -8,7 +8,9 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "reset": "node server/index.js --reset-only",
-    "test": "node --test test/*.test.js"
+    "test": "npm run check:visual && node --test test/*.test.js",
+    "check:visual": "node scripts/verify-visual-lock.mjs",
+    "browser:install": "npm install --prefix data/browser-mcp chrome-devtools-mcp@1.13.0 --no-audit --no-fund --ignore-scripts"
   },
   "license": "UNLICENSED",
   "private": true,

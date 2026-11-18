@@ -440,13 +440,14 @@ export function learningSection(e) {
 export function recordTraining(e, t, systemText, userText) {
   if (db().settings.collectTraining === false || !t.output) return;
   try {
-    const dir = path.join(process.env.DATA_DIR || path.resolve('data'), 'training');
+    const dir = trainingDir();
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(path.join(dir, `${e.id}.jsonl`), JSON.stringify({ messages: [{ role: 'system', content: systemText }, { role: 'user', content: userText }, { role: 'assistant', content: t.output }] }) + '\n');
     e.stats.trainingExamples = (e.stats.trainingExamples || 0) + 1;
   } catch (err) { console.warn('[training]', err.message); }
 }
-export function trainingFile(id) { return path.join(process.env.DATA_DIR || path.resolve('data'), 'training', `${id}.jsonl`); }
+export function trainingDir() { return path.join(process.env.DATA_DIR || path.resolve('data'), 'training', 'workspaces', store.current()); }
+export function trainingFile(id) { if (!/^[\w-]+$/.test(id)) throw new Error('ID agen tidak valid'); return path.join(trainingDir(), `${id}.jsonl`); }
 
 // ═════════════════════ cron ═════════════════════
 function field(spec, min, max) {
