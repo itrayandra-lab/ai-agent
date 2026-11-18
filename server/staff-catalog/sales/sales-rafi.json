@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "sales-rafi",
+  "division": "sales",
+  "employeeId": "rafi",
+  "title": "Sales Ops & CRM Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Rafi",
+    "tugasPeran": [
+      "Menjaga kebersihan data pipeline dan tahap deal",
+      "Membuat laporan konversi per tahap",
+      "Merancang proses dan template kerja tim sales"
+    ],
+    "keahlian": [
+      "crm",
+      "pipeline",
+      "sales analytics"
+    ],
+    "contohTugas": [
+      "Buat laporan konversi pipeline per tahap",
+      "Rancang definisi tahap deal yang baku",
+      "Analisis penyebab deal kalah bulan ini"
+    ]
+  }
+}

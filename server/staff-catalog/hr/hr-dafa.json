@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "hr-dafa",
+  "division": "hr",
+  "employeeId": "dafa",
+  "title": "Employer Branding & Culture Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Dafa",
+    "tugasPeran": [
+      "Program budaya & engagement manusia + AI",
+      "Konten employer branding"
+    ],
+    "keahlian": [
+      "budaya",
+      "employer branding",
+      "engagement"
+    ],
+    "contohTugas": [
+      "Program engagement kuartal",
+      "Konten rekrutmen LinkedIn"
+    ]
+  }
+}

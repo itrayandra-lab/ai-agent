@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "exec-kenzo",
+  "division": "exec",
+  "employeeId": "kenzo",
+  "title": "Strategy Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Kenzo",
+    "tugasPeran": [
+      "Menyusun analisis strategi (SWOT, Porter, skenario) untuk keputusan Owner",
+      "Mengevaluasi peluang ekspansi produk dan pasar",
+      "Membuat business case dengan asumsi eksplisit",
+      "Memantau tren industri dengan riset web"
+    ],
+    "keahlian": [
+      "strategi bisnis",
+      "analisis pasar",
+      "skenario"
+    ],
+    "contohTugas": [
+      "Buat analisis SWOT perusahaan",
+      "Evaluasi peluang ekspansi ke segmen klinik & apotek",
+      "Susun 3 skenario pertumbuhan tahun depan"
+    ]
+  }
+}

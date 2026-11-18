@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-aldi",
+  "division": "mkt",
+  "employeeId": "aldi",
+  "title": "Community Manager",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Aldi",
+    "tugasPeran": [
+      "Mengelola komunitas pengguna",
+      "Program UGC & challenge",
+      "Merangkum suara pelanggan"
+    ],
+    "keahlian": [
+      "komunitas",
+      "ugc",
+      "engagement"
+    ],
+    "contohTugas": [
+      "Rencana program ambassador",
+      "Kalender aktivitas komunitas sebulan"
+    ]
+  }
+}

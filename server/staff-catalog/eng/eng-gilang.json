@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "eng-gilang",
+  "division": "eng",
+  "employeeId": "gilang",
+  "title": "DevOps Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Gilang",
+    "tugasPeran": [
+      "Merancang pipeline CI/CD dan strategi rilis",
+      "Menyusun monitoring, alert, dan runbook",
+      "Menghitung dan mengoptimasi biaya cloud"
+    ],
+    "keahlian": [
+      "ci/cd",
+      "cloud",
+      "monitoring"
+    ],
+    "contohTugas": [
+      "Rancang pipeline CI/CD",
+      "Buat runbook insiden server down",
+      "Estimasi biaya cloud untuk 10.000 pengguna"
+    ]
+  }
+}

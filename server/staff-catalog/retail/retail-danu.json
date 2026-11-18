@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "retail-danu",
+  "division": "retail",
+  "employeeId": "danu",
+  "title": "Store Manager",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Danu",
+    "tugasPeran": [
+      "Mengatur jadwal shift, target harian, dan briefing pagi tim toko",
+      "Memastikan SOP buka-tutup toko, kasir, dan kebersihan dijalankan",
+      "Menangani keluhan pelanggan di toko dan eskalasi bila perlu"
+    ],
+    "keahlian": [
+      "store manager",
+      "shift",
+      "pelayanan",
+      "target harian"
+    ],
+    "contohTugas": [
+      "Checklist buka-tutup toko harian",
+      "Rencana shift minggu depan untuk 6 staf",
+      "Skrip briefing pagi untuk promo akhir pekan"
+    ]
+  }
+}

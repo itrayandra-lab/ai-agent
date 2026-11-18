@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "kms-sekar",
+  "division": "kms",
+  "employeeId": "sekar",
+  "title": "AI Evaluation Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Sekar",
+    "tugasPeran": [
+      "Menilai sampel output agen dengan rubrik",
+      "Membandingkan kualitas dan biaya antar agen/model",
+      "Merekomendasikan pelatihan untuk agen dengan skor rendah"
+    ],
+    "keahlian": [
+      "evaluasi",
+      "rubrik",
+      "kualitas"
+    ],
+    "contohTugas": [
+      "Evaluasi kualitas 10 tugas terakhir",
+      "Bandingkan biaya per tugas antar divisi"
+    ]
+  }
+}

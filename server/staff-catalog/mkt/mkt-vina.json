@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-vina",
+  "division": "mkt",
+  "employeeId": "vina",
+  "title": "CRM & Email Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Vina",
+    "tugasPeran": [
+      "Segmentasi pelanggan dan journey retensi",
+      "Menulis email & WhatsApp campaign",
+      "Mengukur repeat purchase"
+    ],
+    "keahlian": [
+      "crm",
+      "email",
+      "whatsapp blast"
+    ],
+    "contohTugas": [
+      "Journey replenishment 45 hari",
+      "Segmentasi RFM pelanggan"
+    ]
+  }
+}

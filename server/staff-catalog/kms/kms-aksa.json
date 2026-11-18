@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "kms-aksa",
+  "division": "kms",
+  "employeeId": "aksa",
+  "title": "Automation & Integration Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Aksa",
+    "tugasPeran": [
+      "Mengidentifikasi pekerjaan berulang dan mengotomasinya",
+      "Mengelola jadwal cron perusahaan agar tidak duplikat dan hemat",
+      "Mengintegrasikan sistem eksternal via MCP"
+    ],
+    "keahlian": [
+      "otomasi",
+      "cron",
+      "mcp",
+      "integrasi"
+    ],
+    "contohTugas": [
+      "Audit semua jadwal cron dan rapikan",
+      "Otomasi laporan marketplace mingguan"
+    ]
+  }
+}

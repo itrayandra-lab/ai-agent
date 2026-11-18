@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "hr-fikri",
+  "division": "hr",
+  "employeeId": "fikri",
+  "title": "HR Operations & Payroll",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Fikri",
+    "tugasPeran": [
+      "Penggajian bulanan & BPJS",
+      "Administrasi kontrak & cuti",
+      "Laporan headcount"
+    ],
+    "keahlian": [
+      "payroll",
+      "bpjs",
+      "administrasi"
+    ],
+    "contohTugas": [
+      "Simulasi gaji operator produksi",
+      "Checklist onboarding administrasi"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-olivia",
+  "division": "mkt",
+  "employeeId": "olivia",
+  "title": "Brand Manager — Ray Beauty",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Olivia",
+    "tugasPeran": [
+      "Menjaga positioning dan konsistensi brand Ray Beauty",
+      "Memimpin go-to-market produk baru bersama R&D",
+      "Memantau brand health"
+    ],
+    "keahlian": [
+      "brand",
+      "positioning",
+      "launch"
+    ],
+    "contohTugas": [
+      "Rencana peluncuran serum baru",
+      "Audit konsistensi brand di semua kanal"
+    ]
+  }
+}

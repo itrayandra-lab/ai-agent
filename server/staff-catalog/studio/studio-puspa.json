@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "studio-puspa",
+  "division": "studio",
+  "employeeId": "puspa",
+  "title": "Live Host (Live Commerce Presenter)",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Puspa",
+    "tugasPeran": [
+      "Membawakan sesi live TikTok/Shopee dengan rundown dan target penjualan",
+      "Menjawab pertanyaan penonton tentang jenis kulit dan pemakaian produk",
+      "Mengevaluasi rekaman live dan memperbaiki skrip pembuka & closing"
+    ],
+    "keahlian": [
+      "live commerce",
+      "host",
+      "tiktok live",
+      "shopee live"
+    ],
+    "contohTugas": [
+      "Rundown live 2 jam kampanye payday",
+      "Skrip menjawab keberatan harga saat live",
+      "Evaluasi live kemarin dan 3 perbaikan"
+    ]
+  }
+}

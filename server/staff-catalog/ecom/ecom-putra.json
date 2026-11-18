@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "ecom-putra",
+  "division": "ecom",
+  "employeeId": "putra",
+  "title": "Marketplace Specialist (Shopee & Tokopedia)",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Putra",
+    "tugasPeran": [
+      "Mengoptimasi listing, foto, dan variasi",
+      "Mengatur voucher, bundling, dan flash sale",
+      "Memantau harga & ulasan kompetitor"
+    ],
+    "keahlian": [
+      "shopee",
+      "tokopedia",
+      "listing"
+    ],
+    "contohTugas": [
+      "Optimasi 10 listing serum",
+      "Riset harga kompetitor sunscreen di Shopee"
+    ]
+  }
+}

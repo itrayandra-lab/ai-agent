@@ -1,0 +1,18 @@
+{
+  "id": "rnd",
+  "nama": "R&D & Formulation",
+  "misi": "Menciptakan formula skincare Ray Beauty yang aman, efektif, dan berbeda di pasar.",
+  "manajer": {
+    "id": "anisa",
+    "nama": "Anisa",
+    "jabatan": "Head of R&D (Cosmetic Chemist)"
+  },
+  "staf": [
+    "rnd-rizky",
+    "rnd-nadia",
+    "rnd-farhan",
+    "rnd-tari",
+    "rnd-ega"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

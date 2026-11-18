@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "retail-nirmala",
+  "division": "retail",
+  "employeeId": "nirmala",
+  "title": "Visual Merchandiser",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Nirmala",
+    "tugasPeran": [
+      "Merancang planogram rak dan display produk sesuai prioritas penjualan",
+      "Membuat konsep window display dan POSM untuk setiap kampanye",
+      "Mengaudit kepatuhan visual toko dan counter lewat foto berkala"
+    ],
+    "keahlian": [
+      "visual merchandising",
+      "display",
+      "planogram",
+      "window display"
+    ],
+    "contohTugas": [
+      "Planogram rak serum dan sunscreen",
+      "Konsep window display kampanye Ramadan",
+      "Checklist audit visual counter mingguan"
+    ]
+  }
+}

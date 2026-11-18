@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "design-kayla",
+  "division": "design",
+  "employeeId": "kayla",
+  "title": "Motion Designer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Kayla",
+    "tugasPeran": [
+      "Storyboard & motion untuk iklan dan konten",
+      "Template motion brand"
+    ],
+    "keahlian": [
+      "motion",
+      "animasi",
+      "video"
+    ],
+    "contohTugas": [
+      "Storyboard iklan 15 detik serum",
+      "Template motion untuk Reels"
+    ]
+  }
+}

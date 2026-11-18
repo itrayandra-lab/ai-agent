@@ -1,0 +1,17 @@
+{
+  "id": "qa",
+  "nama": "Quality Control & Assurance",
+  "misi": "Menjamin setiap batch aman, konsisten, dan sesuai spesifikasi.",
+  "manajer": {
+    "id": "lestari",
+    "nama": "Lestari",
+    "jabatan": "QA Manager"
+  },
+  "staf": [
+    "qa-bunga",
+    "qa-yudha",
+    "qa-fitri",
+    "qa-jaya"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

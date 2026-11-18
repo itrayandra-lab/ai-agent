@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "ecom-bagus",
+  "division": "ecom",
+  "employeeId": "bagus",
+  "title": "Marketplace Ads Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Bagus",
+    "tugasPeran": [
+      "Mengelola kampanye iklan marketplace",
+      "Optimasi bid & keyword",
+      "Laporan ROAS harian"
+    ],
+    "keahlian": [
+      "shopee ads",
+      "gmv max",
+      "roas"
+    ],
+    "contohTugas": [
+      "Struktur iklan Shopee untuk 5 SKU",
+      "Analisis keyword dengan CTR rendah"
+    ]
+  }
+}

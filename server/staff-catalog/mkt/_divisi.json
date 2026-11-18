@@ -1,0 +1,26 @@
+{
+  "id": "mkt",
+  "nama": "Marketing",
+  "misi": "Membangun brand, menghasilkan demand, dan konten yang mengonversi.",
+  "manajer": {
+    "id": "maya",
+    "nama": "Maya",
+    "jabatan": "Head of Marketing"
+  },
+  "staf": [
+    "mkt-raka",
+    "mkt-sinta",
+    "mkt-dimas",
+    "mkt-kirana",
+    "mkt-reno",
+    "mkt-tasya",
+    "mkt-vina",
+    "mkt-aldi",
+    "mkt-olivia",
+    "mkt-keisha",
+    "mkt-bram",
+    "mkt-arga",
+    "mkt-nayla"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

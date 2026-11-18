@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mfg-sigit",
+  "division": "mfg",
+  "employeeId": "sigit",
+  "title": "Production Supervisor",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Sigit",
+    "tugasPeran": [
+      "Mengawasi proses mixing, filling, dan packing",
+      "Menyusun batch record dan line clearance",
+      "Melaporkan output dan kendala harian"
+    ],
+    "keahlian": [
+      "produksi",
+      "batch record",
+      "line"
+    ],
+    "contohTugas": [
+      "Buat batch record serum 500 kg",
+      "Checklist line clearance antar produk"
+    ]
+  }
+}

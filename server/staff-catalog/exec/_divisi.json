@@ -1,0 +1,15 @@
+{
+  "id": "exec",
+  "nama": "Executive Office",
+  "misi": "Menetapkan arah, memecah goal menjadi pekerjaan lintas divisi, dan menjaga kualitas keputusan.",
+  "manajer": {
+    "id": "aria",
+    "nama": "Aria",
+    "jabatan": "AI Master Orchestrator"
+  },
+  "staf": [
+    "exec-kenzo",
+    "exec-dewi"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

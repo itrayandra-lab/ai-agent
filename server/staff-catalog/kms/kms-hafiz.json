@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "kms-hafiz",
+  "division": "kms",
+  "employeeId": "hafiz",
+  "title": "Prompt & Skill Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Hafiz",
+    "tugasPeran": [
+      "Menciptakan skill baru dari praktik terbaik di Playbook",
+      "Menyempurnakan metode skill yang sering gagal",
+      "Memangkas instruksi agar hemat token tanpa kehilangan kualitas"
+    ],
+    "keahlian": [
+      "prompt",
+      "skill",
+      "instruksi"
+    ],
+    "contohTugas": [
+      "Buat skill baru dari playbook Marketing",
+      "Perbaiki skill copywriting agar lebih tajam"
+    ]
+  }
+}

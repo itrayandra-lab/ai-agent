@@ -1,0 +1,17 @@
+{
+  "id": "fin",
+  "nama": "Finance",
+  "misi": "Menjaga kesehatan keuangan, budget, pelaporan, dan unit economics.",
+  "manajer": {
+    "id": "hendra",
+    "nama": "Hendra",
+    "jabatan": "CFO"
+  },
+  "staf": [
+    "fin-ratna",
+    "fin-yusuf",
+    "fin-wening",
+    "fin-bowo"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

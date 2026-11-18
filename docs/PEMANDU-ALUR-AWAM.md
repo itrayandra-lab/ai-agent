@@ -1,6 +1,8 @@
 # PEMANDU: rancangan alur untuk pengguna awam
 
-Status: rancangan (belum ada kode). Ditulis 2026-11-18. Bahasa: Indonesia. Dasar: permintaan Owner pada sesi UI 2026-11-18.
+Status: rancangan, direvisi 2026-11-18 setelah koreksi Owner. Bahasa: Indonesia.
+
+**Koreksi Owner (berlaku di seluruh dokumen):** satu antarmuka untuk semua orang. Tidak ada mode apa pun (tidak ada Mode Anak, Mode Besar, Mode Lengkap, atau Mode Mahir). Kecanggihan sepenuhnya ada di otak dan backend; layar depan dibuat sesederhana mungkin dan semuanya dipandu pilihan tombol. Satu desain yang cukup nyaman untuk semua usia.
 
 ## 0. Ringkasan satu menit
 
@@ -25,11 +27,11 @@ Catatan jujur: pembagian generasi di bawah adalah asumsi kerja, belum diuji. Bag
 
 | Kelompok | Kecenderungan | Yang harus disediakan |
 |---|---|---|
-| Gen Alpha (anak) | Cepat bosan, suka suara dan gambar, butuh keamanan | Mode Anak: tanpa browser, tanpa koneksi luar, tanpa pembayaran, kata sederhana, nada ramah, ada pendamping orang tua |
+| Gen Alpha (anak) | Cepat bosan, suka suara dan gambar, butuh keamanan | Kata sederhana, tombol besar, dan keamanan bawaan untuk semua pengguna (bagian 6.5), bukan mode terpisah |
 | Gen Z | Terbiasa HP, tidak sabar, suka suara dan voice note | Input suara, hasil dalam hitungan detik, tampilan cepat |
 | Milenial | Pragmatis, butuh hasil kerja nyata | Hasil siap pakai, simpan otomatis, lanjutkan yang kemarin |
 | Gen X | Butuh kejelasan dan kontrol | Selalu ada "apa yang akan terjadi" sebelum eksekusi, bisa dibatalkan |
-| Boomers dan di atasnya | Huruf kecil melelahkan, takut salah pencet | Mode Besar (huruf 18–20 px, kontras tinggi), tombol besar, tidak ada tindakan yang tidak bisa dibatalkan, bahasa tanpa istilah asing |
+| Boomers dan di atasnya | Huruf kecil melelahkan, takut salah pencet | Huruf dasar yang nyaman untuk semua (16–18 px), kontras tinggi dan tombol besar sebagai desain standar, tidak ada tindakan yang tidak bisa dibatalkan, bahasa tanpa istilah asing |
 
 Aturan lintas kelompok:
 
@@ -162,9 +164,9 @@ Prinsip: pakai identity.css, komponen, dan ikon yang sudah ada (lihat `VISUAL-LO
 1. **Beranda menjadi percakapan.** Sapaan, kartu awal, kolom ketik dengan tombol mikrofon. Setelah pengguna mengirim, percakapan terjadi di halaman yang sama dengan tombol pilihan besar bertumpuk (di HP satu kolom, mudah dijangkau jempol).
 2. **Penunjuk langkah** di atas: *Ceritakan → Pilih → Dikerjakan → Hasil* (sudah ada versi awal berupa tiga tombol di Beranda).
 3. **Navigasi awam:** hanya Beranda, Hasil Saya (nama baru untuk Pekerjaan), Catatan. Kantor 3D, Tim, Studio, Pengetahuan, Browser, dan Pengaturan teknis berada di "Lainnya". Spesialis muncul kontekstual ("Dibantu: Sinta dari Marketing"), bukan daftar 22 divisi.
-4. **Mode tampilan** dipilih sekali saat awal dengan tiga contoh: *Biasa · Besar · Besar dan kontras tinggi*.
+4. **Satu tampilan untuk semua:** huruf dasar besar (16–18 px), kontras memenuhi 7:1 untuk teks utama, area ketuk minimal 48 px, tanpa pilihan tampilan yang harus dipahami. Pengguna tetap bisa memperbesar lewat pengaturan peramban.
 5. **Suara:** masukan suara (Web Speech) dan bacaan hasil (TTS yang sudah ada).
-6. **Mode Anak:** profil "Anak" mematikan browser, koneksi luar, pembayaran, dan pencarian bebas; kata disederhanakan; ada ajakan untuk didampingi orang tua. Catatan hukum: data anak berada di bawah aturan pelindungan data pribadi, jadi cakupannya perlu ditinjau sebelum dirilis.
+6.5. **Keamanan bawaan untuk semua, tanpa mode:** tidak ada pembayaran atau aksi tak terbalikkan tanpa konfirmasi dengan pratinjau; konten berbahaya ditolak dengan sopan dan diarahkan ke bantuan; data pribadi tidak diminta kecuali perlu dan selalu dijelaskan kenapa. Karena anak-anak akan ikut memakai, tinjau aturan pelindungan data pribadi (termasuk data anak) sebelum rilis publik.
 
 ## 7. Kamus bahasa (wajib, diuji otomatis)
 
@@ -219,17 +221,17 @@ Uji pengguna: 5 orang per kelompok usia, tanpa bantuan, dengan tugas nyata ("bua
 | T3 | Kartu hasil: Pakai/Ubah sedikit/Ulangi/Simpan, simpan otomatis, langkah lanjut | Siklus lengkap sampai tersimpan |
 | T4 | Profil "Yang aku tahu tentang kamu", onboarding 60 detik, kartu "Lanjutkan kemarin" | Tidak menanyakan hal yang sama dua kali |
 | T5 | Koneksi sebagai kartu, pemilih alat otomatis penuh, konfirmasi pengganti persetujuan | Pengguna tidak pernah menyentuh MCP |
-| T6 | Masukan suara, Mode Besar, Mode Anak | Kenyamanan lintas usia dan keamanan anak |
+| T6 | Masukan suara, huruf dan kontras standar yang nyaman, keamanan bawaan | Kenyamanan lintas usia tanpa mode |
 | T7 | Uji dengan pengguna nyata dan perbaikan | Angka bagian 9 terukur |
 
 Rekomendasi: kerjakan **T0 dan T1 lebih dulu**. Keduanya paling terlihat oleh pengguna, hampir tanpa biaya token, dan memvalidasi seluruh kerangka.
 
 ## 11. Keputusan yang masih terbuka (perlu jawaban Owner)
 
-1. Apakah Mode Anak ikut rilis pertama atau ditunda sampai tinjauan hukum selesai?
-2. Aksi berisiko rendah (menulis, meringkas, riset) berjalan otomatis tanpa konfirmasi. Setuju?
-3. Nama Pemandu: tetap "Pemandu", memakai nama asisten pribadi yang sudah ada (mis. Sora), atau nama baru?
-4. Beranda lama (kolom tugas dan daftar pekerjaan) tetap tersedia untuk pengguna mahir sebagai "Mode Lengkap", atau dihapus?
+1. Aksi berisiko rendah (menulis, meringkas, riset) berjalan otomatis tanpa konfirmasi. Setuju?
+2. Nama Pemandu: tetap "Pemandu", memakai nama asisten pribadi yang sudah ada (mis. Sora), atau nama baru?
+
+Keputusan yang sudah ditetapkan Owner: tidak ada mode apa pun, satu antarmuka untuk semua; halaman teknis lama tidak menjadi "mode" terpisah, melainkan kemampuannya diserap ke dalam percakapan Pemandu (pengguna cukup meminta, otaknya yang mengerjakan).
 
 ## 12. Risiko
 
@@ -237,5 +239,19 @@ Rekomendasi: kerjakan **T0 dan T1 lebih dulu**. Keduanya paling terlihat oleh pe
 - **Terlalu banyak bertanya membuat pengguna bosan:** batas 2 pertanyaan, dan tombol "Serahkan ke kamu" selalu ada.
 - **Biaya token naik:** templat L0 untuk niat umum, cache, dan model besar hanya untuk karya.
 - **Pengguna awam menekan aksi berdampak:** konfirmasi dengan pratinjau, aksi mudah dibatalkan.
-- **Keamanan anak dan data pribadi:** Mode Anak dengan pembatasan dan tinjauan hukum.
+- **Keamanan anak dan data pribadi:** keamanan bawaan untuk semua pengguna dan tinjauan hukum sebelum rilis publik.
 - **Asumsi generasi keliru:** uji pengguna nyata (bagian 9) sebelum menyimpulkan.
+
+## 13. Tambahan (Owner, 2026-11-18): otak yang serba bisa
+
+Prinsip: antarmuka sangat sederhana, otak dan backend sangat kuat. Setiap kemampuan baru harus muncul bagi pengguna hanya sebagai pilihan tombol atau hasil jadi.
+
+### 13.1 n8n sebagai "tangan" otomatisasi
+Agen dapat merancang, memvalidasi, memasang, menjalankan, dan memantau alur kerja n8n lewat API n8n (kunci ada di `.env` sebagai `N8N_API_KEY`, tidak pernah dicetak atau di-commit). Bagi pengguna ini hanya terlihat sebagai: "Mau aku otomatiskan ini?" [Ya, setiap hari] [Ya, setiap minggu] [Tidak dulu], lalu "Sudah jalan. Aku akan kabari kalau ada yang bermasalah."
+Contoh yang harus langsung berfungsi: catat data ke Google Sheets, kirim ringkasan ke email atau WhatsApp, jadwal harian, ambil data dari formulir. Alur dibuat dari templat tepercaya lebih dulu, baru dirakit dari awal bila perlu. Setiap alur dibuat dalam keadaan tidak aktif, diuji dengan data contoh, dan baru diaktifkan setelah pengguna mengonfirmasi pratinjaunya.
+
+### 13.2 Skill yang bertambah sendiri
+Agen belajar dari pengalaman: pekerjaan berhasil yang berulang dijadikan skill yang tersimpan dan terpasang ke agen itu, dengan jejak "dibuat dari tugas mana" dan bisa dicabut. Skill buatan sendiri berstatus draf sampai terbukti berhasil beberapa kali, dan tidak boleh memberi dirinya izin baru. Rincian pola mengikuti hasil riset Hermes Agent.
+
+### 13.3 Cara berpikir seperti Claude
+Perencanaan bertahap, memeriksa hasil sendiri sebelum menyerahkan, memakai alat yang tepat, mencatat apa yang dipelajari, dan bertanya hanya saat benar-benar perlu. Semuanya internal; pengguna cukup melihat jawaban yang tepat dan pilihan yang jelas.

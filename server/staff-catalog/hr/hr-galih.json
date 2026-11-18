@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "hr-galih",
+  "division": "hr",
+  "employeeId": "galih",
+  "title": "Talent Recruiter",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Galih",
+    "tugasPeran": [
+      "Menulis job description dan iklan lowongan",
+      "Menyusun kit interview dan rubrik",
+      "Riset benchmark gaji pasar"
+    ],
+    "keahlian": [
+      "job description",
+      "screening",
+      "interview kit"
+    ],
+    "contohTugas": [
+      "JD untuk Data Analyst",
+      "Benchmark gaji Product Designer di Jakarta",
+      "Kit interview Account Executive"
+    ]
+  }
+}

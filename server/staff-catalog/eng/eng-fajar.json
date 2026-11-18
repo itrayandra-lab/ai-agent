@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "eng-fajar",
+  "division": "eng",
+  "employeeId": "fajar",
+  "title": "Product Manager",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Fajar",
+    "tugasPeran": [
+      "Menulis PRD dan user story dengan acceptance criteria",
+      "Memprioritaskan backlog berdasarkan dampak",
+      "Mengumpulkan insight pelanggan dari CS dan Sales"
+    ],
+    "keahlian": [
+      "prd",
+      "user story",
+      "prioritisasi"
+    ],
+    "contohTugas": [
+      "Tulis PRD fitur laporan otomatis",
+      "Prioritaskan 10 permintaan fitur pelanggan",
+      "Susun user story onboarding baru"
+    ]
+  }
+}

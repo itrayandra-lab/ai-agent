@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "eng-tania",
+  "division": "eng",
+  "employeeId": "tania",
+  "title": "QA Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Tania",
+    "tugasPeran": [
+      "Menyusun test plan dan test case",
+      "Menguji regresi sebelum rilis",
+      "Menulis bug report yang bisa direproduksi"
+    ],
+    "keahlian": [
+      "test plan",
+      "test case",
+      "bug report"
+    ],
+    "contohTugas": [
+      "Buat test plan fitur integrasi WhatsApp",
+      "Susun checklist regresi rilis",
+      "Tulis test case untuk alur pembayaran"
+    ]
+  }
+}

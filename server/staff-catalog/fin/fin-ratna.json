@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "fin-ratna",
+  "division": "fin",
+  "employeeId": "ratna",
+  "title": "Accountant",
+  "version": 1,
+  "name": "Pembuat faktur penjualan",
+  "ringkas": "Susun faktur lengkap dengan PPN dari daftar barang, siap diunduh sebagai CSV dan catatan rapi.",
+  "kataKunci": [
+    "faktur",
+    "invoice",
+    "tagihan",
+    "ppn",
+    "penjualan"
+  ],
+  "inputs": [
+    {
+      "key": "klien",
+      "type": "text",
+      "label": "Nama klien",
+      "required": true,
+      "contoh": "PT Maju Jaya"
+    },
+    {
+      "key": "nomor",
+      "type": "text",
+      "label": "Nomor faktur",
+      "required": true,
+      "contoh": "INV-2026-001"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal faktur",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "items",
+      "type": "longtext",
+      "label": "Daftar barang (satu baris: nama | jumlah | harga satuan)",
+      "required": true,
+      "contoh": "Kaos polos | 10 | 85000"
+    },
+    {
+      "key": "ppn",
+      "type": "choice",
+      "label": "Kena PPN?",
+      "required": true,
+      "default": "11",
+      "choices": [
+        {
+          "v": "11",
+          "t": "Ya, PPN 11%"
+        },
+        {
+          "v": "0",
+          "t": "Tidak kena PPN"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung faktur",
+      "set": {
+        "baris": "baris(input.items).slice(0, 50).map((l) => { const p = l.split('|').map((s) => s.trim()); const q = num(p[1] || 1); const h = num(p[2]); return { nama: p[0] || '-', qty: q, harga: h, jumlah: Math.round(q * h) }; })",
+        "subtotal": "v.baris.reduce((a, b) => a + b.jumlah, 0)",
+        "pajak": "Math.round(v.subtotal * num(input.ppn) / 100)",
+        "total": "v.subtotal + v.pajak"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Faktur ' + input.nomor + ' untuk ' + input.klien + ': total ' + rp(v.total)",
+    "teks": "'# Faktur ' + input.nomor + '\\n\\nKlien: ' + input.klien + '  \\nTanggal: ' + tgl(input.tanggal) + '\\n\\n' + tabel(['Barang', 'Jumlah', 'Harga', 'Subtotal'], v.baris.map((b) => [b.nama, b.qty, rp(b.harga), rp(b.jumlah)])) + '\\n\\n**Subtotal:** ' + rp(v.subtotal) + '  \\n**PPN ' + input.ppn + '%:** ' + rp(v.pajak) + '  \\n**Total:** ' + rp(v.total)",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'faktur-' + input.nomor",
+        "isi": "csv([['Barang', 'Jumlah', 'Harga', 'Subtotal']].concat(v.baris.map((b) => [b.nama, b.qty, b.harga, b.jumlah])).concat([['', '', 'Subtotal', v.subtotal], ['', '', 'PPN ' + input.ppn + '%', v.pajak], ['', '', 'Total', v.total]]))"
+      }
+    ],
+    "data": "({ nomor: input.nomor, total: v.total })"
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "klien": "PT Maju Jaya",
+      "nomor": "INV-2026-001",
+      "tanggal": "2026-11-18",
+      "items": "Kaos polos | 10 | 85000\nSablon logo | 10 | 15.000",
+      "ppn": "11"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1.110.000",
+        "PT Maju Jaya"
+      ]
+    }
+  }
+}

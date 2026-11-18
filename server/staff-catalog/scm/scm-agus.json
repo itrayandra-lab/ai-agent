@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "scm-agus",
+  "division": "scm",
+  "employeeId": "agus",
+  "title": "Logistics & Fulfillment Coordinator",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Agus",
+    "tugasPeran": [
+      "Membandingkan dan mengelola kurir/3PL",
+      "Standar packing produk cair & kaca",
+      "Memantau keterlambatan dan retur"
+    ],
+    "keahlian": [
+      "kurir",
+      "3pl",
+      "fulfillment"
+    ],
+    "contohTugas": [
+      "Bandingkan 4 kurir untuk pengiriman Jawa-Sumatra",
+      "SOP packing anti-bocor"
+    ]
+  }
+}

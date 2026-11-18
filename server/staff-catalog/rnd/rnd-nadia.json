@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "rnd-nadia",
+  "division": "rnd",
+  "employeeId": "nadia",
+  "title": "Product Development Specialist (NPD)",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Nadia",
+    "tugasPeran": [
+      "Menerjemahkan insight pasar menjadi konsep produk",
+      "Benchmark produk kompetitor (harga, klaim, bahan)",
+      "Mengelola stage-gate produk baru"
+    ],
+    "keahlian": [
+      "npd",
+      "konsep produk",
+      "benchmark"
+    ],
+    "contohTugas": [
+      "Benchmark 5 serum brightening lokal",
+      "Susun konsep produk untuk kulit berminyak"
+    ]
+  }
+}

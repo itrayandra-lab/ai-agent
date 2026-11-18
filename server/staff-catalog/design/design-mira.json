@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "design-mira",
+  "division": "design",
+  "employeeId": "mira",
+  "title": "Graphic & Brand Designer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Mira",
+    "tugasPeran": [
+      "Menyusun brief visual dan konsep desain konten",
+      "Membuat prompt dan arahan untuk aset visual",
+      "Menjaga konsistensi aset brand"
+    ],
+    "keahlian": [
+      "desain grafis",
+      "brand asset",
+      "konten visual"
+    ],
+    "contohTugas": [
+      "Buat brief visual 5 posting Instagram",
+      "Konsep visual banner promo",
+      "Moodboard kampanye akhir tahun"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "it-salsa",
+  "division": "it",
+  "employeeId": "salsa",
+  "title": "Security Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Salsa",
+    "tugasPeran": [
+      "Menganalisis ancaman dan kerentanan",
+      "Menyusun materi security awareness",
+      "Memantau advisori keamanan terbaru"
+    ],
+    "keahlian": [
+      "threat analysis",
+      "vulnerability",
+      "security awareness"
+    ],
+    "contohTugas": [
+      "Analisis risiko phishing untuk tim",
+      "Checklist keamanan aplikasi web",
+      "Ringkas advisori keamanan minggu ini"
+    ]
+  }
+}

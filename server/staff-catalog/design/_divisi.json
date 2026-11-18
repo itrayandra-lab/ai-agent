@@ -1,0 +1,18 @@
+{
+  "id": "design",
+  "nama": "Creative & Design",
+  "misi": "Membuat pengalaman, visual, dan identitas brand yang jelas dan memikat.",
+  "manajer": {
+    "id": "alya",
+    "nama": "Alya",
+    "jabatan": "Head of Design"
+  },
+  "staf": [
+    "design-reza",
+    "design-mira",
+    "design-tegar",
+    "design-kayla",
+    "design-rendra"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

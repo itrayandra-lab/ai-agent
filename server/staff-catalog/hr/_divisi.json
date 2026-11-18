@@ -1,0 +1,17 @@
+{
+  "id": "hr",
+  "nama": "People & HR",
+  "misi": "Merekrut, mengembangkan, dan merawat talenta manusia & AI.",
+  "manajer": {
+    "id": "sari",
+    "nama": "Sari",
+    "jabatan": "Head of People"
+  },
+  "staf": [
+    "hr-galih",
+    "hr-intan",
+    "hr-fikri",
+    "hr-dafa"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

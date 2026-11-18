@@ -3,6 +3,7 @@ import { knowledgeNotes, attachKnowledge } from './knowledge/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { inferGender } from '../public/js/tts.js';
 import { buildSeed } from './seed.js';
 import { SEED_SKILLS, ensureEmployeeConfig, defaultTools, autoActivate, grantUniversalSkills, CAP_IDS } from './catalog.js';
 import { personalAssistant } from './roster.js';
@@ -65,6 +66,8 @@ export const current = () => ALS.getStore() || 'main';
 export const run = (wsId, fn) => { if (!WS.has(wsId)) throw new Error(`Ruang kerja ${wsId} tidak ada`); return ALS.run(wsId, fn); };
 export const ids = () => [...WS.keys()];
 export const exists = (wsId) => WS.has(wsId);
+/** voice gender of every AI agent, guessed once from its name; never overwrites a value that is already there (edit the data to correct a name) */
+export function fillVoiceGender(list) { let n = 0; for (const e of list || []) if (e && e.type === 'ai' && e.voiceGender !== 'female' && e.voiceGender !== 'male') { e.voiceGender = inferGender(e.name || e.id); n++; } return n; }
 const wsFile = (id) => path.join(DATA_DIR, 'ws', id, 'db.json');
 /** read every saved workspace at boot (main is loaded by load()) */
 export function loadWorkspaces() {
@@ -76,6 +79,7 @@ export function loadWorkspaces() {
     try {
       const data = JSON.parse(fs.readFileSync(file, 'utf8'));
       data.settings = { ...buildSeed().settings, ...data.settings };
+      fillVoiceGender(data.employees);
       for (const e of data.employees) if (e.status !== 'offline') Object.assign(e, { status: 'idle', statusText: 'Siap bekerja', currentTaskId: null });
       for (const t of data.tasks) if (t.status === 'in_progress') t.status = 'todo';
       WS.set(id, { id, file, timer: null, db: data });
@@ -95,7 +99,7 @@ export function createWorkspace(id, data) {
 export function load({ reset = false } = {}) {
   if (current() !== 'main') {
     const w = wsEntry();
-    if (reset) { w.db = buildSeed(); saveNow(); }
+    if (reset) { w.db = buildSeed(); fillVoiceGender(w.db.employees); saveNow(); }
     return w.db;
   }
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -108,6 +112,7 @@ export function load({ reset = false } = {}) {
       db.skills ??= SEED_SKILLS.map((s) => ({ ...s, createdAt: Date.now() }));
       for (const d of db.divisions) d.delegation ??= 'best_fit';
       for (const e of db.employees) ensureEmployeeConfig(e, db.skills, db.notes);
+      fillVoiceGender(db.employees);
       // v3 migration: meetings, personal assistants, master orchestrator, new capabilities
       db.meetings ??= [];
       if ((db.version || 1) < 3) {
@@ -204,6 +209,7 @@ export function load({ reset = false } = {}) {
       // Agents that were mid-task when the server stopped resume from todo.
       for (const e of db.employees) if (e.status !== 'offline') Object.assign(e, { status: 'idle', statusText: 'Siap bekerja', currentTaskId: null });
       for (const t of db.tasks) if (t.status === 'in_progress' && isAI(t.assigneeId)) t.status = 'todo';
+      fillVoiceGender(db.employees);   /* after every migration, so agents added by a migration get one too */
       saveNow();
       return db;
     } catch (err) {
@@ -212,11 +218,17 @@ export function load({ reset = false } = {}) {
     }
   }
   db = buildSeed();
+  fillVoiceGender(db.employees);
   saveNow();
   return db;
 }
 
 export const get = () => cur();
+/** bendera P0 `settings.staffModel` (staf = workflow n8n); hanya `true` murni yang menyalakan, selain itu perilaku lama. wsId kosong = ruang kerja aktif */
+export function staffModelOn(wsId) {
+  const d = wsId ? WS.get(wsId)?.db : cur();
+  return d?.settings?.staffModel === true;
+}
 export const isAI = (id) => cur().employees.find((e) => e.id === id)?.type === 'ai';
 
 export function save() {
@@ -256,6 +268,7 @@ export function broadcast(msg) { if (!msg.all && !msg.ws) msg.ws = current(); fo
 export function upsert(coll, item) {
   const db = cur();
   const arr = db[coll];
+  if (coll === 'employees') fillVoiceGender([item]);
   const i = arr.findIndex((x) => x.id === item.id);
   if (i >= 0) arr[i] = item; else arr.push(item);
   const limit = LIMITS[coll];

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "rnd-ega",
+  "division": "rnd",
+  "employeeId": "ega",
+  "title": "Fragrance & Sensory Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Ega",
+    "tugasPeran": [
+      "Merancang profil aroma & tekstur",
+      "Menjalankan panel uji sensorik"
+    ],
+    "keahlian": [
+      "aroma",
+      "tekstur",
+      "sensorik"
+    ],
+    "contohTugas": [
+      "Panel sensorik moisturizer gel",
+      "Profil aroma untuk body serum"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "rnd-rizky",
+  "division": "rnd",
+  "employeeId": "rizky",
+  "title": "Formulation Scientist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Rizky",
+    "tugasPeran": [
+      "Menyusun dan mengoptimasi formula prototipe",
+      "Menulis prosedur pembuatan skala lab",
+      "Mencatat hasil percobaan di Brain"
+    ],
+    "keahlian": [
+      "formula",
+      "emulsi",
+      "serum"
+    ],
+    "contohTugas": [
+      "Buat formula sunscreen SPF 50 ringan",
+      "Reformulasi moisturizer agar tidak lengket"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "reg-kevin",
+  "division": "reg",
+  "employeeId": "kevin",
+  "title": "Claims & Labeling Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Kevin",
+    "tugasPeran": [
+      "Mereview klaim iklan, konten KOL, dan kemasan",
+      "Menyusun teks label sesuai aturan",
+      "Memberi alternatif klaim yang aman"
+    ],
+    "keahlian": [
+      "klaim",
+      "label",
+      "copy compliance"
+    ],
+    "contohTugas": [
+      "Review 10 caption iklan serum",
+      "Susun teks label sunscreen"
+    ]
+  }
+}

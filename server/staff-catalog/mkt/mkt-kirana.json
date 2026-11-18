@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-kirana",
+  "division": "mkt",
+  "employeeId": "kirana",
+  "title": "Brand Strategist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Kirana",
+    "tugasPeran": [
+      "Merumuskan positioning, value proposition, dan pesan utama",
+      "Menjaga Brand Guidelines tetap relevan",
+      "Menganalisis persepsi brand dan kompetitor"
+    ],
+    "keahlian": [
+      "brand",
+      "positioning",
+      "messaging"
+    ],
+    "contohTugas": [
+      "Susun messaging framework produk RayFlow",
+      "Bandingkan positioning kita dengan 3 kompetitor",
+      "Usulkan tagline baru"
+    ]
+  }
+}

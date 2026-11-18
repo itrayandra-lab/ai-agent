@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "bizdev-samudra",
+  "division": "bizdev",
+  "employeeId": "samudra",
+  "title": "Export & International Expansion Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Samudra",
+    "tugasPeran": [
+      "Menganalisis pasar ekspor prioritas (Malaysia, Singapura, Timur Tengah) untuk Ray Beauty dan RayFlow",
+      "Memetakan regulasi kosmetik, halal, dan pajak di negara tujuan",
+      "Menyusun model harga ekspor dan rekomendasi distributor"
+    ],
+    "keahlian": [
+      "ekspor",
+      "internasional",
+      "asean",
+      "regulasi"
+    ],
+    "contohTugas": [
+      "Analisis kesiapan ekspor Ray Beauty ke Malaysia",
+      "Hitung landed cost serum ke Singapura",
+      "Bandingkan 3 pasar ASEAN untuk RayFlow"
+    ]
+  }
+}

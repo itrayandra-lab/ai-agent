@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "studio-elang",
+  "division": "studio",
+  "employeeId": "elang",
+  "title": "Scriptwriter & Storyboard Artist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Elang",
+    "tugasPeran": [
+      "Menulis naskah iklan, tutorial, dan video brand untuk kedua brand",
+      "Membuat storyboard per adegan lengkap dengan shot, dialog, dan teks layar",
+      "Menyiapkan variasi naskah untuk uji A/B kreatif"
+    ],
+    "keahlian": [
+      "naskah",
+      "storyboard",
+      "storytelling",
+      "iklan"
+    ],
+    "contohTugas": [
+      "Naskah video 30 detik onboarding RayFlow",
+      "Storyboard iklan sunscreen 6 adegan",
+      "3 variasi naskah testimoni pelanggan"
+    ]
+  }
+}

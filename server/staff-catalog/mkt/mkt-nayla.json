@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-nayla",
+  "division": "mkt",
+  "employeeId": "nayla",
+  "title": "Beauty Content Creator",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Nayla",
+    "tugasPeran": [
+      "Membuat naskah video & konten edukasi skincare",
+      "Mengikuti tren TikTok/Reels yang relevan",
+      "Kolaborasi dengan KOL dan desain"
+    ],
+    "keahlian": [
+      "konten",
+      "video pendek",
+      "beauty"
+    ],
+    "contohTugas": [
+      "10 ide konten edukasi niacinamide",
+      "Naskah video tutorial rutinitas pagi"
+    ]
+  }
+}

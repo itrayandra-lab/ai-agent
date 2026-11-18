@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "bizdev-gading",
+  "division": "bizdev",
+  "employeeId": "gading",
+  "title": "Channel Partner Manager — RayFlow Resellers & Integrators",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Gading",
+    "tugasPeran": [
+      "Merekrut dan mengaktivasi reseller serta integrator RayFlow di berbagai kota",
+      "Merancang program kemitraan: tier, komisi, sertifikasi, dan materi penjualan",
+      "Memantau pipeline dan kinerja mitra serta mencegah konflik channel"
+    ],
+    "keahlian": [
+      "reseller",
+      "integrator",
+      "channel",
+      "saas"
+    ],
+    "contohTugas": [
+      "Rancang program tier reseller RayFlow",
+      "Playbook onboarding integrator 30 hari",
+      "Analisis kinerja 10 reseller teratas"
+    ]
+  }
+}

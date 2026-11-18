@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "reg-raisa",
+  "division": "reg",
+  "employeeId": "raisa",
+  "title": "Regulatory Intelligence Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Raisa",
+    "tugasPeran": [
+      "Memantau perubahan regulasi BPOM & ASEAN",
+      "Ringkasan dampak regulasi ke produk"
+    ],
+    "keahlian": [
+      "regulasi",
+      "monitoring",
+      "asean"
+    ],
+    "contohTugas": [
+      "Ringkasan regulasi kosmetik terbaru",
+      "Dampak aturan label baru"
+    ]
+  }
+}

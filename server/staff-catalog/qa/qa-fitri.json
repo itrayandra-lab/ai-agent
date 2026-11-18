@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "qa-fitri",
+  "division": "qa",
+  "employeeId": "fitri",
+  "title": "Microbiologist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Fitri",
+    "tugasPeran": [
+      "Uji cemaran mikroba bahan & produk",
+      "Challenge test pengawet"
+    ],
+    "keahlian": [
+      "mikrobiologi",
+      "challenge test"
+    ],
+    "contohTugas": [
+      "Rencana uji mikroba batch serum",
+      "Protokol challenge test"
+    ]
+  }
+}

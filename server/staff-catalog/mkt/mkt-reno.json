@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-reno",
+  "division": "mkt",
+  "employeeId": "reno",
+  "title": "Digital Marketing Strategist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Reno",
+    "tugasPeran": [
+      "Menyusun strategi digital lintas kanal",
+      "Merancang funnel & atribusi",
+      "Mengalokasikan budget per kanal"
+    ],
+    "keahlian": [
+      "digital marketing",
+      "funnel",
+      "atribusi"
+    ],
+    "contohTugas": [
+      "Strategi digital marketing Ray Beauty Q1",
+      "Model atribusi sederhana"
+    ]
+  }
+}

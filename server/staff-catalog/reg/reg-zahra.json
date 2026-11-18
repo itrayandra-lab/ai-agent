@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "reg-zahra",
+  "division": "reg",
+  "employeeId": "zahra",
+  "title": "Halal Assurance Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Zahra",
+    "tugasPeran": [
+      "Memetakan status halal bahan & pemasok",
+      "Menyusun SJPH",
+      "Mengajukan sertifikasi ke BPJPH"
+    ],
+    "keahlian": [
+      "halal",
+      "sjph",
+      "bpjph"
+    ],
+    "contohTugas": [
+      "Audit status halal 30 bahan baku",
+      "Rencana sertifikasi halal produk baru"
+    ]
+  }
+}

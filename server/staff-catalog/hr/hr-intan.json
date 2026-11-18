@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "hr-intan",
+  "division": "hr",
+  "employeeId": "intan",
+  "title": "Learning & Development",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Intan",
+    "tugasPeran": [
+      "Merancang kurikulum pelatihan dan onboarding karyawan",
+      "Membuat materi microlearning",
+      "Mengukur efektivitas pelatihan"
+    ],
+    "keahlian": [
+      "training",
+      "kurikulum",
+      "onboarding karyawan"
+    ],
+    "contohTugas": [
+      "Kurikulum onboarding karyawan baru 30 hari",
+      "Modul pelatihan kerja dengan AI agent",
+      "Kuis evaluasi pelatihan sales"
+    ]
+  }
+}

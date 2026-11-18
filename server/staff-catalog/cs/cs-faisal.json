@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "cs-faisal",
+  "division": "cs",
+  "employeeId": "faisal",
+  "title": "Complaint & Product Feedback Specialist",
+  "version": 1,
+  "name": "Perangkum umpan balik pelanggan",
+  "ringkas": "Kelompokkan banyak komentar pelanggan menjadi tema utama, hitung yang positif dan negatif, dan sorot contoh nyata.",
+  "kataKunci": [
+    "umpan balik",
+    "feedback",
+    "komentar",
+    "ulasan",
+    "tema"
+  ],
+  "inputs": [
+    {
+      "key": "umpan",
+      "type": "longtext",
+      "label": "Komentar pelanggan (satu komentar per baris)",
+      "required": true,
+      "contoh": "Pengirimannya lama sekali"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Kelompokkan tema",
+      "set": {
+        "items": "baris(input.umpan).slice(0, 300)",
+        "tema": "[['Harga', /mahal|harga|murah|diskon/], ['Pengiriman', /kirim|lama|resi|kurir|paket/], ['Kualitas produk', /kualitas|rusak|awet|tekstur|aroma|cacat/], ['Layanan', /admin|respon|ramah|lambat|balas/], ['Kemudahan memakai', /susah|mudah|ribet|bingung|aplikasi|website/]].map((t) => ({ tema: t[0], jumlah: v.items.filter((x) => t[1].test(x.toLowerCase())).length, contoh: v.items.filter((x) => t[1].test(x.toLowerCase()))[0] || '' })).sort((x, y) => y.jumlah - x.jumlah)",
+        "positif": "v.items.filter((x) => /bagus|suka|puas|mantap|terima kasih|cepat|ramah/.test(x.toLowerCase())).length",
+        "negatif": "v.items.filter((x) => /jelek|kecewa|lambat|rusak|mahal|buruk|lama|parah/.test(x.toLowerCase())).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.items.length + ' komentar: ' + v.positif + ' positif, ' + v.negatif + ' negatif; tema terbanyak ' + v.tema[0].tema",
+    "teks": "'# Ringkasan umpan balik\\n\\n' + tabel(['Tema', 'Jumlah', 'Contoh'], v.tema.map((t) => [t.tema, t.jumlah, t.contoh])) + '\\n\\nPositif: ' + v.positif + ' · Negatif: ' + v.negatif",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tema-umpan-balik'",
+        "isi": "csv([['Tema', 'Jumlah', 'Contoh']].concat(v.tema.map((t) => [t.tema, t.jumlah, t.contoh])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "umpan": "Pengirimannya lama sekali\nProduknya bagus, saya suka\nHarga agak mahal tapi kualitas mantap\nAdmin ramah dan cepat balas"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "4 komentar",
+        "Pengiriman"
+      ]
+    }
+  }
+}

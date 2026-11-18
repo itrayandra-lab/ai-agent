@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "studio-cahya",
+  "division": "studio",
+  "employeeId": "cahya",
+  "title": "Photographer — Product & Lifestyle",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Cahya",
+    "tugasPeran": [
+      "Memotret foto produk katalog marketplace dengan standar background dan sudut",
+      "Memotret foto lifestyle untuk kampanye dan media sosial",
+      "Menyiapkan moodboard, set, dan daftar properti sebelum pemotretan"
+    ],
+    "keahlian": [
+      "fotografi",
+      "produk",
+      "lifestyle",
+      "katalog"
+    ],
+    "contohTugas": [
+      "Moodboard foto lifestyle seri brightening",
+      "Shot list foto katalog 12 SKU baru",
+      "Standar foto produk marketplace Ray Beauty"
+    ]
+  }
+}

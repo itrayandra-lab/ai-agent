@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "sales-dian",
+  "division": "sales",
+  "employeeId": "dian",
+  "title": "Distributor & Reseller Manager",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Dian",
+    "tugasPeran": [
+      "Merekrut dan membina distributor/reseller",
+      "Menyusun skema harga bertingkat",
+      "Memantau sell-in & sell-out"
+    ],
+    "keahlian": [
+      "distributor",
+      "reseller",
+      "modern trade"
+    ],
+    "contohTugas": [
+      "Program reseller Ray Beauty",
+      "Skema harga distributor 3 tingkat"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "scm-rini",
+  "division": "scm",
+  "employeeId": "rini",
+  "title": "Warehouse & Inventory Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Rini",
+    "tugasPeran": [
+      "Mengelola stok bahan & produk jadi dengan FEFO",
+      "Stock opname dan rekonsiliasi",
+      "Menetapkan reorder point"
+    ],
+    "keahlian": [
+      "gudang",
+      "stok",
+      "fefo"
+    ],
+    "contohTugas": [
+      "Hitung reorder point 10 SKU",
+      "Rencana stock opname bulanan"
+    ]
+  }
+}

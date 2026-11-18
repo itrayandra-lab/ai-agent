@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "exec-dewi",
+  "division": "exec",
+  "employeeId": "dewi",
+  "title": "Executive Assistant",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Dewi",
+    "tugasPeran": [
+      "Menyusun agenda dan notulen rapat dengan action item",
+      "Merangkum dokumen panjang menjadi poin keputusan",
+      "Menyiapkan draf email dan memo resmi untuk Owner",
+      "Menindaklanjuti action item ke pemiliknya"
+    ],
+    "keahlian": [
+      "agenda",
+      "notulen",
+      "koordinasi"
+    ],
+    "contohTugas": [
+      "Buat agenda rapat bulanan direksi",
+      "Rangkum hasil kerja semua divisi minggu ini",
+      "Draf email undangan kerja sama ke calon partner"
+    ]
+  }
+}

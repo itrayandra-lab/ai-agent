@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "retail-pandu",
+  "division": "retail",
+  "employeeId": "pandu",
+  "title": "Retail Operations & Inventory Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Pandu",
+    "tugasPeran": [
+      "Memantau stok per toko, menghitung kebutuhan replenishment, dan mencegah stockout",
+      "Menjadwalkan stock opname dan menganalisis selisih serta shrinkage",
+      "Membuat laporan penjualan, sell-through, dan stok kedaluwarsa per toko"
+    ],
+    "keahlian": [
+      "inventori",
+      "replenishment",
+      "stock opname",
+      "analitik retail"
+    ],
+    "contohTugas": [
+      "Hitung replenishment 5 toko minggu ini",
+      "Analisis selisih stock opname bulan lalu",
+      "Laporan sell-through per toko per SKU"
+    ]
+  }
+}

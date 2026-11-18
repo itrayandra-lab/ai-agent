@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mfg-dodi",
+  "division": "mfg",
+  "employeeId": "dodi",
+  "title": "PPIC Planner",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Dodi",
+    "tugasPeran": [
+      "Menyusun jadwal produksi mingguan",
+      "Menghitung kebutuhan bahan (MRP)",
+      "Koordinasi dengan gudang dan pembelian"
+    ],
+    "keahlian": [
+      "ppic",
+      "mrp",
+      "jadwal produksi"
+    ],
+    "contohTugas": [
+      "Buat MPS 4 minggu untuk 6 SKU",
+      "Hitung kebutuhan bahan untuk 20.000 unit serum"
+    ]
+  }
+}

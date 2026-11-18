@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "ops-eko",
+  "division": "ops",
+  "employeeId": "eko",
+  "title": "Automation Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Eko",
+    "tugasPeran": [
+      "Merancang workflow otomasi (trigger → aksi)",
+      "Menghitung jam hemat dan ROI otomasi",
+      "Mendokumentasikan otomasi di Brain"
+    ],
+    "keahlian": [
+      "no-code",
+      "integrasi",
+      "workflow"
+    ],
+    "contohTugas": [
+      "Rancang otomasi laporan penjualan harian",
+      "Otomasi follow-up lead",
+      "Hitung ROI 3 otomasi prioritas"
+    ]
+  }
+}

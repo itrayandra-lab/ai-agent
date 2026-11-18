@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "sales-satria",
+  "division": "sales",
+  "employeeId": "satria",
+  "title": "Inside Sales — Clinic & Salon B2B",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Satria",
+    "tugasPeran": [
+      "Prospek klinik kecantikan & salon",
+      "Demo produk professional line",
+      "Menjaga pipeline B2B"
+    ],
+    "keahlian": [
+      "b2b",
+      "klinik",
+      "salon"
+    ],
+    "contohTugas": [
+      "Daftar 30 klinik target di Jakarta",
+      "Sequence email untuk salon"
+    ]
+  }
+}

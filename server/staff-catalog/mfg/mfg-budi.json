@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mfg-budi",
+  "division": "mfg",
+  "employeeId": "budi",
+  "title": "Filling & Packing Line Lead",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Budi",
+    "tugasPeran": [
+      "Memimpin lini filling & packing",
+      "Melaporkan output & reject harian"
+    ],
+    "keahlian": [
+      "filling",
+      "packing",
+      "lini produksi"
+    ],
+    "contohTugas": [
+      "Checklist start-up lini filling",
+      "Analisis reject minggu ini"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "legal-yohana",
+  "division": "legal",
+  "employeeId": "yohana",
+  "title": "IP & Trademark Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Yohana",
+    "tugasPeran": [
+      "Cek & daftarkan merek produk baru",
+      "Memantau pelanggaran merek",
+      "Perjanjian lisensi"
+    ],
+    "keahlian": [
+      "merek",
+      "hki",
+      "djki"
+    ],
+    "contohTugas": [
+      "Cek ketersediaan merek untuk lini serum baru",
+      "Strategi perlindungan desain kemasan"
+    ]
+  }
+}

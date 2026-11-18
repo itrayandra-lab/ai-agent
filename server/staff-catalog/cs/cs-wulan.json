@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "cs-wulan",
+  "division": "cs",
+  "employeeId": "wulan",
+  "title": "Support Specialist",
+  "version": 1,
+  "name": "Pemilah pesan pelanggan",
+  "ringkas": "Baca pesan pelanggan, tentukan jenis masalah dan seberapa mendesak, tulis draf balasan, lalu catat ke daftar tiket.",
+  "kataKunci": [
+    "tiket",
+    "keluhan",
+    "pesan pelanggan",
+    "prioritas",
+    "balasan"
+  ],
+  "inputs": [
+    {
+      "key": "pesan",
+      "type": "longtext",
+      "label": "Isi pesan pelanggan",
+      "required": true,
+      "contoh": "Paket saya belum sampai sudah 10 hari, saya kecewa"
+    },
+    {
+      "key": "pelanggan",
+      "type": "text",
+      "label": "Nama pelanggan",
+      "required": false,
+      "contoh": "Bu Rina"
+    },
+    {
+      "key": "kanal",
+      "type": "choice",
+      "label": "Pesan ini masuk lewat mana?",
+      "required": true,
+      "default": "whatsapp",
+      "choices": [
+        {
+          "v": "whatsapp",
+          "t": "WhatsApp"
+        },
+        {
+          "v": "email",
+          "t": "Email"
+        },
+        {
+          "v": "sosmed",
+          "t": "Media sosial"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Baca pesan",
+      "set": {
+        "teks": "String(input.pesan).toLowerCase()",
+        "kategori": "/bayar|transfer|tagihan|invoice|refund|pengembalian dana/.test(v.teks) ? 'Pembayaran' : /kirim|ongkir|resi|paket|belum sampai|kurir/.test(v.teks) ? 'Pengiriman' : /rusak|bocor|cacat|pecah|salah kirim|alergi|iritasi|jerawat/.test(v.teks) ? 'Masalah produk' : /login|masuk|lupa|akun|daftar/.test(v.teks) ? 'Akun' : 'Pertanyaan umum'",
+        "marah": "/marah|kecewa|penipu|tipu|lapor|buruk|parah|tidak becus|bohong/.test(v.teks)",
+        "darurat": "/alergi|iritasi|bengkak|gatal|bocor|urgent|segera|darurat/.test(v.teks)",
+        "prioritas": "v.darurat || v.marah ? 'Tinggi' : 'Normal'",
+        "slaJam": "v.prioritas === 'Tinggi' ? 2 : 8",
+        "sentimen": "v.marah ? 'Negatif' : /terima kasih|bagus|puas|suka|mantap/.test(v.teks) ? 'Positif' : 'Netral'",
+        "balasan": "'Halo ' + (input.pelanggan || 'Kak') + ', terima kasih sudah menghubungi kami. ' + ({ 'Pembayaran': 'Kami cek data pembayarannya dulu ya.', 'Pengiriman': 'Kami cek posisi paketnya ke kurir sekarang.', 'Masalah produk': 'Mohon maaf atas kendalanya; boleh kirim foto produk supaya kami bantu secepatnya.', 'Akun': 'Kami bantu pulihkan akses akunnya.', 'Pertanyaan umum': 'Kami jawab secepatnya.' })[v.kategori] + ' Kami usahakan balas dalam maksimal ' + v.slaJam + ' jam.'"
+      }
+    },
+    {
+      "id": "catat",
+      "use": "simpan_baris",
+      "label": "Catat tiket",
+      "isi": "({ kategori: v.kategori, prioritas: v.prioritas, sentimen: v.sentimen, kanal: input.kanal, pelanggan: cut(input.pelanggan, 60), cuplikan: cut(input.pesan, 160) })"
+    }
+  ],
+  "output": {
+    "ringkas": "'Tiket ' + v.kategori + ', prioritas ' + v.prioritas + ', balas dalam ' + v.slaJam + ' jam'",
+    "teks": "'## Hasil pemilahan\\n- Jenis: ' + v.kategori + '\\n- Prioritas: ' + v.prioritas + '\\n- Perasaan pelanggan: ' + v.sentimen + '\\n- Batas waktu balas: ' + v.slaJam + ' jam\\n\\n## Draf balasan (belum terkirim)\\n' + v.balasan",
+    "berkas": [],
+    "data": "({ kategori: v.kategori, prioritas: v.prioritas })"
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "medium",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "pesan": "Paket saya belum sampai sudah 10 hari, saya kecewa sekali",
+      "pelanggan": "Bu Rina",
+      "kanal": "whatsapp"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Pengiriman",
+        "Tinggi",
+        "Draf balasan"
+      ]
+    }
+  }
+}

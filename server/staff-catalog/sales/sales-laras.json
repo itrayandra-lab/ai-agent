@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "sales-laras",
+  "division": "sales",
+  "employeeId": "laras",
+  "title": "Sales Development Rep",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Laras",
+    "tugasPeran": [
+      "Mencari dan meriset prospek sesuai ICP",
+      "Menulis sekuens outreach email/WhatsApp",
+      "Mengkualifikasi lead dengan BANT dan menjadwalkan demo"
+    ],
+    "keahlian": [
+      "prospecting",
+      "cold email",
+      "kualifikasi lead"
+    ],
+    "contohTugas": [
+      "Riset 10 calon klien distributor di Jawa Timur",
+      "Tulis sekuens outreach 4 langkah",
+      "Kualifikasi lead dari webinar kemarin"
+    ]
+  }
+}

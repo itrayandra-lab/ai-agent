@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "legal-tiara",
+  "division": "legal",
+  "employeeId": "tiara",
+  "title": "Compliance Officer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Tiara",
+    "tugasPeran": [
+      "Menyusun kebijakan internal dan checklist kepatuhan",
+      "Audit kepatuhan proses divisi",
+      "Memantau perubahan regulasi"
+    ],
+    "keahlian": [
+      "compliance",
+      "audit",
+      "kebijakan"
+    ],
+    "contohTugas": [
+      "Audit kepatuhan data pelanggan",
+      "Kebijakan retensi data",
+      "Ringkas regulasi e-commerce terbaru"
+    ]
+  }
+}

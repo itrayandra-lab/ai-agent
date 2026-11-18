@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "rnd-farhan",
+  "division": "rnd",
+  "employeeId": "farhan",
+  "title": "Clinical & Efficacy Researcher",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Farhan",
+    "tugasPeran": [
+      "Merancang uji efikasi & keamanan",
+      "Merangkum literatur ilmiah bahan aktif",
+      "Menyiapkan data pendukung klaim"
+    ],
+    "keahlian": [
+      "uji klinis",
+      "efikasi",
+      "literatur"
+    ],
+    "contohTugas": [
+      "Ringkas bukti ilmiah niacinamide 5%",
+      "Rancang uji pemakaian 28 hari"
+    ]
+  }
+}

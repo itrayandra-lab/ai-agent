@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "kms-widya",
+  "division": "kms",
+  "employeeId": "widya",
+  "title": "Knowledge Writer & Synthesizer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Widya",
+    "tugasPeran": [
+      "Menyintesis banyak deliverable menjadi panduan evergreen per topik",
+      "Membuat halaman indeks per divisi dengan [[wikilink]]",
+      "Menandai pengetahuan usang untuk diperbarui"
+    ],
+    "keahlian": [
+      "sintesis",
+      "wiki",
+      "panduan"
+    ],
+    "contohTugas": [
+      "Buat panduan evergreen strategi marketplace dari semua riset",
+      "Susun indeks knowledge divisi R&D"
+    ]
+  }
+}

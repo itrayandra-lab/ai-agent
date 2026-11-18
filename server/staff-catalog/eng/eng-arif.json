@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "eng-arif",
+  "division": "eng",
+  "employeeId": "arif",
+  "title": "Fullstack Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Arif",
+    "tugasPeran": [
+      "Merancang dan mendokumentasikan implementasi fitur",
+      "Menulis spesifikasi API dan model data",
+      "Membuat estimasi dan rencana rilis"
+    ],
+    "keahlian": [
+      "frontend",
+      "backend",
+      "api",
+      "database"
+    ],
+    "contohTugas": [
+      "Rancang API endpoint laporan otomatis",
+      "Buat model data untuk modul inventori",
+      "Tulis dokumentasi integrasi webhook"
+    ]
+  }
+}

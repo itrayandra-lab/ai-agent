@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "ecom-salsabila",
+  "division": "ecom",
+  "employeeId": "salsabila",
+  "title": "TikTok Shop & Live Commerce Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Salsabila",
+    "tugasPeran": [
+      "Menyusun rundown dan skrip live",
+      "Mengelola affiliate creator TikTok Shop",
+      "Menganalisis performa live"
+    ],
+    "keahlian": [
+      "tiktok shop",
+      "live",
+      "affiliate"
+    ],
+    "contohTugas": [
+      "Rundown live 2 jam produk sunscreen",
+      "Rencana program affiliate 50 creator"
+    ]
+  }
+}

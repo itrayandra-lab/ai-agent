@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "it-doni",
+  "division": "it",
+  "employeeId": "doni",
+  "title": "IT Support Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Doni",
+    "tugasPeran": [
+      "Menangani tiket TI karyawan",
+      "Manajemen aset & lisensi",
+      "Onboarding/offboarding akses"
+    ],
+    "keahlian": [
+      "helpdesk",
+      "aset ti",
+      "akses"
+    ],
+    "contohTugas": [
+      "Checklist onboarding TI karyawan baru",
+      "Inventaris lisensi software"
+    ]
+  }
+}

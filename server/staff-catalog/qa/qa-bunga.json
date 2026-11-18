@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "qa-bunga",
+  "division": "qa",
+  "employeeId": "bunga",
+  "title": "QC Laboratory Analyst",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Bunga",
+    "tugasPeran": [
+      "Menguji bahan baku, ruahan, dan produk jadi",
+      "Mencatat hasil dan OOS",
+      "Memelihara metode uji"
+    ],
+    "keahlian": [
+      "uji lab",
+      "mikrobiologi",
+      "spesifikasi"
+    ],
+    "contohTugas": [
+      "Rencana sampling AQL untuk batch 10.000 unit",
+      "Metode uji pH dan viskositas"
+    ]
+  }
+}

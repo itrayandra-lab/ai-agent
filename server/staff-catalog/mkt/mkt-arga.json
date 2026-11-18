@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-arga",
+  "division": "mkt",
+  "employeeId": "arga",
+  "title": "Marketing Analyst",
+  "version": 1,
+  "name": "Penghitung hasil iklan",
+  "ringkas": "Hitung seberapa untung tiap kampanye iklan (klik, biaya per hasil, dan balik modal) lalu beri saran lanjut atau hentikan.",
+  "kataKunci": [
+    "iklan",
+    "kampanye",
+    "roas",
+    "ctr",
+    "biaya iklan"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data kampanye (nama | biaya | tayangan | klik | pembelian | pendapatan)",
+      "required": true,
+      "contoh": "Promo Gajian | 1500000 | 120000 | 3000 | 90 | 6300000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung performa",
+      "set": {
+        "rows": "baris(input.data).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const biaya = num(p[1]); const tayang = num(p[2]); const klik = num(p[3]); const beli = num(p[4]); const duit = num(p[5]); const roas = biaya ? Math.round(duit / biaya * 100) / 100 : 0; return { nama: p[0] || '-', biaya: biaya, ctr: tayang ? Math.round(klik / tayang * 10000) / 100 : 0, cpc: klik ? Math.round(biaya / klik) : 0, cvr: klik ? Math.round(beli / klik * 10000) / 100 : 0, cpa: beli ? Math.round(biaya / beli) : 0, roas: roas, saran: roas >= 3 ? 'Naikkan anggaran' : roas >= 1.5 ? 'Pertahankan, optimalkan' : 'Hentikan atau perbaiki' }; })",
+        "totalBiaya": "v.rows.reduce((a, b) => a + b.biaya, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' kampanye dianalisis; ' + v.rows.filter((r) => r.roas >= 3).length + ' layak ditambah anggarannya, ' + v.rows.filter((r) => r.roas < 1.5).length + ' perlu dihentikan atau diperbaiki'",
+    "teks": "'# Hasil iklan\\n\\n' + tabel(['Kampanye', 'Biaya', 'Klik per tayang %', 'Biaya per klik', 'Beli per klik %', 'Biaya per pembelian', 'Balik modal (x)', 'Saran'], v.rows.map((r) => [r.nama, rp(r.biaya), r.ctr, rp(r.cpc), r.cvr, rp(r.cpa), r.roas, r.saran]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-iklan'",
+        "isi": "csv([['Kampanye', 'Biaya', 'CTR %', 'CPC', 'CVR %', 'CPA', 'ROAS', 'Saran']].concat(v.rows.map((r) => [r.nama, r.biaya, r.ctr, r.cpc, r.cvr, r.cpa, r.roas, r.saran])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "data": "Promo Gajian | 1500000 | 120000 | 3000 | 90 | 6300000\nIklan Brand | 2000000 | 200000 | 1000 | 5 | 1000000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Naikkan anggaran",
+        "Hentikan atau perbaiki",
+        "2 kampanye"
+      ]
+    }
+  }
+}

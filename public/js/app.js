@@ -24,12 +24,15 @@ function badges() {
 }
 
 // Menu utama: Beranda, Kantor 3D, Chat, Second Brain. Sisanya disembunyikan di "Lainnya".
-const CORE = ['dashboard', 'office', 'chat', 'brain'];
-const MORE = ['tasks', 'approvals', 'browser', 'team', 'studio', 'knowledge', 'settings'];
+const CORE = ['dashboard', 'tasks', 'brain'];   // wajah depan hanya tiga: Beranda (Pemandu), Hasil Saya, Catatan
+const MORE = ['office', 'chat', 'approvals', 'browser', 'team', 'studio', 'knowledge', 'settings'];   // halaman lama: tetap ada, tidak dipromosikan
 let moreOpen = false;
 const SUB = { };
 const SUB_OLD = { office: 'Pantau & masuk ke kantor', dashboard: 'Ringkasan perusahaan', tasks: 'Kanban & jejak kerja', chat: 'Percakapan & rapat', brain: 'Knowledge graph', studio: 'Rancang karyawan AI', studio: 'Rancang karyawan AI', knowledge: 'Knowledge, pelatihan & dataset', team: 'Hierarki & divisi', approvals: 'Keputusan manusia', settings: 'Mesin AI & sistem' };
 let collapsed = true;   // selalu ciut setiap halaman dimuat/di-refresh; buka-tutup manual hanya berlaku selama sesi halaman
+
+/** sisa jatah hari ini dalam kata, tidak pernah dalam dolar */
+function jatah(d) { const b = Number(d.settings.dailyBudgetUSD) || 0; if (!b) return 'banyak'; const p = 1 - (d.usage.costToday || 0) / b; return p > 0.6 ? 'banyak' : p > 0.25 ? 'cukup' : p > 0 ? 'hampir habis' : 'habis'; }
 
 function renderNav() {
   const b = badges();
@@ -42,7 +45,7 @@ function renderNav() {
   $('#sidebar').innerHTML = `<div class="brand"><div class="logo"><img src="/assets/brand/logo-mark-white.webp" alt="" width="34" height="34"></div><span class="lbl"><img class="wordmark-img" src="/assets/brand/logo-wordmark-light.webp" alt="RAIVERSE AGENT" width="112" height="28"><small>${esc(d.company.name)}</small></span><button class="btn icon ghost nav-toggle" id="navtg" title="${collapsed ? 'Perluas' : 'Ciutkan'} navigasi">${icon(collapsed ? 'expand' : 'collapse', 16)}</button></div>
     <div class="nav-group">${CORE.map(item).join('')}</div>
     <div class="side-foot">
-      <button class="engine" id="modepill" aria-label="Jeda atau jalankan kantor" title="Klik untuk jeda / jalankan kantor"><span class="dot ${prov !== 'sim' && d.settings.autonomy ? 'on' : ''}"></span><span class="lbl">${!d.settings.autonomy ? 'Dijeda' : active + '/' + ai.length + ' agen aktif'} · ${usd(d.usage.costToday)}</span></button>
+      <button class="engine" id="modepill" aria-label="Jeda atau jalankan kantor" title="Klik untuk jeda / jalankan kantor"><span class="dot ${prov !== 'sim' && d.settings.autonomy ? 'on' : ''}"></span><span class="lbl">${!d.settings.autonomy ? 'Dijeda' : active ? 'Sedang bekerja' : 'Siap membantu'} · Jatah ${jatah(d)}</span></button>
     </div>
     <div class="nav-group more ${moreOpen ? 'open' : ''}"><button class="nav-more" id="navmore" aria-label="Menu lainnya" title="Menu lainnya" aria-expanded="${moreOpen}">${goldIcon('more', 28)}<span class="lbl">Lainnya</span>${b.approvals && !(moreOpen) ? `<span class="badge">${b.approvals}</span>` : ''}<span class="chev lbl">▾</span></button><div class="more-list">${MORE.map(item).join('')}</div></div>`;
   $('#navmore').onclick = () => { moreOpen = !moreOpen; renderNav(); };
@@ -99,10 +102,10 @@ function openPalette() {
   const input = p.querySelector('#pq');
   let items = []; let sel = 0;
   const actions = [
-    { icon: '🎯', label: 'Goal baru untuk perusahaan', run: goalModal, k: 'aksi' },
+    { icon: '🎯', label: 'Pekerjaan baru untuk perusahaan', run: goalModal, k: 'aksi' },
     { icon: '👥', label: 'Rapat baru', run: () => meetingModal(), k: 'aksi' },
     { icon: '＋', label: 'Tugas baru', run: () => newTaskModal(), k: 'aksi' },
-    { icon: '🤖', label: 'Rekrut karyawan AI', run: () => employeeModal(null, { type: 'ai' }), k: 'aksi' },
+    { icon: '🤖', label: 'Tambah pembantu baru', run: () => employeeModal(null, { type: 'ai' }), k: 'aksi' },
     { icon: '⏯', label: 'Jeda / jalankan kantor', run: () => api('PATCH', '/api/settings', { autonomy: !S.data.settings.autonomy }), k: 'aksi' },
     { icon: '🌓', label: 'Ganti tema terang/gelap', run: () => window.setTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'), k: 'aksi' },
     ...Object.entries(VIEWS).map(([id, v]) => ({ icon: v.icon, label: `Buka ${v.title}`, run: () => navigate(id), k: 'halaman' })),
@@ -116,7 +119,7 @@ function openPalette() {
       ...S.data.notes.filter((n) => q && (m(n.title) || m(n.content))).slice(0, 8).map((n) => ({ icon: '📝', label: n.title, run: () => navigate('brain', { note: n.id }), k: n.folder })),
       ...S.data.tasks.filter((t) => q && m(t.title)).slice(-8).reverse().map((t) => ({ icon: '📋', label: t.title, run: () => taskDrawer(t.id), k: t.status })),
     ].slice(0, 30);
-    if (q && !items.length) items.push({ icon: '🎯', label: `Jadikan goal: “${input.value}”`, run: () => api('POST', '/api/goals', { title: input.value, userId: S.me }).then(() => toast('Goal dikirim', 'ok')), k: 'aksi' });
+    if (q && !items.length) items.push({ icon: '🎯', label: `Jadikan pekerjaan: “${input.value}”`, run: () => api('POST', '/api/goals', { title: input.value, userId: S.me }).then(() => toast('Pekerjaan dikirim', 'ok')), k: 'aksi' });
     sel = Math.min(sel, items.length - 1);
     p.querySelector('#pl').innerHTML = items.map((it, i) => `<div class="pal-i ${i === sel ? 'sel' : ''}" data-i="${i}"><span>${paletteIcon(it.icon)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(it.label)}</span><span class="k">${esc(it.k)}</span></div>`).join('');
     p.querySelectorAll('[data-i]').forEach((x) => (x.onclick = () => choose(+x.dataset.i)));
@@ -161,11 +164,11 @@ document.addEventListener('keydown', (e) => {
     if (drawerKey()) refreshDrawer();
   });
   onEvent((ev) => {
-    if (ev.type === 'approval_requested') toast(`🛑 <b>${esc(emp(ev.actorId)?.name)}</b> butuh persetujuan: ${esc(ev.text.split('"')[1] || '')}`, 'warn', () => taskDrawer(ev.taskId));
+    if (ev.type === 'approval_requested') toast(`🛑 <b>${esc(emp(ev.actorId)?.name)}</b> butuh konfirmasimu: ${esc(ev.text.split('"')[1] || '')}`, 'warn', () => taskDrawer(ev.taskId));
     else if (ev.type === 'meeting_done') toast(`👥 ${esc(ev.text)}`, 'ok', () => navigate('chat', { ch: `mtg-${ev.meetingId}` }));
     else if (ev.type === 'alert') toast(`⚠️ ${esc(ev.text)}`, 'bad', () => ev.taskId && taskDrawer(ev.taskId));
     else if (ev.type === 'task_done') { const t = S.data.tasks.find((x) => x.id === ev.taskId); if (t && !t.parentId && t.kind !== 'routine') toast(`✅ ${esc(ev.text)}`, 'ok', () => taskDrawer(ev.taskId)); }
-    else if ((ev.type === 'task_created' || ev.type === 'delegated') && ev.targetId === S.me && ev.actorId !== S.me) toast(`📥 Tugas baru untuk Anda: ${esc(ev.text)}`, '', () => taskDrawer(ev.taskId));
+    else if ((ev.type === 'task_created' || ev.type === 'delegated') && ev.targetId === S.me && ev.actorId !== S.me) toast(`📥 Ada pekerjaan baru untukmu: ${esc(ev.text)}`, '', () => taskDrawer(ev.taskId));
   });
   // keep relative timestamps fresh without hammering the DOM
   setInterval(() => { if (S.view === 'dashboard' || S.view === 'tasks') current?.update?.(new Set(['tick'])); }, 30000);

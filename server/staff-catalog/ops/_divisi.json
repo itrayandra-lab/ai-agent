@@ -1,0 +1,16 @@
+{
+  "id": "ops",
+  "nama": "Operations",
+  "misi": "Membuat proses berjalan efisien: vendor, logistik, SOP, dan otomasi.",
+  "manajer": {
+    "id": "adi",
+    "nama": "Adi",
+    "jabatan": "COO"
+  },
+  "staf": [
+    "ops-nisa",
+    "ops-eko",
+    "ops-lia"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

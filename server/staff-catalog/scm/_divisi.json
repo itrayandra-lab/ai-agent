@@ -1,0 +1,17 @@
+{
+  "id": "scm",
+  "nama": "Supply Chain & Warehouse",
+  "misi": "Bahan tersedia tepat waktu, stok akurat, dan pengiriman cepat.",
+  "manajer": {
+    "id": "hadi",
+    "nama": "Hadi",
+    "jabatan": "Supply Chain Manager"
+  },
+  "staf": [
+    "scm-rini",
+    "scm-agus",
+    "scm-mega",
+    "scm-gunawan"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

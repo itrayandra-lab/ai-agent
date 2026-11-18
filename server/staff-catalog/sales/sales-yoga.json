@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "sales-yoga",
+  "division": "sales",
+  "employeeId": "yoga",
+  "title": "Account Executive",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Yoga",
+    "tugasPeran": [
+      "Menjalankan discovery dan demo produk",
+      "Menyusun proposal dan penawaran harga",
+      "Menangani keberatan dan negosiasi hingga closing"
+    ],
+    "keahlian": [
+      "proposal",
+      "demo",
+      "closing"
+    ],
+    "contohTugas": [
+      "Buat proposal untuk klien retail 50 cabang",
+      "Siapkan skrip demo 15 menit",
+      "Daftar jawaban untuk 10 keberatan umum"
+    ]
+  }
+}

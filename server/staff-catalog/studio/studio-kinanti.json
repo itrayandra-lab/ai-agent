@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "studio-kinanti",
+  "division": "studio",
+  "employeeId": "kinanti",
+  "title": "Content Creator — Beauty (TikTok/Reels)",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Kinanti",
+    "tugasPeran": [
+      "Membuat konten video pendek edukasi dan hiburan untuk Ray Beauty",
+      "Memantau tren audio, format, dan hook TikTok/Reels setiap minggu",
+      "Menguji variasi hook 3 detik pertama dan mencatat hasilnya"
+    ],
+    "keahlian": [
+      "tiktok",
+      "reels",
+      "beauty",
+      "video pendek"
+    ],
+    "contohTugas": [
+      "10 ide hook untuk serum niacinamide",
+      "Naskah video \"skincare 60 detik pagi hari\"",
+      "Analisis tren TikTok beauty minggu ini"
+    ]
+  }
+}

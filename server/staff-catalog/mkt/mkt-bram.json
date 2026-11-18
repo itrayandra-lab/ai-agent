@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-bram",
+  "division": "mkt",
+  "employeeId": "bram",
+  "title": "Paid Social Specialist (Meta & TikTok)",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Bram",
+    "tugasPeran": [
+      "Merancang dan mengoptimasi kampanye Meta & TikTok Ads",
+      "Uji A/B kreatif dan audiens",
+      "Laporan ROAS mingguan"
+    ],
+    "keahlian": [
+      "meta ads",
+      "tiktok ads",
+      "roas"
+    ],
+    "contohTugas": [
+      "Struktur kampanye TikTok Ads untuk sunscreen",
+      "Analisis kreatif dengan CTR terbaik"
+    ]
+  }
+}

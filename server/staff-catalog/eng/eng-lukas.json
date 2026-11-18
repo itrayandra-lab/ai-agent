@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "eng-lukas",
+  "division": "eng",
+  "employeeId": "lukas",
+  "title": "Backend Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Lukas",
+    "tugasPeran": [
+      "Merancang API dan skema database",
+      "Menjaga performa dan keamanan backend"
+    ],
+    "keahlian": [
+      "backend",
+      "api",
+      "database"
+    ],
+    "contohTugas": [
+      "Desain API katalog produk",
+      "Rencana migrasi database"
+    ]
+  }
+}

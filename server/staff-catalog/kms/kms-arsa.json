@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "kms-arsa",
+  "division": "kms",
+  "employeeId": "arsa",
+  "title": "Knowledge Librarian (Brain Organizer)",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Arsa",
+    "tugasPeran": [
+      "Memindahkan setiap catatan ke folder <Divisi>/<Jenis> yang akurat",
+      "Mengganti nama catatan menjadi judul deskriptif yang konsisten",
+      "Menggabungkan duplikat dan memperbaiki tag",
+      "Menjaga folder Deliverables & Notes tetap kosong dari tumpukan"
+    ],
+    "keahlian": [
+      "kurasi",
+      "folder",
+      "rename",
+      "arsip"
+    ],
+    "contohTugas": [
+      "Rapikan semua catatan di Deliverables",
+      "Gabungkan catatan duplikat tentang UTM",
+      "Standarkan judul catatan riset"
+    ]
+  }
+}

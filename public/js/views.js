@@ -7,11 +7,12 @@ import { KnowledgeView } from './knowledge-view.js';
 import { bindAppearance } from './appearance-ui.js';
 import { resolveAppearance } from './assets3d.js';
 import { sfx } from './sfx.js';
-import { tts } from './tts.js';
+import { tts, findMessageFor } from './tts.js';
 import { icon, goldIcon } from './icons.js';
 // Tombol PLAY/EXIT Kantor 3D: ikon emas + label; saat aktif memakai penanda stop (tidak ada segitiga Play).
 const playBtn = (on) => `${on ? '<span class="gi-stop" aria-hidden="true"></span>' : goldIcon('play', 22)}<span class="pl-lbl">${on ? 'EXIT' : 'PLAY'}</span>`;
 import { BrowserView } from './browser-view.js';
+import { PemanduView } from './pemandu-view.js';
 
 const D = () => S.data;
 tts.bind((id) => emp(id));
@@ -62,7 +63,7 @@ export function meetingModal(pre = {}) {
     <label class="f">Agenda / pertanyaan kunci<textarea class="input" name="agenda" rows="3" placeholder="Apa yang harus diputuskan? Data apa yang relevan?">${esc(pre.agenda || '')}</textarea></label>
     <div class="grid2"><label class="f">Pemimpin rapat<select class="input" name="chairId">${empOptions(pre.chairId || 'aria', { aiOnly: true })}</select></label>
     <label class="f">Putaran diskusi<select class="input" name="rounds">${opt(1, '1 putaran (cepat)')}${opt(2, '2 putaran (diskusi)', 2)}${opt(3, '3 putaran (mendalam)')}</select></label></div>
-    <label class="row small" style="align-items:flex-start"><input type="checkbox" name="ownerLed" checked><span><b>Saya mengawali rapat</b><br><span class="muted">Semua agen diam dan mendengarkan sampai Anda mengirim “saya selesai” atau <code>/selesai</code> di chat rapat.</span></span></label>
+    <label class="row small" style="align-items:flex-start"><input type="checkbox" name="ownerLed" checked><span><b>Saya mengawali rapat</b><br><span class="muted">Semua pembantu diam dan mendengarkan sampai Anda mengirim “saya selesai” atau <code>/selesai</code> di chat rapat.</span></span></label>
     <div class="f" style="display:grid;gap:6px"><span class="small muted">Peserta <b id="mtgcount">0 dipilih</b></span><div class="row wrap"><button class="btn sm" type="button" data-ms="all">Pilih semua</button><button class="btn sm" type="button" data-ms="heads">Semua kepala</button><button class="btn sm" type="button" data-ms="clear">Kosongkan</button>${D().divisions.map((d) => `<button class="btn sm ghost" type="button" data-ms="${d.id}">${d.icon} ${esc(d.short)}</button>`).join('')}</div><div class="list-scroll" style="max-height:260px">${D().divisions.map((d) => `<div class="eyebrow" style="margin:6px 0 2px">${esc(d.name)} <button class="btn sm ghost" type="button" data-ms="${d.id}">pilih divisi</button></div>${ai.filter((e) => e.divisionId === d.id).map((e) => `<label class="row small" style="gap:8px;padding:3px 0"><input type="checkbox" data-p="${e.id}" ${(pre.participants || []).includes(e.id) ? 'checked' : ''}>${esc(e.name)} <span class="muted">· ${esc(e.title)}</span></label>`).join('')}`).join('')}</div></div>
     <p class="small muted" style="margin:0">Untuk pilihan massal, seluruh agen tetap tercatat sebagai peserta yang diwakili; kepala tiap divisi aktif berdiskusi agar rapat tidak menghabiskan 154 panggilan AI. Notulen dan action item otomatis menjadi tugas.</p>`, {
     wide: true,
@@ -121,6 +122,8 @@ async function ensureOffice() {
       onApp: (id) => OfficeView.openApp(id),
       onHolo: (p) => (p === 1 ? OfficeView.help(true) : p === 2 ? toast('🕐 Waktu & siang-malam: tombol T mengunci atau menjalankan jam', 'ok') : OfficeView.openApp('dashboard')),
       onZone: (z) => { if (office?.isPlayer()) return; z === 'brain' ? OfficeView.openApp('brain', { graph: 1 }) : divisionDrawer(z); },
+      getMessageText: (ev) => findMessageFor(ev, D().messages),
+      getMeetingMembers: (id) => D().meetings?.find((m) => m.id === id)?.participants,
       onPlayerHint: (h) => OfficeView.playerHint(h), onPlayerAction: (h, kind) => OfficeView.playerAction(h, kind),
     });
     officeRoot.querySelector('[data-loading]')?.remove();
@@ -374,14 +377,14 @@ export const OfficeView = {
       const r = await api('POST', '/api/orchestrate', { text, images, userId: S.me, to: dk.to, mode: dk.mode, channelId: !dk.to.length && dk.thread ? dk.thread : undefined });
       dk.ch = r.channelId; dk.lastAction = r.action; dk.lastMembers = r.members || [];
       dk.thread = String(r.channelId || '').startsWith('goal-') ? r.channelId : dk.to.length ? null : dk.thread;
-      if (r.action === 'goal') toast('🎯 Goal diterima orkestrator — lihat tim yang bergerak', 'ok');
+      if (r.action === 'goal') toast('🎯 Pekerjaan diterima orkestrator — lihat tim yang bergerak', 'ok');
     } catch (err) {
       if (/Endpoint tidak ada/i.test(err.message)) {
         /* the server still runs the old code (no /api/orchestrate): fall back to the older endpoints so the box keeps working, and say why */
         try {
           const pa = this.orchestrator(), who = dk.to.length ? dk.to : [pa.id];
           const goalish = dk.mode === 'goal' || (dk.mode === 'auto' && !dk.to.length && /\b(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tulis|cari|riset|rancang|lakukan|jalankan|pastikan|pelajari|please|create|make|write|draft|prepare)\b/i.test(text));
-          if (goalish) { await api('POST', '/api/goals', { title: text.slice(0, 150), description: text, userId: S.me }); toast('🎯 Goal dikirim (server lama: restart npm start untuk fitur grup penuh)', 'ok'); }
+          if (goalish) { await api('POST', '/api/goals', { title: text.slice(0, 150), description: text, userId: S.me }); toast('🎯 Pekerjaan dikirim (server lama: restart npm start untuk fitur grup penuh)', 'ok'); }
           else { dk.ch = (await api('POST', '/api/dm', { with: who[0], userId: S.me })).id; await api('POST', '/api/messages', { channelId: dk.ch, userId: S.me, text }); toast('Server masih versi lama: restart "npm start" agar diskusi grup berfungsi', 'warn'); }
           this.dockRender(); q.focus(); return;
         } catch (err2) { err = err2; }
@@ -399,7 +402,7 @@ export const OfficeView = {
     const blocked = d.tasks.filter((t) => t.status === 'blocked' && mine(t)).slice(0, 6);
     const late = d.tasks.filter((t) => ['todo', 'in_progress', 'waiting'].includes(t.status) && t.dueAt && t.dueAt < now && mine(t)).slice(0, 6);
     const thread = (t) => { const r = rootOf(t); return r.kind === 'goal' && d.channels.some((c) => c.id === 'goal-' + r.id) ? `<button class="btn sm ghost" data-thread="goal-${r.id}">Thread</button>` : ''; };
-    const rev = aps.map((a) => { const t = d.tasks.find((x) => x.id === a.taskId) || {}; const ev = a.evidence || t.evidence || []; return `<div class="od-ni"><div class="od-nt" data-task="${a.taskId}">${a.kind === 'review' ? '🔎 Review' : '🛑 Persetujuan'} · <b>${esc(String(a.title).slice(0, 70))}</b></div><div class="small muted">${esc(emp(a.requesterId)?.name || '')}${a.summary ? ': ' + esc(String(a.summary).slice(0, 140)) : ''}</div><div class="small">${ev.length ? `Bukti ${ev.filter((x) => x.ok).length}/${ev.length} terverifikasi` : 'Tanpa bukti'}${(a.unverified ?? t.unverified) ? ' · <b style="color:var(--warn)">⚠️ perlakukan sebagai asumsi</b>' : ''}${(a.gaps || t.gaps) ? `<br>Belum terpenuhi: ${esc(String(a.gaps || t.gaps).slice(0, 160))}` : ''}</div><div class="row"><button class="btn sm ok" data-approve="${a.id}">✓ Setujui</button><button class="btn sm" data-reject="${a.id}">✏️ Revisi</button><button class="btn sm ghost" data-task="${a.taskId}">Lihat hasil</button>${thread(t)}</div></div>`; }).join('');
+    const rev = aps.map((a) => { const t = d.tasks.find((x) => x.id === a.taskId) || {}; const ev = a.evidence || t.evidence || []; return `<div class="od-ni"><div class="od-nt" data-task="${a.taskId}">${a.kind === 'review' ? '🔎 Review' : '🛑 Konfirmasi'} · <b>${esc(String(a.title).slice(0, 70))}</b></div><div class="small muted">${esc(emp(a.requesterId)?.name || '')}${a.summary ? ': ' + esc(String(a.summary).slice(0, 140)) : ''}</div><div class="small">${ev.length ? `Bukti ${ev.filter((x) => x.ok).length}/${ev.length} terverifikasi` : 'Tanpa bukti'}${(a.unverified ?? t.unverified) ? ' · <b style="color:var(--warn)">⚠️ perlakukan sebagai asumsi</b>' : ''}${(a.gaps || t.gaps) ? `<br>Belum terpenuhi: ${esc(String(a.gaps || t.gaps).slice(0, 160))}` : ''}</div><div class="row"><button class="btn sm ok" data-approve="${a.id}">✓ Setujui</button><button class="btn sm" data-reject="${a.id}">✏️ Revisi</button><button class="btn sm ghost" data-task="${a.taskId}">Lihat hasil</button>${thread(t)}</div></div>`; }).join('');
     const blk = blocked.map((t) => `<div class="od-ni"><div class="od-nt" data-task="${t.id}">⚠️ Macet · <b>${esc(t.title.slice(0, 70))}</b></div><div class="small muted">${esc(emp(t.assigneeId)?.name || '')}: ${esc(String((t.log || []).filter((l) => l.type === 'error').at(-1)?.text || '').slice(0, 140))}</div><div class="row"><button class="btn sm" data-retry="${t.id}">🔄 Coba lagi</button><button class="btn sm ghost" data-task="${t.id}">Pindahkan / detail</button>${thread(t)}</div></div>`).join('');
     const lt = late.map((t) => `<div class="od-ni"><div class="od-nt" data-task="${t.id}">⏰ Lewat tenggat · <b>${esc(t.title.slice(0, 70))}</b></div><div class="small muted">${esc(emp(t.assigneeId)?.name || '')} · tenggat ${ago(t.dueAt)}</div><div class="row"><button class="btn sm ghost" data-task="${t.id}">Detail</button>${thread(t)}</div></div>`).join('');
     const count = aps.length + blocked.length + late.length;
@@ -741,21 +744,19 @@ export const OfficeView = {
           (t.available ? '<div class="hp-row"><span><b>Agen bicara</b><br><small class="muted">' + (t.hasIndonesian ? t.voiceCount + ' suara Indonesia ditemukan' : 'belum ada suara Indonesia di perangkat ini, jadi kalimat dibaca dengan logat asing. Pasang paket suara Indonesia di Windows (Bahasa, Bicara) atau pakai Edge') + '</small></span><button class="btn sm ' + (t.on ? '' : 'ghost') + '" data-tts="on">' + (t.on ? 'Nyala' : 'Mati') + '</button></div>' +
           '<div class="hp-row"><span><b>Mesin suara</b><br><small class="muted">' + (t.engine === 'edge' ? 'Microsoft (suara Gadis dan Ardi lewat server; natural dan ringan, butuh internet; teks yang dibacakan dikirim ke Microsoft)' : 'Browser (suara bawaan perangkat; tanpa pihak ketiga, tetapi kurang natural)') + '</small></span><span style="display:flex;gap:6px"><button class="btn sm ' + (t.engine === 'edge' ? '' : 'ghost') + '" data-te="edge">' + (t.engine === 'edge' ? icon('check', 14) + ' ' : '') + 'Microsoft</button><button class="btn sm ' + (t.engine === 'browser' ? '' : 'ghost') + '" data-te="browser">' + (t.engine === 'browser' ? icon('check', 14) + ' ' : '') + 'Browser</button></span></div>' +
           (t.edge.avail === false ? '<div class="small" style="margin:0 0 8px;color:var(--warn,#b45309)">Microsoft belum bisa dipakai: ' + esc(t.edge.availErr || 'Python edge-tts belum terpasang di server') + '. Sementara suara browser yang dipakai.</div>' : '') + (t.engine === 'edge' && t.edge.avail !== false ? '<div class="small muted" style="margin:0 0 8px">' + (t.edge.avail === false ? '' : t.edge.ok === false ? 'Server suara tidak menjawab beberapa kali: memakai suara browser. Pilih Microsoft lagi untuk mencoba ulang. ' + esc(t.edge.err) : t.edge.ok ? 'Berjalan. Kalimat pertama terdengar ' + t.edge.ms + ' ms setelah dikirim.' : 'Dicoba saat pertama dipakai; kalau gagal otomatis pakai suara browser.') + '</div>' : '') +
+          (t.engine === 'browser' && t.voiceCount ? '<div class="small muted" style="margin:0 0 8px">Suara browser di perangkat ini: ' + t.voiceInfo.female.length + ' wanita, ' + t.voiceInfo.male.length + ' pria, ' + t.voiceInfo.unknown.length + ' tanpa keterangan.' + (t.maleBrowser ? '' : t.maleViaEdge ? ' Belum ada suara pria Indonesia, jadi agen cowok memakai suara pria <b>Microsoft (Ardi)</b>; teks yang dibacakan agen cowok dikirim ke Microsoft dan terdengar sedikit lebih lambat.' : ' <span style="color:var(--warn,#b45309)">Belum ada suara pria Indonesia' + (t.maleEdge ? ' dan server Microsoft belum tersedia' : '') + ': agen cowok memakai suara yang ada dengan nada lebih rendah, jadi bisa masih terdengar seperti wanita.</span>') + '</div>' + (t.maleBrowser ? '' : '<div class="hp-row"><span><b>Suara pria dari Microsoft</b><br><small class="muted">dipakai hanya untuk agen cowok, selama browser belum punya suara pria Indonesia</small></span><button class="btn sm ' + (t.maleEdge ? '' : 'ghost') + '" data-mm="1">' + (t.maleEdge ? 'Nyala' : 'Mati') + '</button></div>') : '') +
           '<div class="hp-row"><span><b>Volume suara agen</b></span><input type="range" min="0" max="100" value="' + Math.round(t.vol * 100) + '" data-tv style="width:140px"></div>' +
-          (() => { const pr = tts.pron(); return '<div class="small muted" style="margin:14px 0 8px"><b>Pengucapan suara browser</b>: kalau ada huruf yang hilang (misalnya "sedang" terdengar "edang"), dengarkan cara-cara di bawah lalu pilih nomor yang terdengar benar. Pilihannya dipakai untuk semua agen.</div>' +
-            '<div class="hp-row"><span><b>Uji huruf S</b><br><small class="muted">memutar ' + pr.options.length + ' cara, berurutan</small></span><span style="display:flex;gap:6px"><button class="btn sm" data-pa="1">' + icon('sound', 15) + ' Dengarkan</button><button class="btn sm ghost" data-pa="0">Berhenti</button></span></div>' +
-            '<div class="hp-row" style="flex-wrap:wrap;gap:6px"><span><b>Pilih yang benar</b><br><small class="muted">' + esc(pr.options.find((o) => o.id === pr.strategy)?.label || '') + ' dipakai sekarang</small></span><span style="display:flex;gap:6px;flex-wrap:wrap">' + pr.options.map((o, i) => '<button class="btn sm ' + (o.id === pr.strategy ? '' : 'ghost') + '" data-ps="' + o.id + '" title="' + esc(o.label) + '">' + (i + 1) + '</button>').join('') + '</span></div>' +
-            '<div class="hp-row" style="flex-wrap:wrap;gap:6px"><span><b>Kamus ucapan</b><br><small class="muted">kata yang salah diucapkan, dan cara menulisnya agar benar</small></span><span style="display:flex;gap:6px;flex-wrap:wrap"><input class="input" data-pw placeholder="kata (sedang)" style="width:110px"><input class="input" data-py placeholder="ditulis (sudang)" style="width:110px"><button class="btn sm" data-pd="1">Tambah</button></span></div>' +
-            (Object.keys(pr.dict).length ? '<div class="small" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">' + Object.entries(pr.dict).map(([k, v]) => '<button class="btn sm ghost" data-pk="' + esc(k) + '" title="Hapus">' + esc(k) + ' → ' + esc(v) + ' ×</button>').join('') + '</div>' : ''); })() +
+          (() => { const pr = tts.pron(), n = Object.keys(pr.dict).length; return '<details style="margin:10px 0"' + (n ? ' open' : '') + '><summary class="small muted" style="cursor:pointer">Lanjutan: kamus ucapan' + (n ? ' (' + n + ')' : '') + '</summary>' +
+            '<div class="hp-row" style="flex-wrap:wrap;gap:6px"><span><small class="muted">hanya bila ada kata yang salah diucapkan: tulis katanya dan cara menulisnya agar benar</small></span><span style="display:flex;gap:6px;flex-wrap:wrap"><input class="input" data-pw placeholder="kata" style="width:110px"><input class="input" data-py placeholder="ditulis" style="width:110px"><button class="btn sm" data-pd="1">Tambah</button></span></div>' +
+            (n ? '<div class="small" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">' + Object.entries(pr.dict).map(([k, v]) => '<button class="btn sm ghost" data-pk="' + esc(k) + '" title="Hapus">' + esc(k) + ' → ' + esc(v) + ' ×</button>').join('') + '</div>' : '') + '</details>'; })() +
           '<div class="hp-row"><span><b>Uji suara</b><br><small class="muted">dengarkan 3 agen berbeda</small></span><button class="btn sm" data-tt="1">' + icon('sound', 15) + ' Uji</button></div>' : '<div class="small muted">Browser ini tidak mendukung suara bicara.</div>'); })();
       sp.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { sfx.set({ [b.dataset.s]: !sfx.state()[b.dataset.s] }); drawSnd(); }));
       sp.querySelector('[data-sv]').oninput = (e) => sfx.set({ vol: e.target.value / 100 });
       sp.querySelector('[data-tts]')?.addEventListener('click', () => { tts.set({ on: !tts.isOn() }); drawSnd(); });
+      sp.querySelector('[data-mm]')?.addEventListener('click', () => { tts.set({ maleEdge: !tts.state().maleEdge }); drawSnd(); });
       sp.querySelectorAll('[data-te]').forEach((b) => b.addEventListener('click', () => { tts.set({ engine: b.dataset.te }); drawSnd(); if (b.dataset.te === 'edge') tts.checkEdge().then(() => sp.isConnected && drawSnd()); }));
       if (tts.state().edge.avail === undefined) tts.checkEdge().then(() => sp.isConnected && drawSnd());
       sp.querySelector('[data-tv]')?.addEventListener('input', (e) => tts.set({ vol: e.target.value / 100 }));
-      sp.querySelectorAll('[data-pa]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.pa === '1') tts.audition(); else tts.stopAudition(); }));
-      sp.querySelectorAll('[data-ps]').forEach((b) => b.addEventListener('click', () => { tts.setPron({ strategy: b.dataset.ps }); drawSnd(); }));
       sp.querySelector('[data-pd]')?.addEventListener('click', () => { const w = sp.querySelector('[data-pw]').value, v = sp.querySelector('[data-py]').value; if (w.trim() && v.trim()) { tts.setPron({ word: w, say: v }); drawSnd(); } });
       sp.querySelectorAll('[data-pk]').forEach((b) => b.addEventListener('click', () => { tts.setPron({ word: b.dataset.pk, say: '' }); drawSnd(); }));
       sp.querySelector('[data-tt]')?.addEventListener('click', () => { const ids = (D().employees || []).filter((x) => x.type === 'ai').slice(0, 3).map((x) => x.id); const lines = ['Halo, saya agen RAIVERSE. Tugas hari ini sudah selesai, sembilan puluh lima persen sesuai target.', 'Saya setuju. Biar saya cek dulu datanya.', 'Rapat dimulai pukul sepuluh. Mohon siapkan laporan.']; tts.stop(); (ids.length ? ids : ['a', 'b', 'c']).forEach((id, i) => tts.speak(id, lines[i], { force: true })); });
@@ -941,7 +942,7 @@ export const TasksView = {
       review: ['🛑 Butuh keputusan', (t) => t.status === 'review'],
       high: ['🔥 Prioritas tinggi', (t) => t.priority === 'high' && t.status !== 'done'],
       today: ['✅ Selesai hari ini', (t) => t.status === 'done' && (t.completedAt || 0) >= day.getTime()],
-      ai: ['🤖 Inisiatif agen', (t) => emp(t.createdBy)?.type === 'ai' && !t.parentId],
+      ai: ['🤖 Inisiatif pembantu', (t) => emp(t.createdBy)?.type === 'ai' && !t.parentId],
     };
     const base = D().tasks.filter((t) => (!f.div || t.divisionId === f.div) && (!f.who || t.assigneeId === (f.who === '__me' ? S.me : f.who)) && (!f.top || !t.parentId) && (!q || `${t.title} ${t.description || ''} ${emp(t.assigneeId)?.name || ''}`.toLowerCase().includes(q)));
     const list = f.lens && LENS[f.lens] ? base.filter(LENS[f.lens][1]) : base;
@@ -971,7 +972,7 @@ export const TasksView = {
     kb.querySelectorAll('.col').forEach((col) => {
       col.ondragover = (e) => { e.preventDefault(); col.classList.add('drop'); };
       col.ondragleave = () => col.classList.remove('drop');
-      col.ondrop = async (e) => { e.preventDefault(); col.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (col.dataset.col === 'review') return toast('Review diisi otomatis saat agen meminta persetujuan', 'warn'); await api('PATCH', `/api/tasks/${id}`, { status: col.dataset.col, userId: S.me }); };
+      col.ondrop = async (e) => { e.preventDefault(); col.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (col.dataset.col === 'review') return toast('Review diisi otomatis saat agen meminta konfirmasi', 'warn'); await api('PATCH', `/api/tasks/${id}`, { status: col.dataset.col, userId: S.me }); };
     });
   },
   /** Month calendar: tasks on their due date (or completion date), plus every scheduled cron routine run. */
@@ -996,7 +997,7 @@ export const TasksView = {
         ? `<div class="cal-ev ${x.t.status === 'done' ? 'done' : ''}" style="--c:${div(x.t.divisionId)?.color}" data-task="${x.t.id}" title="${esc(x.t.title)} · ${esc(emp(x.t.assigneeId)?.name || '')}">${x.t.kind === 'goal' ? '🎯 ' : ''}${esc(x.t.title)}</div>`
         : `<div class="cal-ev routine" style="--c:${div(emp(x.r.employeeId)?.divisionId)?.color}" data-agent="${x.r.employeeId}" title="${esc(x.r.title)} · ${new Date(x.r.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}">🔁 ${new Date(x.r.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} ${esc(x.r.title)}</div>`).join('')}${items.length > 5 ? `<div class="cal-more">+${items.length - 5} lagi</div>` : ''}</div>`);
     }
-    el.innerHTML = `<div class="cal-h"><button class="btn sm" data-mo="-1">‹</button><b>${m.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</b><button class="btn sm" data-mo="1">›</button><button class="btn sm ghost" data-mo="0">Hari ini</button><span style="flex:1"></span><span class="small muted">📋 tugas (tenggat/selesai) · 🔁 jadwal cron agen</span></div>
+    el.innerHTML = `<div class="cal-h"><button class="btn sm" data-mo="-1">‹</button><b>${m.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</b><button class="btn sm" data-mo="1">›</button><button class="btn sm ghost" data-mo="0">Hari ini</button><span style="flex:1"></span><span class="small muted">📋 tugas (tenggat/selesai) · 🔁 jadwal rutin pembantu</span></div>
       <div class="cal-grid">${['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((x) => `<div class="cal-dow">${x}</div>`).join('')}${cells.join('')}</div>`;
     el.querySelectorAll('[data-mo]').forEach((b) => (b.onclick = () => { const v = +b.dataset.mo; const d = new Date(this.f.month); if (!v) this.f.month = Date.now(); else { d.setDate(1); d.setMonth(d.getMonth() + v); this.f.month = d.getTime(); } this.update(); }));
   },
@@ -1041,8 +1042,8 @@ export function newTaskModal(pre = {}) {
   });
 }
 export function goalModal() {
-  modal('🎯 Goal baru untuk perusahaan', `<label class="f">Goal<input class="input" name="title" placeholder="mis. Naikkan MRR 20% kuartal ini"></label><label class="f">Konteks<textarea class="input" name="description" rows="3"></textarea></label>`, {
-    actions: [{ label: 'Batal' }, { label: '🚀 Jalankan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; await api('POST', '/api/goals', { ...f, userId: S.me }); toast('Goal dikirim', 'ok'); } }],
+  modal('🎯 Pekerjaan baru untuk perusahaan', `<label class="f">Goal<input class="input" name="title" placeholder="mis. Naikkan MRR 20% kuartal ini"></label><label class="f">Konteks<textarea class="input" name="description" rows="3"></textarea></label>`, {
+    actions: [{ label: 'Batal' }, { label: '🚀 Jalankan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; await api('POST', '/api/goals', { ...f, userId: S.me }); toast('Pekerjaan dikirim', 'ok'); } }],
   });
 }
 
@@ -1057,10 +1058,10 @@ export function taskDrawer(id) {
     const ap = D().approvals.find((x) => x.taskId === t.id && x.status === 'pending');
     const n = t.noteId && note(t.noteId);
     return {
-      head: `<div style="min-width:0"><div class="small muted">${d?.icon} ${esc(d?.name)} · ${t.kind === 'goal' ? '🎯 Goal' : t.kind === 'routine' ? '🔁 Rutinitas' : 'Tugas'} · <code>${t.id}</code></div><div style="font-weight:700;font-size:15px;line-height:1.3">${esc(t.title)}</div></div>`,
+      head: `<div style="min-width:0"><div class="small muted">${d?.icon} ${esc(d?.name)} · ${t.kind === 'goal' ? '🎯 Pekerjaan' : t.kind === 'routine' ? '🔁 Rutinitas' : 'Tugas'} · <code>${t.id}</code></div><div style="font-weight:700;font-size:15px;line-height:1.3">${esc(t.title)}</div></div>`,
       body: `
         <div class="row wrap">${statusChip(t.status)}<span class="chip prio-${t.priority}">${PRIO[t.priority]}</span>${t.revisions ? `<span class="chip">revisi ${t.revisions}</span>` : ''}<span class="chip">dibuat ${ago(t.createdAt)} oleh ${esc(emp(t.createdBy)?.name || t.createdBy)}</span></div>
-        ${ap ? `<div class="card" style="border-color:var(--warn)"><div class="card-b" style="display:grid;gap:8px"><b>🛑 ${esc(a?.name)} meminta persetujuan Anda</b><div class="row"><button class="btn ok" data-approve="${ap.id}">✓ Setujui</button><button class="btn" data-reject="${ap.id}">✏️ Minta revisi</button></div></div></div>` : ''}
+        ${ap ? `<div class="card" style="border-color:var(--warn)"><div class="card-b" style="display:grid;gap:8px"><b>🛑 ${esc(a?.name)} meminta konfirmasi Anda</b><div class="row"><button class="btn ok" data-approve="${ap.id}">✓ Setujui</button><button class="btn" data-reject="${ap.id}">✏️ Minta revisi</button></div></div></div>` : ''}
         ${a?.type === 'human' && t.status !== 'done' ? `<div class="card" style="border-color:var(--accent)"><div class="card-b" style="display:grid;gap:8px"><b>👤 Tugas untuk manusia (${esc(a.name)})</b><textarea class="input" id="hout" rows="3" placeholder="Tulis hasil / catatan penyelesaian">${esc(t.output || '')}</textarea><div class="row"><button class="btn primary" id="hdone">✓ Tandai selesai</button></div></div></div>` : ''}
         <div class="sec"><h4>Pelaksana</h4><div class="row">${avatar(a)}<div style="flex:1;min-width:0"><b data-agent="${a?.id}" style="cursor:pointer">${esc(a?.name)}</b><div class="small muted">${esc(a?.title)} · ${esc(a?.statusText || '')}</div></div><select class="input" id="reassign" style="width:auto;max-width:170px">${empOptions(t.assigneeId)}</select></div></div>
         <div class="row wrap">
@@ -1073,7 +1074,7 @@ export function taskDrawer(id) {
         ${kids.length ? `<div class="sec"><h4>Subtugas (${kids.filter((k) => k.status === 'done').length}/${kids.length})</h4><div style="display:grid;gap:6px">${kids.map((k) => `<div class="bl row" data-task="${k.id}">${avatar(emp(k.assigneeId))}<span style="flex:1;min-width:0">${esc(k.title)}</span>${statusChip(k.status)}</div>`).join('')}</div></div>` : ''}
         ${t.description ? `<div class="sec"><h4>Brief</h4><div class="md small">${md(t.description)}</div></div>` : ''}
         ${contractBlock(t)}
-        ${t.output ? `<div class="sec"><h4>Hasil kerja ${n ? `<a data-note="${n.id}" style="cursor:pointer;text-transform:none;letter-spacing:0">· buka di Brain →</a>` : ''}</h4><div class="output md">${md(t.output)}</div></div>` : ''}
+        ${t.output ? `<div class="sec"><h4>Hasil kerja ${n ? `<a data-note="${n.id}" style="cursor:pointer;text-transform:none;letter-spacing:0">· buka di Catatan →</a>` : ''}</h4><div class="output md">${md(t.output)}</div></div>` : ''}
         <div class="sec"><h4>Jejak kerja (observability)</h4><div class="trace">${(t.log || []).slice().reverse().map((l) => `<div class="trace-i ${l.type}"><div class="ico">${LOG_ICON[l.type] || '•'}</div><div><div class="txt">${l.type === 'thought' ? esc(l.text) : `<b>${esc(emp(l.actorId)?.name || l.actorId)}</b> ${esc(l.text)}`}</div><div class="when">${new Date(l.t).toLocaleString('id-ID')}</div></div></div>`).join('')}</div></div>
         <div class="sec"><h4>Komentar</h4><div class="row"><input class="input" id="tc" placeholder="Tambahkan arahan untuk agen…"><button class="btn" id="tcs">Kirim</button></div></div>`,
       mount(el) {
@@ -1124,9 +1125,9 @@ export function agentDrawer(id) {
           <div class="card kpi" style="padding:10px"><div class="l">Biaya</div><div class="v" style="font-size:20px">${usd(e.stats.cost)}</div></div>
         </div>
         <div class="sec"><h4>Profil</h4><div class="md small"><p>${esc(e.persona)}</p></div><div class="row wrap" style="gap:5px">${e.skills.map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div>
-          <div class="small muted" style="margin-top:8px">${e.type === 'ai' ? `🤖 AI · model ${esc(e.model || (e.isLead ? D().settings.model : D().settings.workerModel))} · otonomi: ${e.autonomy === 'ask' ? 'minta persetujuan' : 'otomatis'}` : '👤 Manusia'}${boss ? ` · lapor ke <a data-agent="${boss.id}" style="cursor:pointer">${esc(boss.name)}</a>` : ''}</div>
+          <div class="small muted" style="margin-top:8px">${e.type === 'ai' ? `🤖 AI · model ${esc(e.model || (e.isLead ? D().settings.model : D().settings.workerModel))} · otonomi: ${e.autonomy === 'ask' ? 'minta konfirmasi' : 'otomatis'}` : '👤 Manusia'}${boss ? ` · lapor ke <a data-agent="${boss.id}" style="cursor:pointer">${esc(boss.name)}</a>` : ''}</div>
           ${reports.length ? `<div class="faces" style="margin-top:8px">${reports.map((r) => `<span data-agent="${r.id}" style="cursor:pointer">${avatar(r)}</span>`).join('')}</div>` : ''}</div>
-        ${e.type === 'ai' ? `<div class="sec"><h4>Konfigurasi agen</h4><div style="display:grid;gap:8px">
+        ${e.type === 'ai' ? `<div class="sec"><h4>Pengaturan pembantu</h4><div style="display:grid;gap:8px">
           <div class="row wrap" style="gap:5px">${(e.skillRefs || []).map((r) => { const sk = (D().skills || []).find((x) => x.id === r.id); return sk ? `<span class="chip" title="${esc(sk.description)}">◆ ${esc(sk.name)} · ${r.proficiency}/10</span>` : ''; }).join('') || '<span class="small muted">Belum ada skill dari library</span>'}</div>
           <div class="small muted mono">tools: ${(e.tools || []).join(' · ')}</div>
           <div class="small muted">Knowledge wajib: ${(e.knowledgeIds || []).map((id) => note(id)).filter(Boolean).map((n) => `<a data-note="${n.id}" style="cursor:pointer">${esc(n.title)}</a>`).join(', ') || '-'}</div>
@@ -1178,7 +1179,7 @@ export const ChatView = {
     this.ch = S.params.ch || this.ch || 'general';
     root.style.overflow = 'hidden';
     root.innerHTML = `<div class="chat has-sel" id="chat"><div class="chat-list" id="cl"></div><div class="chat-main"><div class="chat-h" id="chh"></div><div class="msgs" id="msgs"></div>
-      <details class="chat-tools"><summary>Aksi percakapan</summary><div class="quick" id="cquick">${[['/goal ', 'Tujuan baru', 'goal'], ['/rapat ', 'Rapat', 'team'], ['/tugas @', 'Tugas', 'tasks'], ['@all ', 'Semua agen', 'team'], ['/status', 'Status', 'dashboard']].map(([c, l, ic]) => `<button class="chip" data-cmd="${c}">${icon(ic, 14)} ${l}</button>`).join('')}</div></details>
+      <details class="chat-tools"><summary>Aksi percakapan</summary><div class="quick" id="cquick">${[['/goal ', 'Tujuan baru', 'goal'], ['/rapat ', 'Rapat', 'team'], ['/tugas @', 'Tugas', 'tasks'], ['@all ', 'Semua pembantu', 'team'], ['/status', 'Status', 'dashboard']].map(([c, l, ic]) => `<button class="chip" data-cmd="${c}">${icon(ic, 14)} ${l}</button>`).join('')}</div></details>
       <div class="mention-pop" id="cpop" hidden></div>
       <div class="composer"><textarea class="input" id="cin" rows="1" aria-label="Pesan" placeholder="Tulis pesan… gunakan @ untuk menyebut agen"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
     const send = async () => {
@@ -1212,7 +1213,7 @@ export const ChatView = {
       const before = cin.value.slice(0, cin.selectionStart); const m = before.match(/@([\w-]{0,20})$/);
       if (m) {
         const q = m[1].toLowerCase();
-        const special = [['all', '📣 Semua agen', `${D().employees.filter((x) => x.type === 'ai').length} agen · eksekusi bertahap`], ['kepala', '👑 Semua kepala', 'orkestrator setiap divisi'], ['staff', '🤖 Semua staf', 'melalui kepala divisi']].filter((x) => x[0].includes(q) || x[1].toLowerCase().includes(q));
+        const special = [['all', '📣 Semua pembantu', `${D().employees.filter((x) => x.type === 'ai').length} agen · eksekusi bertahap`], ['kepala', '👑 Semua kepala', 'orkestrator setiap divisi'], ['staff', '🤖 Semua staf', 'melalui kepala divisi']].filter((x) => x[0].includes(q) || x[1].toLowerCase().includes(q));
         const hits = D().employees.filter((x) => x.id !== S.me && (`${x.name} ${x.title} ${x.team || ''}`.toLowerCase().includes(q))).slice(0, Math.max(0, 7 - special.length));
         pop.innerHTML = special.map((x, k) => `<div class="mi ${k ? '' : 'on'}" data-name="${x[0]}"><span class="ava">${x[1].slice(0, 2)}</span><div><b>${x[1]}</b><small>${x[2]}</small></div></div>`).join('') + hits.map((x, k) => `<div class="mi ${k || special.length ? '' : 'on'}" data-name="${esc(x.name)}">${avatar(x)}<div><b>${esc(x.name)}</b><small>${esc(x.title)}${x.team ? ' · ' + esc(x.team) : ''}</small></div><span class="status-dot st-${x.status}"></span></div>`).join('');
         pop.hidden = !hits.length && !special.length; pop.querySelectorAll('[data-name]').forEach((el) => (el.onmousedown = (ev) => { ev.preventDefault(); pick(el); }));
@@ -1275,14 +1276,14 @@ export const ChatView = {
   async command(text) {
     const [cmd, ...rest] = text.split(' '); const arg = rest.join(' ').trim();
     const mention = (t) => { const m = t.match(/@([\w-]+)/); return m && D().employees.find((x) => x.name.toLowerCase() === m[1].toLowerCase() || x.id === m[1].toLowerCase()); };
-    if (cmd === '/goal') { if (!arg) { goalModal(); return true; } await api('POST', '/api/goals', { title: arg, userId: S.me }); toast('🎯 Goal dikirim ke asisten pribadimu', 'ok'); return true; }
+    if (cmd === '/goal') { if (!arg) { goalModal(); return true; } await api('POST', '/api/goals', { title: arg, userId: S.me }); toast('🎯 Pekerjaan dikirim ke asisten pribadimu', 'ok'); return true; }
     if (cmd === '/tugas') { const who = mention(arg); const title = arg.replace(/@[\w-]+/, '').trim(); if (!who || !title) { newTaskModal({ assigneeId: who?.id, title }); return true; } await api('POST', '/api/tasks', { title, assigneeId: who.id, userId: S.me }); toast(`📋 Tugas dibuat untuk ${who.name}`, 'ok'); return true; }
     if (cmd === '/rapat') { meetingModal({ topic: arg }); return true; }
     if (cmd === '/cari') { navigate('brain', {}); setTimeout(() => { const q = document.querySelector('#bq'); if (q) { q.value = arg; q.dispatchEvent(new Event('input')); } }, 150); return true; }
     if (cmd === '/status') {
       const d = D(); const open = d.tasks.filter((t) => !['done', 'cancelled'].includes(t.status));
       const busy = d.employees.filter((e) => e.status === 'working' || e.status === 'meeting');
-      modal('📊 Status perusahaan', `<div class="stat-strip">${[['tugas aktif', open.length], ['agen bekerja', busy.length], ['persetujuan', d.approvals.filter((a) => a.status === 'pending').length], ['biaya hari ini', usd(d.usage.costToday)]].map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>${busy.slice(0, 12).map((e) => `<div class="member">${avatar(e)}<div style="flex:1;min-width:0"><div class="nm">${esc(e.name)}</div><div class="rl">${esc(e.statusText || '')}</div></div></div>`).join('') || '<div class="empty small">Semua agen sedang luang</div>'}`, { actions: [{ label: 'Tutup' }] });
+      modal('📊 Status perusahaan', `<div class="stat-strip">${[['tugas aktif', open.length], ['agen bekerja', busy.length], ['persetujuan', d.approvals.filter((a) => a.status === 'pending').length], ['biaya hari ini', usd(d.usage.costToday)]].map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>${busy.slice(0, 12).map((e) => `<div class="member">${avatar(e)}<div style="flex:1;min-width:0"><div class="nm">${esc(e.name)}</div><div class="rl">${esc(e.statusText || '')}</div></div></div>`).join('') || '<div class="empty small">Semua pembantu sedang luang</div>'}`, { actions: [{ label: 'Tutup' }] });
       return true;
     }
     return false;
@@ -1356,7 +1357,7 @@ export const BrainView = {
       };
       return node(top, top, 0);
     }, !!q, open);
-    tree.querySelector('#borg').onclick = async (ev) => { ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`🗂️ Brain dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
+    tree.querySelector('#borg').onclick = async (ev) => { ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`🗂️ Catatan dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
     tree.querySelectorAll('details').forEach((dt) => (dt.ontoggle = () => (dt.open ? open.add(dt.dataset.f) : open.delete(dt.dataset.f))));
     tree.querySelectorAll('[data-open]').forEach((x) => (x.onclick = () => { this.open(x.dataset.open); this.root.querySelector('#brain').classList.remove('show-tree'); }));
     tree.querySelector('#bgraph').onclick = () => { this.mode = 'graph'; this.renderAll(); this.root.querySelector('#brain').classList.remove('show-tree'); };
@@ -1427,7 +1428,7 @@ export const BrainView = {
 // ═════════════════════ TEAM ═════════════════════
 export const TeamView = {
   mount(root) {
-    root.innerHTML = `<div class="page"><div class="row wrap"><h2 style="margin:0;flex:1">👥 Organisasi</h2><button class="btn" id="ndiv">＋ Divisi</button><button class="btn" id="nhum">＋ Manusia</button><button class="btn primary" id="nai">＋ Rekrut karyawan AI</button></div>
+    root.innerHTML = `<div class="page"><div class="row wrap"><h2 style="margin:0;flex:1">👥 Organisasi</h2><button class="btn" id="ndiv">＋ Divisi</button><button class="btn" id="nhum">＋ Manusia</button><button class="btn primary" id="nai">＋ Tambah pembantu baru</button></div>
       <details class="card acc" id="hier"></details>
       <div class="org" id="org"></div>
       <details class="card acc"><summary class="card-h">🔁 Rutinitas otomatis <span class="muted small" id="rtn"></span></summary><div class="card-b" style="display:grid;gap:8px"><div class="row"><button class="btn sm" id="nrt">＋ Rutinitas</button></div><div id="rts" style="display:grid;gap:8px"></div></div></details></div>`;
@@ -1486,7 +1487,7 @@ const ROLE_TEMPLATES = [
 export function employeeModal(e, pre = {}) {
   const isNew = !e;
   e = e || { name: '', type: pre.type || 'ai', divisionId: pre.divisionId || 'mkt', title: '', persona: '', skills: [], isLead: false, avatar: 'bot', autonomy: 'auto', model: '' };
-  modal(isNew ? (e.type === 'human' ? '＋ Tambah anggota manusia' : '＋ Rekrut karyawan AI') : `✎ Edit ${esc(e.name)}`, `
+  modal(isNew ? (e.type === 'human' ? '＋ Tambah anggota manusia' : '＋ Tambah pembantu baru') : `✎ Edit ${esc(e.name)}`, `
     ${isNew && e.type === 'ai' ? `<label class="f">Template peran (opsional)<select class="input" id="tpl"><option value="">— Pilih template —</option>${ROLE_TEMPLATES.map((t, i) => opt(i, `${t[0]} (${div(t[1])?.short})`)).join('')}</select></label>` : ''}
     <div class="grid2"><label class="f">Nama<input class="input" name="name" value="${esc(e.name)}"></label><label class="f">Jabatan<input class="input" name="title" value="${esc(e.title)}"></label></div>
     <div class="grid2"><label class="f">Divisi<select class="input" name="divisionId">${D().divisions.map((d) => opt(d.id, d.icon + ' ' + d.name, e.divisionId)).join('')}</select></label>
@@ -1494,7 +1495,7 @@ export function employeeModal(e, pre = {}) {
     <label class="f">Persona & cara kerja<textarea class="input" name="persona" rows="3" placeholder="Sifat, gaya komunikasi, standar kualitas…">${esc(e.persona)}</textarea></label>
     <label class="f">Keahlian (pisahkan koma)<input class="input" name="skills" value="${esc(e.skills.join(', '))}"></label>
     <div class="grid2"><label class="f">Avatar 3D<select class="input" name="avatar">${['bot', 'cat', 'bear', 'bunny', 'fox'].map((a) => opt(a, { bot: '🤖 Bot', cat: '🐱 Kucing', bear: '🐻 Beruang', bunny: '🐰 Kelinci', fox: '🦊 Rubah' }[a], e.avatar)).join('')}</select></label>
-      <label class="f">Otonomi<select class="input" name="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta persetujuan', e.autonomy)}</select></label></div>
+      <label class="f">Otonomi<select class="input" name="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta konfirmasi', e.autonomy)}</select></label></div>
     <div class="grid2"><label class="f">Model AI<select class="input" name="model">${opt('', 'Default (Pengaturan)', e.model)}${(D().models || []).map((m) => opt(m, m, e.model)).join('')}</select></label>
       <label class="f">Head divisi?<select class="input" name="isLead">${opt('false', 'Tidak', String(e.isLead))}${opt('true', 'Ya 👑', String(e.isLead))}</select></label></div>`, {
     onMount(b) {
@@ -1514,7 +1515,7 @@ export function employeeModal(e, pre = {}) {
 }
 function routineTargetLabel(r) {
   const type = r.targetType || 'employee';
-  if (type === 'all') return `Semua agen (${D().employees.filter((e) => e.type === 'ai').length})`;
+  if (type === 'all') return `Semua pembantu (${D().employees.filter((e) => e.type === 'ai').length})`;
   if (type === 'heads') return 'Semua kepala divisi';
   if (type === 'staff') return 'Semua staf';
   if (type === 'division') return `Divisi ${div(r.targetId)?.name || r.targetId}`;
@@ -1525,7 +1526,7 @@ function routineModal(r) {
   const isNew = !r;
   r = r || { title: '', description: '', employeeId: 'aria', targetType: 'employee', targetId: 'aria', targetTag: '', everyMinutes: 60, enabled: true };
   const current = (r.targetType || 'employee') === 'employee' ? `employee:${r.targetId || r.employeeId}` : (r.targetType === 'division' ? `division:${r.targetId}` : r.targetType || 'employee:aria');
-  const targetOpts = `<option value="all" ${current === 'all' ? 'selected' : ''}>📣 Semua agen (hemat: via head divisi)</option><option value="heads" ${current === 'heads' ? 'selected' : ''}>👑 Semua kepala divisi</option><option value="staff" ${current === 'staff' ? 'selected' : ''}>🤖 Semua staf (via head divisi)</option><option value="tag" ${current === 'tag' ? 'selected' : ''}># Hashtag / tim / keahlian</option>${D().divisions.map((d) => `<option value="division:${d.id}" ${current === `division:${d.id}` ? 'selected' : ''}>${d.icon} Divisi ${esc(d.name)}</option>`).join('')}${D().employees.filter((e) => e.type === 'ai').map((e) => `<option value="employee:${e.id}" ${current === `employee:${e.id}` ? 'selected' : ''}>${esc(e.name)} · ${esc(e.title)}</option>`).join('')}`;
+  const targetOpts = `<option value="all" ${current === 'all' ? 'selected' : ''}>📣 Semua pembantu (hemat: via head divisi)</option><option value="heads" ${current === 'heads' ? 'selected' : ''}>👑 Semua kepala divisi</option><option value="staff" ${current === 'staff' ? 'selected' : ''}>🤖 Semua staf (via head divisi)</option><option value="tag" ${current === 'tag' ? 'selected' : ''}># Hashtag / tim / keahlian</option>${D().divisions.map((d) => `<option value="division:${d.id}" ${current === `division:${d.id}` ? 'selected' : ''}>${d.icon} Divisi ${esc(d.name)}</option>`).join('')}${D().employees.filter((e) => e.type === 'ai').map((e) => `<option value="employee:${e.id}" ${current === `employee:${e.id}` ? 'selected' : ''}>${esc(e.name)} · ${esc(e.title)}</option>`).join('')}`;
   modal(isNew ? '＋ Rutinitas otomatis' : '✎ Edit rutinitas', `<label class="f">Judul<input class="input" name="title" value="${esc(r.title)}" placeholder="mis. Laporan penjualan harian"></label><label class="f">Instruksi<textarea class="input" name="description" rows="3">${esc(r.description)}</textarea></label><label class="f">Target<select class="input" name="targetSpec">${targetOpts}</select></label><label class="f">Hashtag / tim / keahlian (dipakai jika target Hashtag)<input class="input" name="targetTag" value="${esc(r.targetTag || '')}" placeholder="mis. seo, marketplace, Growth Team"></label><div class="grid2"><label class="f">Koordinator fallback<select class="input" name="employeeId">${empOptions(r.employeeId || 'aria', { aiOnly: true })}</select></label><label class="f">Setiap (menit)<input class="input" type="number" min="1" name="everyMinutes" value="${r.everyMinutes || 60}"></label></div><div class="small muted">Target massal dijalankan per koordinator divisi dan masuk antrean bertahap, bukan memanggil semua model sekaligus.</div>`, {
     actions: [...(!isNew ? [{ label: 'Hapus', kind: 'danger', run: () => api('DELETE', `/api/routines/${r.id}`) }] : []), { label: 'Batal' }, { label: 'Simpan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; const [kind, id] = f.targetSpec.split(':'); f.targetType = kind; f.targetId = id || (kind === 'tag' ? f.targetTag : ''); delete f.targetSpec; if (kind === 'employee') f.employeeId = id; isNew ? await api('POST', '/api/routines', f) : await api('PATCH', `/api/routines/${r.id}`, f); } }],
   });
@@ -1533,12 +1534,12 @@ function routineModal(r) {
 
 // ═════════════════════ APPROVALS ═════════════════════
 export const ApprovalsView = {
-  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Persetujuan</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif — semua langsung jalan, hanya dicatat.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Persetujuan">Kebijakan Persetujuan</a></p><div id="ap" style="display:grid;gap:10px"></div><details class="card acc"><summary class="card-h">🕘 Riwayat keputusan</summary><div id="aph" class="card-b" style="display:grid;gap:6px"></div></details></div>`; bindCommon(root); this.root = root; this.update(); },
+  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Konfirmasi</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif — semua langsung jalan, hanya dicatat.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Konfirmasi">Kebijakan Konfirmasi</a></p><div id="ap" style="display:grid;gap:10px"></div><details class="card acc"><summary class="card-h">🕘 Riwayat keputusan</summary><div id="aph" class="card-b" style="display:grid;gap:6px"></div></details></div>`; bindCommon(root); this.root = root; this.update(); },
   update() {
     const aps = D().approvals;
     const pend = aps.filter((a) => a.status === 'pending').reverse();
     const r = this.root;
-    r.querySelector('#ap').innerHTML = pend.map((a) => { const t = task(a.taskId); return approvalCard(a) + (t?.output ? `<details class="card" style="margin-top:-6px"><summary class="card-h" style="cursor:pointer;font-weight:550">📄 Pratinjau hasil</summary><div class="card-b md">${md(t.output.slice(0, 5000))}</div></details>` : ''); }).join('') || '<div class="card empty">Tidak ada yang menunggu persetujuan 🎉</div>';
+    r.querySelector('#ap').innerHTML = pend.map((a) => { const t = task(a.taskId); return approvalCard(a) + (t?.output ? `<details class="card" style="margin-top:-6px"><summary class="card-h" style="cursor:pointer;font-weight:550">📄 Pratinjau hasil</summary><div class="card-b md">${md(t.output.slice(0, 5000))}</div></details>` : ''); }).join('') || '<div class="card empty">Tidak ada yang menunggu konfirmasi 🎉</div>';
     bindApprovalButtons(r.querySelector('#ap'));
     r.querySelector('#aph').innerHTML = aps.filter((a) => a.status !== 'pending').slice(-12).reverse().map((a) => `<div class="bl row" data-task="${a.taskId}"><span>${a.status === 'approved' ? '✅' : '✏️'}</span><span style="flex:1;min-width:0">${esc(a.title)}</span><span class="small muted">${esc(emp(a.decidedBy)?.name || '')} · ${ago(a.decidedAt)}</span></div>`).join('') || '<div class="muted small">Belum ada</div>';
   },
@@ -1561,8 +1562,8 @@ async function accountCard(box) {
       ${manage ? `<div class="row wrap" style="margin-top:8px"><select class="input" id="invrole" style="width:auto">${opt('member', 'sebagai Anggota', 'member')}${owner ? opt('admin', 'sebagai Admin', '') : ''}</select><button class="btn primary" id="invgo">🔗 Buat link undangan</button></div><div class="small" id="invout"></div>` : ''}</div>
     <div class="sec" style="margin:0"><h4>Google Drive</h4>${!owner ? '<div class="small muted">Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri, supaya isi Drive pribadi tidak masuk ke ruang kerja orang lain.</div>'
       : `<div class="small">${u.drive ? `✅ Tersambung${cfg.root ? ` · <a href="https://drive.google.com/drive/folders/${esc(cfg.root)}" target="_blank" rel="noopener">buka folder RAIVERSE ↗</a>` : ''}` : '⚠️ Belum tersambung: <a href="/auth/google">login ulang dengan Google</a> dan centang izin Drive.'}</div>
-      ${u.drive ? `<div class="row wrap" style="margin-top:6px"><button class="btn" data-dr="setup">📁 Siapkan folder</button><button class="btn" data-dr="push">⬆ Kirim Brain ke Drive</button><button class="btn" data-dr="pull">⬇ Ambil dari Drive</button><button class="btn" id="drpick" ${cfg.pickerKey ? '' : 'disabled title="GOOGLE_PICKER_API_KEY belum diisi"'}>📎 Pilih file dari Drive</button></div>
-      <div class="small muted">Folder <b>Perusahaan</b> = internal, <b>Publik</b> = boleh untuk agen layanan luar, <b>Pribadi</b> = tidak dibaca agen, <b>Hasil Agen</b> = draf agen. Isi Drive menjadi <b>fakta terverifikasi</b> di Brain ruang kerja ini.</div><div class="small" id="drres"></div>` : ''}`}</div>`;
+      ${u.drive ? `<div class="row wrap" style="margin-top:6px"><button class="btn" data-dr="setup">📁 Siapkan folder</button><button class="btn" data-dr="push">⬆ Kirim Catatan ke Drive</button><button class="btn" data-dr="pull">⬇ Ambil dari Drive</button><button class="btn" id="drpick" ${cfg.pickerKey ? '' : 'disabled title="GOOGLE_PICKER_API_KEY belum diisi"'}>📎 Pilih file dari Drive</button></div>
+      <div class="small muted">Folder <b>Perusahaan</b> = internal, <b>Publik</b> = boleh untuk agen layanan luar, <b>Pribadi</b> = tidak dibaca agen, <b>Hasil Pembantu</b> = draf pembantu. Isi Drive menjadi <b>fakta terverifikasi</b> di Catatan ruang kerja ini.</div><div class="small" id="drres"></div>` : ''}`}</div>`;
   box.querySelectorAll('[data-ws]').forEach((b) => (b.onclick = async () => { await api('POST', '/api/ws/switch', { id: b.dataset.ws }); location.reload(); }));
   box.querySelector('#wsrename')?.addEventListener('click', async () => { await api('POST', '/api/ws/rename', { name: box.querySelector('#wsname').value }); toast('Nama ruang kerja diganti', 'ok'); accountCard(box); });
   const drawMembers = async () => {
@@ -1730,15 +1731,15 @@ export const SettingsView = {
 
 export const VIEWS = {
   office: { title: 'Kantor 3D', icon: '🏢', view: OfficeView },
-  dashboard: { title: 'Beranda', icon: '📊', view: DashboardView },
-  tasks: { title: 'Pekerjaan', icon: '📋', view: TasksView },
-  chat: { title: 'Chat', icon: '💬', view: ChatView },
-  brain: { title: 'Second Brain', short: 'Brain', icon: '🧠', view: BrainView },
-  studio: { title: 'Agent Studio', icon: '✨', view: StudioView },
+  dashboard: { title: 'Beranda', icon: '📊', view: PemanduView },   // Pemandu menggantikan DashboardView lama (tetap diekspor untuk kembali bila perlu)
+  tasks: { title: 'Hasil Saya', short: 'Hasil', icon: '📋', view: TasksView },
+  chat: { title: 'Obrolan', icon: '💬', view: ChatView },
+  brain: { title: 'Catatan', short: 'Catatan', icon: '🧠', view: BrainView },
+  studio: { title: 'Rancang Pembantu', short: 'Rancang', icon: '✨', view: StudioView },
   team: { title: 'Tim & Divisi', icon: '👥', view: TeamView },
-  knowledge: { title: 'Ruang Pengetahuan', icon: '🏛️', view: KnowledgeView },
-  approvals: { title: 'Persetujuan', icon: '🛑', view: ApprovalsView },
-  browser: { title: 'Browser Agen', short: 'Browser', icon: '🌐', ic: 'browser', view: BrowserView },
+  knowledge: { title: 'Pusat Belajar', short: 'Belajar', icon: '🏛️', view: KnowledgeView },
+  approvals: { title: 'Konfirmasi', icon: '🛑', view: ApprovalsView },
+  browser: { title: 'Penjelajah Web', short: 'Web', icon: '🌐', ic: 'browser', view: BrowserView },
   settings: { title: 'Pengaturan', icon: '⚙️', view: SettingsView },
 };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && OfficeView.wins?.size && !/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName)) { const top = [...OfficeView.wins.values()].sort((a, b) => (+b.el.style.zIndex || 0) - (+a.el.style.zIndex || 0))[0]; if (top && !document.querySelector('.modal:not([hidden]), .drawer.open')) OfficeView.closeApp(top.id); } });

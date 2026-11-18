@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "sales-hana",
+  "division": "sales",
+  "employeeId": "hana",
+  "title": "Key Account Manager — Modern Trade",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Hana",
+    "tugasPeran": [
+      "Mengelola akun retail chain & drugstore",
+      "Menyusun account plan dan syarat dagang",
+      "Memantau sell-in dan sell-out"
+    ],
+    "keahlian": [
+      "key account",
+      "retail",
+      "modern trade"
+    ],
+    "contohTugas": [
+      "Account plan untuk jaringan drugstore nasional",
+      "Hitung margin channel modern trade"
+    ]
+  }
+}

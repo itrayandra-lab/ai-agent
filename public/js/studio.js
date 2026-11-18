@@ -2,6 +2,7 @@
 import { S, api, esc, emp, div, avatar, toast, modal, navigate, opt, formData } from './core.js';
 import { bindAppearance } from './appearance-ui.js';
 import { resolveAppearance } from './assets3d.js';
+import { genderOf } from './tts.js';
 
 const D = () => S.data;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -112,7 +113,9 @@ export const StudioView = {
             <label class="f">Jenis<select class="input" data-f="type">${opt('ai', 'Karyawan AI', e.type)}${opt('human', 'Manusia', e.type)}</select></label></div>
           <div class="grid2"><label class="f">Head divisi<select class="input" data-f="isLead">${opt('false', 'Tidak', String(e.isLead))}${opt('true', 'Ya', String(e.isLead))}</select></label>
             <label class="f">Avatar 3D<select class="input" data-f="avatar">${Object.entries(AVATARS).map(([k, v]) => opt(k, v, e.avatar)).join('')}</select></label></div>
-          ${ai ? `<div class="grid2"><label class="f">Otonomi<select class="input" data-f="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta persetujuan', e.autonomy)}</select></label>
+          ${ai ? `<div class="grid2"><label class="f">Suara (cewek atau cowok)<select class="input" data-f="voiceGender">${opt('female', 'Cewek (suara wanita)', genderOf(e))}${opt('male', 'Cowok (suara pria)', genderOf(e))}</select></label>
+            <div class="small muted" style="align-self:end;padding-bottom:8px">Suara bicara agen ini mengikuti pilihan ini, tidak mengubah tampilan 3D. Awalnya ditebak dari nama.</div></div>
+          <div class="grid2"><label class="f">Otonomi<select class="input" data-f="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta persetujuan', e.autonomy)}</select></label>
             <label class="f">Format output<select class="input" data-f="outputFormat">${['markdown', 'json', 'html', 'csv', 'text'].map((x) => opt(x, x.toUpperCase(), e.outputFormat)).join('')}</select></label></div>
           <div class="grid2"><label class="f">Model<select class="input" data-f="model">${opt('', 'Default (Pengaturan)', e.model)}${(D().models || []).map((m) => opt(m, m, e.model)).join('')}</select></label>
             <label class="f">Effort penalaran<select class="input" data-f="effort">${EFFORTS.map(([v, l]) => opt(v, l, e.effort)).join('')}</select></label></div>` : ''}

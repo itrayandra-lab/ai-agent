@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "design-tegar",
+  "division": "design",
+  "employeeId": "tegar",
+  "title": "Packaging & Motion Designer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Tegar",
+    "tugasPeran": [
+      "Merancang konsep kemasan",
+      "Membuat konsep motion & video pendek",
+      "Spesifikasi cetak"
+    ],
+    "keahlian": [
+      "kemasan",
+      "motion",
+      "video"
+    ],
+    "contohTugas": [
+      "Konsep kemasan serum premium",
+      "Storyboard video 15 detik"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "cs-rara",
+  "division": "cs",
+  "employeeId": "rara",
+  "title": "Beauty Advisor",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Rara",
+    "tugasPeran": [
+      "Konsultasi kebutuhan kulit pelanggan",
+      "Rekomendasi rutinitas produk",
+      "Menjawab keluhan pemakaian"
+    ],
+    "keahlian": [
+      "konsultasi kulit",
+      "rekomendasi produk",
+      "edukasi"
+    ],
+    "contohTugas": [
+      "Panduan rutinitas untuk kulit berjerawat",
+      "Template jawaban soal purging"
+    ]
+  }
+}

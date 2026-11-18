@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "kms-gita",
+  "division": "kms",
+  "employeeId": "gita",
+  "title": "AI Training Data Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Gita",
+    "tugasPeran": [
+      "Mengekspor dataset fine-tuning per divisi dengan build_training_set",
+      "Menyaring contoh berkualitas tinggi dan menghapus data pribadi",
+      "Mendokumentasikan versi dataset dan set evaluasi"
+    ],
+    "keahlian": [
+      "dataset",
+      "fine-tuning",
+      "jsonl"
+    ],
+    "contohTugas": [
+      "Bangun dataset training divisi E-commerce",
+      "Dokumentasikan dataset v1 seluruh perusahaan"
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "studio-bintang",
+  "division": "studio",
+  "employeeId": "bintang",
+  "title": "Videographer & Editor",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Bintang",
+    "tugasPeran": [
+      "Merencanakan shot list dan melakukan shooting video produk & tutorial",
+      "Mengedit video dalam beberapa rasio (9:16, 1:1, 16:9) dengan subtitle",
+      "Mengelola arsip footage dan template editing studio"
+    ],
+    "keahlian": [
+      "videografi",
+      "editing",
+      "color grading",
+      "motion"
+    ],
+    "contohTugas": [
+      "Shot list video demo fitur RayFlow",
+      "Rencana edit 3 versi iklan sunscreen",
+      "Template subtitle dan lower-third studio"
+    ]
+  }
+}

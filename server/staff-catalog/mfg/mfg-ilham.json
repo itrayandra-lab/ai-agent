@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mfg-ilham",
+  "division": "mfg",
+  "employeeId": "ilham",
+  "title": "Maintenance & Packaging Engineer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Ilham",
+    "tugasPeran": [
+      "Menyusun jadwal preventive maintenance",
+      "Mengevaluasi spesifikasi kemasan & mesin filling",
+      "Menganalisis downtime"
+    ],
+    "keahlian": [
+      "maintenance",
+      "mesin",
+      "kemasan"
+    ],
+    "contohTugas": [
+      "Jadwal preventive maintenance kuartal",
+      "Evaluasi botol airless vs pump"
+    ]
+  }
+}

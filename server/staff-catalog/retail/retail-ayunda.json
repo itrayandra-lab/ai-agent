@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "retail-ayunda",
+  "division": "retail",
+  "employeeId": "ayunda",
+  "title": "Retail Beauty Advisor",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Ayunda",
+    "tugasPeran": [
+      "Melakukan konsultasi jenis kulit dan merekomendasikan rutinitas Ray Beauty",
+      "Menyusun skrip konsultasi, bundling, dan penanganan keberatan",
+      "Mencatat pertanyaan pelanggan yang sering muncul untuk tim Marketing dan R&D"
+    ],
+    "keahlian": [
+      "beauty advisor",
+      "konsultasi",
+      "skin analysis",
+      "upselling"
+    ],
+    "contohTugas": [
+      "Skrip konsultasi kulit berminyak berjerawat",
+      "Ide 5 bundling rutinitas untuk pemula",
+      "Rangkuman pertanyaan pelanggan toko bulan ini"
+    ]
+  }
+}

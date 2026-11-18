@@ -357,8 +357,8 @@ export async function askColleague(asker, targetId, question) {
   if (!target) return `Karyawan "${targetId}" tidak ditemukan.`;
   if (target.id === asker.id) return 'Tidak bisa bertanya ke diri sendiri.';
   const ch = engine.ensureDM(asker.id, target.id);
-  engine.postMessage(ch, asker.id, question);
-  engine.event('message', asker.id, `${asker.name} → ${target.name}: ${clip(question, 90)}`, { targetId: target.id, channelId: ch });
+  const asked = engine.postMessage(ch, asker.id, question);
+  engine.event('message', asker.id, `${asker.name} → ${target.name}: ${clip(question, 90)}`, { targetId: target.id, channelId: ch, messageId: asked.id });
   if (target.type !== 'ai') return `${target.name} adalah manusia; pertanyaan sudah dikirim lewat DM dan akan dijawab manual.`;
   const prev = { status: target.status, text: target.statusText };
   if (target.status === 'idle') engine.setStatus(target, 'chatting', `Menjawab ${asker.name}`);
@@ -366,8 +366,8 @@ export async function askColleague(asker, targetId, question) {
     const res = await llm.call({ system: briefPrompt(target), maxTokens: 900, effort: 'low', employee: target, model: llm.defaultModels().small,
       messages: [{ role: 'user', content: `${asker.name} (${asker.title}) bertanya kepadamu:\n${question}\n\nJawab sebagai ahli di bidangmu, maksimal 150 kata, beri rekomendasi konkret.` }] });
     const answer = clip(llm.textOf(res) || 'Belum bisa menjawab.', 1500);
-    engine.postMessage(ch, target.id, answer);
-    engine.event('message', target.id, `${target.name} → ${asker.name}: ${clip(answer, 90)}`, { targetId: asker.id, channelId: ch });
+    const answered = engine.postMessage(ch, target.id, answer);
+    engine.event('message', target.id, `${target.name} → ${asker.name}: ${clip(answer, 90)}`, { targetId: asker.id, channelId: ch, messageId: answered.id });
     return `${target.name}: ${answer}`;
   } finally {
     if (target.status === 'chatting') engine.setStatus(target, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);

@@ -2,6 +2,7 @@
 import { knowledgeNotes, attachKnowledge } from './knowledge/index.js';
 import { SEED_SKILLS, ensureEmployeeConfig, autoActivate } from './catalog.js';
 import { TEAMS } from './roster-teams.js';
+import { install as installPower, REV as POWER_REV } from './skills-power.js';
 import { DIVISIONS, ROSTER, rosterEmployees, personalAssistant } from './roster.js';
 const now = () => Date.now();
 
@@ -300,7 +301,7 @@ Terkait: [[Cara Kerja AI + Manusia]]
     ...DIVISIONS.map((d, i) => ({ id: `r-execute-${d.id}`, employeeId: ROSTER.find((x) => x.div === d.id && x.lead).id, targetType: 'division', targetId: d.id, title: `Eksekusi nyata harian — ${d.name}`, description: 'Periksa tugas dan prioritas divisi. Pilih satu tindakan konkret bernilai tertinggi yang belum selesai, konsultasikan maksimal dua staf relevan, eksekusi memakai tool yang tersedia, lalu kirim hasil dan bukti ke channel divisi. Untuk Google/sistem eksternal, hasil hanya boleh disebut berhasil jika ada receipt ID/URL/range; bila konektor belum aktif tulis BELUM TEREKSEKUSI. Bagikan satu pelajaran untuk tim.', cron: `${(5 + i * 7) % 60} ${9 + Math.floor(i / 8)} * * 1-5`, everyMinutes: 0, enabled: true, lastRunAt: t, createdBy: 'system-v8' })),
   ];
 
-  return {
+  const out = {
     version: 8,
     meetings: [],
     company: { name: 'Ray Group', tagline: 'Kerja lebih ringan, bisnis lebih kencang.', language: 'Bahasa Indonesia' },
@@ -314,8 +315,11 @@ Terkait: [[Cara Kerja AI + Manusia]]
       provider: 'auto', groqApiKey: '', groqModel: 'openai/gpt-oss-120b', groqWorkerModel: 'openai/gpt-oss-120b',
       autonomy: true, tickMs: 2500, maxConcurrent: 3, dailyBudgetUSD: 5, mode: 'auto', currentUserId: 'owner', autoActivate: true, autoOrganize: true,
       autoApprove: true, massDispatchSize: 20, googleAppsScript: { url: '', secret: '', enabled: false },
+      staffModel: false,   // bendera P0: staf = workflow n8n; mati = perilaku lama (lihat docs/PAGAR-SINKRONISASI.md)
     },
   };
+  installPower(out); out.powerRev = POWER_REV;   // paket skill super langsung terpasang ke agen yang relevan
+  return out;
 }
 
 export function slug(s) {

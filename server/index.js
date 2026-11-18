@@ -18,6 +18,11 @@ import os from 'node:os';
 import * as auth from './auth.js';
 import * as gdrive from './gdrive.js';
 import * as browser from './browser.js';
+import * as otomasi from './n8n.js';
+import * as staffApi from './staff/index.js';
+import * as learn from './skills-learn.js';
+import * as power from './skills-power.js';
+import * as pemandu from './pemandu.js';
 import { starterDb } from './workspace.js';
 
 // Local secrets (GROQ_API_KEY / ANTHROPIC_API_KEY) live in .env, never in the repo.
@@ -32,6 +37,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 if (process.argv.includes('--reset-only')) { store.load({ reset: true }); console.log('Data direset.'); process.exit(0); }
 store.load();
 store.loadWorkspaces();
+for (const ws of store.ids()) store.run(ws, () => { const d = store.get(); if (d.powerRev !== power.REV) { const r = power.install(d); d.powerRev = power.REV; store.saveNow(); console.log(`  Paket skill super [${ws}]: ${r.skills} skill baru, ${r.refs} pemasangan ke agen`); } });
 auth.load();
 if (store.get().needsOrganize) { const r = lib.autoOrganize('arsa'); delete store.get().needsOrganize; store.save(); console.log(`Brain dirapikan: ${r.moved} dipindah, ${r.renamed} diganti nama`); }
 engine.start();
@@ -129,11 +135,12 @@ on('PUT', '/api/notes/:id', (b, p) => {
 on('DELETE', '/api/notes/:id', (b, p) => ({ ok: store.remove('notes', p.id) }));
 
 const EMP_FIELDS = ['name', 'type', 'divisionId', 'title', 'persona', 'skills', 'isLead', 'reportsTo', 'avatar', 'autonomy', 'model', 'status',
-  'about', 'taskAndFunction', 'instructions', 'escalation', 'outputFormat', 'effort', 'skillRefs', 'tools', 'knowledgeIds', 'starters', 'reasoning', 'team', 'appearance'];
-on('POST', '/api/employees', (b) => org.hire(pick(b, EMP_FIELDS), b.userId || 'owner'));
+  'about', 'taskAndFunction', 'instructions', 'escalation', 'outputFormat', 'effort', 'skillRefs', 'tools', 'knowledgeIds', 'starters', 'reasoning', 'team', 'appearance', 'voiceGender'];
+const cleanVoiceGender = (o) => { if ('voiceGender' in o && o.voiceGender !== 'female' && o.voiceGender !== 'male') delete o.voiceGender; return o; };   // the voice follows this field; anything else is ignored
+on('POST', '/api/employees', (b) => org.hire(cleanVoiceGender(pick(b, EMP_FIELDS)), b.userId || 'owner'));
 on('PATCH', '/api/employees/:id', (b, p) => {
   const e = db().employees.find((x) => x.id === p.id) || (() => { throw bad('Karyawan tidak ada', 404); })();
-  const ch = pick(b, EMP_FIELDS);
+  const ch = cleanVoiceGender(pick(b, EMP_FIELDS));
   if (typeof ch.skills === 'string') ch.skills = ch.skills.split(',').map((s) => s.trim()).filter(Boolean);
   if (ch.status === 'offline') ch.statusText = 'Offline';
   if (ch.status === 'idle') ch.statusText = 'Siap bekerja';
@@ -287,7 +294,8 @@ on('POST', '/api/routines/:id/run', (b, p) => engine.runRoutine(db().routines.fi
 on('PATCH', '/api/settings', async (b, p, url, me, member) => {
   ownerOnly(me, member);
   const s = db().settings;
-  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize']);
+  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize', 'staffModel']);
+  if ('staffModel' in ch) ch.staffModel = ch.staffModel === true;
   if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = b.apiKey.trim();
   if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = b.groqApiKey.trim();
   for (const k of ['tickMs', 'maxConcurrent', 'dailyBudgetUSD']) if (k in ch) ch[k] = Number(ch[k]);
@@ -371,7 +379,11 @@ const signedIn = (me) => { if (!me) throw bad('Login dengan Google dulu', 401); 
 const driveOwner = (me, member) => { signedIn(me); if (member?.role !== 'owner') throw bad('Google Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri', 403); return me; };
 const wsInfo = (me) => { const id = auth.activeWs(me), w = auth.wsById(id); return { id, name: w?.name || db().company?.name || 'Kantor', role: auth.memberOf(me, id)?.role || (auth.enforced() ? null : 'owner') }; };
 // Browser agen (Chrome DevTools MCP): hanya Owner/Admin yang boleh melihat dan mengendalikan
+for (const [m, p, fn] of otomasi.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url, me, member); });
+for (const [m, p, fn] of staffApi.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url, me, member); });   // staf: daftar, jalankan, hasil (docs/ARSITEKTUR-STAF-N8N.md)
 for (const [m, p, fn] of browser.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });
+for (const [m, p, fn] of learn.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });   // kartu "aku belajar sesuatu": hanya Owner/Admin yang memutuskan
+for (const [m, p, fn] of pemandu.routes) on(m, p, (b, params, url, me, member) => { b.canAutomate = !auth.enforced() || ['owner', 'admin'].includes(member?.role); return fn(b, params, url, me, member); });   // Pemandu: antarmuka depan yang dipandu pilihan tombol
 on('GET', '/api/auth/me', (b, p, url, me, member) => ({ configured: auth.configured(), enforced: auth.enforced(), user: auth.publicUser(me), employeeId: member?.employeeId || db().settings.currentUserId, workspace: me ? wsInfo(me) : null, workspaces: me ? auth.myWorkspaces(me) : [], scopes: auth.SCOPES }));
 on('POST', '/api/ws/switch', (b, p, url, me) => ({ id: auth.switchWs(signedIn(me), need(b.id, 'id wajib')) }));
 on('GET', '/api/ws/members', (b, p, url, me) => { signedIn(me); return { members: auth.wsMembers(auth.activeWs(me)) }; });
@@ -412,6 +424,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/auth/google/callback') return auth.callback(req, res, url, AUTH_HOOKS);
   if (url.pathname === '/auth/logout') return auth.logout(req, res);
   if (url.pathname.startsWith('/join/')) return auth.joinLink(req, res, url.pathname.slice(6), AUTH_HOOKS);
+  if (url.pathname.startsWith('/api/automations/hook/') && await otomasi.handleHook(req, res, url, body)) return;   // panggilan balik dari mesin otomasi lokal: token + hanya dari komputer ini, tanpa sesi login
   // ── gate: once anyone has signed in, every API call needs a session (the page itself loads and shows the sign-in card)
   const me = auth.sessionUser(req);
   if (url.pathname.startsWith('/api/') && auth.enforced() && url.pathname !== '/api/auth/me' && !me) return json(res, 401, { error: 'Silakan login dengan Google', login: '/auth/google' });

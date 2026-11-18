@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mkt-tasya",
+  "division": "mkt",
+  "employeeId": "tasya",
+  "title": "KOL & Influencer Manager",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Tasya",
+    "tugasPeran": [
+      "Seleksi dan brief KOL/creator",
+      "Negosiasi skema kerja sama",
+      "Mengukur dampak kampanye KOL"
+    ],
+    "keahlian": [
+      "kol",
+      "influencer",
+      "creator"
+    ],
+    "contohTugas": [
+      "Shortlist 20 KOL skincare mikro",
+      "Brief kampanye KOL sunscreen"
+    ]
+  }
+}

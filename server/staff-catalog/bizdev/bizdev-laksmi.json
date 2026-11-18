@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "bizdev-laksmi",
+  "division": "bizdev",
+  "employeeId": "laksmi",
+  "title": "Partnership Manager — Clinics, Salons & Co-branding",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Laksmi",
+    "tugasPeran": [
+      "Menjalin kemitraan klinik kecantikan dan salon untuk professional line",
+      "Merancang program co-branding dengan brand atau komunitas yang selaras",
+      "Mengelola rencana bersama, materi edukasi, dan review kinerja mitra"
+    ],
+    "keahlian": [
+      "klinik",
+      "salon",
+      "co-branding",
+      "kemitraan"
+    ],
+    "contohTugas": [
+      "Proposal kemitraan untuk jaringan klinik estetika",
+      "Ide 5 co-branding yang cocok dengan Ray Beauty",
+      "Template review kinerja mitra kuartalan"
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "mfg-surya",
+  "division": "mfg",
+  "employeeId": "surya",
+  "title": "HSE / K3 Officer",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Surya",
+    "tugasPeran": [
+      "Identifikasi bahaya & kontrol K3",
+      "Inspeksi rutin & investigasi insiden"
+    ],
+    "keahlian": [
+      "k3",
+      "hse",
+      "apd"
+    ],
+    "contohTugas": [
+      "HIRARC area mixing",
+      "Program inspeksi K3 bulanan"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "ecom",
+  "nama": "E-commerce & Marketplace",
+  "misi": "Menumbuhkan penjualan online di marketplace, TikTok Shop, dan website.",
+  "manajer": {
+    "id": "jessica",
+    "nama": "Jessica",
+    "jabatan": "Head of E-commerce"
+  },
+  "staf": [
+    "ecom-putra",
+    "ecom-salsabila",
+    "ecom-bagus",
+    "ecom-cindy",
+    "ecom-nabila",
+    "ecom-sarah"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

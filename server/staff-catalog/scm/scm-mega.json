@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "scm-mega",
+  "division": "scm",
+  "employeeId": "mega",
+  "title": "Demand Planner",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Mega",
+    "tugasPeran": [
+      "Membuat forecast per SKU per minggu",
+      "Menghitung uplift promo kampanye",
+      "Mengukur akurasi forecast"
+    ],
+    "keahlian": [
+      "forecast",
+      "demand",
+      "s&op"
+    ],
+    "contohTugas": [
+      "Forecast penjualan 12.12 per SKU",
+      "Analisis musim Ramadan"
+    ]
+  }
+}

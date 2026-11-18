@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "status": "todo",
+  "key": "bizdev-prasetyo",
+  "division": "bizdev",
+  "employeeId": "prasetyo",
+  "title": "Corporate Sales & B2B Gifting Specialist",
+  "name": "todo",
+  "ringkas": "todo",
+  "kataKunci": "todo",
+  "version": 1,
+  "inputs": "todo",
+  "steps": "todo",
+  "output": "todo",
+  "schedule": "todo",
+  "risk": "todo",
+  "confirm": "todo",
+  "brain": "todo",
+  "sample": "todo",
+  "konteks": {
+    "karakter": "Prasetyo",
+    "tugasPeran": [
+      "Menjual paket hampers dan gifting Ray Beauty ke perusahaan untuk hari raya dan event",
+      "Menawarkan langganan RayFlow ke korporat dan grup usaha",
+      "Menyusun penawaran, harga volume, dan jadwal pengiriman korporat"
+    ],
+    "keahlian": [
+      "corporate sales",
+      "gifting",
+      "hampers",
+      "b2b"
+    ],
+    "contohTugas": [
+      "Katalog hampers Lebaran untuk korporat",
+      "Daftar 30 perusahaan target gifting akhir tahun",
+      "Penawaran RayFlow untuk grup ritel 10 cabang"
+    ]
+  }
+}

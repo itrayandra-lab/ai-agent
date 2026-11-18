@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "fin-bowo",
+  "division": "fin",
+  "employeeId": "bowo",
+  "title": "Treasury & AR/AP Specialist",
+  "version": 1,
+  "name": "Pemeriksa umur piutang",
+  "ringkas": "Kelompokkan tagihan yang belum dibayar berdasarkan lama telatnya, dan catat ringkasannya untuk dipantau.",
+  "kataKunci": [
+    "piutang",
+    "tagihan",
+    "jatuh tempo",
+    "telat bayar",
+    "aging"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "piutang",
+      "type": "longtext",
+      "label": "Daftar tagihan (satu baris: klien | nomor | jatuh tempo YYYY-MM-DD | jumlah)",
+      "required": true,
+      "contoh": "PT Maju | INV-001 | 2026-10-01 | 2500000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Kelompokkan umur",
+      "set": {
+        "rows": "baris(input.piutang).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const d = Math.floor((Date.parse(input.acuan) - Date.parse(p[2])) / 864e5); const hari = Number.isNaN(d) ? 0 : d; return { klien: p[0] || '-', nomor: p[1] || '-', hari: hari, jumlah: num(p[3]), kelompok: hari <= 0 ? 'Belum jatuh tempo' : hari <= 30 ? '1-30 hari' : hari <= 60 ? '31-60 hari' : hari <= 90 ? '61-90 hari' : 'Lebih dari 90 hari' }; })",
+        "total": "v.rows.reduce((a, b) => a + b.jumlah, 0)"
+      }
+    },
+    {
+      "id": "ringkasan",
+      "use": "hitung",
+      "label": "Ringkas per kelompok",
+      "set": {
+        "kelompok": "['Belum jatuh tempo', '1-30 hari', '31-60 hari', '61-90 hari', 'Lebih dari 90 hari'].map((k) => ({ kelompok: k, tagihan: v.rows.filter((r) => r.kelompok === k).length, jumlah: v.rows.filter((r) => r.kelompok === k).reduce((a, b) => a + b.jumlah, 0) }))",
+        "telat": "v.rows.filter((r) => r.hari > 0).reduce((a, b) => a + b.jumlah, 0)"
+      }
+    },
+    {
+      "id": "catat",
+      "use": "simpan_baris",
+      "label": "Catat ringkasan",
+      "isi": "({ acuan: input.acuan, total: v.total, telat: v.telat, kelompok: v.kelompok })"
+    }
+  ],
+  "output": {
+    "ringkas": "rp(v.telat) + ' dari total ' + rp(v.total) + ' sudah lewat jatuh tempo'",
+    "teks": "'# Umur piutang per ' + tgl(input.acuan) + '\\n\\n' + tabel(['Kelompok', 'Jumlah tagihan', 'Nilai'], v.kelompok.map((k) => [k.kelompok, k.tagihan, rp(k.jumlah)])) + '\\n\\n**Total piutang:** ' + rp(v.total) + '  \\n**Sudah lewat jatuh tempo:** ' + rp(v.telat)",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'umur-piutang-' + input.acuan",
+        "isi": "csv([['Klien', 'Nomor', 'Hari telat', 'Jumlah', 'Kelompok']].concat(v.rows.map((r) => [r.klien, r.nomor, r.hari, r.jumlah, r.kelompok])))"
+      }
+    ],
+    "data": "({ total: v.total, telat: v.telat })"
+  },
+  "schedule": {
+    "allowed": true,
+    "cron": "0 8 * * 1",
+    "keterangan": "Tiap Senin pagi (belum diaktifkan: jadwal menyusul di tahap berikutnya)"
+  },
+  "risk": "medium",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "piutang": "PT Maju | INV-001 | 2026-10-01 | 2500000\nCV Sinar | INV-002 | 2026-11-30 | 1000000\nToko Abadi | INV-003 | 2026-08-01 | 750000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Lebih dari 90 hari",
+        "4.250.000"
+      ]
+    }
+  }
+}
