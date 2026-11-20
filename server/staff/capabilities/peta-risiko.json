@@ -1,0 +1,327 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-peta-risiko",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan peta risiko",
+  "version": 1,
+  "name": "Susun peta risiko",
+  "ringkas": "Susun daftar risiko dengan kemungkinan dikali dampak, tingkat, pemilik, dan tindakan untuk proyek, keselamatan, keamanan, atau data pribadi.",
+  "kataKunci": [
+    "risiko",
+    "bahaya",
+    "dampak",
+    "kemungkinan",
+    "mitigasi",
+    "keselamatan"
+  ],
+  "kemampuan": {
+    "id": "peta-risiko",
+    "kelompok": "analisis",
+    "tujuanAwam": "Mendaftar risiko, menilai seberapa mungkin dan seberapa besar akibatnya, lalu menentukan pemilik dan tindakan agar yang paling berbahaya ditangani lebih dulu."
+  },
+  "inputs": [
+    {
+      "key": "bidang",
+      "type": "choice",
+      "label": "Risiko apa yang dipetakan?",
+      "required": true,
+      "default": "proyek",
+      "choices": [
+        {
+          "v": "proyek",
+          "t": "Pekerjaan atau proyek"
+        },
+        {
+          "v": "selamat",
+          "t": "Keselamatan kerja"
+        },
+        {
+          "v": "aman",
+          "t": "Keamanan"
+        },
+        {
+          "v": "pribadi",
+          "t": "Data pribadi"
+        },
+        {
+          "v": "usaha",
+          "t": "Usaha secara umum"
+        }
+      ]
+    },
+    {
+      "key": "konteks",
+      "type": "text",
+      "label": "Pekerjaan atau tempat yang ditinjau",
+      "required": true,
+      "contoh": "Peluncuran toko online"
+    },
+    {
+      "key": "risiko",
+      "type": "longtext",
+      "label": "Daftar risiko, satu baris satu risiko: risiko | kemungkinan (1-5) | dampak (1-5) | pemilik",
+      "required": true,
+      "contoh": "Pemasok terlambat | 4 | 3 | Rina\nServer mati | 2 | 5 | Doni\nSalah ketik harga | 1 | 1 | Sari"
+    },
+    {
+      "key": "tampil",
+      "type": "choice",
+      "label": "Mau melihat yang mana?",
+      "required": true,
+      "default": "semua",
+      "choices": [
+        {
+          "v": "semua",
+          "t": "Semua risiko"
+        },
+        {
+          "v": "penting",
+          "t": "Yang tinggi ke atas saja"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung tingkat tiap risiko",
+      "set": {
+        "r": "baris(input.risiko).map((l) => l.split('|').map((t) => t.trim())).filter((c) => c.length >= 3 && c[0] !== '').slice(0, 60).map((c) => { const a = parseFloat(String(c[1]).replace(',', '.')); const b = parseFloat(String(c[2]).replace(',', '.')); const k = Number.isFinite(a) ? Math.min(5, Math.max(1, Math.round(a))) : 3; const d = Number.isFinite(b) ? Math.min(5, Math.max(1, Math.round(b))) : 3; const skor = k * d; const tingkat = skor >= 20 ? 'Kritis' : skor >= 12 ? 'Tinggi' : skor >= 6 ? 'Sedang' : 'Rendah'; return { nama: cut(c[0], 80), k: k, d: d, skor: skor, tingkat: tingkat, pemilik: c[3] ? cut(c[3], 30) : 'Belum ditentukan', tebak: !(Number.isFinite(a) && Number.isFinite(b)) }; })",
+        "urut": "v.r.slice().sort((a, b) => b.skor - a.skor)",
+        "n": "v.r.length",
+        "cnt": "({ kritis: v.r.filter((x) => x.tingkat === 'Kritis').length, tinggi: v.r.filter((x) => x.tingkat === 'Tinggi').length, sedang: v.r.filter((x) => x.tingkat === 'Sedang').length, rendah: v.r.filter((x) => x.tingkat === 'Rendah').length })",
+        "tebakan": "v.r.filter((x) => x.tebak).length",
+        "tanpaPemilik": "v.r.filter((x) => x.pemilik === 'Belum ditentukan').length",
+        "skorMaks": "v.n ? v.urut[0].skor : 0",
+        "rataSkor": "v.n ? Math.round(v.r.reduce((a, x) => a + x.skor, 0) / v.n * 10) / 10 : 0",
+        "tampilan": "input.tampil === 'penting' ? v.urut.filter((x) => x.skor >= 12) : v.urut",
+        "tindakDasar": "({ Kritis: 'Hentikan dan tangani sekarang, beri tahu penanggung jawab', Tinggi: 'Susun rencana pencegahan minggu ini', Sedang: 'Pantau dan siapkan rencana cadangan', Rendah: 'Catat dan tinjau berkala' })",
+        "tambahan": "input.bidang === 'selamat' ? 'Pastikan alat pelindung dan jalur darurat tersedia.' : input.bidang === 'aman' ? 'Periksa siapa yang punya akses dan ganti akses yang tidak perlu.' : input.bidang === 'pribadi' ? 'Kurangi data yang disimpan dan batasi siapa yang boleh melihat.' : input.bidang === 'usaha' ? 'Siapkan dana cadangan dan pemasok pengganti.' : 'Tetapkan tenggat dan pemeriksaan ulang tiap minggu.'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? v.n + ' risiko dipetakan untuk ' + input.konteks + ': ' + v.cnt.kritis + ' kritis, ' + v.cnt.tinggi + ' tinggi, ' + v.cnt.sedang + ' sedang, ' + v.cnt.rendah + ' rendah' : 'Tidak ada risiko yang terbaca, tulis dengan pola: risiko | kemungkinan | dampak | pemilik'",
+    "teks": "'# Peta risiko: ' + input.konteks + '\\n\\n' + (v.n ? (v.tampilan.length ? tabel(['Risiko', 'Kemungkinan', 'Dampak', 'Skor', 'Tingkat', 'Pemilik', 'Tindakan'], v.tampilan.map((x) => [x.nama, x.k, x.d, x.skor, x.tingkat, x.pemilik, v.tindakDasar[x.tingkat]])) : 'Tidak ada risiko tingkat tinggi ke atas.') + '\\n\\nSaran umum: ' + v.tambahan + (v.tebakan ? '\\n\\nCatatan: ' + v.tebakan + ' risiko punya nilai yang tidak terbaca dan dianggap 3 (sedang); periksa lagi.' : '') + (v.tanpaPemilik ? '\\n\\nCatatan: ' + v.tanpaPemilik + ' risiko belum punya pemilik; tunjuk satu orang tiap risiko.' : '') : 'Belum ada risiko yang bisa dibaca. Tulis satu risiko per baris dengan pola: risiko | kemungkinan | dampak | pemilik.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'peta-risiko-' + cut(String(input.konteks).toLowerCase(), 30)",
+        "isi": "csv([['risiko', 'kemungkinan', 'dampak', 'skor', 'tingkat', 'pemilik', 'tindakan', 'status']].concat(v.urut.map((x) => [x.nama, x.k, x.d, x.skor, x.tingkat, x.pemilik, v.tindakDasar[x.tingkat], ''])))"
+      }
+    ],
+    "data": "({ n: v.n, kritis: v.cnt.kritis, tinggi: v.cnt.tinggi, sedang: v.cnt.sedang, rendah: v.cnt.rendah, skorMaks: v.skorMaks, rataSkor: v.rataSkor, tanpaPemilik: v.tanpaPemilik })"
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "bidang": "proyek",
+      "konteks": "Peluncuran toko online",
+      "risiko": "Pemasok terlambat | 4 | 3 | Rina\nServer mati | 2 | 5 | Doni\nSalah ketik harga | 1 | 1 | Sari",
+      "tampil": "semua"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 risiko dipetakan untuk Peluncuran toko online",
+        "1 tinggi"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "penasihat risiko yang menjelaskan bahaya dengan tenang kepada orang awam",
+    "tujuan": "Tunjukkan risiko mana yang harus ditangani lebih dulu, mengapa, dan langkah pertama yang masuk akal.",
+    "gaya": "tenang, praktis, tidak menakut-nakuti, menyebut urutan prioritas",
+    "pedoman": [
+      "Pakai hanya risiko dan skor yang diberikan; jangan mengarang risiko baru.",
+      "Urutkan pembahasan dari skor tertinggi dan beri satu langkah pertama.",
+      "Risiko tanpa pemilik harus diingatkan agar ditunjuk pemiliknya."
+    ],
+    "skema": {
+      "pembahasan": "teks",
+      "prioritas": "daftar",
+      "langkah_pertama": "daftar",
+      "suasana": "pilihan:aman|waspada|mendesak"
+    },
+    "contoh": {
+      "baik": "Pemasok terlambat paling mendesak karena sering terjadi; minta pemasok cadangan minggu ini.",
+      "buruk": "Semua risiko berbahaya."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 4
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "risiko"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Risiko dengan skor tertinggi perlu ditangani lebih dulu karena paling mungkin terjadi dan paling besar akibatnya; sisanya cukup dipantau.\",\"prioritas\":[\"Risiko skor tertinggi\"],\"langkah_pertama\":[\"Tunjuk pemilik dan tenggat\"],\"suasana\":\"waspada\"}"
+  },
+  "evaluasi": [
+    {
+      "nama": "tiga risiko beragam tingkat",
+      "input": {
+        "bidang": "proyek",
+        "konteks": "Peluncuran toko online",
+        "risiko": "Pemasok terlambat | 4 | 3 | Rina\nServer mati | 2 | 5 | Doni\nSalah ketik harga | 1 | 1 | Sari",
+        "tampil": "semua"
+      },
+      "ai": "{\"pembahasan\":\"Pemasok terlambat adalah risiko paling mendesak karena skornya tertinggi; server mati sedang, salah ketik rendah.\",\"prioritas\":[\"Pemasok terlambat\"],\"langkah_pertama\":[\"Cari pemasok cadangan\"],\"suasana\":\"waspada\"}",
+      "kriteria": {
+        "mengandung": [
+          "Pemasok terlambat",
+          "risiko"
+        ],
+        "mengandungAturan": [
+          "Tinggi",
+          "Sedang",
+          "Rendah"
+        ],
+        "panjangMin": 120,
+        "panjangMaks": 4000,
+        "nilai": [
+          {
+            "path": "data.n",
+            "min": 3,
+            "max": 3
+          },
+          {
+            "path": "data.skorMaks",
+            "min": 12,
+            "max": 12
+          },
+          {
+            "path": "data.tinggi",
+            "min": 1,
+            "max": 1
+          },
+          {
+            "path": "data.rataSkor",
+            "min": 7.6,
+            "max": 7.7
+          }
+        ]
+      }
+    },
+    {
+      "nama": "nilai di luar batas dan teks aneh",
+      "input": {
+        "bidang": "pribadi",
+        "konteks": "Data pelanggan toko",
+        "risiko": "Kebocoran data | 5 | 5 | Ani\nFormulir tanpa sandi | 9 | 2 |\nCatatan lain | abc | x | Budi",
+        "tampil": "penting"
+      },
+      "ai": "{\"pembahasan\":\"Kebocoran data berstatus kritis dan harus ditangani dulu; formulir tanpa sandi juga perlu segera dibatasi aksesnya.\",\"prioritas\":[\"Kebocoran data\"],\"langkah_pertama\":[\"Batasi akses data pelanggan\"],\"suasana\":\"mendesak\"}",
+      "kriteria": {
+        "mengandung": [
+          "Kebocoran data",
+          "risiko"
+        ],
+        "mengandungAturan": [
+          "Kritis",
+          "Belum ditentukan",
+          "data yang disimpan"
+        ],
+        "panjangMin": 120,
+        "panjangMaks": 4000,
+        "nilai": [
+          {
+            "path": "data.n",
+            "min": 3,
+            "max": 3
+          },
+          {
+            "path": "data.kritis",
+            "min": 1,
+            "max": 1
+          },
+          {
+            "path": "data.skorMaks",
+            "min": 25,
+            "max": 25
+          },
+          {
+            "path": "data.tanpaPemilik",
+            "min": 1,
+            "max": 1
+          }
+        ]
+      }
+    },
+    {
+      "nama": "keselamatan kerja dengan satu risiko",
+      "input": {
+        "bidang": "selamat",
+        "konteks": "Gudang barang",
+        "risiko": "Lantai licin | 3 | 4 | Joko",
+        "tampil": "semua"
+      },
+      "ai": "{\"pembahasan\":\"Lantai licin berisiko tinggi karena sering dilewati; pasang tanda dan bersihkan rutin.\",\"prioritas\":[\"Lantai licin\"],\"langkah_pertama\":[\"Pasang tanda lantai basah\"],\"suasana\":\"waspada\"}",
+      "kriteria": {
+        "mengandung": [
+          "Lantai licin"
+        ],
+        "mengandungAturan": [
+          "alat pelindung",
+          "Joko"
+        ],
+        "panjangMin": 80,
+        "panjangMaks": 4000,
+        "nilai": [
+          {
+            "path": "data.n",
+            "min": 1,
+            "max": 1
+          },
+          {
+            "path": "data.skorMaks",
+            "min": 12,
+            "max": 12
+          }
+        ]
+      }
+    },
+    {
+      "nama": "tidak ada risiko terbaca",
+      "input": {
+        "bidang": "aman",
+        "konteks": "Kantor kecil",
+        "risiko": "tidak ada",
+        "tampil": "semua"
+      },
+      "ai": "{\"pembahasan\":\"Belum ada risiko yang terbaca, jadi peta belum bisa disusun; tulis ulang dengan pola risiko, kemungkinan, dampak.\",\"prioritas\":[\"Belum ada\"],\"langkah_pertama\":[\"Tulis daftar risiko\"],\"suasana\":\"aman\"}",
+      "kriteria": {
+        "mengandung": [
+          "risiko"
+        ],
+        "mengandungAturan": [
+          "Belum ada risiko"
+        ],
+        "panjangMin": 40,
+        "panjangMaks": 4000,
+        "nilai": [
+          {
+            "path": "data.n",
+            "min": 0,
+            "max": 0
+          }
+        ]
+      }
+    }
+  ]
+}

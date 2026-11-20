@@ -70,31 +70,27 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "PMO Manager di divisi Operations, memakai bahasa awam",
-    "tujuan": "Nilai tiap risiko dari kemungkinan dan dampaknya, urutkan dari yang terbesar, dan beri saran penanganan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "peta-risiko"
+  ],
+  "keahlian": {
+    "istilah": [
+      "risiko proyek",
+      "daftar risiko",
+      "mitigasi",
+      "dampak",
+      "kemungkinan"
+    ],
+    "data": [
+      "risiko (risiko | kemungkinan 1-5 | dampak 1-5 | pemilik)"
+    ],
+    "gaya": "praktis, fokus tenggat dan penanggung jawab",
     "contoh": {
       "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
-      "buruk": "Operasional perlu rapi."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "risiko proyek"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun daftar risiko proyek perlu dibaca bersama: risiko proyek menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan anggaran tetap di manajer."
+    ]
   }
 }

@@ -120,31 +120,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Packaging & Motion Designer di divisi Creative & Design, memakai bahasa awam",
-    "tujuan": "Hitung ukuran pola potong kemasan (termasuk bleed), jumlah per lembar cetak, dan biaya bahan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "desain-visual-teknis"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kemasan",
+      "dieline",
+      "pola kemasan",
+      "cetak",
+      "box"
+    ],
+    "data": [
+      "panjang kemasan jadi (mm)",
+      "lebar kemasan jadi (mm)",
+      "tinggi kemasan jadi (mm)",
+      "bentuk kemasan"
+    ],
+    "gaya": "rapi dan jelas, jelaskan alasan desain",
     "contoh": {
       "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
-      "buruk": "Desainnya kurang bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "kemasan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung ukuran pola kemasan perlu dibaca bersama: kemasan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ukuran dan warna mengikuti panduan merek."
+    ]
   }
 }

@@ -119,31 +119,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Retail Beauty Advisor di divisi Retail & Beauty Stores, memakai bahasa awam",
-    "tujuan": "Siapkan jawaban tiga langkah (akui, jelaskan, tawarkan) untuk keberatan umum pelanggan di toko, disesuaikan dengan produknya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "keberatan",
+      "skrip",
+      "konsultasi toko",
+      "penjualan toko",
+      "jawaban pelanggan"
+    ],
+    "data": [
+      "produk yang ditawarkan",
+      "keberatan pelanggan",
+      "manfaat utama produk",
+      "yang bisa kita tawarkan"
+    ],
     "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
-      "buruk": "Toko harus lebih bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "keberatan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun jawaban untuk keberatan pelanggan perlu dibaca bersama: keberatan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
   }
 }

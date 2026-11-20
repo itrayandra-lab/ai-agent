@@ -100,31 +100,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "IP & Trademark Specialist di divisi Legal & Compliance, memakai bahasa awam",
-    "tujuan": "Bandingkan nama merek baru dengan merek lain yang Anda ketahui dan lihat mana yang terlalu mirip. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "merek",
+      "nama merek",
+      "kemiripan",
+      "trademark",
+      "hak kekayaan"
+    ],
+    "data": [
+      "nama merek baru",
+      "merek lain untuk dibandingkan (satu per baris)",
+      "seberapa ketat?"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
     "contoh": {
       "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
-      "buruk": "Pasti aman secara hukum."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "merek"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kemiripan nama merek perlu dibaca bersama: merek menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
   }
 }

@@ -9,21 +9,56 @@
   <link rel="apple-touch-icon" href="/assets/brand/icon-192.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;500;600&family=Inter:wght@400;500;600;700&display=swap">
+  <!-- perf: font tidak lagi menahan tampilan pertama (display=swap + dimuat tanpa memblokir) -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;500;600&family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;500;600&family=Inter:wght@400;500;600;700&display=swap"></noscript>
   <link rel="stylesheet" href="/css/app.css">
   <link rel="stylesheet" href="/css/knowledge.css">
   <link rel="stylesheet" href="/css/glass.css">
   <link rel="stylesheet" href="/css/identity.css">
+  <link rel="stylesheet" href="/css/office-layout.css">
+  <link rel="stylesheet" href="/css/float-nav.css">
+  <link rel="stylesheet" href="/css/glass-global.css">
+  <link rel="stylesheet" href="/css/hemat.css">
   <script type="importmap">
     { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
   </script>
+  <!-- perf: seluruh rantai modul UI diminta sekaligus (tanpa air terjun), dan data awal mulai diunduh sebelum skrip jalan -->
+  <link rel="modulepreload" href="/js/app.js">
+  <link rel="modulepreload" href="/js/core.js">
+  <link rel="modulepreload" href="/js/views.js">
+  <link rel="modulepreload" href="/js/awam.js">
+  <link rel="modulepreload" href="/js/icons.js">
+  <link rel="modulepreload" href="/js/iconizer.js">
+  <link rel="modulepreload" href="/js/md.js">
+  <link rel="modulepreload" href="/js/tim-view.js">
+  <link rel="modulepreload" href="/js/hasil-view.js">
+  <link rel="modulepreload" href="/js/pengaturan-view.js">
+  <link rel="modulepreload" href="/js/admin-view.js">
+  <link rel="modulepreload" href="/js/admin-bagian.js">
+  <link rel="modulepreload" href="/js/graph.js">
+  <link rel="modulepreload" href="/js/studio.js">
+  <link rel="modulepreload" href="/js/knowledge-view.js">
+  <link rel="modulepreload" href="/js/sfx.js">
+  <link rel="modulepreload" href="/js/tts.js">
+  <link rel="modulepreload" href="/js/office-panels.js">
+  <link rel="modulepreload" href="/js/nama-ruang.js">
+  <link rel="modulepreload" href="/js/mode-kursor.js">
+  <link rel="modulepreload" href="/js/browser-view.js">
+  <link rel="modulepreload" href="/js/obrolan-view.js">
+  <link rel="modulepreload" href="/js/pesan-view.js">
+  <link rel="modulepreload" href="/js/kamus-ui.js">
+  <link rel="modulepreload" href="/js/sambungan-view.js">
+  <link rel="modulepreload" href="/js/memori-view.js">
+  <link rel="modulepreload" href="/js/komposer-core.js">
+  <script src="/js/boot-awal.js"></script>
 </head>
 <body>
   <div id="app">
     <aside class="sidebar" id="sidebar"></aside>
     <div class="main">
       <header class="topbar" id="topbar"></header>
-      <main id="view" aria-label="Ruang kerja"></main>
+      <main id="view" aria-label="Ruang kerja"><div class="boot-skel" role="status" style="position:absolute;inset:0;display:grid;place-items:center;font:500 14px/1.4 Inter,system-ui,sans-serif;opacity:.7">Memuat RAIVERSE…</div></main>
     </div>
     <nav class="bottomnav" id="bottomnav"></nav>
   </div>

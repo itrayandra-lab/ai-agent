@@ -152,31 +152,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Demand Planner di divisi Supply Chain & Warehouse, memakai bahasa awam",
-    "tujuan": "Perkirakan penjualan beberapa minggu ke depan dari data minggu-minggu lalu, dengan tambahan untuk promo dan ukuran ketepatannya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "forecast",
+      "perkiraan permintaan",
+      "penjualan mingguan",
+      "promo",
+      "akurasi"
+    ],
+    "data": [
+      "penjualan tiap minggu, urut dari yang lama (pisahkan dengan ",
+      "cara memperkirakan",
+      "berapa minggu ke depan",
+      "minggu promo"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
     "contoh": {
       "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
-      "buruk": "Stok sepertinya cukup."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "forecast"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil peramal permintaan mingguan perlu dibaca bersama: forecast menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
   }
 }

@@ -99,31 +99,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Deviation & CAPA Specialist di divisi Quality Control & Assurance, memakai bahasa awam",
-    "tujuan": "Urutkan jenis keluhan atau penyimpangan dari yang terbanyak dan temukan sedikit jenis yang menyumbang sebagian besar masalah. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur, tegas pada yang di luar batas",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "analisis-angka"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pareto",
+      "keluhan",
+      "prioritas masalah",
+      "80/20",
+      "penyimpangan"
+    ],
+    "data": [
+      "periode data",
+      "jenis masalah (jenis | jumlah)",
+      "batas \"sebagian besar\""
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
     "contoh": {
       "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
-      "buruk": "Mutu kelihatannya baik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "pareto"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembuat diagram pareto keluhan perlu dibaca bersama: pareto menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
   }
 }

@@ -100,5 +100,29 @@
         "tahan pengeluaran"
       ]
     }
+  },
+  "kemampuan": [
+    "analisis-angka"
+  ],
+  "keahlian": {
+    "istilah": [
+      "anggaran",
+      "budget",
+      "realisasi",
+      "selisih",
+      "pengeluaran"
+    ],
+    "data": [
+      "daftar pos (satu baris: pos | anggaran | pengeluaran nyata)",
+      "seberapa ketat batasnya?"
+    ],
+    "gaya": "teliti dan netral, sebut angka seperti apa adanya, tandai risiko uang dengan jelas",
+    "contoh": {
+      "baik": "Piutang lewat 60 hari bernilai Rp 12 juta; hubungi dua klien terbesar minggu ini.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Bukan nasihat pajak atau akuntan resmi."
+    ]
   }
 }

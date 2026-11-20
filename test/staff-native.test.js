@@ -318,4 +318,46 @@ test('konektor: Telegram/Discord dilaporkan apa adanya (belum tersambung di sini
   const r = await N.kirimKeluar({ ws: store.current(), employeeId: 'tidak-ada', teks: 'uji' }); assert.equal(r.terkirim, false); assert.ok(r.alasan);
 });
 
+// ───────────────────────── kemampuan inti + staf = orang ─────────────────────────
+const K = await import('../server/staff/kemampuan.js');
+
+test('kemampuan: berkas sah semua, jumlah pas, tiap kemampuan punya >= 3 kasus evaluasi dan SEMUA lulus (model tiruan)', async () => {
+  K.reset(); const load = K.load({ force: true }); assert.deepEqual(load.problems, [], JSON.stringify(load.problems).slice(0, 600));
+  const caps = K.all(); assert.ok(caps.length >= 30 && caps.length <= 40, 'jumlah kemampuan ' + caps.length);
+  const gagal = [];
+  for (const c of caps) { assert.ok(c.evaluasi.length >= 3, c.key); assert.ok(c.inputs.some((x) => x.type === 'choice'), c.key + ' punya tombol'); assert.ok(c.output.berkas?.length >= 1, c.key + ' punya berkas'); const r = await K.evaluasi(c); if (!r.ok) gagal.push(c.key + ': ' + r.kasus.filter((k) => !k.ok).map((k) => k.nama + ' => ' + k.gagal.join('; ')).join(' | ')); }
+  assert.deepEqual(gagal, []);
+});
+
+test('staf = orang: 216 staf tetap ada, tiap staf merujuk kemampuan yang ada + keahlian khusus; otak dirakit dari kemampuan + keahlian', async () => {
+  const all = readySpecs(); assert.equal(all.length, 216);
+  const ids = new Set(K.all().map((c) => c.kemampuan.id)); const pakai = {};
+  for (const sp of all) {
+    assert.ok(Array.isArray(sp.kemampuan) && sp.kemampuan.length >= 1 && sp.kemampuan.every((id) => ids.has(id)), sp.key + ' kemampuan');
+    assert.ok(sp.keahlian && sp.keahlian.istilah?.length && sp.keahlian.gaya && sp.keahlian.batasan?.length, sp.key + ' keahlian'); for (const id of sp.kemampuan) pakai[id] = (pakai[id] || 0) + 1;
+    assert.ok(db.employees.some((e) => e.id === sp.employeeId) || sp.division === 'alat', sp.key + ' punya karakter');
+    if (sp.otakProfil) { const st = N.profilStep(sp, sp.sample.input, 'ringkasan'); assert.ok(st.sistem.includes('Istilah khas peranmu'), sp.key); assert.ok(st.sistem.includes(sp.title), sp.key + ' peran memuat jabatan'); }
+  }
+  for (const id of ids) assert.ok(pakai[id] >= 1, 'kemampuan tanpa pengguna: ' + id);
+  const a = registry.get('fin-ratna'), b = registry.get('hr-fikri'); assert.notEqual(a.otakProfil.peran, b.otakProfil.peran);
+});
+
+test('kemampuan dijalankan lewat pintu manajer: daftar ringkas bertahap, dikerjakan staf yang cocok (karakter 3D bekerja), jujur tanpa AI', async () => {
+  resetUse(); live(false); const lead = db.employees.find((e) => e.isLead && e.divisionId === 'fin');
+  const list = await S.manager.call(lead, { id: 't1', createdBy: 'owner' }, 'staf', { aksi: 'kemampuan' });
+  assert.match(list, /^Kemampuan \(\d+\), halaman 1 dari/); assert.ok(list.split('\n').length <= 14, 'daftar ringkas');
+  assert.match(await S.manager.call(lead, { id: 't1' }, 'staf', { aksi: 'kemampuan', halaman: 99 }), /\(kosong\)/);
+  const id = list.match(/• ([a-z0-9-]+) —/)[1]; const cap = K.get(id);
+  const lihat = await S.manager.call(lead, { id: 't1' }, 'staf', { aksi: 'lihat', kemampuan: id }); assert.ok(lihat.includes(cap.inputs[0].key));
+  const out = await S.manager.call(lead, { id: 't1', createdBy: 'owner' }, 'staf', { aksi: 'jalankan_kemampuan', kemampuan: id, isian: cap.sample.input });
+  assert.match(out, /selesai/); assert.match(out, new RegExp(cap.name.slice(0, 12))); assert.match(await S.manager.call(lead, { id: 't1' }, 'staf', { aksi: 'jalankan_kemampuan', kemampuan: 'tidak-ada' }), /tidak ada di daftarmu/);
+});
+
+test('kemampuan + staf: dengan AI, keahlian staf masuk ke permintaan, model kecil, biaya tercatat; karakter orang itu yang bekerja', async () => {
+  resetUse(); live(true); runner.clearAiCache(); const cap = K.get('hitung-harga-biaya'); const person = readySpecs().find((x) => x.kemampuan.includes('hitung-harga-biaya') && x.division === 'sales') || readySpecs().find((x) => x.kemampuan.includes('hitung-harga-biaya'));
+  llm.text = cap.otakProfil.contohAI; const e = db.employees.find((x) => x.id === person.employeeId); const p = runner.run({ capability: cap, person, input: cap.sample.input }); llm.delay = 0;
+  const r = await p; live(false); assert.equal(r.status, 'selesai', r.galat); assert.equal(r.pakaiAI, true); assert.equal(r.karyawan, person.employeeId); assert.match(r.staf.nama, /oleh/); assert.deepEqual(llm.models, ['claude-haiku-5-5']); assert.ok(r.biaya > 0);
+  assert.equal(e.status, 'idle'); resetUse();
+});
+
 test.after(() => { llmSrv.close(); mock.close?.(); setTimeout(() => process.exit(0), 50).unref(); });

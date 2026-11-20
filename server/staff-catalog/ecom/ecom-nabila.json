@@ -151,31 +151,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "TikTok Affiliate Manager di divisi E-commerce & Marketplace, memakai bahasa awam",
-    "tujuan": "Perkirakan pesanan, omzet, komisi, dan balik modal dari tiap kreator berdasarkan jumlah penonton dan sampel yang dikirim. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "affiliate",
+      "kreator",
+      "komisi",
+      "sampel",
+      "tiktok shop"
+    ],
+    "data": [
+      "kreator (satu baris: nama | rata-rata penonton per video | k",
+      "harga produk (rp)",
+      "harga pokok produk (rp)",
+      "penonton yang membuka produk"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
     "contoh": {
       "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
-      "buruk": "Jualan perlu ditingkatkan."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "affiliate"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung hasil kerja sama kreator affiliate perlu dibaca bersama: affiliate menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

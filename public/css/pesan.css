@@ -1,0 +1,100 @@
+/* Pesan (kelas psn-*): daftar kontak + utas, kompak 14 px. Dimuat sebelum identity.css; selektor diawali .page.psn supaya tidak bentrok. */
+.page.psn { display: grid; grid-template-columns: 1fr; height: 100%; min-height: 0; gap: 0; font-size: 14px; line-height: 1.5; padding: 0; overflow: hidden; }
+.page.psn.dua { grid-template-columns: 290px minmax(0, 1fr); }
+.page.psn:not(.dua)[data-tampil="daftar"] .psn-utas { display: none; }
+.page.psn:not(.dua)[data-tampil="utas"] .psn-daftar { display: none; }
+.psn-daftar { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); padding: 8px 8px 0; gap: 6px; }
+.page.psn:not(.dua) .psn-daftar { border-right: 0; }
+.psn-kepala { display: flex; align-items: center; justify-content: space-between; color: var(--head); font-size: 15px; padding: 2px 4px; }
+.psn-kepala .btn { min-height: 28px; font-size: 12px; padding: 0 10px; }
+.psn-cari { position: relative; display: flex; align-items: center; }
+.psn-cari svg { position: absolute; left: 10px; color: var(--muted); pointer-events: none; }
+.psn-cari .input { width: 100%; min-height: 34px; padding: 6px 12px 6px 30px; font-size: 13px; border-radius: 12px; }
+.psn-filter { display: flex; gap: 4px; }
+.psn-filter .btn { min-height: 28px; padding: 0 10px; font-size: 12px; border-radius: 999px; }
+.psn-filter .btn.on, .psn-tab .btn.on { background: var(--accent-bg); color: var(--head); border-color: var(--gold); }
+.psn-list { list-style: none; margin: 0; padding: 0 0 8px; overflow-y: auto; flex: 1; display: grid; align-content: start; gap: 1px; }
+.psn-baris { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 8px; border: 0; border-radius: 12px; background: transparent; color: var(--text); text-align: left; cursor: pointer; min-height: 52px; }
+.psn-baris:hover, .psn-baris:focus-visible { background: var(--gl-fill); outline: none; }
+.psn-baris:focus-visible { box-shadow: inset 0 0 0 2px var(--gold); }
+.psn-baris.aktif { background: var(--accent-bg); }
+.psn-ava { position: relative; flex: none; width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-weight: 650; font-size: 14px; }
+.psn-ava.besar { width: 32px; height: 32px; }
+.psn-ava.raksasa { width: 52px; height: 52px; font-size: 20px; }
+.psn-dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--panel, #fff); background: var(--muted); }
+.psn-dot.bekerja { background: #e8a33d; }
+.psn-dot.siap { background: #3fb67d; }
+.psn-dot.rapat { background: #6d8df5; }
+.psn-dot.luring { background: #8b8f98; }
+.psn-isi { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.psn-atas, .psn-bawah { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.psn-nama { font-size: 13.5px; font-weight: 600; color: var(--head); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+.psn-atas time { margin-left: auto; font-size: 11px; color: var(--muted); flex: none; }
+.psn-pin { color: var(--gold); display: inline-flex; }
+.psn-sub { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psn-badge { flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--gold); color: var(--navy, #14213d); font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; }
+.psn-kosong { padding: 14px 8px; color: var(--muted); font-size: 13px; list-style: none; }
+.psn-utas { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.psn-belum { margin: auto; text-align: center; color: var(--muted); display: grid; gap: 8px; justify-items: center; padding: 20px; }
+.psn-hu { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 10px 4px; border-bottom: 1px solid var(--line); }
+.psn-kembali { display: none; min-height: 32px; min-width: 32px; }
+.psn-kembali svg { transform: rotate(180deg); }
+.page.psn:not(.dua) .psn-kembali { display: inline-grid; }
+.psn-judul { flex: 1; min-width: 0; display: grid; }
+.psn-judul b { font-size: 14px; color: var(--head); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psn-judul small, .psn-st { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psn-st.bekerja { color: #b9791a; }
+.psn-st.siap { color: #2f9c68; }
+.psn-st.rapat { color: #5877e0; }
+.psn-pinbtn { min-height: 32px; min-width: 32px; color: var(--muted); }
+.psn-pinbtn.on { color: var(--gold); }
+.psn-tab { display: flex; gap: 4px; flex-basis: 100%; padding-bottom: 4px; }
+.psn-tab .btn { min-height: 28px; padding: 0 12px; font-size: 12px; border-radius: 999px; }
+.psn-badan { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.psn-ob { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.psn-ob > .page.ob { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 10px 0; }
+.psn-ob .ob.kontak .ob-bar, .psn-ob .ob.kontak #pmUntuk { display: none; }
+.psn-lama { margin: 6px 10px 0; font-size: 12px; color: var(--muted); border: 1px dashed var(--line2); border-radius: 10px; padding: 2px 10px; }
+.psn-lama summary { cursor: pointer; min-height: 28px; display: flex; align-items: center; gap: 6px; }
+.psn-lama ul { list-style: none; margin: 0; padding: 4px 0 6px; max-height: 28vh; overflow: auto; display: grid; gap: 6px; }
+.psn-lama li { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: baseline; }
+.psn-lama li.saya span:nth-child(2) { color: var(--head); }
+.psn-lama time { font-size: 11px; }
+.psn-chip { display: inline-block; font-size: 11px; padding: 0 8px; border-radius: 999px; background: var(--accent-bg); color: var(--head); border: 1px solid var(--line2); }
+.psn-tugas { list-style: none; margin: 0; padding: 10px; display: grid; gap: 8px; overflow-y: auto; }
+.psn-tugas li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--gl-fill); }
+.psn-tugas b { font-size: 13px; color: var(--head); }
+.psn-tugas small, .psn-tugas time, .psn-tugas p { font-size: 12px; color: var(--muted); margin: 0; }
+.psn-tl { justify-self: start; font-size: 11px; font-weight: 600; padding: 0 8px; border-radius: 999px; border: 1px solid var(--line2); }
+.psn-tl.done { color: #2f9c68; border-color: #2f9c68; }
+.psn-tl.in_progress, .psn-tl.running, .psn-tl.working { color: #b9791a; border-color: #b9791a; }
+.psn-tl.failed, .psn-tl.blocked { color: var(--warn); border-color: var(--warn); }
+.psn-info { padding: 12px; display: grid; gap: 12px; overflow-y: auto; }
+.psn-info-h { display: flex; align-items: center; gap: 12px; }
+.psn-info-h b { color: var(--head); font-size: 15px; display: block; }
+.psn-info-h small { color: var(--muted); font-size: 12px; }
+.psn-info dl { margin: 0; display: grid; gap: 8px; }
+.psn-info dl > div { display: grid; grid-template-columns: 84px 1fr; gap: 8px; align-items: baseline; }
+.psn-info dt { color: var(--muted); font-size: 12px; }
+.psn-info dd { margin: 0; font-size: 13px; }
+.psn-keahlian { display: flex; flex-wrap: wrap; gap: 4px; }
+.psn-aksi-grup { display: flex; gap: 6px; }
+.psn-aksi-grup .btn { min-height: 30px; font-size: 12px; }
+.psn-pilih { list-style: none; margin: 6px 0 0; padding: 0; max-height: 40vh; overflow: auto; display: grid; gap: 2px; }
+.psn-cek { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 2px 6px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+.psn-cek:hover { background: var(--gl-fill); }
+.psn-cek small { display: block; color: var(--muted); font-size: 11px; }
+@media (prefers-reduced-motion: no-preference) { .psn-dot.bekerja { animation: psn-kedip 1.8s ease-in-out infinite; } }
+@keyframes psn-kedip { 50% { opacity: .45; } }
+.psn-filter { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+.psn-filter::-webkit-scrollbar { display: none; }
+.psn-filter .btn { flex: none; }
+.psn-ava.kecil { width: 24px; height: 24px; font-size: 11px; }
+.psn-ruang-isi { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: grid; align-content: start; gap: 10px; }
+.psn-msg { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; }
+.psn-msg b { font-size: 12.5px; color: var(--head); }
+.psn-msg small, .psn-msg time { font-size: 11px; color: var(--muted); }
+.psn-msg p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.psn-ruang-form { display: flex; gap: 6px; align-items: flex-end; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+.psn-ruang-form .input { flex: 1; min-height: 38px; max-height: 120px; resize: none; padding: 8px 12px; font-size: 14px; border-radius: 14px; }
+.psn-ruang-form .btn { min-height: 38px; min-width: 38px; }

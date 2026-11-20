@@ -4,6 +4,8 @@ import { S, api, esc, toast, navigate, modal } from './core.js';
 import { icon } from './icons.js';
 import { tts } from './tts.js';
 import { kosong, memuat, galat, ramah } from './awam.js';
+import { pasangSambungan } from './sambungan-view.js';
+import { renderMemori } from './memori-view.js';
 
 const PERAN = { owner: 'Pemilik', admin: 'Pengelola', member: 'Anggota' };
 
@@ -12,23 +14,55 @@ export const PengaturanView = {
     this.root = root;
     root.innerHTML = `<div class="page pengaturan">
       <header class="page-head"><h2>Pengaturan</h2><p class="muted">Cukup empat hal: akunmu, tampilan, ruang kerja, dan sambungan.</p></header>
+      <nav class="set-nav" aria-label="Bagian pengaturan"><a href="#sTamp" data-sn="sTamp">Tampilan</a><a href="#sAkun" data-sn="sAkun">Akun</a><a href="#sRuang" data-sn="sRuang">Ruang kerja</a><a href="#sChat" data-sn="sChat">Obrolan di ponsel</a><a href="#sMemori" data-sn="sMemori">Memori</a><a href="#sData" data-sn="sData">Data pribadi</a><a href="#sSamb" data-sn="sSamb">Sambungan</a></nav>
       <section class="card set-k" aria-labelledby="sTamp"><div class="card-b"><h3 id="sTamp">Tampilan</h3>
         <p class="muted">Pilih yang paling nyaman di matamu.</p>
         <div class="set-pil" role="group" aria-label="Pilih tampilan"><button type="button" class="btn" data-th="light">${icon('sun', 20)} Terang</button><button type="button" class="btn" data-th="dark">${icon('moon', 20)} Gelap</button></div>
-        <div class="set-row"><div><b>Suara asisten</b><p class="muted">Asisten membacakan balasannya dengan suara.</p></div><button type="button" class="btn" id="sSuara" aria-pressed="false">Mati</button></div></div></section>
+        <div class="set-row"><div><b>Kualitas</b><p class="muted">Otomatis menyesuaikan diri dengan perangkatmu. Hemat mematikan efek kaca buram, suasana hidup, dan membatasi 30 gambar per detik, supaya komputer tetap ringan.</p></div><div class="set-pil" role="group" aria-label="Kualitas"><button type="button" class="btn" data-ku="otomatis" aria-pressed="false">Otomatis</button><button type="button" class="btn" data-ku="tinggi" aria-pressed="false">Tinggi</button><button type="button" class="btn" data-ku="hemat" aria-pressed="false">Hemat</button></div></div>
+        <div class="set-row"><div><b>Suasana hidup</b><p class="muted">Seberapa ramai kantor 3D: orang berjalan, ngobrol, mampir ke taman. Mati paling hemat baterai.</p></div><div class="set-pil" role="group" aria-label="Suasana hidup"><button type="button" class="btn" data-su="penuh" aria-pressed="false">Penuh</button><button type="button" class="btn" data-su="ringan" aria-pressed="false">Ringan</button><button type="button" class="btn" data-su="mati" aria-pressed="false">Mati</button></div></div>
+        <div class="set-row"><div><b>Suara asisten</b><p class="muted">Asisten membacakan balasannya dengan suara.</p></div><button type="button" class="btn" id="sSuara" aria-pressed="false">Mati</button></div>
+        <div class="set-row"><div><b>Tes suara</b><p class="muted" id="sSuaraInfo" role="status"></p></div><button type="button" class="btn" id="sTes">Tes suara</button></div></div></section>
       <section class="card set-k" aria-labelledby="sAkun"><div class="card-b"><h3 id="sAkun">Akun</h3><div id="sAkunBox">${memuat()}</div></div></section>
       <section class="card set-k" aria-labelledby="sRuang"><div class="card-b"><h3 id="sRuang">Ruang kerja dan undangan</h3><div id="sRuangBox">${memuat()}</div></div></section>
+      <section class="card set-k" aria-labelledby="sChat"><div class="card-b"><h3 id="sChat">Obrolan di ponsel</h3><div id="sChatBox"></div></div></section>
+      <section class="card set-k" aria-labelledby="sMemori"><div class="card-b"><h3 id="sMemori">Memori</h3><div id="sMemoriBox"></div></div></section>
+      <section class="card set-k" aria-labelledby="sData"><div class="card-b"><h3 id="sData">Data pribadimu</h3><div id="sDataBox"></div></div></section>
       <section class="card set-k" aria-labelledby="sSamb"><div class="card-b"><h3 id="sSamb">Sambungan</h3><div id="sSambBox">${memuat()}</div></div></section>
     </div>`;
     const $ = (q) => root.querySelector(q);
+    root.querySelectorAll('[data-sn]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); root.querySelector('#' + a.dataset.sn)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); root.querySelectorAll('[data-sn]').forEach((x) => x.classList.toggle('on', x === a)); }));
     const tema = () => document.documentElement.dataset.theme;
     const segar = () => root.querySelectorAll('[data-th]').forEach((b) => { const on = tema() === b.dataset.th; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
     root.querySelectorAll('[data-th]').forEach((b) => (b.onclick = () => { window.setTheme(b.dataset.th); segar(); }));
     segar();
+    const suasanaNow = () => { try { const v = localStorage.getItem('suasana-hidup'); if (v) return v; } catch { /* bawaan */ } return 'ringan'; };
+    const suasanaSegar = () => root.querySelectorAll('[data-su]').forEach((b) => { const on = suasanaNow() === b.dataset.su; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    root.querySelectorAll('[data-su]').forEach((b) => (b.onclick = () => { try { localStorage.setItem('suasana-hidup', b.dataset.su); } catch { /* sesi ini saja */ } window.dispatchEvent(new CustomEvent('raiverse:suasana', { detail: { tingkat: b.dataset.su } })); suasanaSegar(); }));
+    suasanaSegar();
+    const kualNow = () => { try { const v = localStorage.getItem('kualitas'); if (v === 'tinggi' || v === 'hemat') return v; } catch { /* bawaan */ } return 'otomatis'; };
+    const kualSegar = () => root.querySelectorAll('[data-ku]').forEach((b) => { const on = kualNow() === b.dataset.ku; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    root.querySelectorAll('[data-ku]').forEach((b) => (b.onclick = () => { try { localStorage.setItem('kualitas', b.dataset.ku); } catch { /* sesi ini saja */ } window.dispatchEvent(new CustomEvent('raiverse:kualitas', { detail: { pilihan: b.dataset.ku } })); kualSegar(); }));
+    kualSegar();
     const suara = () => { const on = tts.isOn?.(); $('#sSuara').textContent = on ? 'Nyala' : 'Mati'; $('#sSuara').setAttribute('aria-pressed', String(!!on)); $('#sSuara').classList.toggle('on', !!on); };
     $('#sSuara').onclick = () => { tts.set({ on: !tts.isOn() }); suara(); };
-    suara();
+    const info = () => { const el = $('#sSuaraInfo'); if (!el) return; const d = tts.diagnosa(); el.textContent = tts.kenapaDiam(d) || ('Siap: ' + d.jumlahSuara + ' suara tersedia' + (d.adaIndonesia ? ', termasuk bahasa Indonesia.' : '.')); };
+    $('#sTes').onclick = () => { tts.test(); setTimeout(info, 600); };
+    this._suaraH = () => info(); window.addEventListener('raiverse:suara-berubah', this._suaraH); window.addEventListener('raiverse:suara-gagal', this._suaraH);
+    suara(); info();
+    this.bersihSambungan = pasangSambungan($('#sChatBox'));
+    this.dataPribadi($('#sDataBox'));
+    renderMemori($('#sMemoriBox'));   // "Yang aku tahu tentang kamu" pindah ke sini dari layar obrolan
     this.muat();
+  },
+  /** unduh salinan data, keluar dari semua perangkat, dan hapus akun: rute /api/me/* sudah ada di peladen */
+  dataPribadi(box) {
+    box.innerHTML = `<p class="muted">Kamu berhak membawa pulang atau menghapus datamu kapan saja.</p>
+      <div class="set-row"><div><b>Unduh salinan datamu</b><p class="muted">Berkas berisi catatan, hasil, dan pengaturanmu.</p></div><button type="button" class="btn" id="dExp">${icon('download', 18)} Unduh</button></div>
+      <div class="set-row"><div><b>Keluar dari semua perangkat</b><p class="muted">Berguna bila ponsel atau komputermu hilang.</p></div><button type="button" class="btn" id="dRev">Keluar semua</button></div>
+      <div class="set-row"><div><b>Hapus akun dan data</b><p class="muted">Tidak bisa dibatalkan.</p></div><button type="button" class="btn" id="dDel">Hapus akunku</button></div>`;
+    box.querySelector('#dExp').onclick = async () => { try { const r = await api('GET', '/api/me/export'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' })); a.download = 'data-raiverse.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('Salinan datamu sudah diunduh.', 'ok'); } catch { /* api() sudah memberi tahu */ } };
+    box.querySelector('#dRev').onclick = () => modal('Keluar dari semua perangkat?', '<p>Kamu perlu masuk lagi di tiap perangkat.</p>', { actions: [{ label: 'Batal' }, { label: 'Keluar semua', kind: 'primary', run: async () => { await api('POST', '/api/me/sessions/revoke', {}); toast('Selesai. Kamu akan diminta masuk lagi.', 'ok'); setTimeout(() => location.reload(), 1200); } }] });
+    box.querySelector('#dDel').onclick = () => modal('Hapus akun dan semua datamu?', '<p>Semua catatan, hasil, dan pengaturanmu dihapus <b>selamanya</b>. Ketik <b>HAPUS</b> untuk memastikan.</p><input class="input" name="konfirmasi" aria-label="Ketik HAPUS" autocomplete="off">', { actions: [{ label: 'Batal' }, { label: 'Hapus selamanya', kind: 'primary', run: async (b) => { if (b.querySelector('[name=konfirmasi]').value.trim() !== 'HAPUS') { toast('Ketik HAPUS dulu ya.', 'warn'); return false; } await api('POST', '/api/me/delete', { konfirmasi: 'HAPUS AKUN SAYA' }); toast('Akunmu sudah dihapus.', 'ok'); setTimeout(() => location.reload(), 1500); } }] });
   },
   async muat() {
     const root = this.root; if (!root) return;
@@ -76,7 +110,7 @@ export const PengaturanView = {
     const box = this.root.querySelector('#sSambBox'); const u = me.user; const pemilik = (me.workspace || {}).role === 'owner' || !u;
     const google = u ? (u.drive ? `<p class="set-ok">${icon('check', 18)} Google tersambung${cfg.root ? ` · <a href="https://drive.google.com/drive/folders/${esc(cfg.root)}" target="_blank" rel="noopener">buka foldermu</a>` : ''}</p>${pemilik ? `<div class="set-pil"><button type="button" class="btn" data-dr="setup">Siapkan folder</button><button type="button" class="btn" data-dr="push">Kirim Catatan ke Google</button><button type="button" class="btn" data-dr="pull">Ambil dari Google</button></div><p class="muted" id="drres" role="status"></p>` : ''}` : `<p>Belum tersambung. Masuk lagi dengan Google dan izinkan akses ke Drive.</p><a class="btn primary" href="/auth/google">Sambungkan Google</a>`) : '<p>Setelah kamu masuk dengan akun, Google bisa disambungkan di sini.</p>';
     box.innerHTML = `<div class="set-k2"><h4>Google</h4>${google}</div>
-      <div class="set-k2"><h4>WhatsApp</h4><p>Untuk mengirim pesan dan pengingat lewat WhatsApp, cukup minta Pemandu. Ia akan memandumu langkah demi langkah.</p><button type="button" class="btn" data-pemandu="Tolong sambungkan WhatsApp-ku">${icon('chat', 18)} Minta Pemandu menyambungkan</button></div>`;
+      <div class="set-k2"><h4>WhatsApp</h4><p>Untuk mengirim pesan dan pengingat lewat WhatsApp, cukup minta aray. Ia akan memandumu langkah demi langkah.</p><button type="button" class="btn" data-pemandu="Tolong sambungkan WhatsApp-ku">${icon('chat', 18)} Minta aray menyambungkan</button></div>`;
     box.querySelector('[data-pemandu]')?.addEventListener('click', (e) => navigate('dashboard', { mulai: e.currentTarget.dataset.pemandu }));
     const res = () => box.querySelector('#drres'); const say = (t) => { if (res()) res().textContent = t; };
     box.querySelectorAll('[data-dr]').forEach((b) => (b.onclick = async () => {
@@ -89,5 +123,5 @@ export const PengaturanView = {
     }));
   },
   update() { /* data akun dimuat sekali per buka */ },
-  unmount() { this.root = null; },
+  unmount() { window.removeEventListener('raiverse:suara-berubah', this._suaraH); window.removeEventListener('raiverse:suara-gagal', this._suaraH); this.bersihSambungan?.(); this.root = null; },
 };

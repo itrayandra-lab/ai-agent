@@ -99,31 +99,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Clinical & Efficacy Researcher di divisi R&D & Formulation, memakai bahasa awam",
-    "tujuan": "Ringkas hasil uji pemakaian: perubahan tiap subjek, persen yang membaik, rata-rata perbaikan, dan angka uji dasar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "analisis-hasil-uji"
+  ],
+  "keahlian": {
+    "istilah": [
+      "uji klinis",
+      "efikasi",
+      "sebelum sesudah",
+      "hasil uji",
+      "subjek"
+    ],
+    "data": [
+      "apa yang diukur?",
+      "angka yang lebih baik",
+      "data (satu baris: subjek | sebelum | sesudah)"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
     "contoh": {
       "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
-      "buruk": "Formula B pasti terbaik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "uji klinis"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil perangkum hasil uji sebelum dan sesudah perlu dibaca bersama: uji klinis menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
   }
 }

@@ -104,31 +104,30 @@
     "folder": "Report",
     "simpan": false
   },
-  "otakProfil": {
-    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
-    "tujuan": "Hitung cicilan bulanan, total bunga, dan tabel angsuran untuk pinjaman dengan bunga flat atau anuitas. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "cicilan",
+      "pinjaman",
+      "bunga",
+      "kredit",
+      "angsuran"
+    ],
+    "data": [
+      "jumlah pinjaman (rp)",
+      "bunga per tahun (%)",
+      "lama cicilan (bulan, maks 120)",
+      "jenis bunga"
+    ],
     "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
-      "buruk": "Hasil sudah benar."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "cicilan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung cicilan pinjaman perlu dibaca bersama: cicilan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
   }
 }

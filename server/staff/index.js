@@ -11,11 +11,14 @@ import { readDeploy, filesOf } from './data.js';
 import * as native from './native.js';
 
 import * as skills from './skills.js';
-export { registry, runner, deployer, manager, skills };
+import * as kontrak from './kontrak.js';
+export { registry, runner, deployer, manager, skills, kontrak };
 export const isTool = manager.isTool;
 export const toolDefs = manager.toolDefs;
 export const promptSection = manager.promptSection;
 export const call = manager.call;
+export const taskHint = manager.taskHint;
+export const delegasiOtomatis = manager.delegasiOtomatis;
 
 const wrap = (fn) => async (b, p, url, me, member) => { try { return await fn(b, p, url, me, member); } catch (err) { if (err instanceof StaffError) throw Object.assign(new Error(err.message), { code: err.code }); throw err; } };
 const divisionName = (id) => store.get().divisions?.find((d) => d.id === id)?.name || id;

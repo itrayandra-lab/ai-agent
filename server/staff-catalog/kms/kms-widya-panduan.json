@@ -99,31 +99,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Knowledge Writer & Synthesizer di divisi Knowledge & AI Ops, memakai bahasa awam",
-    "tujuan": "Ubah catatan bahan mentah menjadi panduan kerja lengkap: tujuan, langkah bernomor, kesalahan umum, dan daftar cek. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "kelola-pengetahuan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "panduan",
+      "evergreen",
+      "sop",
+      "langkah kerja",
+      "dokumentasi"
+    ],
+    "data": [
+      "topik panduan",
+      "untuk siapa?",
+      "bahan (satu langkah atau catatan per baris; awali \"jangan\" u"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
     "contoh": {
       "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
-      "buruk": "Simpan saja."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "panduan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun panduan kerja abadi perlu dibaca bersama: panduan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
   }
 }

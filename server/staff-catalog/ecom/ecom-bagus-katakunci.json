@@ -77,31 +77,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Marketplace Ads Specialist di divisi E-commerce & Marketplace, memakai bahasa awam",
-    "tujuan": "Pilah kata kunci iklan menjadi pertahankan, uji lagi, atau jeda berdasarkan klik, pesanan, dan biayanya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "klasifikasi-pilah"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kata kunci",
+      "keyword",
+      "iklan",
+      "jeda",
+      "optimasi"
+    ],
+    "data": [
+      "kata kunci (satu baris: kata | klik | pesanan | biaya)",
+      "biaya paling tinggi per pesanan yang masih wajar (rp)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
     "contoh": {
       "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
-      "buruk": "Jualan perlu ditingkatkan."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "kata kunci"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyaring kata kunci iklan perlu dibaca bersama: kata kunci menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

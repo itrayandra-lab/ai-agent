@@ -129,31 +129,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "TikTok Shop & Live Commerce Specialist di divisi E-commerce & Marketplace, memakai bahasa awam",
-    "tujuan": "Susun jadwal menit demi menit untuk siaran langsung: sapaan, demo produk, kuis, penawaran kilat, dan penutup sesuai durasi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "live",
+      "rundown",
+      "siaran langsung",
+      "live commerce",
+      "penawaran kilat"
+    ],
+    "data": [
+      "tema siaran",
+      "produk yang dijual (satu per baris)",
+      "lama siaran",
+      "jam mulai (contoh 19:00)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
     "contoh": {
       "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
-      "buruk": "Jualan perlu ditingkatkan."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "live"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun rundown siaran langsung jualan perlu dibaca bersama: live menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

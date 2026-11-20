@@ -106,5 +106,31 @@
       ]
     },
     "ai": "{\"penjelasan\":\"Orang jarang mengklik karena pembuka iklan kurang menarik dan iklan sudah terlalu sering muncul di orang yang sama.\",\"langkah\":[\"Ganti gambar dan kalimat pertama\",\"Perluas target audiens\",\"Jeda iklan lama selama 3 hari\"]}"
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "diagnosa iklan",
+      "ctr rendah",
+      "frekuensi",
+      "optimasi iklan",
+      "performa iklan"
+    ],
+    "data": [
+      "persentase klik dari tayangan (ctr, %)",
+      "persentase pembeli dari pengunjung (%)",
+      "rata-rata orang melihat iklan berapa kali",
+      "biaya per 1000 tayangan (rp)"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

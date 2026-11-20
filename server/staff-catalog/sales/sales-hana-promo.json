@@ -132,31 +132,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Key Account Manager — Modern Trade di divisi Sales, memakai bahasa awam",
-    "tujuan": "Cek apakah promo diskon di toko modern menguntungkan: bandingkan laba sebelum dan sesudah promo dengan perkiraan kenaikan penjualan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "promo",
+      "diskon",
+      "untung rugi",
+      "kenaikan penjualan",
+      "toko modern"
+    ],
+    "data": [
+      "harga normal per satuan (rp)",
+      "harga pokok per satuan (rp)",
+      "penjualan biasa per bulan (satuan)",
+      "besar diskon promo"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
     "contoh": {
-      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
-      "buruk": "Beli sekarang atau rugi."
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "promo"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung untung rugi promo toko perlu dibaca bersama: promo menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

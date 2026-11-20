@@ -103,31 +103,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "IT Support Specialist di divisi IT & Security, memakai bahasa awam",
-    "tujuan": "Baca laporan karyawan, tentukan jenis masalah dan tingkat mendesaknya, lalu beri langkah pertama yang bisa dicoba. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "klasifikasi-pilah"
+  ],
+  "keahlian": {
+    "istilah": [
+      "tiket it",
+      "helpdesk",
+      "laporan masalah",
+      "wifi",
+      "akun"
+    ],
+    "data": [
+      "isi laporan dari karyawan",
+      "nama pelapor",
+      "pelapor bekerja dari mana?"
+    ],
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar",
     "contoh": {
       "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
-      "buruk": "Sistem mungkin kurang aman."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "tiket it"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemilah laporan masalah it perlu dibaca bersama: tiket it menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan meminta atau menyebut kata sandi asli."
+    ]
   }
 }

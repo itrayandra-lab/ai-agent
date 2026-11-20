@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-prioritas-keputusan",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan membantu memutuskan",
+  "version": 1,
+  "name": "Bantu memutuskan pilihan",
+  "ringkas": "Bantu memutuskan lewat urutan prioritas (dampak dan usaha), timbangan untung rugi, atau tiga skenario hati-hati, biasa, dan optimis dengan angka.",
+  "kataKunci": ["keputusan", "prioritas", "swot", "skenario", "dampak", "usaha"],
+  "kemampuan": {
+    "id": "prioritas-keputusan",
+    "kelompok": "perencanaan",
+    "tujuanAwam": "Membantu memilih mana yang dikerjakan lebih dulu atau apakah sebuah langkah layak diambil, dengan hitungan yang mudah dilihat."
+  },
+  "inputs": [
+    { "key": "pertanyaan", "type": "text", "label": "Apa yang sedang diputuskan?", "required": true, "contoh": "Mana yang dikerjakan dulu bulan ini" },
+    { "key": "mode", "type": "choice", "label": "Mau dibantu dengan cara apa?", "required": true, "default": "matriks", "choices": [{ "v": "matriks", "t": "Urutkan prioritas" }, { "v": "swot", "t": "Timbang untung dan rugi" }, { "v": "skenario", "t": "Tiga skenario angka" }] },
+    { "key": "data", "type": "longtext", "label": "Isi per baris: pilihan | dampak 1-5 | usaha 1-5. Atau K/L/P/A | butir | bobot. Atau persen turun dan naik.", "required": true, "contoh": "Iklan baru | 4 | 2\nGanti kemasan | 5 | 5" },
+    { "key": "dasar", "type": "number", "label": "Angka dasar (hanya untuk tiga skenario)", "required": false, "default": 0, "contoh": "10000000" },
+    { "key": "sikap", "type": "choice", "label": "Sikap terhadap risiko?", "required": true, "default": "seimbang", "choices": [{ "v": "hati-hati", "t": "Hati-hati" }, { "v": "seimbang", "t": "Seimbang" }, { "v": "berani", "t": "Berani" }] }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung pertimbangan",
+      "set": {
+        "bar": "baris(input.data).map((l) => l.split('|').map((t) => String(t).trim())).filter((r) => r[0] !== '').slice(0, 30)",
+        "hasil": "(() => { const k = (x) => x >= 1 ? Math.min(5, Math.round(x)) : 3; if (input.mode === 'swot') { const peta = { k: 'Kekuatan', l: 'Kelemahan', p: 'Peluang', a: 'Ancaman' }; const it = v.bar.filter((r) => peta[String(r[0]).toLowerCase().slice(0, 1)]).map((r) => [peta[String(r[0]).toLowerCase().slice(0, 1)], r[1] || '-', k(num(r[2]))]); const pos = it.filter((r) => r[0] === 'Kekuatan' || r[0] === 'Peluang').reduce((s, r) => s + r[2], 0); const neg = it.filter((r) => r[0] === 'Kelemahan' || r[0] === 'Ancaman').reduce((s, r) => s + r[2], 0); const tot = pos + neg; return { judul: ['Kelompok', 'Butir', 'Bobot (1-5)'], baris: it, kesimpulan: !it.length ? 'Belum ada butir yang terbaca, awali tiap baris dengan K, L, P, atau A' : pos - neg > tot * 0.2 ? 'Condong maju: nilai positif ' + pos + ' lebih besar dari nilai negatif ' + neg : neg - pos > tot * 0.2 ? 'Condong menahan diri: nilai negatif ' + neg + ' lebih besar dari nilai positif ' + pos : 'Seimbang (positif ' + pos + ', negatif ' + neg + '), perlu pertimbangan tambahan', kunci: { jumlah: it.length, positif: pos, negatif: neg, selisih: pos - neg } }; } if (input.mode === 'skenario') { const ang = Number(input.dasar) || 0; const nm = baris(input.data).join(' ').replace(/[,;|]/g, ' ').split(' ').filter((t) => t !== '').map((t) => num(t)).filter((t) => Number.isFinite(t)); const turun = Math.min(90, nm.length ? Math.abs(nm[0]) : 20); const naik = Math.min(300, nm.length > 1 ? Math.abs(nm[1]) : 20); const h = Math.round(ang * (1 - turun / 100)); const o = Math.round(ang * (1 + naik / 100)); const pat = input.sikap === 'hati-hati' ? h : input.sikap === 'berani' ? o : ang; return { judul: ['Skenario', 'Perubahan', 'Angka', 'Artinya'], baris: [['Hati-hati', 'turun ' + turun + ' persen', h, 'Dipakai untuk batas aman'], ['Biasa', 'sesuai angka dasar', ang, 'Perkiraan paling mungkin'], ['Optimis', 'naik ' + naik + ' persen', o, 'Jangan jadi satu-satunya patokan']], kesimpulan: ang === 0 ? 'Isi angka dasar agar skenario bisa dihitung' : 'Dengan sikap ' + input.sikap + ', patokan rencana adalah ' + pat, kunci: { hati: h, biasa: ang, optimis: o, patokan: pat } }; } const it = v.bar.map((r) => { const d = k(num(r[1])); const u = k(num(r[2])); return [r[0], d, u, Math.round(d / u * 100) / 100, d >= 3 && u <= 3 ? 'Kerjakan dulu' : d >= 3 ? 'Rencanakan matang-matang' : u <= 3 ? 'Kerjakan bila sempat' : 'Tunda dulu']; }).sort((a, b) => b[3] - a[3] || b[1] - a[1]); return { judul: ['Urutan', 'Pilihan', 'Dampak (1-5)', 'Usaha (1-5)', 'Skor', 'Saran'], baris: it.map((r, i) => [i + 1].concat(r)), kesimpulan: it.length ? 'Mulai dari ' + it[0][0] + ' (skor ' + it[0][3] + ')' : 'Belum ada pilihan yang terbaca', kunci: { jumlah: it.length, skorTertinggi: it.length ? it[0][3] : 0, kerjakanDulu: it.filter((r) => r[4] === 'Kerjakan dulu').length } }; })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "cut(String(input.pertanyaan), 80) + ': ' + v.hasil.kesimpulan",
+    "teks": "'# ' + input.pertanyaan + '\\n\\nCara: ' + input.mode + '\\n\\n' + (v.hasil.baris.length ? tabel(v.hasil.judul, v.hasil.baris) : 'Belum ada baris yang bisa dibaca.') + '\\n\\n**Kesimpulan hitungan:** ' + v.hasil.kesimpulan + '\\n\\nIni alat bantu berpikir, keputusan akhir tetap di tangan Anda.'",
+    "berkas": [
+      { "jenis": "csv", "nama": "'keputusan-' + cut(String(input.mode).toLowerCase(), 20)", "isi": "csv([v.hasil.judul].concat(v.hasil.baris))" }
+    ],
+    "data": "Object.assign({ cara: input.mode }, v.hasil.kunci)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "pertanyaan": "Mana yang dikerjakan dulu bulan ini", "mode": "matriks", "data": "Iklan baru | 4 | 2\nGanti kemasan | 5 | 5\nRapikan gudang | 2 | 1\nBuka cabang | 5 | 5", "dasar": 0, "sikap": "seimbang" }, "expect": { "berkas": 1, "mengandung": ["Mulai dari Iklan baru", "skor 2"] } },
+  "otakProfil": {
+    "peran": "penasihat keputusan yang menjelaskan hasil hitungan kepada orang awam",
+    "tujuan": "Terjemahkan hasil hitungan menjadi saran memutuskan: apa yang menonjol, apa yang perlu dipastikan dulu, dan langkah berikutnya.",
+    "gaya": "tenang, seimbang, tidak memaksa, sebut angka apa adanya",
+    "pedoman": ["Pakai hanya pilihan dan angka dari hasil hitungan; jangan menambah pilihan baru.", "Sebut satu alasan utama mengapa pilihan teratas unggul dan satu hal yang bisa membalik hasil.", "Ingatkan dengan sopan bahwa keputusan akhir ada pada pengguna."],
+    "skema": { "pembahasan": "teks", "pertimbangan": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Iklan baru unggul karena dampaknya besar dengan usaha kecil; hasil bisa berubah bila biaya iklan ternyata jauh lebih mahal.", "buruk": "Pilih saja yang pertama." },
+    "batas": { "pembahasan": 500, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["pilihan"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Pilihan teratas unggul karena dampaknya besar dengan usaha kecil, tetapi hasil bisa berubah bila usahanya ternyata lebih berat dari perkiraan.\",\"pertimbangan\":[\"Nilai dampak dan usaha masih perkiraan\"],\"langkah\":[\"Uji pilihan teratas dalam skala kecil\"]}"
+  },
+  "evaluasi": [
+    { "nama": "urutan prioritas empat pilihan", "input": { "pertanyaan": "Mana yang dikerjakan dulu bulan ini", "mode": "matriks", "data": "Iklan baru | 4 | 2\nGanti kemasan | 5 | 5\nRapikan gudang | 2 | 1\nBuka cabang | 5 | 5", "dasar": 0, "sikap": "seimbang" }, "ai": "{\"pembahasan\":\"Pilihan teratas adalah iklan baru karena dampaknya besar dengan usaha kecil, sedangkan pilihan besar lain perlu direncanakan matang.\",\"pertimbangan\":[\"Nilai masih perkiraan\"],\"langkah\":[\"Mulai dari iklan baru\"]}", "kriteria": { "mengandung": ["iklan baru", "pilihan"], "mengandungAturan": ["Mulai dari Iklan baru", "Kerjakan dulu", "Rencanakan matang-matang"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.jumlah", "min": 4, "max": 4 }, { "path": "data.skorTertinggi", "min": 2, "max": 2 }, { "path": "data.kerjakanDulu", "min": 1, "max": 1 }] } },
+    { "nama": "timbangan untung rugi dengan baris salah", "input": { "pertanyaan": "Apakah membuka kelas online", "mode": "swot", "data": "K | Tim solid | 4\nL | Modal kecil | 3\nP | Pasar tumbuh | 5\nA | Pesaing besar | 4\nx | abaikan | 2", "dasar": 0, "sikap": "hati-hati" }, "ai": "{\"pembahasan\":\"Nilai positif dan negatif hampir sama sehingga pilihan membuka kelas masih seimbang dan perlu pertimbangan tambahan seperti modal.\",\"pertimbangan\":[\"Modal kecil\",\"Pesaing besar\"],\"langkah\":[\"Hitung kebutuhan modal\"]}", "kriteria": { "mengandung": ["seimbang", "modal"], "mengandungAturan": ["Seimbang (positif 9, negatif 7)", "Pasar tumbuh"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.jumlah", "min": 4, "max": 4 }, { "path": "data.positif", "min": 9, "max": 9 }, { "path": "data.negatif", "min": 7, "max": 7 }] } },
+    { "nama": "tiga skenario angka dengan sikap berani", "input": { "pertanyaan": "Target omzet bulan depan", "mode": "skenario", "data": "-20 30", "dasar": 10000000, "sikap": "berani" }, "ai": "{\"pembahasan\":\"Skenario hati-hati memberi batas aman delapan juta, sedangkan pilihan optimis tiga belas juta sebaiknya tidak jadi satu-satunya patokan.\",\"pertimbangan\":[\"Rentang cukup lebar\"],\"langkah\":[\"Siapkan biaya untuk skenario hati-hati\"]}", "kriteria": { "mengandung": ["batas aman", "pilihan optimis"], "mengandungAturan": ["Hati-hati", "naik 30 persen"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.hati", "min": 8000000, "max": 8000000 }, { "path": "data.optimis", "min": 13000000, "max": 13000000 }, { "path": "data.patokan", "min": 13000000, "max": 13000000 }] } },
+    { "nama": "nilai prioritas tidak terbaca", "input": { "pertanyaan": "Pilih kegiatan", "mode": "matriks", "data": "Opsi X | tinggi | 99\nOpsi Y", "dasar": 0, "sikap": "seimbang" }, "ai": "{\"pembahasan\":\"Karena nilai tidak terbaca, hitungan memakai nilai tengah dan pilihan Opsi Y unggul tipis, jadi isi ulang angka dampak dan usaha.\",\"pertimbangan\":[\"Nilai tidak lengkap\"],\"langkah\":[\"Isi dampak dan usaha 1 sampai 5\"]}", "kriteria": { "mengandung": ["Opsi Y", "isi ulang"], "mengandungAturan": ["Mulai dari Opsi Y"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.jumlah", "min": 2, "max": 2 }, { "path": "data.skorTertinggi", "min": 1, "max": 1 }] } }
+  ]
+}

@@ -123,31 +123,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Documentation & CPKB Specialist di divisi Quality Control & Assurance, memakai bahasa awam",
-    "tujuan": "Buat daftar periksa audit internal siap cetak untuk gudang, produksi, laboratorium, dokumen, atau kebersihan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur, tegas pada yang di luar batas",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "audit internal",
+      "daftar periksa",
+      "checklist",
+      "cpkb",
+      "inspeksi"
+    ],
+    "data": [
+      "area yang diaudit",
+      "seberapa rinci?",
+      "tanggal audit",
+      "nama auditor"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
     "contoh": {
       "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
-      "buruk": "Mutu kelihatannya baik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "audit internal"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembuat daftar periksa audit internal perlu dibaca bersama: audit internal menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
   }
 }

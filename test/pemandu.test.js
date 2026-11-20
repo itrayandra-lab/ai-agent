@@ -14,7 +14,7 @@ const pm = await import('../server/pemandu.js');
 const { scan } = await import('../server/kamus.js');
 store.load();
 
-const KINDS = new Set(['choices', 'plan', 'confirm', 'progress', 'result', 'done', 'error']);
+const KINDS = new Set(['chat', 'choices', 'plan', 'confirm', 'progress', 'result', 'done', 'error']);
 let n = 0;
 const sid = () => `uji-${++n}-${Date.now()}`;
 const turn = (s, x) => pm.turn({ userId: 'owner', sessionId: s, ...x });
@@ -53,51 +53,192 @@ test('niat: enam niat umum dikenali tanpa token', () => {
   assert.equal(pm.detectIntent('hmm'), null);
 });
 
-const INPUTS = { konten: 'bikinin aku konten buat jualan kopi', riset: 'tolong cari tahu pesaing warung kopi', rencana: 'susun rencana usaha tiga bulan', pesan: 'tulis pesan balasan untuk pelanggan', ringkas: 'tolong ringkas ini: ' + 'Rapat tadi membahas harga baru, jadwal pengiriman, dan keluhan pelanggan. '.repeat(4), belajar: 'ajari aku cara bikin laporan keuangan' };
-/** jawab semua pertanyaan dengan pilihan yang disarankan sampai Pemandu mulai bekerja */
-async function answerAll(s, r) { let asked = 0; while (r.kind === 'choices' && r.ask) { asked++; r = checkContract(await turn(s, { choiceId: r.options.find((o) => o.recommended).id })); } return { r, asked }; }
+const INPUTS = { konten: 'bikinin aku konten buat jualan kopi', riset: 'tolong carikan pesaing warung kopi', rencana: 'susun rencana usaha tiga bulan', pesan: 'tulis pesan balasan untuk pelanggan', ringkas: 'tolong ringkas ini: ' + 'Rapat tadi membahas harga baru, jadwal pengiriman, dan keluhan pelanggan. '.repeat(4), belajar: 'tolong buatkan aku bahan belajar laporan keuangan' };
+const goals = () => store.get().tasks.filter((t) => t.kind === 'goal' && t.status !== 'cancelled');
+/** jawab semua pertanyaan dengan pilihan yang disarankan; berhenti di kalimat konfirmasi (opsional: lanjut "Ya, kerjakan") */
+async function answerAll(s, r, { start = true } = {}) {
+  let asked = 0;
+  while (r.kind === 'choices' && r.ask) { asked++; r = checkContract(await turn(s, { choiceId: r.options.find((o) => o.recommended).id })); }
+  const confirmed = r;
+  if (start && r.kind === 'confirm') r = checkContract(await turn(s, { choiceId: 'start' }));
+  return { r, asked, confirmed };
+}
 const stopWork = (s) => turn(s, { choiceId: 'cancel' });
 
 for (const [intent, text] of Object.entries(INPUTS)) {
-  test(`alur L0 "${intent}": paling banyak 1 pertanyaan bila perlu, lalu langsung dikerjakan tanpa kartu rencana`, async () => {
-    const s = sid();
+  test(`alur kerja "${intent}": permintaan jelas -> paling banyak 1 pertanyaan -> kalimat konfirmasi -> baru dikerjakan`, async () => {
+    const s = sid(); const before = goals().length;
     let r = checkContract(await turn(s, { input: text }));
-    const { r: after, asked } = await answerAll(s, r); r = after;
+    const { asked, confirmed } = await answerAll(s, r, { start: false });
     assert.ok(asked <= 1, `bertanya ${asked} kali`);
-    assert.notEqual(r.kind, 'plan'); assert.notEqual(r.kind, 'confirm');
+    assert.equal(confirmed.kind, 'confirm');
+    assert.deepEqual(confirmed.options.map((o) => o.id), ['start', 'edit', 'later']);
+    assert.match(confirmed.say, /Mau aku kerjakan sekarang/);
+    assert.equal(goals().length, before, 'belum ada pekerjaan sebelum "Ya, kerjakan"');
+    r = checkContract(await turn(s, { choiceId: 'start' }));
     assert.equal(r.kind, 'progress'); assert.equal(r.step.now, 3);
-    const g = store.get().tasks.find((t) => t.kind === 'goal' && t.description.includes(text.slice(0, 20)));
-    assert.ok(g, 'pekerjaan dibuat saat mulai bekerja');
+    const g = goals().find((t) => t.description.includes(text.slice(0, 20)));
+    assert.ok(g, 'pekerjaan dibuat setelah konfirmasi');
     assert.match(g.description, /Yang sudah diputuskan pengguna/, 'pilihan pengguna ikut sebagai brief');
     await stopWork(s);
   });
 }
 
-test('permintaan yang sudah jelas langsung dikerjakan tanpa pertanyaan', async () => {
-  const s = sid();
+test('permintaan yang sudah jelas tidak ditanya lagi, tetapi tetap menunggu konfirmasi', async () => {
+  const s = sid(); const before = goals().length;
   const r = checkContract(await turn(s, { input: 'tolong buatkan konten instagram promo kopi susu untuk akhir pekan di Bandung' }));
-  assert.equal(r.kind, 'progress');
+  assert.equal(r.kind, 'confirm'); assert.equal(goals().length, before);
+  const n = checkContract(await turn(s, { choiceId: 'later' }));   // Nanti saja: kembali ngobrol, tanpa pekerjaan
+  assert.equal(n.kind, 'chat'); assert.equal(goals().length, before);
+  assert.ok(n.options.length <= 3);
+});
+
+test('Ubah di kalimat konfirmasi: teks tambahan diterima, tetap menunggu "Ya"', async () => {
+  const s = sid(); const before = goals().length;
+  await turn(s, { input: 'tolong buatkan pesan tagihan untuk pelanggan dengan nada santai ya' });
+  let r = checkContract(await turn(s, { choiceId: 'edit' })); assert.equal(r.kind, 'confirm'); assert.ok(r.notes?.some((x) => /Ketik apa yang mau diubah/.test(x)));
+  r = checkContract(await turn(s, { input: 'tambahkan nomor rekening BCA' })); assert.equal(r.kind, 'confirm'); assert.equal(goals().length, before);
+  await turn(s, { choiceId: 'start' });
+  assert.match(goals().at(-1).description, /nomor rekening BCA/);
   await stopWork(s);
 });
 
-test('kartu awal tanpa topik menanyakan topik dulu, "Serahkan ke kamu" tetap jalan', async () => {
+test('pagar di kode: tombol "Ya, kerjakan" yang basi tidak membuat pekerjaan', async () => {
+  const before = goals().length;
   const s = sid();
-  let r = checkContract(await turn(s, { choiceId: 'intent:konten' }));
-  assert.equal(r.kind, 'choices'); assert.ok(r.freeText && r.delegate);
-  r = checkContract(await turn(s, { choiceId: 'delegate' }));
-  assert.ok(r.ask || r.kind === 'progress');
-  if (r.kind === 'progress') await stopWork(s);
+  const r = checkContract(await turn(s, { choiceId: 'start' }));   // tidak ada usulan kerja yang menunggu
+  assert.equal(r.kind, 'chat'); assert.equal(goals().length, before);
 });
 
-test('obrolan ringan dijawab ramah tanpa membuat pekerjaan', async () => {
-  const before = store.get().tasks.length;
-  let r = checkContract(await turn(sid(), { input: 'makasih ya' })); assert.match(r.notes[0], /Sama-sama/);
-  r = checkContract(await turn(sid(), { input: 'kamu bisa apa' })); assert.match(r.notes[0], /Aku Pemandu/);
-  r = checkContract(await turn(sid(), { input: 'halo' })); assert.equal(r.kind, 'choices');
+// ───────────────────────── obrolan dengan model tiruan ─────────────────────────
+/** model tiruan: mengembalikan objek sesuai skema; mencatat panggilan agar tes bisa memeriksa model yang dipakai */
+function fakeChat(rules) {
+  const calls = [];
+  pm.setChat(async ({ system, messages, model }) => {
+    calls.push({ system, messages, model });
+    const last = messages.at(-1).content; const sys = system;
+    for (const [re, out] of rules) if (re.test(last)) return typeof out === 'function' ? out({ last, sys, messages }) : out;
+    return { balasan: 'Oke, aku dengar.', saran: [], alat: 'tidak', kueri: '', kerja: false, judul: '' };
+  });
+  return calls;
+}
+const jawab = (balasan, extra = {}) => ({ balasan, saran: [], alat: 'tidak', kueri: '', kerja: false, judul: '', ...extra });
+const noMenu = (r) => { assert.equal(r.kind, 'chat'); assert.ok(r.options.length <= 3, 'paling banyak tiga tombol saran'); assert.ok(!r.options.some((o) => o.id.startsWith('intent:')), 'bukan menu topik pembuka'); };
+
+test('obrolan: "hi" dijawab hangat tanpa menu topik dan tanpa pekerjaan', async () => {
+  fakeChat([]); const before = goals().length;
+  for (const sapa of ['hi', 'halo', 'Hai!']) { const r = checkContract(await turn(sid(), { input: sapa })); noMenu(r); assert.match(r.say, /Halo/); assert.ok(r.say.length < 100, 'satu atau dua kalimat'); }
+  assert.equal(goals().length, before);
+});
+
+test('obrolan: basa-basi, pertanyaan umum, dan diskusi bisnis dijawab model sebagai obrolan, tanpa pekerjaan', async () => {
+  const calls = fakeChat([
+    [/apa kabar/i, jawab('Kabarku baik, terima kasih sudah tanya! Kamu sendiri gimana?', { saran: ['Cerita soal usahaku'] })],
+    [/apa itu seo/i, jawab('SEO itu cara membuat situsmu lebih mudah ditemukan lewat mesin pencari. Contohnya memakai kata yang dicari orang.', { saran: ['Kasih contoh', 'Buatkan tips SEO'] })],
+    [/kemahalan/i, jawab('Untuk kopi susu, Rp25.000 masih wajar di kafe, tapi tergantung lokasi dan ukuran gelasnya.', { kerja: true, judul: 'Analisis harga' })],   // model salah menandai kerja: pagar tetap menahan
+  ]);
+  const before = goals().length;
+  let r = checkContract(await turn(sid(), { input: 'apa kabar?' })); noMenu(r); assert.match(r.say, /Kabarku baik/);
+  r = checkContract(await turn(sid(), { input: 'apa itu SEO?' })); noMenu(r); assert.match(r.say, /mesin pencari/); assert.deepEqual(r.options.map((o) => o.label), ['Kasih contoh', 'Buatkan tips SEO']);
+  r = checkContract(await turn(sid(), { input: 'menurutmu harga kopi susu 25 ribu itu kemahalan?' })); noMenu(r); assert.match(r.say, /wajar/);
+  assert.equal(goals().length, before, 'diskusi tidak berubah menjadi pekerjaan');
+  assert.ok(calls.every((c) => c.model === 'openai/gpt-oss-20b'), 'obrolan ringan memakai model kecil');
+});
+
+test('obrolan: riwayat menempel pada percakapan yang sama', async () => {
+  const calls = fakeChat([[/lanjutkan/i, jawab('Baik, soal kopi tadi, kita lanjutkan.')]]);
+  const s = sid();
+  await turn(s, { input: 'aku punya kedai kopi kecil di Bandung ya' });
+  await turn(s, { input: 'lanjutkan yang tadi' });
+  const msgs = calls.at(-1).messages.map((m) => m.content);
+  assert.ok(msgs.some((x) => /kedai kopi kecil di Bandung/.test(x)), 'pesan sebelumnya ikut dikirim');
+  assert.equal(calls.at(-1).messages[0].role, 'user');
+});
+
+test('obrolan: permintaan kerja eksplisit hanya sampai kalimat konfirmasi; Ya baru membuat pekerjaan', async () => {
+  fakeChat([]); const before = goals().length; const s = sid();
+  let r = checkContract(await turn(s, { input: 'bikinin aku caption instagram buat promo kopi susu hari ini ya' }));
+  assert.equal(r.kind, 'confirm'); assert.equal(goals().length, before);
+  r = checkContract(await turn(s, { choiceId: 'later' })); assert.equal(r.kind, 'chat'); assert.equal(goals().length, before);
+  r = checkContract(await turn(s, { input: 'bikinin aku caption instagram buat promo kopi susu hari ini ya' }));
+  r = checkContract(await turn(s, { choiceId: 'start' })); assert.equal(r.kind, 'progress'); assert.equal(goals().length, before + 1);
+  await stopWork(s);
+});
+
+test('obrolan: permintaan ambigu dan topik yang memancing eksekusi tidak membuat pekerjaan', async () => {
+  fakeChat([
+    [/kerjakan atau jelaskan/i, jawab('Maksudmu mau aku buatkan, atau cukup dijelaskan dulu?', { saran: ['Buatkan saja', 'Jelaskan dulu'] })],
+    [/otomasi di n8n/i, jawab('Singkatnya, otomasi itu rangkaian langkah yang jalan sendiri sesuai jadwal.', { kerja: true, judul: 'Pasang otomasi' })],   // model memancing eksekusi
+    [/rencana usaha/i, jawab('Boleh kita bahas dulu: usahamu di bidang apa?', { kerja: true })],
+  ]);
+  const before = goals().length; const routines = store.get().routines.length;
+  let r = checkContract(await turn(sid(), { input: 'soal konten ini kerjakan atau jelaskan dulu ya' })); assert.equal(r.kind, 'chat');
+  r = checkContract(await turn(sid(), { input: 'jelaskan cara membuat otomasi di n8n' })); assert.equal(r.kind, 'chat');
+  r = checkContract(await turn(sid(), { input: 'aku masih bingung soal rencana usaha, ngobrol dulu boleh?' })); assert.ok(['chat', 'confirm'].includes(r.kind));
+  assert.equal(goals().length, before, 'tidak ada pekerjaan tanpa konfirmasi'); assert.equal(store.get().routines.length, routines);
+});
+
+test('obrolan: menyela usulan kerja dengan pertanyaan melepas usulan dan dijawab sebagai obrolan', async () => {
+  fakeChat([[/apa itu seo/i, jawab('SEO itu cara membuat situsmu mudah ditemukan.')]]);
+  const before = goals().length; const s = sid();
+  let r = await turn(s, { input: 'buat konten buat jualan kopi' }); assert.ok(['choices', 'confirm'].includes(r.kind));
+  r = checkContract(await turn(s, { input: 'eh, apa itu SEO?' })); assert.equal(r.kind, 'chat'); assert.match(r.say, /mudah ditemukan/);
+  r = checkContract(await turn(s, { choiceId: 'start' })); assert.equal(r.kind, 'chat'); assert.equal(goals().length, before);
+});
+
+test('obrolan: alat dipakai senyap lewat satu pintu, ditandai "Memanggil ...", hasilnya tetap bagian percakapan', async () => {
+  const brainMod = await import('../server/pengetahuan/brain.js');
+  brainMod.writeNote({ title: 'Harga menu kopi', content: 'Kopi susu Rp22.000, americano Rp18.000', folder: 'Company', authorId: 'owner', kb: 'owner' });
+  fakeChat([[/harga menu/i, ({ sys }) => (sys.includes('Hasil alat (data') ? jawab('Menurut catatanmu, kopi susu Rp22.000 dan americano Rp18.000.') : jawab('Sebentar, kucek catatanmu.', { alat: 'catatan', kueri: 'harga menu kopi' }))]]);
+  const before = goals().length;
+  const r = checkContract(await turn(sid(), { input: 'berapa harga menu kopi kita sekarang?' }));
+  assert.equal(r.kind, 'chat'); assert.match(r.say, /Rp22\.000/);
+  assert.equal(r.tools.length, 1); assert.match(r.tools[0].label, /Memanggil Catatan/); assert.match(r.tools[0].detail, /harga menu kopi/);
+  assert.equal(goals().length, before);
+});
+
+test('obrolan: jargon dari model dibersihkan, dan semua layar bebas kata terlarang', async () => {
+  fakeChat([[/jargon/i, jawab('Agen kami memakai token dan model untuk membuat goal serta task lewat API.')]]);
+  const r = checkContract(await turn(sid(), { input: 'ceritakan soal jargon dong' }));
+  assert.deepEqual(scan(r.say), []); assert.match(r.say, /pembantu/);
+});
+
+test('obrolan: permintaan panjang memakai model besar, selain itu model kecil', async () => {
+  const calls = fakeChat([]);
+  pm.setChat(null);   // model tiruan menandai impl: pemilihan model besar hanya berlaku pada model asli, jadi cukup periksa fungsi pemilih
+  const eng = await import('../server/engine.js');
+  assert.equal(eng.isComplex('halo'), false); assert.equal(eng.isComplex('tolong analisis '.repeat(25)), true);
+  assert.equal(calls.length, 0);
+});
+
+test('tanpa model (mode simulasi): sapaan tetap hangat, pertanyaan dijawab jujur, tombol "Kerjakan sebagai pekerjaan" membuka konfirmasi', async () => {
+  pm.setChat(null); const before = goals().length; const s = sid();
+  let r = checkContract(await turn(s, { input: 'hmm kira-kira siapa penemu lampu ya?' }));
+  assert.equal(r.kind, 'chat'); assert.match(r.say, /belum tersambung/); assert.deepEqual(r.options.map((o) => o.label), ['Kerjakan sebagai pekerjaan']);
+  assert.equal(goals().length, before);
+  r = checkContract(await turn(s, { choiceId: 'say:0' }));
+  assert.ok(['choices', 'confirm'].includes(r.kind)); assert.equal(goals().length, before, 'tetap menunggu konfirmasi');
+  await stopWork(s);
+});
+
+test('kartu awal lama: diperlakukan sebagai pesan biasa, bukan wizard', async () => {
+  pm.setChat(null);
+  const s = sid(); const before = goals().length;
+  let r = checkContract(await turn(s, { choiceId: 'intent:konten' }));
+  assert.ok(['choices', 'confirm'].includes(r.kind)); assert.equal(goals().length, before);
+  await stopWork(s);
+});
+
+test('obrolan ringan tanpa model dijawab ramah tanpa membuat pekerjaan', async () => {
+  pm.setChat(null); const before = store.get().tasks.length;
+  let r = checkContract(await turn(sid(), { input: 'makasih ya' })); assert.match(r.say, /Sama-sama/);
+  r = checkContract(await turn(sid(), { input: 'kamu bisa apa' })); assert.match(r.say, /kembaran digitalmu/);
+  r = checkContract(await turn(sid(), { input: 'halo' })); noMenu(r);
   assert.equal(store.get().tasks.length, before);
 });
 
 test('pilihan lama dari layar yang sudah lewat tidak merusak keadaan', async () => {
+  pm.setChat(null);
   const s = sid();
   await turn(s, { input: 'buat konten kopi' });
   const r = checkContract(await turn(s, { choiceId: 'plan:full' }));   // tidak ada pilihan itu di layar sekarang
@@ -105,6 +246,7 @@ test('pilihan lama dari layar yang sudah lewat tidak merusak keadaan', async () 
 });
 
 test('profil: pertanyaan yang jawabannya sudah diketahui dilewati, dan jawaban baru dicatat', async () => {
+  pm.setChat(null);
   pm.setProfile('owner', { gaya: '' });   // jawaban rekomendasi di tes sebelumnya ikut tercatat
   const s0 = sid();
   let r = checkContract(await turn(s0, { input: 'tulis pesan untuk pelanggan' }));   // penerima terbaca dari kalimat; yang ditanya hanya gaya bahasa
@@ -114,8 +256,8 @@ test('profil: pertanyaan yang jawabannya sudah diketahui dilewati, dan jawaban b
   assert.equal(pm.profileView('owner').items.find((i) => i.key === 'gaya').value, 'sopan dan resmi');
   await stopWork(s0);
   const s1 = sid();
-  r = checkContract(await turn(s1, { input: 'tulis pesan untuk pelanggan' }));   // gaya sudah diketahui: tidak ada pertanyaan
-  assert.equal(r.kind, 'progress', 'tidak menanyakan gaya bahasa dua kali');
+  r = checkContract(await turn(s1, { input: 'tulis pesan untuk pelanggan' }));   // gaya sudah diketahui: tidak ada pertanyaan, langsung kalimat konfirmasi
+  assert.equal(r.kind, 'confirm', 'tidak menanyakan gaya bahasa dua kali');
   assert.ok(r.notes?.some((x) => /sopan dan resmi/.test(x)), 'memberi tahu apa yang dipakai dari profil');
   await stopWork(s1);
   const note = store.get().notes.find((x) => x.title === 'Profil pengguna owner');
@@ -143,19 +285,19 @@ test('onboarding: satu kalimat, satu alamat situs, dan alamat jaringan dalam dit
 });
 
 test('L1: keluaran model kecil divalidasi, di-cache, dan bila rusak jatuh ke templat umum', async () => {
-  let calls = 0;
+  pm.setChat(null); let calls = 0;
   const good = { label: 'Menata gudang', questions: [{ say: 'Gudangmu seberapa besar?', options: ['Kecil', 'Sedang', 'Besar'] }], plans: [{ give: 'Tiga tips cepat' }, { give: 'Denah dan jadwal rapi' }, { give: 'Rencana tata ulang lengkap' }] };
   pm.setL1(async () => { calls++; return good; });
   let s = sid();
-  let r = checkContract(await turn(s, { input: 'gimana ya enaknya merapikan gudang kecilku' }));
+  let r = checkContract(await turn(s, { input: 'tolong buatkan daftar belanja bulanan untuk gudang kecilku' }));
   assert.match(r.say, /Gudangmu seberapa besar/);
-  r = checkContract(await turn(sid(), { input: 'gimana ya enaknya merapikan gudang kecilku' }));
+  r = checkContract(await turn(sid(), { input: 'tolong buatkan daftar belanja bulanan untuk gudang kecilku' }));
   assert.equal(calls, 1, 'permintaan yang sama memakai cache');
   pm.setL1(async () => ({ label: 'Tool agent', questions: [], plans: [{ give: 'a' }, { give: 'b' }, { give: 'c' }] }));
-  r = checkContract(await turn(sid(), { input: 'apa saja yang perlu disiapkan buat pindahan kantor' }));
+  r = checkContract(await turn(sid(), { input: 'tolong siapkan daftar persiapan pindahan kantor' }));
   assert.match(r.say, /hasilnya berupa apa/, 'kata terlarang ditolak, templat umum dipakai');
   pm.setL1(async () => { throw new Error('model tidak tersedia'); });
-  r = checkContract(await turn(sid(), { input: 'ada ide nama toko baru yang unik' }));
+  r = checkContract(await turn(sid(), { input: 'tolong buatkan nama toko baru yang unik' }));
   assert.match(r.say, /hasilnya berupa apa/);
   assert.equal(pm.validateL1({ label: 'x', questions: [{ say: 'y', options: ['hanya satu'] }], plans: [] }), null);
   pm.setL1(null);
@@ -186,16 +328,16 @@ test('kartu "Aku belajar sesuatu, simpan?": usulan nyata dari sesi belajar mandi
 function checkCard(c) { assert.deepEqual(scan(c.say + ' ' + c.options.map((x) => x.label).join(' ')), []); return c; }
 
 test('layar: satu percakapan, bukan wizard (tanpa penunjuk langkah, kartu rencana, atau panel)', () => {
-  const v = fs.readFileSync('public/js/pemandu-view.js', 'utf8');
-  for (const k of ['pm-steps', 'Dikerjakan', 'pm-cards']) assert.ok(!v.includes(k), `tidak boleh ada: ${k}`);
-  for (const k of ['pmThread', 'pmForm', 'pmMic', 'pm-suggest']) assert.ok(v.includes(k), `harus ada: ${k}`);
+  const v = fs.readFileSync('public/js/obrolan-view.js', 'utf8');
+  for (const k of ['pm-steps', 'Dikerjakan', 'pm-cards', 'pm-hero', 'pm-suggest', 'Aku Sora', 'Yang aku tahu', 'Boleh kenalan']) assert.ok(!v.includes(k), `tidak boleh ada: ${k}`);
+  for (const k of ['pmThread', 'pmForm', 'pmMic', 'ob-chips']) assert.ok(v.includes(k), `harus ada: ${k}`);
 });
 
 test('layar: teks antarmuka Pemandu dan menu tidak memuat kata terlarang', () => {
-  const src = fs.readFileSync('public/js/pemandu-view.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '').replace(/^import .*$/gm, '');
-  const texts = [...src.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map((m) => m[2].replace(/\$\{[^}]*\}/g, ' ')).filter((t) => /[A-Za-z]{3,}/.test(t) && !t.startsWith('/') && !t.startsWith('application/') && (/[ ]/.test(t) || /^[A-Z]/.test(t)));   // kode (alamat, jenis MIME, nama kelas) bukan teks layar
+  const src = fs.readFileSync('public/js/obrolan-view.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, '').replace(/^import .*$/gm, '');
+  const texts = [...src.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map((m) => m[2].replace(/\$\{[^}]*\}/g, ' ')).filter((t) => /[A-Za-z]{3,}/.test(t) && !t.startsWith('/') && !t.startsWith('application/') && !/\/api\/|=>|await /.test(t) && (/[ ]/.test(t) || /^[A-Z]/.test(t)));   // kode (alamat, jenis MIME, nama kelas) bukan teks layar
   const bad = texts.map((t) => [t, scan(t.replace(/<[^>]+>/g, ' '))]).filter(([, w]) => w.length);
-  assert.deepEqual(bad, [], 'kata terlarang di pemandu-view.js');
+  assert.deepEqual(bad, [], 'kata terlarang di obrolan-view.js');
   const views = fs.readFileSync('public/js/views.js', 'utf8'); const titles = [...views.slice(views.indexOf('export const VIEWS')).matchAll(/(?:title|short): '([^']+)'/g)].map((m) => m[1]);
   assert.ok(titles.length >= 10); assert.deepEqual(titles.filter((t) => scan(t).length), [], 'judul menu');
   const app = fs.readFileSync('public/js/app.js', 'utf8');
@@ -205,7 +347,7 @@ test('layar: teks antarmuka Pemandu dan menu tidak memuat kata terlarang', () =>
 });
 
 test('putaran penuh (mode simulasi): Mulai -> hasil -> Ubah sedikit mulai bekerja lagi -> Pakai ini -> tersimpan dan langkah lanjut', { timeout: 480000 }, async () => {
-  engine.start();
+  pm.setChat(null); engine.start();
   const s = sid();
   let r = checkContract(await turn(s, { input: 'bikinin aku konten buat jualan kopi' }));
   ({ r } = await answerAll(s, r));

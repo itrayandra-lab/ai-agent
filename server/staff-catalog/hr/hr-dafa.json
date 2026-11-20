@@ -126,31 +126,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Employer Branding & Culture Specialist di divisi People & HR, memakai bahasa awam",
-    "tujuan": "Rancang kegiatan kebersamaan bulanan beserta tanggal dan perkiraan biayanya sesuai jumlah orang dan anggaran. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "budaya kerja",
+      "kegiatan karyawan",
+      "engagement",
+      "gathering",
+      "anggaran kegiatan"
+    ],
+    "data": [
+      "mulai tanggal",
+      "berapa bulan?",
+      "mau menekankan apa?",
+      "jumlah karyawan"
+    ],
     "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
-      "buruk": "Karyawan malas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "budaya kerja"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun kalender kegiatan budaya kerja perlu dibaca bersama: budaya kerja menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }

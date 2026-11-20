@@ -89,31 +89,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Export & International Expansion Analyst di divisi Business Development & Partnerships, memakai bahasa awam",
-    "tujuan": "Urutkan negara tujuan ekspor dari nilai yang Anda berikan untuk ukuran pasar, kemudahan aturan, persaingan, dan kedekatan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pasar ekspor",
+      "perbandingan negara",
+      "prioritas",
+      "skor pasar",
+      "ekspansi"
+    ],
+    "data": [
+      "nilai 1 sampai 5 tiap negara (satu baris: negara | ukuran pa",
+      "yang paling diutamakan"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
     "contoh": {
-      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
-      "buruk": "Peluangnya besar."
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "pasar ekspor"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembanding pasar ekspor perlu dibaca bersama: pasar ekspor menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
   }
 }

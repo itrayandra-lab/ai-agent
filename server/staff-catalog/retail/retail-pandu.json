@@ -112,31 +112,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Retail Operations & Inventory Analyst di divisi Retail & Beauty Stores, memakai bahasa awam",
-    "tujuan": "Hitung kapan dan berapa banyak stok harus dipesan lagi per produk, dari penjualan harian, lama pengiriman, dan cadangan aman. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "restock",
+      "stok",
+      "pesan ulang",
+      "stockout",
+      "persediaan"
+    ],
+    "data": [
+      "produk (satu baris: kode | stok sekarang | rata-rata terjual",
+      "cadangan aman",
+      "stok yang ingin dijaga setelah barang datang"
+    ],
     "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
-      "buruk": "Toko harus lebih bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "restock"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung kebutuhan pesan ulang stok toko perlu dibaca bersama: restock menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
   }
 }

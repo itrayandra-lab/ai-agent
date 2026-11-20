@@ -98,31 +98,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Brand Manager — Ray Beauty di divisi Marketing, memakai bahasa awam",
-    "tujuan": "Susun jadwal mundur dari hari peluncuran (kemasan, konten, penyebaran ke kreator, pesan awal, evaluasi) sesuai besar peluncuran. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "peluncuran",
+      "go to market",
+      "produk baru",
+      "jadwal rilis",
+      "launch"
+    ],
+    "data": [
+      "nama produk baru",
+      "tanggal peluncuran",
+      "besar peluncuran"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
     "contoh": {
       "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
-      "buruk": "Produk terbaik sedunia!"
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "peluncuran"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil perencana peluncuran produk baru perlu dibaca bersama: peluncuran menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

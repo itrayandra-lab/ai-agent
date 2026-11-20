@@ -4,7 +4,9 @@ import { ramah } from './awam.js';
 import { icon } from './icons.js';
 export { esc };
 
-export const S = { data: null, view: 'dashboard', params: {}, me: 'owner' };
+// Layar pertama: Kantor 3D di desktop; di layar sempit (HP) Beranda obrolan supaya ringan.
+const FIRST_VIEW = (() => { try { return matchMedia('(max-width: 820px)').matches ? 'dashboard' : 'office'; } catch { return 'dashboard'; } })();
+export const S = { data: null, view: FIRST_VIEW, params: {}, me: 'owner' };
 const subs = new Set();
 export const onChange = (fn) => { subs.add(fn); return () => subs.delete(fn); };
 let pending = new Set();
@@ -32,6 +34,14 @@ export async function api(method, url, body) {
 /** full-screen sign-in card (Google). Also used for "waiting for the Owner's approval". */
 export function loginGate(info = {}) {
   if (document.getElementById('gate')) return;
+  if (info.forbidden) {   // sudah masuk tetapi belum anggota ruang kerja ini: jangan menyuruh masuk lagi
+    const k = document.createElement('div'); k.id = 'gate';
+    k.innerHTML = `<div class="gate-card glass"><div class="gate-logo"><img src="/assets/brand/logo-mark-white.webp" alt="RAIVERSE" width="54" height="54"></div>
+      <h2>Kamu belum menjadi anggota ruang kerja ini</h2>
+      <p>Akunmu sudah masuk, hanya saja belum diundang ke ruang kerja ini. Minta pemiliknya mengirim tautan undangan, lalu buka tautan itu.</p>
+      <a class="btn primary gate-btn" href="/" aria-label="Kembali ke ruang kerjaku">Kembali ke ruang kerjaku</a></div>`;
+    document.body.appendChild(k); return;
+  }
   const err = new URLSearchParams(location.search).get('login');
   const el = document.createElement('div');
   el.id = 'gate';
@@ -59,8 +69,9 @@ export function soften(hex) {
 const softDiv = (d) => { if (d && d.color) d.color = soften(d.color); return d; };
 
 export async function loadState() {
-  const r = await fetch('/api/state');
-  if (r.status === 401 || r.status === 403) { loginGate(await r.json().catch(() => ({}))); throw Object.assign(new Error('Perlu masuk'), { gate: true }); }
+  const pra = window.__state0; window.__state0 = null;   // perf: unduhan pertama sudah dimulai di index.html, sejajar dengan pemuatan modul
+  const r = await (pra ? pra.catch(() => fetch('/api/state')) : fetch('/api/state'));
+  if (r.status === 401 || r.status === 403) { loginGate({ ...(await r.json().catch(() => ({}))), forbidden: r.status === 403 }); throw Object.assign(new Error('Perlu masuk'), { gate: true }); }
   S.data = await r.json();
   (S.data.divisions || []).forEach(softDiv);
   S.me = S.data.me || S.data.settings.currentUserId || 'owner';   // the signed-in person (from the server session)

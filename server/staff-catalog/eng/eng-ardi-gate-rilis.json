@@ -119,31 +119,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "QA Automation Engineer di divisi Product & Engineering, memakai bahasa awam",
-    "tujuan": "Putuskan rilis boleh jalan atau ditahan berdasarkan hasil uji, bug terbuka, dan cakupan uji. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "prioritas-keputusan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "gate rilis",
+      "kelayakan rilis",
+      "bug kritis",
+      "cakupan uji",
+      "go no go"
+    ],
+    "data": [
+      "jumlah uji yang lulus",
+      "jumlah uji yang gagal",
+      "bug kritis yang masih terbuka",
+      "bug tingkat tinggi yang masih terbuka"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
     "contoh": {
       "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
-      "buruk": "Coba perbaiki kodenya."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "gate rilis"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kelayakan rilis perlu dibaca bersama: gate rilis menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
   }
 }

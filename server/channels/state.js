@@ -1,13 +1,14 @@
 // Penyimpanan saluran chat (Telegram, Discord): data/channels.json, ditulis atomik di bawah kunci berkas, mode 0600.
 // Isi: token bot (amplop terenkripsi lewat secure.js), ikatan akun luar -> (ruang kerja, pengguna), kode tautan (HANYA hash),
 // offset Telegram, daftar pesan yang sudah diproses (supaya tidak ganda), daftar akun luar yang diblokir.
+import * as config from '../config.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as secure from '../secure.js';
 
 export const SERVICES = ['telegram', 'discord'];
 export const LABEL = { telegram: 'Telegram', discord: 'Discord' };
-const file = () => path.join(process.env.DATA_DIR || path.resolve('data'), 'channels.json');
+const file = () => path.join(config.dataDir(), 'channels.json');
 const fill = (s) => { s.tokens ||= {}; s.secrets ||= {}; s.links ||= {}; s.codes ||= []; s.offsets ||= {}; s.blocked ||= {}; s.seen ||= {}; return s; };
 
 export function read() { let j = {}; try { j = JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { /* belum ada */ } return fill(j); }
@@ -44,7 +45,6 @@ export const getLink = (service, ext) => read().links[linkKey(service, ext)] || 
 export const allLinks = () => Object.values(read().links);
 export const linksOf = (ws, accountId) => allLinks().filter((l) => l.ws === ws && l.accountId === accountId);
 export const countLinks = (service) => allLinks().filter((l) => l.service === service).length;
-export const saveLink = (link) => update((s) => { s.links[linkKey(link.service, link.ext)] = link; });
 export const removeLink = (service, ext) => update((s) => { const k = linkKey(service, ext); const had = !!s.links[k]; delete s.links[k]; return had; });
 export const isBlocked = (service, ext) => !!read().blocked[linkKey(service, ext)];
 

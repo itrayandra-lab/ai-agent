@@ -1,0 +1,2126 @@
+{
+ "mulai": "2026-11-18T18:28:31.871Z",
+ "model": "openai/gpt-oss-20b",
+ "batasUSD": 0.08,
+ "jalur": "penuh = pesan → Pemandu → asisten/master → manajer → staf; manajer = pekerjaan langsung ke manajer divisi",
+ "skenario": [],
+ "kemampuan": [
+  {
+   "id": "analisis-angka",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "ada angka janggal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"8 angka\" tidak ada"
+     ],
+     "ms": 1074,
+     "biaya": 0.000135,
+     "panggilan": 1,
+     "token": 893,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-statistik-angka"
+    },
+    {
+     "nama": "angka rapi tanpa janggal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"6 angka\" tidak ada",
+      "kata kunci \"stabil\" tidak ada"
+     ],
+     "ms": 518,
+     "biaya": 0.000104,
+     "panggilan": 1,
+     "token": 789,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-statistik-teks"
+    },
+    {
+     "nama": "angka format Indonesia dan tren turun",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"4 angka\" tidak ada"
+     ],
+     "ms": 517,
+     "biaya": 0.000121,
+     "panggilan": 1,
+     "token": 857,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-ayu"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "analisis-hasil-uji",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "dua batas dengan nama dan koma desimal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"uji ulang\" tidak ada"
+     ],
+     "ms": 1060,
+     "biaya": 0.000174,
+     "panggilan": 1,
+     "token": 1092,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-citra-uji-ab"
+    },
+    {
+     "nama": "hanya batas atas dengan angka sebaris",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [
+      "hasil aturan tidak memuat \"1 dari 4 hasil di luar batas\"",
+      "hasil aturan tidak memuat \"2 mendekati batas\""
+     ],
+     "catatanMutu": [
+      "kata kunci \"batas atas\" tidak ada"
+     ],
+     "ms": 1063,
+     "biaya": 0.000253,
+     "panggilan": 2,
+     "token": 1861,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-naufal-evaluasi-model"
+    },
+    {
+     "nama": "dua kelompok berbeda nyata",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 564,
+     "biaya": 0.000127,
+     "panggilan": 1,
+     "token": 917,
+     "model": "openai/gpt-oss-20b",
+     "staf": "qa-bunga"
+    },
+    {
+     "nama": "dua kelompok tidak beda nyata dan data sedikit",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 806,
+     "biaya": 0.000117,
+     "panggilan": 1,
+     "token": 904,
+     "model": "openai/gpt-oss-20b",
+     "staf": "qa-fitri-challenge-test"
+    },
+    {
+     "nama": "sebelum dan sesudah dengan pemisah campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 411,
+     "biaya": 0.000087,
+     "panggilan": 1,
+     "token": 796,
+     "model": "openai/gpt-oss-20b",
+     "staf": "qa-fitri"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 3,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "analisis-kinerja-penjualan",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "calon pembeli dengan tahap macet",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tujuh\" tidak ada"
+     ],
+     "ms": 1440,
+     "biaya": 0.000262,
+     "panggilan": 2,
+     "token": 1586,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-bagus"
+    },
+    {
+     "nama": "hasil iklan dengan satu yang merugi",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"anggaran\" tidak ada"
+     ],
+     "ms": 564,
+     "biaya": 0.000113,
+     "panggilan": 1,
+     "token": 921,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-nabila"
+    },
+    {
+     "nama": "untung rugi dengan baris rusak dan pemisah titik koma",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 982,
+     "biaya": 0.000127,
+     "panggilan": 1,
+     "token": 956,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-salsabila-performa"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "bandingkan-pilihan",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "tiga pilihan seimbang",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 370,
+     "biaya": 0.000089,
+     "panggilan": 1,
+     "token": 786,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-samudra-pasar"
+    },
+    {
+     "nama": "utamakan murah dan baris berformat aneh",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1349,
+     "biaya": 0.000196,
+     "panggilan": 2,
+     "token": 1254,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-bayu"
+    },
+    {
+     "nama": "satu pilihan saja",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pembanding\" tidak ada"
+     ],
+     "ms": 479,
+     "biaya": 0.000095,
+     "panggilan": 1,
+     "token": 774,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-sekar-bandingkan"
+    },
+    {
+     "nama": "tidak ada pilihan terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 590,
+     "biaya": 0.00011,
+     "panggilan": 2,
+     "token": 922,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-ilham-pemasok-kemasan"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "catat-produksi-mutu",
+   "kelompok": "operasional",
+   "kasus": [
+    {
+     "nama": "hasil produksi terhadap target",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [
+      "hasil aturan tidak memuat \"87.2 persen\"",
+      "hasil aturan tidak memuat \"lebih 50\""
+     ],
+     "catatanMutu": [],
+     "ms": 1018,
+     "biaya": 0.000177,
+     "panggilan": 1,
+     "token": 1101,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-budi-oee"
+    },
+    {
+     "nama": "efektivitas mesin tanpa target",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 648,
+     "biaya": 0.000152,
+     "panggilan": 1,
+     "token": 981,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-sigit"
+    },
+    {
+     "nama": "kejadian kerja dengan baris tanpa pemisah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "panjang pembahasan 798 di luar 40-700",
+      "kata kunci \"keselamatan\" tidak ada"
+     ],
+     "ms": 619,
+     "biaya": 0.000157,
+     "panggilan": 1,
+     "token": 1049,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-surya-laporan-insiden"
+    }
+   ],
+   "lulus": 2,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "cocokkan-bersihkan-data",
+   "kelompok": "data",
+   "kasus": [
+    {
+     "nama": "bandingkan dua daftar buah",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 392,
+     "biaya": 0.00009,
+     "panggilan": 1,
+     "token": 783,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-bandingkan-daftar"
+    },
+    {
+     "nama": "rapikan daftar dengan spasi dan baris kosong",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 516,
+     "biaya": 0.0001,
+     "panggilan": 1,
+     "token": 807,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-bersihkan-daftar"
+    },
+    {
+     "nama": "periksa tabel yang bolong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "jargon: error"
+     ],
+     "ms": 858,
+     "biaya": 0.000104,
+     "panggilan": 1,
+     "token": 831,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-csv-dari-teks"
+    },
+    {
+     "nama": "cari catatan mirip",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"gabung\" tidak ada"
+     ],
+     "ms": 529,
+     "biaya": 0.00012,
+     "panggilan": 1,
+     "token": 880,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-ihsan-cocokkan"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "desain-visual-teknis",
+   "kelompok": "desain",
+   "kasus": [
+    {
+     "nama": "kontras abu-abu di latar putih",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil menunjukkan\" tidak ada",
+      "kata kunci \"abu-abu\" tidak ada"
+     ],
+     "ms": 418,
+     "biaya": 0.000093,
+     "panggilan": 1,
+     "token": 740,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-kayla-frame"
+    },
+    {
+     "nama": "video panjang untuk YouTube",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil menunjukkan\" tidak ada",
+      "kata kunci \"dipotong\" tidak ada"
+     ],
+     "ms": 1051,
+     "biaya": 0.00026,
+     "panggilan": 2,
+     "token": 1773,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-mira"
+    },
+    {
+     "nama": "pola kotak 10 x 5 x 15",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil menunjukkan\" tidak ada"
+     ],
+     "ms": 833,
+     "biaya": 0.000131,
+     "panggilan": 1,
+     "token": 892,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-tegar"
+    },
+    {
+     "nama": "label produk belum lengkap",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"hasil\" tidak ada",
+      "kata kunci \"Hasil menunjukkan\" tidak ada"
+     ],
+     "ms": 420,
+     "biaya": 0.000099,
+     "panggilan": 1,
+     "token": 792,
+     "model": "openai/gpt-oss-20b",
+     "staf": "studio-bintang-ekspor"
+    },
+    {
+     "nama": "warna tidak terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil pemeriksaan\" tidak ada",
+      "kata kunci \"tanda pagar\" tidak ada"
+     ],
+     "ms": 520,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 782,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-kayla-frame"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 0,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "hitung-harga-biaya",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "harga jual dan laba",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"sepertiga\" tidak ada"
+     ],
+     "ms": 537,
+     "biaya": 0.000115,
+     "panggilan": 1,
+     "token": 889,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-cicilan-pinjaman"
+    },
+    {
+     "nama": "diskon bertingkat format Indonesia",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"margin\" tidak ada"
+     ],
+     "ms": 535,
+     "biaya": 0.000115,
+     "panggilan": 1,
+     "token": 873,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-diskon-bertingkat"
+    },
+    {
+     "nama": "cicilan dengan bunga tahunan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 598,
+     "biaya": 0.000119,
+     "panggilan": 1,
+     "token": 881,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-hitung-ppn"
+    },
+    {
+     "nama": "PPN tanpa persentase diisi",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"margin\" tidak ada"
+     ],
+     "ms": 426,
+     "biaya": 0.000087,
+     "panggilan": 1,
+     "token": 754,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-gading"
+    },
+    {
+     "nama": "titik impas dengan angka bertitik",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 547,
+     "biaya": 0.000127,
+     "panggilan": 1,
+     "token": 929,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-laksmi"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 2,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "hitung-hemat-otomasi",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "otomatisasi cepat balik modal",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 623,
+     "biaya": 0.000145,
+     "panggilan": 1,
+     "token": 983,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-gilang"
+    },
+    {
+     "nama": "otomatisasi tidak menutup biaya",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"belum layak\" tidak ada",
+      "jargon: tool"
+     ],
+     "ms": 565,
+     "biaya": 0.000137,
+     "panggilan": 1,
+     "token": 980,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-naufal"
+    },
+    {
+     "nama": "biaya layanan per bulan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1005,
+     "biaya": 0.000209,
+     "panggilan": 2,
+     "token": 1696,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-aksa"
+    },
+    {
+     "nama": "biaya kebanyakan ikut pemakaian dan isian kurang",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 952,
+     "biaya": 0.000149,
+     "panggilan": 1,
+     "token": 952,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ops-eko"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 3,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "hitung-sdm",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "sisa cuti dengan masa kerja separuh tahun",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"hasil\" tidak ada",
+      "kata kunci \"hasil\" tidak ada"
+     ],
+     "ms": 974,
+     "biaya": 0.000197,
+     "panggilan": 1,
+     "token": 1172,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri-cuti"
+    },
+    {
+     "nama": "cuti terpakai melebihi jatah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"minus\" tidak ada"
+     ],
+     "ms": 725,
+     "biaya": 0.000112,
+     "panggilan": 1,
+     "token": 859,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri"
+    },
+    {
+     "nama": "gaji dengan tunjangan dan angka bertitik",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 518,
+     "biaya": 0.000112,
+     "panggilan": 1,
+     "token": 855,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-intan-evaluasi"
+    },
+    {
+     "nama": "gaji tinggi melewati batas iuran",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"batas\" tidak ada"
+     ],
+     "ms": 525,
+     "biaya": 0.000107,
+     "panggilan": 1,
+     "token": 831,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri-cuti"
+    },
+    {
+     "nama": "efektivitas pelatihan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"seperempat\" tidak ada"
+     ],
+     "ms": 556,
+     "biaya": 0.000129,
+     "panggilan": 1,
+     "token": 953,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 1,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "hitung-teknis",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "ubah satuan dengan huruf besar dan koma desimal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "panjang pembahasan 21 di luar 30-500",
+      "kata kunci \"kilogram\" tidak ada"
+     ],
+     "ms": 628,
+     "biaya": 0.000091,
+     "panggilan": 1,
+     "token": 735,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-konversi-satuan"
+    },
+    {
+     "nama": "tambah hari melewati akhir bulan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"maret\" tidak ada"
+     ],
+     "ms": 583,
+     "biaya": 0.000099,
+     "panggilan": 1,
+     "token": 754,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-selisih-tanggal"
+    },
+    {
+     "nama": "terbilang angka bertitik",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kuitansi\" tidak ada"
+     ],
+     "ms": 716,
+     "biaya": 0.000096,
+     "panggilan": 1,
+     "token": 746,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-tambah-hari"
+    },
+    {
+     "nama": "persen ke gram dengan baris campur",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"hasil\" tidak ada",
+      "kata kunci \"takaran\" tidak ada",
+      "kata kunci \"seratus\" tidak ada"
+     ],
+     "ms": 608,
+     "biaya": 0.00012,
+     "panggilan": 1,
+     "token": 860,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-terbilang-rupiah"
+    },
+    {
+     "nama": "jumlah sampel dari populasi",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1175,
+     "biaya": 0.000235,
+     "panggilan": 2,
+     "token": 1697,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-bayu-ukuran-sampel"
+    },
+    {
+     "nama": "pengenceran",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 876,
+     "biaya": 0.000126,
+     "panggilan": 1,
+     "token": 875,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-arif-estimasi-fitur"
+    }
+   ],
+   "lulus": 6,
+   "ketat": 1,
+   "total": 6,
+   "aiSah": 5
+  },
+  {
+   "id": "kelola-pengetahuan",
+   "kelompok": "pengetahuan",
+   "kasus": [
+    {
+     "nama": "indeks catatan dengan satu catatan sendirian",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kata ciri\" tidak ada"
+     ],
+     "ms": 1370,
+     "biaya": 0.000133,
+     "panggilan": 1,
+     "token": 940,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-arsa"
+    },
+    {
+     "nama": "nama kembar dan judul penuh tanda baca",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 618,
+     "biaya": 0.000112,
+     "panggilan": 1,
+     "token": 864,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-gita-pembagi"
+    },
+    {
+     "nama": "samarkan email dan nomor, buang pendek dan ganda",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1271,
+     "biaya": 0.000106,
+     "panggilan": 1,
+     "token": 844,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-gita"
+    },
+    {
+     "nama": "panduan kerja dengan peringatan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"empat langkah\" tidak ada"
+     ],
+     "ms": 761,
+     "biaya": 0.000113,
+     "panggilan": 1,
+     "token": 875,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-hafiz"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "klasifikasi-pilah",
+   "kelompok": "data",
+   "kasus": [
+    {
+     "nama": "pilah pesan dengan penanda mendesak",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 786,
+     "biaya": 0.0001,
+     "panggilan": 1,
+     "token": 840,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-wulan"
+    },
+    {
+     "nama": "kelompokkan pelanggan menurut belanja",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pesan\" tidak ada"
+     ],
+     "ms": 803,
+     "biaya": 0.000097,
+     "panggilan": 1,
+     "token": 801,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-bagus-katakunci"
+    },
+    {
+     "nama": "aturan kosong dan isi berantakan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pesan\" tidak ada"
+     ],
+     "ms": 421,
+     "biaya": 0.000085,
+     "panggilan": 1,
+     "token": 749,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-doni"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "laporan-ringkasan-kerja",
+   "kelompok": "pelaporan",
+   "kasus": [
+    {
+     "nama": "produksi harian dengan target",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 550,
+     "biaya": 0.000114,
+     "panggilan": 1,
+     "token": 851,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-karin"
+    },
+    {
+     "nama": "penjualan angka format Indonesia",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 532,
+     "biaya": 0.000127,
+     "panggilan": 1,
+     "token": 890,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-budi"
+    },
+    {
+     "nama": "tugas tanpa jumlah dan baris tidak terbaca",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 570,
+     "biaya": 0.000101,
+     "panggilan": 1,
+     "token": 589,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-karin"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 3,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "nilai-skor",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "tiga calon ambang sedang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 2186,
+     "biaya": 0.000198,
+     "panggilan": 2,
+     "token": 1358,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-gading-seleksi"
+    },
+    {
+     "nama": "ambang ketat dan nilai kosong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"ambang\" tidak ada"
+     ],
+     "ms": 1907,
+     "biaya": 0.000243,
+     "panggilan": 2,
+     "token": 1471,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-fajar"
+    },
+    {
+     "nama": "bobot aneh dan nilai kurang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1038,
+     "biaya": 0.000243,
+     "panggilan": 2,
+     "token": 1845,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-sekar"
+    },
+    {
+     "nama": "daftar calon kosong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1258,
+     "biaya": 0.000157,
+     "panggilan": 2,
+     "token": 1525,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-tasya"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 0,
+   "total": 4,
+   "aiSah": 1
+  },
+  {
+   "id": "periksa-kepatuhan",
+   "kelompok": "pemeriksaan",
+   "kasus": [
+    {
+     "nama": "label kemasan kurang satu syarat",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1105,
+     "biaya": 0.000088,
+     "panggilan": 1,
+     "token": 839,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-rara-kecocokan-bahan"
+    },
+    {
+     "nama": "klaim iklan melanggar dengan huruf besar",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 417,
+     "biaya": 0.000091,
+     "panggilan": 1,
+     "token": 830,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-arman-hak"
+    },
+    {
+     "nama": "syarat halal tanpa penanda dan tanpa larangan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 751,
+     "biaya": 0.000121,
+     "panggilan": 1,
+     "token": 897,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-tiara-audit"
+    },
+    {
+     "nama": "syarat tidak terbaca",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1112,
+     "biaya": 0.000085,
+     "panggilan": 1,
+     "token": 749,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-yohana"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 4,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "periksa-mutu-teks",
+   "kelompok": "pemeriksaan",
+   "kasus": [
+    {
+     "nama": "slogan baik",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1268,
+     "biaya": 0.000126,
+     "panggilan": 2,
+     "token": 912,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-reza"
+    },
+    {
+     "nama": "klaim ragu dan panjang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"bukti\" tidak ada"
+     ],
+     "ms": 930,
+     "biaya": 0.000094,
+     "panggilan": 1,
+     "token": 765,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-hafiz-uji-arahan"
+    },
+    {
+     "nama": "arahan panjang dengan baris berantakan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pembaca\" tidak ada"
+     ],
+     "ms": 851,
+     "biaya": 0.000107,
+     "panggilan": 1,
+     "token": 797,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-kirana-uji-slogan"
+    },
+    {
+     "nama": "teks tombol layar terlalu pendek",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tombol\" tidak ada"
+     ],
+     "ms": 1222,
+     "biaya": 0.000093,
+     "panggilan": 1,
+     "token": 740,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-reza"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 0,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "perkiraan-stok-kapasitas",
+   "kelompok": "perkiraan",
+   "kasus": [
+    {
+     "nama": "stok sudah di titik pesan ulang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "jargon: error"
+     ],
+     "ms": 876,
+     "biaya": 0.000132,
+     "panggilan": 1,
+     "token": 912,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-gilang-sla-downtime"
+    },
+    {
+     "nama": "kebutuhan bahan dengan baris campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 882,
+     "biaya": 0.000129,
+     "panggilan": 1,
+     "token": 922,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-lukas-batas-laju"
+    },
+    {
+     "nama": "perkiraan permintaan dengan pemisah campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 780,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 793,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-doni-lisensi"
+    },
+    {
+     "nama": "kapasitas disk bertambah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"delapan puluh\" tidak ada"
+     ],
+     "ms": 861,
+     "biaya": 0.000071,
+     "panggilan": 1,
+     "token": 701,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-rangga-kapasitas-disk"
+    },
+    {
+     "nama": "disk tidak bertambah dan stok tanpa pemakaian",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1322,
+     "biaya": 0.000127,
+     "panggilan": 1,
+     "token": 878,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-dodi"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 3,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "peta-risiko",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "tiga risiko beragam tingkat",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 814,
+     "biaya": 0.000127,
+     "panggilan": 1,
+     "token": 927,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-salsa-risiko"
+    },
+    {
+     "nama": "nilai di luar batas dan teks aneh",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [
+      "hasil aturan tidak memuat \"Belum ditentukan\""
+     ],
+     "catatanMutu": [],
+     "ms": 879,
+     "biaya": 0.000137,
+     "panggilan": 1,
+     "token": 966,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-arman"
+    },
+    {
+     "nama": "keselamatan kerja dengan satu risiko",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 907,
+     "biaya": 0.000111,
+     "panggilan": 1,
+     "token": 858,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-surya"
+    },
+    {
+     "nama": "tidak ada risiko terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 781,
+     "biaya": 0.000104,
+     "panggilan": 2,
+     "token": 874,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ops-lia-risiko"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "prioritas-keputusan",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "urutan prioritas empat pilihan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1437,
+     "biaya": 0.000217,
+     "panggilan": 1,
+     "token": 1233,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-matriks-prioritas"
+    },
+    {
+     "nama": "timbangan untung rugi dengan baris salah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pilihan\" tidak ada"
+     ],
+     "ms": 1254,
+     "biaya": 0.00014,
+     "panggilan": 1,
+     "token": 979,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-ardi-gate-rilis"
+    },
+    {
+     "nama": "tiga skenario angka dengan sikap berani",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pilihan\" tidak ada",
+      "kata kunci \"pilihan optimis\" tidak ada"
+     ],
+     "ms": 1657,
+     "biaya": 0.000209,
+     "panggilan": 1,
+     "token": 1176,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-ardi"
+    },
+    {
+     "nama": "nilai prioritas tidak terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1505,
+     "biaya": 0.000239,
+     "panggilan": 2,
+     "token": 1768,
+     "model": "openai/gpt-oss-20b",
+     "staf": "exec-kenzo-skenario"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 1,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "rancang-struktur",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "tabel data pesanan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Rancangan ini\" tidak ada",
+      "kata kunci \"alamat pengiriman\" tidak ada"
+     ],
+     "ms": 618,
+     "biaya": 0.000087,
+     "panggilan": 1,
+     "token": 740,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-pembuat-utm"
+    },
+    {
+     "nama": "papan cerita lengkap",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Rancangan video\" tidak ada",
+      "kata kunci \"dua puluh detik\" tidak ada"
+     ],
+     "ms": 1206,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 800,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-karin-rencana-dashboard"
+    },
+    {
+     "nama": "dashboard dengan uraian berantakan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Rancangan dashboard\" tidak ada",
+      "kata kunci \"tiga kartu\" tidak ada"
+     ],
+     "ms": 873,
+     "biaya": 0.000102,
+     "panggilan": 1,
+     "token": 781,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-kayla"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "ringkas-umpan-balik",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "ulasan campuran",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1111,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 816,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-faisal"
+    },
+    {
+     "nama": "fokus keluhan saja",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2091,
+     "biaya": 0.000089,
+     "panggilan": 1,
+     "token": 768,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-dafa-survei"
+    },
+    {
+     "nama": "komentar kosong dan tidak jelas",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [
+      "hasil aturan tidak memuat \"Tidak ada komentar\""
+     ],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 2566,
+     "biaya": 0.000105,
+     "panggilan": 2,
+     "token": 861,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-keisha-rekap-liputan"
+    }
+   ],
+   "lulus": 2,
+   "ketat": 2,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "riset-halaman-web",
+   "kelompok": "riset",
+   "kasus": [
+    {
+     "nama": "nilai pencarian halaman produk",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": null,
+     "alasan": [
+      "status gagal: fetch failed"
+     ],
+     "catatanMutu": [],
+     "ms": 149,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "alat-cek-halaman-web"
+    },
+    {
+     "nama": "bandingkan harga dengan harga sendiri",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": null,
+     "alasan": [
+      "status gagal: fetch failed"
+     ],
+     "catatanMutu": [],
+     "ms": 50,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "data-bayu-baca-halaman-kompetitor"
+    },
+    {
+     "nama": "keamanan isi dengan kata berformat aneh",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": null,
+     "alasan": [
+      "status gagal: fetch failed"
+     ],
+     "catatanMutu": [],
+     "ms": 99,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "it-salsa"
+    }
+   ],
+   "lulus": 0,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 0
+  },
+  {
+   "id": "susun-daftar-periksa",
+   "kelompok": "pemeriksaan",
+   "kasus": [
+    {
+     "nama": "pemeriksaan stok tiga area",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2813,
+     "biaya": 0.0001,
+     "panggilan": 1,
+     "token": 787,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-tegar-label"
+    },
+    {
+     "nama": "pembersihan rinci dengan pemisah campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 876,
+     "biaya": 0.000091,
+     "panggilan": 1,
+     "token": 754,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-cindy-audit"
+    },
+    {
+     "nama": "area kosong jadi umum",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2296,
+     "biaya": 0.000116,
+     "panggilan": 1,
+     "token": 845,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-tania"
+    },
+    {
+     "nama": "terlalu banyak area dipotong",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1657,
+     "biaya": 0.000095,
+     "panggilan": 1,
+     "token": 788,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-galih-wawancara"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 4,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "susun-jadwal",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "konten bergiliran mingguan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"ritmenya\" tidak ada"
+     ],
+     "ms": 1901,
+     "biaya": 0.000183,
+     "panggilan": 2,
+     "token": 1151,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-dafa"
+    },
+    {
+     "nama": "giliran kerja harian berulang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"dua giliran\" tidak ada"
+     ],
+     "ms": 1471,
+     "biaya": 0.000143,
+     "panggilan": 1,
+     "token": 943,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-rangga"
+    },
+    {
+     "nama": "tanggal dan jumlah tidak terbaca",
+     "lulus": false,
+     "ketat": false,
+     "alasan": [
+      "ditolak sebelum jalan: Tanggal mulai: tulis tanggal seperti 2026-11-18"
+     ]
+    }
+   ],
+   "lulus": 2,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "susun-rencana-kerja",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "rencana lengkap dengan penanggung jawab",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1044,
+     "biaya": 0.000095,
+     "panggilan": 1,
+     "token": 819,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-dika"
+    },
+    {
+     "nama": "tanpa daftar tugas, pakai kerangka bawaan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"lima tugas\" tidak ada"
+     ],
+     "ms": 2357,
+     "biaya": 0.000081,
+     "panggilan": 1,
+     "token": 741,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-rara"
+    },
+    {
+     "nama": "isian berantakan dan tenggat menumpuk",
+     "lulus": false,
+     "ketat": false,
+     "alasan": [
+      "ditolak sebelum jalan: Tanggal mulai: tulis tanggal seperti 2026-11-18"
+     ]
+    }
+   ],
+   "lulus": 2,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "susun-rencana-pemasaran",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "kampanye penjualan dengan bagian jelas",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2381,
+     "biaya": 0.000107,
+     "panggilan": 1,
+     "token": 863,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-laksmi-cobranding"
+    },
+    {
+     "nama": "tantangan interaksi tanpa daftar tempat",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tujuh hari\" tidak ada"
+     ],
+     "ms": 8179,
+     "biaya": 0.000104,
+     "panggilan": 1,
+     "token": 815,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-putra-bundling"
+    },
+    {
+     "nama": "anggaran kosong dan isian aneh",
+     "lulus": false,
+     "ketat": false,
+     "alasan": [
+      "ditolak sebelum jalan: Anggaran total (rupiah): tulis angka saja (contoh: 150000)"
+     ]
+    }
+   ],
+   "lulus": 2,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "tulis-dokumen-kerja",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "kebutuhan produk setengah lengkap",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1941,
+     "biaya": 0.000084,
+     "panggilan": 1,
+     "token": 725,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-notulen-rapat"
+    },
+    {
+     "nama": "laporan masalah lengkap",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"5 dari 5\" tidak ada",
+      "jargon: error"
+     ],
+     "ms": 2550,
+     "biaya": 0.000097,
+     "panggilan": 1,
+     "token": 777,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-mira-brief"
+    },
+    {
+     "nama": "catatan rapat berantakan tanpa kata kunci",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "jargon: persetujuan"
+     ],
+     "ms": 2656,
+     "biaya": 0.000109,
+     "panggilan": 1,
+     "token": 787,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-nabila-brief"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "tulis-konten-pemasaran",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "caption produk makanan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 4057,
+     "biaya": 0.000175,
+     "panggilan": 2,
+     "token": 1512,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-cindy"
+    },
+    {
+     "nama": "klaim berlebihan terdeteksi",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kopi\" tidak ada"
+     ],
+     "ms": 4900,
+     "biaya": 0.000222,
+     "panggilan": 2,
+     "token": 1658,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-galih"
+    },
+    {
+     "nama": "slogan dengan poin bernomor dan batas sendiri",
+     "lulus": false,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [
+      "hasil aturan tidak memuat \"maksimal 8 kata\""
+     ],
+     "catatanMutu": [
+      "kata kunci \"kopi\" tidak ada"
+     ],
+     "ms": 604,
+     "biaya": 0.000096,
+     "panggilan": 1,
+     "token": 797,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-keisha"
+    }
+   ],
+   "lulus": 2,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "tulis-naskah-video",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "video 30 detik tanpa naskah",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1076,
+     "biaya": 0.000219,
+     "panggilan": 2,
+     "token": 1665,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-nayla"
+    },
+    {
+     "nama": "naskah ada tapi terlalu panjang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"sayur\" tidak ada"
+     ],
+     "ms": 632,
+     "biaya": 0.000136,
+     "panggilan": 1,
+     "token": 959,
+     "model": "openai/gpt-oss-20b",
+     "staf": "studio-elang-hitung-kata"
+    },
+    {
+     "nama": "format tidak dikenal dan poin berantakan",
+     "lulus": false,
+     "ketat": false,
+     "alasan": [
+      "ditolak sebelum jalan: Berapa lama videonya?: pilih salah satu tombol yang tersedia"
+     ]
+    }
+   ],
+   "lulus": 2,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "tulis-pesan-pelanggan",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "email untuk pelanggan kesal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"5 bagian\" tidak ada"
+     ],
+     "ms": 641,
+     "biaya": 0.000149,
+     "panggilan": 1,
+     "token": 966,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-templat-email"
+    },
+    {
+     "nama": "rangkaian tiga pesan resmi tanpa nama",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"maaf\" tidak ada",
+      "kata kunci \"3 bagian\" tidak ada"
+     ],
+     "ms": 591,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 798,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-prasetyo"
+    },
+    {
+     "nama": "jawaban cepat dengan keterangan sangat singkat dan kata terlarang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"maaf\" tidak ada",
+      "kata kunci \"2 bagian\" tidak ada"
+     ],
+     "ms": 423,
+     "biaya": 0.000092,
+     "panggilan": 1,
+     "token": 735,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-aldi-balasan-komunitas"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 3
+  }
+ ],
+ "berhenti": null,
+ "selesai": "2026-11-18T18:30:47.308Z",
+ "biayaTotal": 0.014101,
+ "panggilanTotal": 128,
+ "tokenTotal": 104602,
+ "tokenMasuk": 76960,
+ "tokenKeluar": 27642,
+ "perModel": {
+  "openai/gpt-oss-20b": {
+   "calls": 128,
+   "tokens": 104602,
+   "cost": 0.014101079999999993
+  }
+ },
+ "perDivisi": {},
+ "ringkasan": {
+  "skenario": {
+   "total": 0,
+   "dijalankan": 0,
+   "lulus": 0,
+   "lulusKecualiJargon": 0,
+   "dilewati": 0,
+   "penuh": {
+    "total": 0,
+    "lulus": 0
+   },
+   "manajer": {
+    "total": 0,
+    "lulus": 0
+   },
+   "stafDipakai": 0
+  },
+  "kemampuan": {
+   "total": 31,
+   "kasus": 116,
+   "lulus": 104,
+   "ketat": 42,
+   "aiSah": 99,
+   "kemampuanLulusSemua": 21
+  }
+ }
+}

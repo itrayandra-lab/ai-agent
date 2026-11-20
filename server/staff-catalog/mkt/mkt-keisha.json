@@ -141,5 +141,31 @@
         "dipoles AI"
       ]
     }
+  },
+  "kemampuan": [
+    "tulis-konten-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "siaran pers",
+      "press release",
+      "humas",
+      "media",
+      "pengumuman"
+    ],
+    "data": [
+      "nama perusahaan atau brand",
+      "kota",
+      "tanggal rilis",
+      "apa yang diumumkan?"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

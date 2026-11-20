@@ -246,31 +246,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Visual Merchandiser di divisi Retail & Beauty Stores, memakai bahasa awam",
-    "tujuan": "Beri nilai delapan hal tampilan toko (Ya, sebagian, belum) dan dapatkan skor serta daftar yang harus dibenahi lebih dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "audit visual",
+      "tampilan toko",
+      "etalase",
+      "kebersihan",
+      "checklist"
+    ],
+    "data": [
+      "nama toko atau konter",
+      "etalase bersih dan terang",
+      "harga terpasang di semua produk",
+      "produk unggulan setinggi mata"
+    ],
     "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
-      "buruk": "Toko harus lebih bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "audit visual"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil daftar periksa tampilan toko perlu dibaca bersama: audit visual menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
   }
 }

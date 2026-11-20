@@ -1,5 +1,6 @@
 // Tim Saya: tampilan orang, bukan struktur teknis. Asisten kamu, satu baris per divisi dengan penanggung jawabnya, lalu kartu staf.
 // Memakai data yang sudah ada (employees, divisions, status, statusText). Medan baru P1 (role, staffId, workflowId) dipakai bila ada.
+import { namaRuang } from './nama-ruang.js';
 import { S, esc, navigate, avatar, div } from './core.js';
 import { icon } from './icons.js';
 import { awam, statusOrang, peranOrang, kosong } from './awam.js';
@@ -29,7 +30,7 @@ export const TimView = {
   mount(root) {
     this.q = this.q || '';
     root.innerHTML = `<div class="page tim">
-      <header class="page-head"><h2>Tim saya</h2><p class="muted">Orang-orang yang membantumu. Pilih satu untuk memberi pekerjaan, Pemandu yang menemani.</p></header>
+      <header class="page-head"><h2>Tim saya</h2><p class="muted">Orang-orang yang membantumu. Pilih satu untuk memberi pekerjaan, aray yang menemani.</p></header>
       <div class="tim-cari"><label class="sr-only" for="timQ">Cari orang atau divisi</label><input id="timQ" class="input" type="search" placeholder="Cari nama atau bagian…" value="${esc(this.q)}" autocomplete="off"></div>
       <div id="timBody"></div></div>`;
     root.querySelector('#timQ').oninput = (e) => { this.q = e.target.value; this.update(new Set(['employees'])); };
@@ -61,7 +62,7 @@ export const TimView = {
       const aktif = semua.filter((e) => statusOrang(e, d.tasks).id === 'bekerja').length;
       const tampil = q ? staf.filter((e) => ok(e) || dv.name.toLowerCase().includes(q)) : staf;
       html += `<details class="divisi" data-div="${esc(dv.id)}" ${open.has(dv.id) || q ? 'open' : ''}>
-        <summary><span class="divisi-t"><i class="titik" style="background:${esc(dv.color || '#7fb3ff')}" aria-hidden="true"></i><b>${esc(awam(dv.name))}</b></span>
+        <summary><span class="divisi-t"><i class="titik" style="background:${esc(dv.color || '#7fb3ff')}" aria-hidden="true"></i><b>${esc(namaRuang(dv.id, awam(dv.name)))}</b></span>
           <span class="divisi-m">${mgr ? `Penanggung jawab: ${esc(mgr.name)}` : ''}</span><span class="divisi-c">${aktif ? `${aktif} sedang bekerja · ` : ''}${semua.length} orang</span></summary>
         <div class="divisi-b">${mgr ? `<div class="orang-grid mgr">${kartuOrang(mgr, d.tasks)}</div>` : ''}${tampil.length ? `<div class="orang-grid">${tampil.map((e) => kartuOrang(e, d.tasks)).join('')}</div>` : ''}</div></details>`;
     }

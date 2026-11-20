@@ -122,31 +122,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "DevOps Engineer di divisi Product & Engineering, memakai bahasa awam",
-    "tujuan": "Hitung berapa menit layanan boleh mati agar target ketersediaan tercapai dan berapa yang sudah terpakai. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "uptime",
+      "sla",
+      "downtime",
+      "error budget",
+      "ketersediaan"
+    ],
+    "data": [
+      "target ketersediaan",
+      "periode yang dihitung",
+      "gangguan yang terjadi (satu baris: tanggal | menit mati | pe"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
     "contoh": {
       "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
-      "buruk": "Coba perbaiki kodenya."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "uptime"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung anggaran gangguan layanan perlu dibaca bersama: uptime menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
   }
 }

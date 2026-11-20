@@ -200,31 +200,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Data Privacy Officer di divisi Legal & Compliance, memakai bahasa awam",
-    "tujuan": "Jawab beberapa pertanyaan tentang fitur atau mitra baru, dapatkan tingkat risiko data pribadi dan daftar langkah pengamanan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "peta-risiko"
+  ],
+  "keahlian": {
+    "istilah": [
+      "data pribadi",
+      "privasi",
+      "dpia",
+      "risiko data",
+      "pdp"
+    ],
+    "data": [
+      "nama fitur atau mitra baru",
+      "memproses data sensitif (kesehatan, keuangan, biometrik, ana",
+      "perkiraan jumlah orang yang datanya diproses",
+      "data dibagikan ke pihak lain?"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
     "contoh": {
       "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
-      "buruk": "Pasti aman secara hukum."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "data pribadi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penilai risiko data pribadi fitur baru perlu dibaca bersama: data pribadi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
   }
 }

@@ -98,31 +98,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Inside Sales — Clinic & Salon B2B di divisi Sales, memakai bahasa awam",
-    "tujuan": "Buat jadwal tindak lanjut 14 hari setelah demo, ritmenya menyesuaikan seberapa berminat calon pelanggan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "tindak lanjut",
+      "follow up",
+      "setelah demo",
+      "jadwal kontak",
+      "pipeline b2b"
+    ],
+    "data": [
+      "nama calon pelanggan",
+      "tanggal demo",
+      "seberapa berminat?"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
     "contoh": {
-      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
-      "buruk": "Beli sekarang atau rugi."
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "tindak lanjut"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun jadwal tindak lanjut setelah demo perlu dibaca bersama: tindak lanjut menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

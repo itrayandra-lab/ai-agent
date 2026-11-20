@@ -5,13 +5,16 @@
 //   L0  aturan + templat, tanpa token  (6 niat umum)
 //   L1  model kecil dengan JSON ketat  (niat tak terduga) + cache + cadangan templat L0
 //   L2  model besar hanya untuk karya  (dikerjakan lewat submitGoal di langkah "Kerjakan")
-import * as store from './store.js';
+import * as store from './penyimpanan/store.js';
 import * as engine from './engine.js';
-import * as brain from './brain.js';
-import * as llm from './llm.js';
+import * as brain from './pengetahuan/brain.js';
+import * as llm from './otak/llm.js';
 import * as gov from './governor.js';
 import * as kamus from './kamus.js';
-import * as mem from './memory-lite.js';
+import * as mem from './pengetahuan/memory-lite.js';
+import * as chat from './pemandu-chat.js';
+import { PERSONA_ARAY } from './otak/perilaku-obrolan.js';
+export const setChat = chat.setChat;   // untuk tes: model tiruan untuk obrolan
 import dns from 'node:dns/promises';
 import net from 'node:net';
 
@@ -299,7 +302,7 @@ function getSession(userId, sessionId) {
   const id = /^[\w-]{6,48}$/.test(sessionId || '') ? sessionId : mkId();
   const k = key(userId, id);
   if (!S[k]) {
-    S[k] = { id, userId, intent: null, input: '', extra: '', answers: {}, qs: [], qi: 0, awaiting: null, planId: null, stage: 'start', goalId: null, revs: 0, history: [], notes: [], learned: null, createdAt: now(), updatedAt: now() };
+    S[k] = { id, userId, intent: null, input: '', extra: '', answers: {}, qs: [], qi: 0, awaiting: null, planId: null, stage: 'start', goalId: null, revs: 0, history: [], notes: [], learned: null, chat: [], confirmed: false, createdAt: now(), updatedAt: now() };
     const keys = Object.keys(S);
     if (keys.length > 40) for (const old of keys.sort((a, b) => S[a].updatedAt - S[b].updatedAt).slice(0, keys.length - 40)) delete S[old];
   }
@@ -312,7 +315,7 @@ function goBack(s) {
   if (!prev) return reset(s);
   Object.assign(s, prev, { notes: [], learned: null });
 }
-function reset(s) { Object.assign(s, { auto: null, l1: null, intent: null, input: '', extra: '', answers: {}, qs: [], qi: 0, awaiting: null, planId: null, stage: 'start', goalId: null, revs: 0, history: [], notes: [], learned: null }); }
+function reset(s) { Object.assign(s, { sugg: [], say: '', confirmed: false, auto: null, l1: null, intent: null, input: '', extra: '', answers: {}, qs: [], qi: 0, awaiting: null, planId: null, stage: 'start', goalId: null, revs: 0, history: [], notes: [], learned: null }); }
 
 const STEP = { start: 1, ask: 1, plan: 2, confirm: 2, work: 3, result: 4, tweak: 4, done: 4, auto: 4 };
 const base = (s) => ({ sessionId: s.id, step: { now: STEP[s.stage] || 1, of: 4 }, undo: s.history.length > 0 && !['work', 'result', 'done', 'auto'].includes(s.stage), quota: quota(), delegate: false, freeText: false, options: [] });
@@ -343,16 +346,13 @@ function offerCards(s, ctx = {}) {
 }
 
 async function render(s) {
-  if (s.stage === 'plan') launch(s);   // tidak ada kartu rencana: Seimbang dipilih otomatis (Cepat bila jatah menipis); "Ubah sedikit" mengatur panjang hasil
+  if (s.stage === 'plan') { s.planId = quota().pct < 25 ? 'fast' : 'balanced'; s.stage = 'confirm'; }   // rencana dipilih diam-diam; yang tampil hanya satu kalimat konfirmasi
   const b = base(s); const t = tmplOf(s);
   const notes = s.notes.length ? take(s, 'notes') : null;
   const learned = s.learned ? take(s, 'learned') : null;
   const extra = { ...(notes ? { notes } : {}), ...(learned ? { learned } : {}) };
   switch (s.stage) {
-    case 'start': {
-      const nm = userName(s.userId);
-      return { ...b, ...extra, kind: 'choices', say: `${greeting()}${nm ? ', ' + nm : ''}! Mau dibantu apa hari ini?`, options: KARTU_AWAL.map((id) => o(`intent:${id}`, INTENTS[id].kartu, '')), freeText: true, delegate: false };
-    }
+    case 'start': return chatResponse(s, s.say || `${greeting()}${userName(s.userId) ? ', ' + userName(s.userId) : ''}! Ada yang bisa kubantu?`, s.sugg?.length ? s.sugg : (s.chat?.length ? [] : LIGHT), [], [], extra);   // pembuka: satu baris saran ringan; selanjutnya saran hanya setelah balasan yang bermakna
     case 'ask': {
       const q = t.qs.find((x) => x.id === s.qs[s.qi]);
       if (s.awaiting === 'other') return { ...b, ...extra, kind: 'choices', say: 'Ketik jawabanmu, atau ucapkan lewat mikrofon.', options: [], freeText: true, delegate: true };
@@ -362,7 +362,7 @@ async function render(s) {
       return { ...b, ...extra, kind: 'choices', say: `Seru! ${t.label} tentang apa? Ketik atau ucapkan satu kalimat saja.`, options: profileOf(s.userId).data.nama ? [o('topic:usaha', `Tentang ${profileOf(s.userId).data.nama}`)] : [], freeText: true, delegate: true };
     case 'confirm': {
       const p = t.plans[s.planId];
-      return { ...b, ...extra, kind: 'confirm', say: `Siap. Aku akan membuat: ${p.give}. Hasilnya kamu terima sebagai: ${p.out}. Mulai sekarang?`, preview: previewOf(s, t), options: [o('start', 'Mulai', ETA[s.planId], 1), o('edit', 'Ubah pilihan')] };
+      return { ...b, ...extra, kind: 'confirm', say: `Siap, aku bisa mengerjakan ini: ${p.give.charAt(0).toLowerCase()}${p.give.slice(1)}. Mau aku kerjakan sekarang?`, options: [o('start', 'Ya, kerjakan', ETA[s.planId], 1), o('edit', 'Ubah'), o('later', 'Nanti saja')], freeText: true };
     }
     case 'work': if (resultOf(s)) { s.stage = 'result'; if (s.learned) s.learned = extra.learned || s.learned; return render(s); } return { ...progressOf(s, b), ...extra };
     case 'result': case 'tweak': {
@@ -408,8 +408,10 @@ function briefOf(s) {
   return { title: clip(`${t.label}: ${s.input || s.extra || t.label}`, 120), description: lines.filter((l) => l !== '').join('\n'), priority: s.planId === 'full' ? 'high' : s.planId === 'fast' ? 'low' : 'medium' };
 }
 /** pilihan rencana diambil diam-diam: Seimbang, atau Cepat bila jatah hari ini menipis */
-function launch(s) { s.planId = quota().pct < 25 ? 'fast' : 'balanced'; startWork(s); }
 function startWork(s) {
+  // PAGAR DI KODE: pekerjaan hanya dibuat setelah pengguna sendiri menjawab "Ya, kerjakan" (atau memilih mengubah hasil). Tanpa itu, tidak ada tugas yang tercipta.
+  if (s.confirmed !== true) throw new Error('pekerjaan belum dikonfirmasi pengguna');
+  s.confirmed = false;
   const br = briefOf(s);
   const g = engine.submitGoal({ title: br.title, description: br.description, userId: s.userId, priority: br.priority });
   s.goalId = g.id; s.stage = 'work'; s.startedAt = now(); s.revs = 0;
@@ -425,7 +427,8 @@ function progressOf(s, b) {
   const who = emp(active?.assigneeId)?.name;
   const waited = Math.round((now() - (s.startedAt || now())) / 1000);
   const pct = Math.min(92, kids.length ? 8 + Math.round((done / kids.length) * 80) : 6 + Math.min(70, waited * 2));
-  return { ...b, kind: 'progress', say: who ? `${who} lagi menyiapkan hasilnya. Sebentar ya.` : 'Lagi disiapkan. Sebentar ya.', progress: { pct, text: kids.length ? `${done} dari ${kids.length} bagian selesai` : 'Mulai dikerjakan' }, options: [o('cancel', 'Hentikan')], undo: false };
+  if (g.paused) return { ...b, kind: 'progress', say: 'Pekerjaan ini kujeda. Bagian yang sudah berjalan tetap selesai, sisanya menunggu kamu.', paused: true, progress: { pct, text: kids.length ? `${done} dari ${kids.length} bagian selesai (dijeda)` : 'Dijeda' }, options: [o('lanjut', 'Lanjutkan', '', 1), o('cancel', 'Hentikan')], undo: false };
+  return { ...b, kind: 'progress', say: who ? `${who} lagi menyiapkan hasilnya. Sebentar ya.` : 'Lagi disiapkan. Sebentar ya.', progress: { pct, text: kids.length ? `${done} dari ${kids.length} bagian selesai` : 'Mulai dikerjakan' }, options: [o('jeda', 'Jeda'), o('cancel', 'Hentikan')], undo: false };
 }
 function resultOf(s) {
   const g = goal(s);
@@ -520,6 +523,50 @@ async function autoTurn(s, cid, text) {
 }
 
 // ───────────────────────── satu giliran ─────────────────────────
+// ───────────────────────── obrolan: percakapan dulu, kerja hanya bila diminta lalu dikonfirmasi ─────────────────────────
+const LIGHT = ['Bantu aku menulis sesuatu', 'Cari tahu sesuatu'];
+const WORK_LABEL = 'Kerjakan sebagai pekerjaan';
+const pushChat = (s, role, content) => { (s.chat ||= []).push({ role, content: clip(content, 1200) }); if (s.chat.length > 20) s.chat.splice(0, s.chat.length - 20); };
+export const profileText = (userId) => Object.entries(profileOf(userId).data).map(([k, v]) => `- ${PROFIL_LABEL[k]}: ${v}`).join('\n');
+const breaksOut = (text) => chat.isQuestion(text) || chat.SAPAAN.test(text) || chat.TERIMA.test(text);
+/** balasan obrolan: kalimat, penanda alat yang dipakai, dan paling banyak 3 tombol saran sesudah balasan yang bermakna (bukan menu pembuka) */
+function chatResponse(s, say, sugg = [], tools = [], keep = [], extra = null) {
+  extra = { ...(s.notes.length ? { notes: take(s, 'notes') } : {}), ...(extra || {}) };
+  s.sugg = sugg.slice(0, 4);   // tombol "say:N" menunjuk ke daftar ini (saran lanjutan, atau pilihan ganda bila extra.pilihanGanda)
+  const options = [...s.sugg.map((l, i) => o(`say:${i}`, l)), ...keep].slice(0, 4);
+  s.say = '';
+  return { ...base(s), ...extra, kind: 'chat', say, options, freeText: true, delegate: false, undo: false, ...(tools.length ? { tools } : {}) };
+}
+/** niat kerja yang jelas: tanyakan paling banyak satu hal, lalu berhenti di kalimat konfirmasi (tidak ada pekerjaan sebelum "Ya, kerjakan") */
+async function proposeWork(s, text) {
+  Object.assign(s, { input: text, extra: '', answers: {}, qs: [], qi: 0, awaiting: null, planId: null, confirmed: false });
+  s.intent = detectIntent(text);
+  if (!s.intent) { const l1t = await l1Template(text); s.intent = 'umum'; s.l1 = l1t || null; }
+  if (INTENTS[s.intent]?.needsText && text.length < 140 && !/\n/.test(text)) { s.stage = 'topic'; s.needInput = true; return await render(s); }
+  enterAfterCapture(s);
+  return await render(s);
+}
+async function converse(s, text, { keep = [], onDelta = null, onTool = null, sources = '' } = {}) {
+  s.lastText = text;
+  pushChat(s, 'user', text);
+  const reply = (say, sugg = [], tools = [], extra = null) => { pushChat(s, 'assistant', say); return chatResponse(s, say, sugg, tools, keep, extra); };
+  if (chat.SAPAAN.test(text)) return reply(`Halo${userName(s.userId) ? ', ' + userName(s.userId) : ''}! Senang ketemu kamu. Ada yang bisa kubantu?`, LIGHT);
+  if (chat.TERIMA.test(text)) return reply('Sama-sama! Kalau ada lagi yang mau dibahas atau dikerjakan, bilang saja.');
+  if (chat.TENTANG.test(text)) return reply(`Aku ${paOf(s.userId)?.name || 'aray'}, kembaran digitalmu: aku memahami tujuanmu, menjawab sendiri atau meneruskan ke orang yang tepat, memantau, lalu melapor. Kamu juga bisa langsung menyapa siapa saja dengan namanya. Kalau kamu minta, aku bisa membuatkan tulisan, pesan, rencana, ringkasan, atau notulensi.`, LIGHT);
+  if (chat.wantsWork(text)) return await proposeWork(s, text);
+  if (chat.live()) {
+    try {
+      const out = await chat.reply({ history: s.chat, profile: profileText(s.userId), text, sources, summary: s.ringkasan || '', onDelta, onTool, persona: PERSONA_ARAY(paOf(s.userId)?.name || 'aray') });
+      if (out.kerja && !chat.isQuestion(text)) return await proposeWork(s, text);   // model hanya mengusulkan; konfirmasi tetap wajib
+      return reply(out.balasan, out.saran, out.tools, { kutipanMentah: out.kutipan, ...(out.pilihan ? { pilihanGanda: true } : {}) });
+    } catch (err) { console.warn('[pemandu] obrolan gagal, memakai jawaban cadangan:', err.message); }
+  }
+  // cadangan tanpa model: aturan murah, dan jujur bahwa otak AI belum tersambung
+  if (detectIntent(text) && !chat.isQuestion(text)) return await proposeWork(s, text);
+  s.offer = text;
+  return reply(chat.isQuestion(text) ? 'Maaf, otak AI-ku sedang belum tersambung, jadi aku belum bisa menjawab pertanyaan itu dengan baik. Kalau mau, aku bisa mengerjakannya sebagai pekerjaan.' : 'Oke, aku dengar. Kalau mau, aku bisa mengerjakannya sebagai pekerjaan.', [WORK_LABEL]);
+}
+
 function pickPlanOrOption(s, choiceId) {
   const t = tmplOf(s);
   const q = t.qs.find((x) => x.id === s.qs[s.qi]);
@@ -541,10 +588,28 @@ function answer(s, q, opt, { auto = false, text = null } = {}) {
 
 const FEED = { singkat: 'Buat versi yang lebih singkat, intinya saja.', santai: 'Buat versi yang lebih santai dan akrab.', resmi: 'Buat versi yang lebih resmi dan sopan.', lengkap: 'Buat versi yang lebih lengkap dan rinci.' };
 
-export async function turn({ userId, sessionId, input, choiceId, canAutomate = true }) {
+// Pintu depan: Chat Engine (server/chat-engine.js) mendaftarkan diri di sini, jadi web, Kantor 3D, Telegram, dan Discord memakai mesin yang sama.
+// Tanpa pintu depan (mis. tes modul ini saja), giliran langsung dikerjakan mesin dalam ini.
+let front = null;
+export const setFront = (fn) => { front = fn; };
+export const turn = (args) => (front && !args._inner ? front(args) : innerTurn(args));
+export const innerTurn = (args) => runTurn(args);
+/** tahap percakapan saat ini ('start' = obrolan biasa); tidak membuat sesi baru */
+export function stageOf(userId, sessionId) { return state().sessions[key(userId, sessionId)]?.stage || 'start'; }
+// identitas pembicara utama di obrolan = aray (orkestrator, kembaran digital pemilik). Entitas Sora tetap ada di data (id tidak berubah, dipakai mesin tugas dan tampilan 3D) tetapi bukan persona pembicara.
+export const paOf = (userId) => db().employees.find((e) => e.isMaster) || db().employees.find((e) => e.isPA && e.ownerId === userId) || emp('aria');
+/** usulan kerja dari luar (Chat Engine): berhenti di kalimat konfirmasi, tidak pernah langsung membuat pekerjaan */
+export async function proposeFor(userId, sessionId, text) {
+  const s = getSession(userId, sessionId); s.chat ||= [];
+  if (s.stage !== 'start') return null;
+  pushChat(s, 'user', text);
+  return await proposeWork(s, text);
+}
+async function runTurn({ userId, sessionId, input, choiceId, canAutomate = true, onDelta = null, onTool = null, sources = '' }) {
   const s = getSession(userId, sessionId);
   s.updatedAt = now();
-  const text = clip(input, 2000);
+  let text = clip(input, 2000);
+  s.chat ||= [];
   try {
     // keamanan bawaan untuk semua pengguna
     const bad = text && AMAN.find((x) => x.re.test(text));
@@ -558,6 +623,8 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
     if (s.history.length > 12) s.history.shift();
     if (cid === 'poll' || cid.startsWith('resume')) { if (cid.startsWith('resume')) { const prev = state().sessions[key(userId, cid.split(':')[1])]; if (prev) return await render(prev); } return await render(s); }
     if (cid === 'cancel') { cancelWork(s); reset(s); s.notes.push('Sudah kuhentikan.'); return await render(s); }
+    if (cid === 'edit' && s.stage === 'confirm') { s.notes.push('Boleh. Ketik apa yang mau diubah, nanti kuperbarui.'); return await render(s); }
+    if (cid === 'later' && s.stage === 'confirm') { const keep = s.chat; reset(s); s.chat = keep; pushChat(s, 'assistant', 'Siap, nanti saja. Kita lanjut ngobrol; bilang saja kalau mau kukerjakan.'); return chatResponse(s, 'Siap, nanti saja. Kita lanjut ngobrol; bilang saja kalau mau kukerjakan.'); }
     if (cid === 'edit') { s.stage = pickQuestionsFresh(s); return await render(s); }
     if (cid.startsWith('card:')) {
       const [, type, opt] = cid.split(':'); const card = CARDS[type];
@@ -569,21 +636,15 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
 
     // 1. awal
     if (s.stage === 'start') {
-      if (cid.startsWith('intent:')) { s.intent = cid.slice(7); s.stage = 'topic'; if (!INTENTS[s.intent]) { reset(s); return await render(s); } if (INTENTS[s.intent].needsText) s.needInput = true; return await render(s); }
+      // tombol saran dan kartu lama diperlakukan sebagai pesan biasa dari pengguna: obrolan dulu
+      if (cid.startsWith('say:')) text = s.sugg?.[Number(cid.slice(4))] || '';
+      else if (cid.startsWith('intent:')) text = INTENTS[cid.slice(7)]?.kartu || '';
       if (!text) return await render(s);
-      if (SAPAAN.test(text)) return await render(s);
-      if (TERIMA.test(text)) { s.notes.push('Sama-sama! Senang bisa membantu.'); return await render(s); }
-      if (TENTANG.test(text)) { s.notes.push('Aku Pemandu. Aku bantu menulis konten dan pesan, mencari tahu sesuatu, menyusun rencana, meringkas, dan menjelaskan hal baru, lalu merapikan hasilnya sampai kamu puas.'); return await render(s); }
-      s.input = text;
-      s.intent = detectIntent(text);
-      if (!s.intent) {
-        const l1t = await l1Template(text);
-        s.intent = 'umum'; s.l1 = l1t || null;
-        if (l1t) s.notes.push('Aku coba pahami dulu maksudmu.');
-      }
-      if (INTENTS[s.intent]?.needsText && text.length < 140 && !/\n/.test(text)) { s.stage = 'topic'; s.needInput = true; return await render(s); }
-      enterAfterCapture(s); return await render(s);
+      if (text === WORK_LABEL && s.offer) return await proposeWork(s, s.offer);
+      return await converse(s, text, { onDelta, onTool, sources });
     }
+    // sapaan, pertanyaan, dan basa-basi di tengah usulan kerja: usulan dilepas, kita ngobrol (diskusi tidak berubah jadi pekerjaan)
+    if (['topic', 'ask', 'confirm'].includes(s.stage) && !cid && text && breaksOut(text)) { const keep = s.chat; reset(s); s.chat = keep; return await converse(s, text); }
     if (s.stage === 'topic') {
       if (cid === 'delegate' || cid === 'topic:usaha') s.input = profileOf(userId).data.nama ? `tentang ${profileOf(userId).data.nama}` : '(ikuti profil, pilihkan topiknya)';
       else if (text) s.input = text; else return await render(s);
@@ -599,22 +660,16 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
       else s.notes.push('Pilihan itu sudah lewat. Ini yang sekarang:');
       return await render(s);
     }
-    // 3. rencana
-    if (s.stage === 'plan') {
-      if (cid.startsWith('plan:') && tmplOf(s).plans[cid.slice(5)]) { s.planId = cid.slice(5); s.stage = 'confirm'; return await render(s); }
-      if (cid === 'delegate') { s.planId = quota().pct < 25 ? 'fast' : 'balanced'; s.stage = 'confirm'; return await render(s); }
-      if (text) { s.extra = clip(`${s.extra} ${text}`, 400); s.notes.push('Aku catat tambahannya. Pilih rencananya:'); }
-      return await render(s);
-    }
     // 4. konfirmasi lalu kerjakan
     if (s.stage === 'confirm') {
-      if (cid === 'start') { startWork(s); return await render(s); }
+      if (cid === 'start') { s.confirmed = true; pushChat(s, 'assistant', `Baik, aku mulai mengerjakan: ${clip(s.input, 80)}`); startWork(s); return await render(s); }
       if (text) { s.extra = clip(`${s.extra} ${text}`, 400); s.notes.push('Sudah kutambahkan.'); }
       return await render(s);
     }
     // 5. sedang dikerjakan
     if (s.stage === 'work') {
       if (cid === 'redo') { const g = goal(s); if (g) { Object.assign(g, { status: 'todo', failures: 0 }); store.upsert('tasks', g); s.startedAt = now(); } }
+      if (cid === 'jeda' || cid === 'lanjut') setPausedOf(s, cid === 'jeda');
       return await render(s);
     }
     // 6. hasil
@@ -625,11 +680,13 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
         s.noteTitle = db().notes.find((n) => n.id === g?.noteId)?.title || null;
         s.stage = 'done'; s.doneSay = cid === 'save' ? 'Sudah tersimpan di Catatan. Selanjutnya mau apa?' : 'Sip, hasilnya sudah kamu pakai. Selanjutnya mau apa?';
         s.previous = clip(r?.text, 700);
+        pushChat(s, 'assistant', `Hasil "${clip(r?.title, 60)}" sudah dipakai pengguna.`);
         const out = await render(s); return cid === 'use' ? { ...out, copy: r?.text || '' } : out;
       }
       if (cid === 'tweak') { s.stage = 'tweak'; s.awaiting = null; return await render(s); }
       if (cid === 'redo') { revise(s, 'Ulangi dari awal dengan pendekatan yang berbeda dan hasil yang lebih baik.'); return await render(s); }
-      if (text) { revise(s, text); return await render(s); }
+      if (text && !cid && breaksOut(text)) return await converse(s, text, { keep: [o('use', 'Pakai ini', '', 1), o('tweak', 'Ubah sedikit'), o('redo', 'Buat versi lain')] });   // bertanya soal hasil = obrolan, bukan revisi
+      if (text) { revise(s, text); return await render(s); }   // instruksi perbaikan yang diketik pengguna sendiri = konfirmasi
       return await render(s);
     }
     if (s.stage === 'tweak') {
@@ -654,7 +711,7 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
         Object.assign(s, { intent: row[3] || intent, input: row[2] || row[1], previous, answers: same ? answers : {}, l1: same ? l1 : null, qs: [], stage: 'plan' });
         return await render(s);
       }
-      if (text) { reset(s); return await turn({ userId, sessionId: s.id, input: text }); }
+      if (text) { reset(s); return await runTurn({ userId, sessionId: s.id, input: text, canAutomate }); }
       return await render(s);
     }
     return await render(s);
@@ -666,8 +723,9 @@ export async function turn({ userId, sessionId, input, choiceId, canAutomate = t
 function pickQuestionsFresh(s) { s.answers = {}; s.notes = []; pickQuestions(s); return s.qs.length ? 'ask' : 'plan'; }
 function revise(s, feedback) {
   const revs = s.revs + 1;
+  // memilih "Ubah sedikit" / "Buat versi lain" atau mengetik perbaikan adalah perintah eksplisit pengguna atas hasil yang sudah ada
   if (review(s, 'reject', feedback)) { s.stage = 'work'; s.startedAt = now(); }
-  else { const g = goal(s); s.previous = clip(g?.output || g?.summary, 700); s.extra = clip(`${s.extra} ${feedback}`, 400); startWork(s); }   // hasil sudah selesai tanpa konfirmasi: mulai pekerjaan baru dari hasil tadi
+  else { s.confirmed = true; const g = goal(s); s.previous = clip(g?.output || g?.summary, 700); s.extra = clip(`${s.extra} ${feedback}`, 400); startWork(s); }   // hasil sudah selesai tanpa konfirmasi: mulai pekerjaan baru dari hasil tadi
   s.revs = revs; s.awaiting = null;
 }
 
@@ -679,8 +737,7 @@ export function home(userId) {
   const profile = profileView(userId);
   return {
     say: `${greeting()}${nm ? ', ' + nm : ''}!`,
-    sub: 'Aku Pemandu. Ceritakan yang kamu butuhkan, atau ketuk salah satu pilihan.',
-    cards: [...(last ? [{ id: `resume:${last.id}`, label: 'Lanjutkan yang tadi', hint: (last.input || '(').startsWith('(') ? tmplOf(last).label : clip(last.input, 60), ikon: 'clock' }] : []), ...KARTU_AWAL.map((id) => ({ id: `intent:${id}`, label: INTENTS[id].kartu, ikon: INTENTS[id].ikon }))],
+    cards: [],   // menu kartu dihapus (arah Owner): layar awal obrolan memakai chip saran dinamis dari /api/chat/awal
     profile, onboarding: !profile.known && !profile.skipped, quota: quota(),
   };
 }
@@ -695,3 +752,36 @@ export const routes = [
   ['GET', '/api/pemandu/profile', (b) => profileView(who(b))],
   ['PUT', '/api/pemandu/profile', (b) => setProfile(who(b), b.items || {}, { replace: !!b.replace })],
 ];
+
+// ───────────────────────── pintu kecil untuk Chat Engine ─────────────────────────
+/** pekerjaan yang sedang berjalan pada percakapan ini (bila ada) */
+export const goalOf = (userId, sessionId) => { const s = state().sessions[key(userId, sessionId)]; return s ? goal(s) : null; };
+/** lepas usulan kerja yang menunggu (mis. pengguna beralih bertanya kepada orang lain); riwayat obrolan tetap */
+export function abandon(userId, sessionId) { const s = state().sessions[key(userId, sessionId)]; if (s && ['topic', 'ask', 'confirm'].includes(s.stage)) { const keep = s.chat; reset(s); s.chat = keep; } }
+export function dropSession(userId, sessionId) { delete state().sessions[key(userId, sessionId)]; }
+/** catat satu pesan ke riwayat obrolan Sora agar konteksnya ikut terbaca */
+export function remember(userId, sessionId, role, content) { pushChat(getSession(userId, sessionId), role, content); }
+/** usulan kerja langsung (koordinasi aray, "jadikan tugas" dari notulensi): hanya sampai kartu konfirmasi; pekerjaan baru tercipta setelah tombol "Ya, kerjakan" (startWork menolak tanpa itu) */
+export async function usulKerja(userId, sessionId, text) { const s = getSession(userId, sessionId); pushChat(s, 'user', text); return await proposeWork(s, text); }
+/** mundurkan riwayat obrolan sampai SEBELUM pesan pengguna terakhir (untuk "ulangi" dan "ubah pesan"); hanya bila tidak sedang ada pekerjaan atau konfirmasi */
+export function rewindChat(userId, sessionId) {
+  const s = state().sessions[key(userId, sessionId)];
+  if (!s) return { ok: true, teks: '' };
+  if (!['start', 'chat'].includes(s.stage || 'start')) return { ok: false };
+  const chatArr = s.chat || []; let i = chatArr.length - 1;
+  while (i >= 0 && chatArr[i].role !== 'user') i--;
+  const teks = i >= 0 ? chatArr[i].content : '';
+  if (i >= 0) chatArr.splice(i);
+  return { ok: true, teks };
+}
+/** ringkasan percakapan panjang (kompaksi) untuk jalur asisten utama; dipakai sebagai konteks tambahan oleh obrolan */
+export function setRingkasan(userId, sessionId, text) { getSession(userId, sessionId).ringkasan = String(text || ''); }
+
+// ───────────────────────── jeda pekerjaan ─────────────────────────
+/** menjeda atau melanjutkan: bagian yang sudah berjalan tetap selesai, bagian yang menunggu giliran (todo) tidak dimulai selama dijeda (guard `paused` di antrean engine) */
+function setPausedOf(s, on) {
+  const g = goal(s); if (!g || ['done', 'cancelled'].includes(g.status)) return false;
+  for (const t of db().tasks.filter((x) => x.rootId === g.id && !['done', 'cancelled'].includes(x.status))) { if (on) t.paused = true; else delete t.paused; store.upsert('tasks', t); }
+  return true;
+}
+export function setPaused(userId, sessionId, on) { const s = state().sessions[key(userId, sessionId)]; return s ? setPausedOf(s, !!on) : false; }

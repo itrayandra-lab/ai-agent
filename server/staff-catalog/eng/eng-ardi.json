@@ -91,31 +91,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "QA Automation Engineer di divisi Product & Engineering, memakai bahasa awam",
-    "tujuan": "Beri skor tiap kasus uji manual dan tentukan mana yang paling untung diotomasikan lebih dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "prioritas-keputusan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "otomasi uji",
+      "kasus uji",
+      "regresi",
+      "prioritas uji",
+      "balik modal"
+    ],
+    "data": [
+      "kasus uji (nama | sering dijalankan 1-5 | stabil 1-5 | menit",
+      "seberapa agresif mengotomasi?"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
     "contoh": {
       "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
-      "buruk": "Coba perbaiki kodenya."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "otomasi uji"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penentu uji yang layak diotomasikan perlu dibaca bersama: otomasi uji menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
   }
 }

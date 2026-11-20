@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-nilai-skor",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan beri skor berbobot",
+  "version": 1,
+  "name": "Beri skor calon atau gagasan",
+  "ringkas": "Beri skor berbobot pada calon, mitra, kreator, atau gagasan menurut kriteria, lalu urutkan dan beri peringkat layak, ragu, atau tolak.",
+  "kataKunci": ["skor", "nilai", "kandidat", "kriteria", "prioritas", "seleksi"],
+  "kemampuan": {
+    "id": "nilai-skor",
+    "kelompok": "analisis",
+    "tujuanAwam": "Menilai beberapa calon (pelanggan, mitra, kreator, fitur) dengan kriteria berbobot agar pilihan lebih adil dan bisa dipertanggungjawabkan."
+  },
+  "inputs": [
+    { "key": "tujuan", "type": "text", "label": "Apa yang sedang dinilai?", "required": true, "contoh": "Calon mitra reseller" },
+    { "key": "kriteria", "type": "longtext", "label": "Kriteria, satu baris satu kriteria: nama | bobot (angka, makin besar makin penting)", "required": true, "contoh": "Modal | 3\nPengalaman | 2\nLokasi | 1" },
+    { "key": "kandidat", "type": "longtext", "label": "Calon, satu baris satu calon: nama | nilai tiap kriteria (0 sampai 10, urut seperti kriteria)", "required": true, "contoh": "Budi | 8 | 7 | 6\nSari | 9 | 9 | 9\nTono | 4 | 3 | 5" },
+    { "key": "ambang", "type": "choice", "label": "Seberapa ketat penilaiannya?", "required": true, "default": "sedang", "choices": [{ "v": "ketat", "t": "Ketat" }, { "v": "sedang", "t": "Sedang" }, { "v": "longgar", "t": "Longgar" }] }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skor tiap calon",
+      "set": {
+        "kr0": "baris(input.kriteria).map((l) => l.split('|').map((t) => t.trim())).filter((c) => c[0] !== '').map((c) => ({ nama: cut(c[0], 30), bobot: Number.isFinite(num(c[1])) && num(c[1]) > 0 ? Math.min(num(c[1]), 100) : 1 })).slice(0, 8)",
+        "kr": "v.kr0.length ? v.kr0 : [{ nama: 'Nilai umum', bobot: 1 }]",
+        "totBobot": "v.kr.reduce((a, k) => a + k.bobot, 0)",
+        "layak": "input.ambang === 'ketat' ? 80 : input.ambang === 'longgar' ? 60 : 70",
+        "ragu": "v.layak - 20",
+        "cal": "baris(input.kandidat).map((l) => l.split('|').map((t) => t.trim())).filter((c) => c[0] !== '' && c.length >= 2).slice(0, 50).map((c) => { const s = v.kr.map((k, i) => { const x = parseFloat(String(c[i + 1]).replace(',', '.')); return Number.isFinite(x) ? Math.min(10, Math.max(0, x)) : 0; }); const kosong = v.kr.filter((k, i) => !Number.isFinite(parseFloat(String(c[i + 1]).replace(',', '.')))).length; const skor = Math.round(v.kr.reduce((a, k, i) => a + k.bobot * s[i], 0) / v.totBobot * 10); return { nama: cut(c[0], 40), nilai: s, kosong: kosong, skor: skor, label: skor >= v.layak ? 'Layak' : skor >= v.ragu ? 'Ragu' : 'Tolak' }; })",
+        "urut": "v.cal.slice().sort((a, b) => b.skor - a.skor)",
+        "n": "v.urut.length",
+        "nLayak": "v.urut.filter((c) => c.label === 'Layak').length",
+        "nRagu": "v.urut.filter((c) => c.label === 'Ragu').length",
+        "nTolak": "v.urut.filter((c) => c.label === 'Tolak').length",
+        "adaKosong": "v.urut.filter((c) => c.kosong > 0).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? v.n + ' calon dinilai untuk ' + input.tujuan + ': ' + v.nLayak + ' layak, ' + v.nRagu + ' ragu, ' + v.nTolak + ' tolak; teratas ' + v.urut[0].nama + ' (' + v.urut[0].skor + ')' : 'Tidak ada calon yang terbaca, tulis dengan pola: nama | nilai | nilai'",
+    "teks": "'# Penilaian: ' + input.tujuan + '\\n\\nKriteria: ' + v.kr.map((k) => k.nama + ' (bobot ' + k.bobot + ')').join(', ') + '. Batas layak ' + v.layak + ', ragu mulai ' + v.ragu + '.\\n\\n' + (v.n ? tabel(['Peringkat', 'Calon', 'Skor (0-100)', 'Hasil'], v.urut.map((c, i) => [i + 1, c.nama, c.skor, c.label])) + (v.adaKosong ? '\\n\\nCatatan: ' + v.adaKosong + ' calon punya nilai yang kosong atau tidak terbaca (dihitung 0); lengkapi dulu.' : '') : 'Belum ada calon yang bisa dibaca. Tulis satu calon per baris dengan pola: nama | nilai | nilai.')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'skor-' + cut(String(input.tujuan).toLowerCase(), 30)", "isi": "csv([['peringkat', 'calon', 'skor', 'hasil']].concat(v.urut.map((c, i) => [i + 1, c.nama, c.skor, c.label])))" }
+    ],
+    "data": "({ n: v.n, layak: v.nLayak, ragu: v.nRagu, tolak: v.nTolak, teratas: v.n ? v.urut[0].nama : '', skorTeratas: v.n ? v.urut[0].skor : 0, kriteria: v.kr.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "tujuan": "Calon mitra reseller", "kriteria": "Modal | 3\nPengalaman | 2\nLokasi | 1", "kandidat": "Budi | 8 | 7 | 6\nSari | 9 | 9 | 9\nTono | 4 | 3 | 5", "ambang": "sedang" }, "expect": { "berkas": 1, "mengandungAturan": ["3 calon dinilai untuk Calon mitra reseller", "2 layak", "1 tolak"], "mengandung": ["3 calon dinilai"] } },
+  "otakProfil": {
+    "peran": "penilai yang adil dan menjelaskan hasil skor kepada orang awam",
+    "tujuan": "Terangkan mengapa calon teratas unggul, siapa yang masih ragu dan apa yang perlu dilengkapi, tanpa mengubah skor.",
+    "gaya": "adil, tenang, menghargai semua calon, menyebut angka apa adanya",
+    "pedoman": ["Pakai hanya nama, kriteria dan skor yang diberikan; jangan mengubah skor.", "Untuk calon yang ragu, sebut kriteria yang perlu diperjelas.", "Ingatkan bahwa skor adalah alat bantu, keputusan akhir tetap di tangan manusia."],
+    "skema": { "pembahasan": "teks", "unggul": "daftar", "perlu_dicek": "daftar", "saran": "pilihan:lanjutkan-teratas|wawancara-yang-ragu|ubah-kriteria" },
+    "contoh": { "baik": "Sari unggul di semua kriteria; Budi layak tetapi lemah di lokasi sehingga perlu dicek.", "buruk": "Sari bagus, yang lain jelek." },
+    "batas": { "pembahasan": 600, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["skor"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Calon teratas unggul pada hampir semua kriteria sehingga skornya tinggi; calon yang ragu perlu dicek pada kriteria yang nilainya rendah.\",\"unggul\":[\"Skor tertinggi\"],\"perlu_dicek\":[\"Kriteria bernilai rendah pada calon ragu\"],\"saran\":\"lanjutkan-teratas\"}"
+  },
+  "evaluasi": [
+    {
+      "nama": "tiga calon ambang sedang",
+      "input": { "tujuan": "Calon mitra reseller", "kriteria": "Modal | 3\nPengalaman | 2\nLokasi | 1", "kandidat": "Budi | 8 | 7 | 6\nSari | 9 | 9 | 9\nTono | 4 | 3 | 5", "ambang": "sedang" },
+      "ai": "{\"pembahasan\":\"Sari unggul di semua kriteria dengan skor tertinggi, Budi layak, dan Tono tertinggal di modal sehingga skornya rendah.\",\"unggul\":[\"Sari skor tertinggi\"],\"perlu_dicek\":[\"Modal Tono\"],\"saran\":\"lanjutkan-teratas\"}",
+      "kriteria": { "mengandung": ["Sari", "skor"], "mengandungAturan": ["Layak", "Tolak"], "panjangMin": 100, "panjangMaks": 3000, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.skorTeratas", "min": 90, "max": 90 }, { "path": "data.layak", "min": 2, "max": 2 }, { "path": "data.tolak", "min": 1, "max": 1 }] }
+    },
+    {
+      "nama": "ambang ketat dan nilai kosong",
+      "input": { "tujuan": "Kreator konten", "kriteria": "Jangkauan | 2\nKecocokan | 2", "kandidat": "Ani | 9 | 8\nRudi | 7\nDewi | x | 6", "ambang": "ketat" },
+      "ai": "{\"pembahasan\":\"Dengan ambang ketat hanya skor tinggi yang layak; dua calon punya nilai kosong sehingga skornya perlu dilengkapi dulu.\",\"unggul\":[\"Ani paling lengkap\"],\"perlu_dicek\":[\"Nilai kosong Rudi dan Dewi\"],\"saran\":\"wawancara-yang-ragu\"}",
+      "kriteria": { "mengandung": ["ambang", "skor"], "mengandungAturan": ["kosong"], "panjangMin": 80, "panjangMaks": 3000, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.skorTeratas", "min": 85, "max": 85 }, { "path": "data.layak", "min": 1, "max": 1 }] }
+    },
+    {
+      "nama": "bobot aneh dan nilai kurang",
+      "input": { "tujuan": "Prioritas fitur", "kriteria": "Daya tarik | abc", "kandidat": "Fitur A | 6\nFitur B | 9 | 9", "ambang": "longgar" },
+      "ai": "{\"pembahasan\":\"Karena kriteria tidak ada, penilaian memakai nilai umum saja; skor fitur B tertinggi dan fitur A masih ragu.\",\"unggul\":[\"Fitur B\"],\"perlu_dicek\":[\"Tentukan kriteria yang jelas\"],\"saran\":\"ubah-kriteria\"}",
+      "kriteria": { "mengandung": ["kriteria"], "mengandungAturan": ["Daya tarik", "Fitur B"], "panjangMin": 80, "panjangMaks": 3000, "nilai": [{ "path": "data.n", "min": 2, "max": 2 }, { "path": "data.kriteria", "min": 1, "max": 1 }, { "path": "data.skorTeratas", "min": 90, "max": 90 }] }
+    },
+    {
+      "nama": "daftar calon kosong",
+      "input": { "tujuan": "Konsep iklan", "kriteria": "Daya tarik | 1", "kandidat": "tidak ada", "ambang": "sedang" },
+      "ai": "{\"pembahasan\":\"Belum ada calon yang terbaca sehingga belum ada skor; tulis ulang dengan pola nama dan nilai.\",\"unggul\":[\"Belum ada\"],\"perlu_dicek\":[\"Pola penulisan calon\"],\"saran\":\"ubah-kriteria\"}",
+      "kriteria": { "mengandung": ["skor"], "mengandungAturan": ["Belum ada calon"], "panjangMin": 40, "panjangMaks": 3000, "nilai": [{ "path": "data.n", "min": 0, "max": 0 }] }
+    }
+  ]
+}

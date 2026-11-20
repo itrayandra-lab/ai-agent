@@ -85,31 +85,30 @@
     "folder": "Report",
     "simpan": false
   },
-  "otakProfil": {
-    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
-    "tujuan": "Hitung harga akhir setelah satu sampai tiga diskon berurutan, beserta jumlah yang dihemat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "diskon",
+      "potongan",
+      "harga akhir",
+      "promo",
+      "hemat"
+    ],
+    "data": [
+      "harga awal (rp)",
+      "diskon pertama (%)",
+      "diskon kedua (%)",
+      "diskon ketiga (%)"
+    ],
     "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
-      "buruk": "Hasil sudah benar."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "diskon"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung diskon bertingkat perlu dibaca bersama: diskon menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
   }
 }

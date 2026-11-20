@@ -3,7 +3,7 @@
 // Jalur pengelola (admin) dikecualikan secara eksplisit lewat DAFTAR_PUTIH_PENGELOLA di bawah, tidak diam-diam.
 export const TERLARANG = [
   'agen', 'agent', 'agents', 'goal', 'goals', 'task', 'tasks', 'approval', 'approvals', 'persetujuan', 'mcp', 'tool', 'tools',
-  'capability', 'brain', 'second brain', 'knowledge base', 'workspace', 'token', 'tokens', 'model', 'prompt', 'error', 'api', 'json', 'orkestrator',
+  'capability', 'brain', 'second brain', 'knowledge base', 'workspace', 'token', 'tokens', 'model', 'prompt', 'error', 'api', 'json', 'orkestrator', 'orchestrator', 'pemandu',
 ];
 /** kata teknis tambahan yang juga tidak boleh tampil bagi pengguna biasa */
 export const TAMBAHAN = ['workflow', 'n8n', 'provider', 'effort', 'endpoint', 'npm', 'localhost', 'webhook', 'api key', 'sse', 'llm', 'groq', 'anthropic', 'jsonl', 'dataset', 'fine-tuning', 'knowledge graph', 'cron', 'orchestrator', 'dashboard', 'chat', 'konsol', 'persona', 'otonomi', 'sandbox', 'review', 'blocked', 'kanban', 'timeline'];

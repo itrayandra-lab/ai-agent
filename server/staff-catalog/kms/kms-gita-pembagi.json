@@ -89,31 +89,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "AI Training Data Engineer di divisi Knowledge & AI Ops, memakai bahasa awam",
-    "tujuan": "Bagi daftar contoh menjadi bagian latih dan uji dengan perbandingan pilihan, hasilnya tetap sama bila diulang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "kelola-pengetahuan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bagi data",
+      "data uji",
+      "train test",
+      "dataset",
+      "pembagian"
+    ],
+    "data": [
+      "contoh teks (satu per baris)",
+      "perbandingan latih / uji"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
     "contoh": {
       "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
-      "buruk": "Simpan saja."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "bagi data"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembagi data latih dan data uji perlu dibaca bersama: bagi data menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
   }
 }

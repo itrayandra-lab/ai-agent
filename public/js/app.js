@@ -9,6 +9,8 @@ import { bisaKelola, kosong } from './awam.js';
 const $ = (q) => document.querySelector(q);
 const navIc = (id, size) => goldIcon(id, size, VIEWS[id]?.ic || id);   // ikon emas bila ada; yang lain ikon garis
 let current = null;
+const LEFT = ['dashboard', 'pesan', 'tasks', 'brain', 'team', 'settings'];   // 'pesan' = halaman kontak agen/grup dari sesi Chat: otomatis tampil di panel kiri begitu VIEWS.pesan terdaftar   // halaman yang tampil di PANEL KIRI di atas Kantor 3D (desktop)
+const desktop = () => !matchMedia('(max-width: 820px)').matches;
 let connected = false;
 
 window.setTheme = (t) => {
@@ -25,8 +27,8 @@ function badges() {
 }
 
 // Menu utama: empat layar. Sisanya terlipat di "Lainnya". Jalur pengelola (#admin) tidak ditautkan di sini.
-const CORE = ['dashboard', 'tasks', 'brain', 'team'];
-const MORE = ['office', 'settings'];
+const CORE = ['office', 'dashboard', 'pesan', 'tasks', 'brain', 'team'];   // Kantor 3D utama; Beranda = versi obrolan untuk yang malas melihat 3D
+const MORE = ['settings'];
 let moreOpen = false;
 let collapsed = true;   // selalu ciut setiap halaman dimuat; buka-tutup manual hanya berlaku selama sesi halaman
 
@@ -36,12 +38,12 @@ function jatah(d) { const b = Number(d.settings.dailyBudgetUSD) || 0; if (!b) re
 function renderNav() {
   const b = badges();
   const d = S.data;
-  const item = (id) => { const v = VIEWS[id]; const n = b[id] || 0; return `<button type="button" class="nav-item ${S.view === id ? 'active' : ''}" data-nav="${id}" title="${v.title}" ${S.view === id ? 'aria-current="page"' : ''}><span class="ic">${navIc(id, 28)}</span><span class="lbl"><b>${v.title}</b></span>${n ? `<span class="badge" aria-label="${n} menunggu">${n}</span>` : ''}</button>`; };
+  const item = (id) => { const v = VIEWS[id]; const n = b[id] || 0; return `<button type="button" class="nav-item ${S.view === id ? 'active' : ''}" data-nav="${id}" title="${v.title}" aria-label="${v.title}" ${S.view === id ? 'aria-current="page"' : ''}><span class="ic">${navIc(id, 28)}</span><span class="lbl"><b>${v.title}</b></span>${n ? `<span class="badge" aria-label="${n} menunggu">${n}</span>` : ''}</button>`; };
   const ai = d.employees.filter((e) => e.type === 'ai');
   const active = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length;
   document.getElementById('app').classList.toggle('nav-collapsed', collapsed);
   $('#sidebar').innerHTML = `<div class="brand"><div class="logo"><img src="/assets/brand/logo-mark-white.webp" alt="" width="34" height="34"></div><span class="lbl"><img class="wordmark-img" src="/assets/brand/logo-wordmark-light.webp" alt="RAIVERSE AGENT" width="112" height="28"><small>${esc(d.company.name)}</small></span><button type="button" class="btn icon ghost nav-toggle" id="navtg" aria-label="${collapsed ? 'Perluas menu' : 'Ciutkan menu'}" aria-expanded="${!collapsed}" title="${collapsed ? 'Perluas menu' : 'Ciutkan menu'}">${icon(collapsed ? 'expand' : 'collapse', 16)}</button></div>
-    <div class="nav-group">${CORE.map(item).join('')}</div>
+    <div class="nav-group">${CORE.filter((id) => id !== 'office').map(item).join('')}</div>
     <div class="side-foot">
       <button type="button" class="engine" id="modepill" aria-label="Jeda atau lanjutkan kerja tim" title="Jeda atau lanjutkan kerja tim"><span class="dot ${d.settings.autonomy ? 'on' : ''}"></span><span class="lbl">${!d.settings.autonomy ? 'Dijeda' : active ? 'Sedang bekerja' : 'Siap membantu'} · Jatah ${jatah(d)}</span></button>
     </div>
@@ -52,7 +54,7 @@ function renderNav() {
   $('#sidebar .logo').onclick = () => { if (collapsed) $('#navtg').click(); };   // menu ciut: logo ikut membukanya
   $('#bottomnav').innerHTML = CORE.map((id) => `<button type="button" class="${S.view === id ? 'active' : ''}" data-nav="${id}" aria-label="${VIEWS[id].title}" ${S.view === id ? 'aria-current="page"' : ''}><span class="ic">${navIc(id, 24)}</span><span>${VIEWS[id].short || VIEWS[id].title.split(' ')[0]}</span>${b[id] ? `<span class="badge" aria-label="${b[id]} menunggu">${b[id]}</span>` : ''}</button>`).join('');
   $('#bottomnav').insertAdjacentHTML('beforeend', `<button type="button" id="bnmore" aria-label="Menu lainnya" class="${MORE.includes(S.view) ? 'active' : ''}"><span class="ic">${goldIcon('more', 24)}</span><span>Lainnya</span></button>`);
-  document.querySelectorAll('[data-nav]').forEach((x) => (x.onclick = () => navigate(x.dataset.nav)));
+  document.querySelectorAll('[data-nav]').forEach((x) => (x.onclick = () => { const id = x.dataset.nav; navigate(id === S.view && desktop() && LEFT.includes(id) ? 'office' : id); /* klik item yang sedang terbuka = tutup panel */ }));
   $('#bnmore').onclick = openMenu;
 }
 
@@ -85,11 +87,18 @@ function route() {
   S.view = next;
   moreOpen = false;   // "Lainnya" tertutup dan menutup lagi setelah berpindah
   const root = $('#view');
-  if (current) current.unmount?.(root);
-  root.innerHTML = '';
-  root.scrollTop = 0;
-  current = VIEWS[next].view;
-  current.mount(root);
+  const office = VIEWS.office.view;
+  if (desktop() && (next === 'office' || LEFT.includes(next))) {
+    // Kantor 3D adalah ruang kerja utama: tetap terpasang, halaman lain hanya mengganti isi PANEL KIRI
+    if (current !== office) { current?.unmount?.(root); root.innerHTML = ''; root.scrollTop = 0; current = office; office.mount(root); }
+    office.setLeft(next === 'office' ? null : next);
+  } else {
+    if (current) current.unmount?.(root);
+    root.innerHTML = '';
+    root.scrollTop = 0;
+    current = VIEWS[next].view;
+    current.mount(root);
+  }
   renderNav(); renderTop();
   document.title = `${VIEWS[next].title} · RAIVERSE AGENT`;
 }
@@ -119,7 +128,7 @@ function openPalette() {
       ...S.data.notes.filter((n) => q && (m(n.title) || m(n.content))).slice(0, 8).map((n) => ({ icon: 'doc', label: n.title, run: () => navigate('brain', { note: n.id }), k: 'catatan' })),
       ...S.data.tasks.filter((t) => q && !t.parentId && m(t.title)).slice(-8).reverse().map((t) => ({ icon: 'tasks', label: t.title, run: () => navigate('tasks', { buka: t.id }), k: 'hasil' })),
     ].slice(0, 30);
-    if (q && !items.some((i) => i.k === 'orang' || i.k === 'catatan' || i.k === 'hasil')) items.push({ icon: 'spark', label: `Tanya Pemandu: “${input.value}”`, run: () => navigate('dashboard', { mulai: input.value }), k: 'pemandu' });
+    if (q && !items.some((i) => i.k === 'orang' || i.k === 'catatan' || i.k === 'hasil')) items.push({ icon: 'spark', label: `Tanya aray: “${input.value}”`, run: () => navigate('dashboard', { mulai: input.value }), k: 'pemandu' });
     sel = Math.max(0, Math.min(sel, items.length - 1));
     p.querySelector('#pl').innerHTML = items.map((it, i) => `<div class="pal-i ${i === sel ? 'sel' : ''}" role="option" aria-selected="${i === sel}" tabindex="0" data-i="${i}"><span aria-hidden="true">${icon(it.icon)}</span><span class="pal-t">${esc(it.label)}</span><span class="k">${esc(it.k)}</span></div>`).join('');
     p.querySelectorAll('[data-i]').forEach((x) => { x.onclick = () => choose(+x.dataset.i); x.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(+x.dataset.i); } }; });
@@ -140,7 +149,7 @@ function openPalette() {
 document.addEventListener('click', (e) => { const b = e.target.closest?.('[data-copy]'); if (!b) return; const t = b.closest('.codebox')?.querySelector('code')?.textContent || ''; navigator.clipboard?.writeText(t).then(() => { b.textContent = 'Tersalin'; setTimeout(() => (b.textContent = 'Salin'), 1500); }).catch(() => {}); });
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette(); }
-  if (e.key === 'Escape') { if (!$('#palette').hidden) return; if (!$('#modal').hidden) { $('#modal').hidden = true; $('#modal').innerHTML = ''; } else closeDrawer(); }
+  if (e.key === 'Escape') { if (!$('#palette').hidden) return; if (desktop() && LEFT.includes(S.view) && $('#modal').hidden && !drawerKey()) { navigate('office'); return; } if (!$('#modal').hidden) { $('#modal').hidden = true; $('#modal').innerHTML = ''; } else closeDrawer(); }
 });
 
 // ───── mulai
@@ -159,7 +168,8 @@ document.addEventListener('keydown', (e) => {
     const [v, q] = location.hash.slice(1).split('?');
     if (VIEWS[v] || LEGACY[v]) navigate(v, Object.fromEntries(new URLSearchParams(q || '')));
   });
-  connect((ok) => { if (ok !== connected) { connected = ok; renderTop(); if (ok) loadState(); } });
+  let sambungPertama = true;   // perf: sambungan pertama tidak mengunduh ulang seluruh data yang baru saja dimuat; hanya sambungan ulang yang menyegarkan
+  connect((ok) => { if (ok !== connected) { connected = ok; renderTop(); if (ok) { if (sambungPertama) sambungPertama = false; else loadState(); } } });
   onChange((colls) => {
     if (colls.has('__route')) return route();
     current?.update?.(colls);

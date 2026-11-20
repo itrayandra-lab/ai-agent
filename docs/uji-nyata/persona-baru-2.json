@@ -1,0 +1,180 @@
+{
+  "versi": "baru",
+  "model": "openai/gpt-oss-20b / openai/gpt-oss-20b",
+  "jumlah": 11,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0.00115,
+  "detik": 6,
+  "skor": {
+    "ketepatan": 1,
+    "kejujuran": 0,
+    "kejelasan": 1,
+    "alat": null,
+    "konfirmasi": 1,
+    "respons": 0.9696969696969696
+  },
+  "total": 0.793939393939394,
+  "gagal": [
+    {
+      "id": "persona-3",
+      "catatan": [
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ]
+    },
+    {
+      "id": "persona-10",
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku Reno, digital marketing strategist yang fokus pada funnel end-to-end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-2",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Saya ahli strategi digital marketing, fokus pada funnel end-to-end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-3",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.6666666666666666,
+      "catatan": [
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ],
+      "jawaban": "Hai! Aku Reno, digital marketing strategist.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-4",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku ahli strategi digital marketing, funnel end-to-end, dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-5",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Digital Marketing Strategist: fokus funnel end‑to‑end & atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-6",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku spesialis digital marketing, fokus pada funnel end‑to‑end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-7",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Pengalaman saya di bidang iklan digital sudah lebih dari 5 tahun, fokus pada strategi funnel end-to-end dan analisis atribusi untuk meningkatkan konversi pelanggan.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-8",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Pilih membuat funnel penjualan sederhana: landing page, email drip, dan retargeting. Itu cepat, biaya rendah, dan mudah diukur.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-9",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Gunakan ROAS setiap kali kamu mau tahu efektivitas kampanye iklan: hitung ROAS sebelum kampanye, di tengah, dan setelah kampanye selesai untuk memonitor perubahan dan mengoptimalkan anggaran.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-10",
+      "kategori": "persona",
+      "ketepatan": null,
+      "kejujuran": 0,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ],
+      "jawaban": "Kita mulai kerja jam 08:00 pagi, siap mendukung kampanyemu.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-11",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Hai, siap membantu kamu dengan strategi digital marketing",
+      "alatDipakai": []
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-hitung-sdm",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan hitungan kepegawaian",
+  "version": 1,
+  "name": "Hitungan cuti, gaji, dan pelatihan",
+  "ringkas": "Hitung sisa cuti, gaji bersih dengan potongan jaminan sosial, atau seberapa efektif pelatihan, lalu jelaskan hasilnya.",
+  "kataKunci": ["cuti", "gaji", "bpjs", "pelatihan", "karyawan", "potongan", "efektivitas"],
+  "kemampuan": {
+    "id": "hitung-sdm",
+    "kelompok": "hitungan",
+    "tujuanAwam": "Membantu urusan pegawai: sisa cuti, gaji bulanan sederhana dengan potongan BPJS, dan hasil pelatihan dibanding biayanya."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau menghitung apa?", "required": true, "default": "cuti", "choices": [{ "v": "cuti", "t": "Sisa cuti" }, { "v": "gaji", "t": "Gaji bulanan" }, { "v": "pelatihan", "t": "Hasil pelatihan" }] },
+    { "key": "nilai", "type": "number", "label": "Angka pertama: jatah cuti setahun (hari), gaji pokok (rupiah), atau nilai rata-rata sebelum pelatihan", "required": true, "contoh": "12" },
+    { "key": "kedua", "type": "number", "label": "Angka kedua: cuti terpakai (hari), tunjangan tetap (rupiah), atau nilai rata-rata sesudah pelatihan", "required": false, "contoh": "5" },
+    { "key": "ketiga", "type": "number", "label": "Angka ketiga: sisa cuti tahun lalu (hari), lembur atau bonus (rupiah), atau jumlah peserta", "required": false, "contoh": "2" },
+    { "key": "keempat", "type": "number", "label": "Angka keempat: lama bekerja tahun ini (bulan, bawaan 12), atau total biaya pelatihan (rupiah)", "required": false, "contoh": "12" }
+  ],
+  "steps": [
+    {
+      "id": "urai",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "a": "num(input.nilai)",
+        "b": "num(input.kedua)",
+        "c": "num(input.ketiga)",
+        "d": "num(input.keempat)"
+      }
+    },
+    {
+      "id": "hitung1",
+      "use": "hitung",
+      "label": "Hitung cuti dan gaji",
+      "set": {
+        "hc": "(() => { const bulan = v.d > 0 ? Math.min(12, v.d) : 12; const pro = Math.round(v.a * bulan / 12 * 10) / 10; const sisa = Math.round((pro + v.c - v.b) * 10) / 10; return { judul: 'Sisa cuti', inti: 'sisa cuti ' + sisa + ' hari dari jatah ' + pro + ' hari', kepala: ['Komponen', 'Jumlah'], rows: [['Jatah cuti setahun', v.a + ' hari'], ['Lama bekerja tahun ini', bulan + ' bulan'], ['Jatah sesuai masa kerja', pro + ' hari'], ['Sisa dari tahun lalu', v.c + ' hari'], ['Sudah terpakai', v.b + ' hari'], ['Sisa cuti', sisa + ' hari']], data: { sisa: sisa, jatah: pro, terpakai: v.b, bulan: bulan } }; })()",
+        "hg": "(() => { const dasar = v.a + v.b; const bruto = v.a + v.b + v.c; const jht = Math.round(dasar * 0.02); const jp = Math.round(Math.min(dasar, 10547400) * 0.01); const kes = Math.round(Math.min(dasar, 12000000) * 0.01); const pot = jht + jp + kes; const pJht = Math.round(dasar * 0.037); const pJp = Math.round(Math.min(dasar, 10547400) * 0.02); const pKes = Math.round(Math.min(dasar, 12000000) * 0.04); const pJkk = Math.round(dasar * 0.0024); const pJkm = Math.round(dasar * 0.003); const pt = pJht + pJp + pKes + pJkk + pJkm; return { judul: 'Gaji bulanan sederhana', inti: 'gaji bersih ' + rp(bruto - pot) + ' dari penghasilan kotor ' + rp(bruto), kepala: ['Komponen', 'Jumlah'], rows: [['Gaji pokok', rp(v.a)], ['Tunjangan tetap', rp(v.b)], ['Lembur atau bonus', rp(v.c)], ['Penghasilan kotor', rp(bruto)], ['Potongan jaminan hari tua (2%)', rp(jht)], ['Potongan jaminan pensiun (1%)', rp(jp)], ['Potongan BPJS Kesehatan (1%)', rp(kes)], ['Total potongan', rp(pot)], ['Gaji bersih (belum pajak penghasilan)', rp(bruto - pot)], ['Beban perusahaan untuk jaminan sosial', rp(pt)], ['Biaya perusahaan seluruhnya', rp(bruto + pt)]], data: { kotor: bruto, potongan: pot, bersih: bruto - pot, bebanPerusahaan: pt, biayaPerusahaan: bruto + pt } }; })()"
+      }
+    },
+    {
+      "id": "hitung2",
+      "use": "hitung",
+      "label": "Hitung pelatihan dan periksa isian",
+      "set": {
+        "hp": "(() => { const naik = Math.round((v.b - v.a) * 100) / 100; const pr = v.a > 0 ? Math.round(naik / v.a * 10000) / 100 : 0; const bp = v.c > 0 ? Math.round(v.d / v.c) : 0; const pp = naik > 0 && v.c > 0 ? Math.round(v.d / (naik * v.c)) : 0; const nilai = pr >= 10 ? 'efektif' : pr > 0 ? 'naik sedikit' : 'belum efektif'; return { judul: 'Hasil pelatihan', inti: 'nilai naik ' + naik + ' poin (' + pr + '%), penilaian ' + nilai, kepala: ['Komponen', 'Hasil'], rows: [['Nilai rata-rata sebelum', v.a], ['Nilai rata-rata sesudah', v.b], ['Kenaikan', naik + ' poin'], ['Kenaikan persen', pr + '%'], ['Jumlah peserta', v.c], ['Total biaya', rp(v.d)], ['Biaya per peserta', v.c > 0 ? rp(bp) : '-'], ['Biaya per poin kenaikan per peserta', pp ? rp(pp) : '-'], ['Penilaian sederhana (naik 10% atau lebih dianggap efektif)', nilai]], data: { naik: naik, persen: pr, biayaPeserta: bp, biayaPerPoin: pp } }; })()",
+        "pilih": "({ cuti: v.hc, gaji: v.hg, pelatihan: v.hp })[input.jenis] || v.hc",
+        "peringatan": "[input.jenis === 'cuti' && v.hc.data.sisa < 0 ? 'Cuti yang terpakai melebihi jatah, periksa lagi catatannya.' : '', input.jenis === 'cuti' && v.a <= 0 ? 'Jatah cuti setahun belum benar.' : '', input.jenis === 'cuti' && v.d > 12 ? 'Lama bekerja di atas 12 bulan dibulatkan menjadi 12.' : '', input.jenis === 'gaji' && v.a <= 0 ? 'Gaji pokok harus lebih dari 0.' : '', input.jenis === 'gaji' ? 'Hitungan memakai patokan umum dan belum memuat pajak penghasilan; cocokkan dengan aturan terbaru.' : '', input.jenis === 'pelatihan' && v.c <= 0 ? 'Jumlah peserta belum diisi, biaya per peserta belum bisa dihitung.' : '', input.jenis === 'pelatihan' && v.a <= 0 ? 'Nilai sebelum pelatihan harus lebih dari 0 agar persen kenaikan bisa dihitung.' : ''].filter((t) => t !== '')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.pilih.judul + ': ' + v.pilih.inti",
+    "teks": "'# ' + v.pilih.judul + '\\n\\n' + tabel(v.pilih.kepala, v.pilih.rows) + (v.peringatan.length ? '\\n\\nPerhatian: ' + v.peringatan.join(' ') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'sdm-' + input.jenis", "isi": "csv([v.pilih.kepala].concat(v.pilih.rows))" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, peringatan: v.peringatan.length }, v.pilih.data)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "cuti", "nilai": "12", "kedua": "5", "ketiga": "2", "keempat": "6" }, "expect": { "berkas": 1, "mengandung": ["Sisa cuti", "3 hari"] } },
+  "otakProfil": {
+    "peran": "pendamping urusan kepegawaian yang menjelaskan hitungan kepada orang awam",
+    "tujuan": "Terangkan hasil hitungan cuti, gaji, atau pelatihan: apa artinya bagi pegawai atau perusahaan, dan apa yang perlu dicocokkan dengan aturan resmi.",
+    "gaya": "sopan, netral, sebut angka apa adanya",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Ingatkan bahwa gaji bersih belum memuat pajak penghasilan dan aturan perusahaan bisa berbeda.", "Jangan memberi penilaian terhadap pribadi pegawai; bahas angkanya saja."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Sisa cuti 3 hari sudah termasuk 2 hari dari tahun lalu; cocokkan dengan catatan resmi sebelum disetujui.", "buruk": "Cutinya masih banyak, santai saja." },
+    "batas": { "pembahasan": 500, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["hasil"], "minPanjang": 30, "maksPanjang": 500 },
+    "contohAI": "{\"pembahasan\":\"Hasil hitungan sudah menjumlah semua komponen yang diisi. Cocokkan dengan catatan resmi atau aturan perusahaan sebelum dipakai.\",\"poin\":[\"Semua komponen sudah masuk\"],\"langkah\":[\"Cocokkan dengan catatan resmi\"]}"
+  },
+  "evaluasi": [
+    { "nama": "sisa cuti dengan masa kerja separuh tahun", "input": { "jenis": "cuti", "nilai": "12", "kedua": "5", "ketiga": "2", "keempat": "6" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan jatah cuti dihitung sesuai masa kerja, lalu ditambah sisa tahun lalu dan dikurangi cuti yang terpakai.\",\"poin\":[\"Sisa tiga hari\"],\"langkah\":[\"Cocokkan dengan catatan resmi\"]}", "kriteria": { "mengandung": ["hasil", "cuti"], "mengandungAturan": ["Sisa cuti", "3 hari"], "panjangMin": 100, "panjangMaks": 2000, "nilai": [{ "path": "data.sisa", "min": 3, "max": 3 }, { "path": "data.jatah", "min": 6, "max": 6 }] } },
+    { "nama": "cuti terpakai melebihi jatah", "input": { "jenis": "cuti", "nilai": "12", "kedua": "15" }, "ai": "{\"pembahasan\":\"Hasil bernilai minus karena cuti yang terpakai lebih banyak dari jatah, jadi catatannya perlu diperiksa.\",\"poin\":[\"Sisa minus tiga hari\"],\"langkah\":[\"Periksa catatan cuti\"]}", "kriteria": { "mengandung": ["minus", "catatan"], "mengandungAturan": ["melebihi jatah", "-3 hari"], "panjangMin": 100, "panjangMaks": 2000, "nilai": [{ "path": "data.sisa", "min": -3, "max": -3 }, { "path": "data.peringatan", "min": 1, "max": 3 }] } },
+    { "nama": "gaji dengan tunjangan dan angka bertitik", "input": { "jenis": "gaji", "nilai": "Rp 5.000.000", "kedua": "500.000" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan gaji bersih setelah potongan jaminan sosial; pajak penghasilan belum termasuk sehingga angka akhir bisa lebih kecil.\",\"poin\":[\"Potongan sekitar empat persen\"],\"langkah\":[\"Cocokkan dengan aturan pajak\"]}", "kriteria": { "mengandung": ["gaji bersih", "pajak"], "mengandungAturan": ["Gaji bersih", "5.280.000"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.bersih", "min": 5280000, "max": 5280000 }, { "path": "data.potongan", "min": 220000, "max": 220000 }, { "path": "data.biayaPerusahaan", "min": 6063000, "max": 6064000 }] } },
+    { "nama": "gaji tinggi melewati batas iuran", "input": { "jenis": "gaji", "nilai": "15000000" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan iuran pensiun dan kesehatan berhenti di batas upah tertentu sehingga potongan tidak naik sebanding gaji.\",\"poin\":[\"Ada batas upah iuran\"],\"langkah\":[\"Cek batas terbaru\"]}", "kriteria": { "mengandung": ["batas", "iuran"], "mengandungAturan": ["Total potongan"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.potongan", "min": 525000, "max": 526000 }, { "path": "data.bersih", "min": 14474000, "max": 14475000 }] } },
+    { "nama": "efektivitas pelatihan", "input": { "jenis": "pelatihan", "nilai": "60", "kedua": "75", "ketiga": "20", "keempat": "10.000.000" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan nilai rata-rata naik seperempat dari sebelumnya dengan biaya yang bisa dibandingkan per peserta.\",\"poin\":[\"Kenaikan dua puluh lima persen\"],\"langkah\":[\"Ulangi tes tiga bulan lagi\"]}", "kriteria": { "mengandung": ["pelatihan", "peserta", "seperempat"], "mengandungAturan": ["Biaya per peserta", "efektif"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.naik", "min": 15, "max": 15 }, { "path": "data.persen", "min": 25, "max": 25 }, { "path": "data.biayaPeserta", "min": 500000, "max": 500000 }, { "path": "data.biayaPerPoin", "min": 33000, "max": 33400 }] } }
+  ]
+}

@@ -1,10 +1,11 @@
 // Collaboration layer: real multi-agent meetings, colleague consultation, continual learning,
 // cron scheduling, web page reading and an MCP (Model Context Protocol) client.
+import * as config from './config.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import * as store from './store.js';
-import * as brain from './brain.js';
-import * as llm from './llm.js';
+import * as store from './penyimpanan/store.js';
+import * as brain from './pengetahuan/brain.js';
+import * as llm from './otak/llm.js';
 import * as engine from './engine.js';
 
 const db = () => store.get();
@@ -446,7 +447,7 @@ export function recordTraining(e, t, systemText, userText) {
     e.stats.trainingExamples = (e.stats.trainingExamples || 0) + 1;
   } catch (err) { console.warn('[training]', err.message); }
 }
-export function trainingDir() { return path.join(process.env.DATA_DIR || path.resolve('data'), 'training', 'workspaces', store.current()); }
+export function trainingDir() { return path.join(config.dataDir(), 'training', 'workspaces', store.current()); }
 export function trainingFile(id) { if (!/^[\w-]+$/.test(id)) throw new Error('ID agen tidak valid'); return path.join(trainingDir(), `${id}.jsonl`); }
 
 // ═════════════════════ cron ═════════════════════
@@ -507,10 +508,10 @@ export async function assertMcpUrl(raw, wsId = store.current()) {
   const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (wsId === 'main' && process.env.MCP_BLOCK_PRIVATE !== '1') {
     if (/^(169\.254\.|metadata\.google\.internal$|fd00:ec2::)/.test(host)) throw new Error('Alamat metadata awan tidak diizinkan untuk server MCP.');
-    if (/^(localhost|127\.0\.0\.1|::1)$/.test(host) && Number(u.port || 80) === Number(process.env.PORT || 4317)) throw new Error('Server MCP tidak boleh mengarah ke aplikasi ini sendiri.');
+    if (/^(localhost|127\.0\.0\.1|::1)$/.test(host) && Number(u.port || 80) === config.port()) throw new Error('Server MCP tidak boleh mengarah ke aplikasi ini sendiri.');
     return u.href;
   }
-  const { checkUrl } = await import('./browser.js');
+  const { checkUrl } = await import('./integrasi/browser.js');
   const r = await checkUrl(u.href, undefined, { resolve: true });
   if (!r.ok) throw new Error(`Server MCP ditolak: ${r.reason}`);
   return u.href;

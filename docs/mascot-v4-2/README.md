@@ -41,7 +41,7 @@ Folder ini adalah satu-satunya sumber kebenaran untuk integrasi karakter **Robot
 | `verify-v42.mjs` | penjaga otomatis (baca-saja) |
 | `bukti/` | gambar bukti (sebelum/sesudah, ekspresi, kontak) |
 
-Dokumen lama `docs/V4_2-MASCOT-INTEGRATION.md` dan `docs/INSTRUKSI-SESI-RUNTIME-V4_2.md` masih ada, tetapi **folder ini yang berlaku**.
+Dokumen lama `docs/arsip/V4_2-MASCOT-INTEGRATION.md` dan `docs/arsip/INSTRUKSI-SESI-RUNTIME-V4_2.md` masih ada, tetapi **folder ini yang berlaku**.
 
 ## Lokasi di luar aplikasi ini
 
@@ -51,4 +51,4 @@ Dokumen lama `docs/V4_2-MASCOT-INTEGRATION.md` dan `docs/INSTRUKSI-SESI-RUNTIME-
 
 - **07-UI-GLASSMORPH-DAN-TATA-LETAK-PLAZA.md** — UI glassmorph premium (`public/css/glass.css`), tata letak plaza baru (Brain/air mancur lebih kecil), perbaikan tombol Play/Exit dan sinematik masuk Play lagi.
 
-- **docs/sesi-baru-orkestrator/** paket serah-terima untuk sesi baru (audit backend chat, rapat, goal; ringkasan perubahan; aturan).
+- **docs/arsip/sesi-baru-orkestrator/** paket serah-terima untuk sesi baru (audit backend chat, rapat, goal; ringkasan perubahan; aturan).

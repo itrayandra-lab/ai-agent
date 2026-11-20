@@ -110,31 +110,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Executive Assistant di divisi Executive Office, memakai bahasa awam",
-    "tujuan": "Susun agenda rapat dengan jam tiap topik, penanggung jawab, dan peringatan bila waktu melebihi durasi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan, lalu keputusan yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "agenda",
+      "jadwal rapat",
+      "durasi rapat",
+      "topik rapat",
+      "pimpinan rapat"
+    ],
+    "data": [
+      "judul rapat",
+      "jam mulai (contoh 09:00)",
+      "lama rapat",
+      "topik (satu baris: topik | menit | pemimpin)"
+    ],
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan",
     "contoh": {
       "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
-      "buruk": "Ada banyak hal yang perlu dibahas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "agenda"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun agenda rapat perlu dibaca bersama: agenda menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan akhir ada pada pemimpin."
+    ]
   }
 }

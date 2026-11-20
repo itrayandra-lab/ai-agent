@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-susun-daftar-periksa",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan susun daftar periksa",
+  "version": 1,
+  "name": "Susun daftar periksa",
+  "ringkas": "Bangun daftar periksa siap pakai (audit, pembersihan, tampilan toko, label, kegiatan) dari topik dan area, lengkap dengan penanggung jawab dan kolom status.",
+  "kataKunci": ["daftar periksa", "checklist", "audit", "pembersihan", "toko", "label"],
+  "kemampuan": {
+    "id": "susun-daftar-periksa",
+    "kelompok": "pemeriksaan",
+    "tujuanAwam": "Membuat daftar periksa rapi per area kerja agar tidak ada yang terlewat, dengan kolom penanggung jawab dan status yang siap diisi."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Daftar periksa untuk apa?", "required": true, "default": "umum", "choices": [{ "v": "audit", "t": "Pemeriksaan catatan atau stok" }, { "v": "bersih", "t": "Pembersihan tempat" }, { "v": "toko", "t": "Tampilan toko" }, { "v": "label", "t": "Label kemasan" }, { "v": "umum", "t": "Kegiatan umum" }] },
+    { "key": "topik", "type": "text", "label": "Nama pekerjaan atau tempatnya", "required": true, "contoh": "Pemeriksaan stok gudang" },
+    { "key": "area", "type": "longtext", "label": "Bagian atau area yang diperiksa (satu per baris atau pisahkan dengan koma)", "required": true, "contoh": "Rak A\nRak B\nGudang depan" },
+    { "key": "jumlah", "type": "choice", "label": "Seberapa rinci?", "required": true, "default": "biasa", "choices": [{ "v": "ringkas", "t": "Ringkas (3 butir)" }, { "v": "biasa", "t": "Biasa (5 butir)" }, { "v": "rinci", "t": "Rinci (8 butir)" }] },
+    { "key": "penanggung", "type": "text", "label": "Penanggung jawab (boleh kosong)", "required": false, "contoh": "Budi" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun butir per area",
+      "set": {
+        "area0": "baris(input.area).join(',').replace(/;/g, ',').split(',').map((x) => x.trim()).filter((x) => x !== '').slice(0, 12).map((x) => cut(x, 40))",
+        "areas": "v.area0.length ? v.area0 : ['Umum']",
+        "per": "input.jumlah === 'ringkas' ? 3 : input.jumlah === 'rinci' ? 8 : 5",
+        "pola": "({ audit: ['Dokumen pendukung tersedia dan terbaru', 'Catatan sesuai dengan keadaan sebenarnya', 'Angka cocok dengan bukti', 'Ada penanggung jawab yang jelas', 'Selisih sudah dijelaskan', 'Aturan yang berlaku dipatuhi', 'Temuan sebelumnya sudah ditindaklanjuti', 'Hasil dilaporkan ke pimpinan'], bersih: ['Singkirkan barang yang tidak dipakai', 'Lap permukaan dan sudut', 'Jalur jalan bebas hambatan', 'Lantai bersih dan kering', 'Alat kebersihan dikembalikan ke tempatnya', 'Sampah dibuang dan tempat sampah bersih', 'Cahaya dan udara memadai', 'Foto kondisi akhir diambil'], toko: ['Produk tertata rapi dan menghadap depan', 'Harga terpasang jelas', 'Stok rak depan tidak kosong', 'Papan dan spanduk bersih', 'Lampu menyala dan terang', 'Promo terbaru terpasang', 'Jalur pembeli lega', 'Area kasir rapi'], label: ['Nama produk tertulis jelas', 'Berat atau isi bersih tertulis', 'Komposisi lengkap', 'Tanggal kedaluwarsa terbaca', 'Nama dan alamat produsen ada', 'Nomor izin tertulis', 'Cara simpan dan pakai ada', 'Tulisan terbaca dan tidak terpotong'], umum: ['Tujuan kegiatan jelas', 'Penanggung jawab ditunjuk', 'Bahan dan alat disiapkan', 'Tenggat ditetapkan', 'Anggaran dicek', 'Orang terkait diberi tahu', 'Hasil dicatat', 'Evaluasi dilakukan setelah selesai'] })",
+        "butir": "v.pola[input.jenis] ? v.pola[input.jenis].slice(0, v.per) : v.pola.umum.slice(0, v.per)",
+        "pj": "input.penanggung ? cut(String(input.penanggung), 30) : 'Belum ditentukan'",
+        "baris": "v.areas.reduce((a, ar) => a.concat(v.butir.map((b) => [ar, b, v.pj, ''])), []).map((r, i) => [i + 1].concat(r))",
+        "n": "v.baris.length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Daftar periksa ' + input.topik + ': ' + v.n + ' butir untuk ' + v.areas.length + ' area, penanggung jawab ' + v.pj",
+    "teks": "'# Daftar periksa: ' + input.topik + '\\n\\nPenanggung jawab: ' + v.pj + '. Kolom status diisi saat pemeriksaan (Sudah, Belum, atau Tidak berlaku).\\n\\n' + tabel(['No', 'Area', 'Yang diperiksa', 'Penanggung jawab', 'Status'], v.baris.map((r) => [r[0], r[1], r[2], r[3], '...']))",
+    "berkas": [
+      { "jenis": "csv", "nama": "'daftar-periksa-' + cut(String(input.topik).toLowerCase(), 30)", "isi": "csv([['no', 'area', 'yang diperiksa', 'penanggung jawab', 'status']].concat(v.baris))" },
+      { "jenis": "md", "nama": "'daftar-periksa-' + cut(String(input.topik).toLowerCase(), 30) + '-cetak'", "isi": "'# ' + input.topik + '\\n\\n' + v.areas.map((ar) => '## ' + ar + '\\n\\n' + v.butir.map((b) => '- [ ] ' + b).join('\\n')).join('\\n\\n')" }
+    ],
+    "data": "({ n: v.n, area: v.areas.length, per: v.per, penanggung: v.pj })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "audit", "topik": "Pemeriksaan stok gudang", "area": "Rak A\nRak B\nGudang depan", "jumlah": "biasa", "penanggung": "Budi" }, "expect": { "berkas": 2, "mengandung": ["15 butir untuk 3 area", "penanggung jawab Budi"] } },
+  "otakProfil": {
+    "peran": "penyusun daftar periksa yang membantu orang awam tidak melewatkan hal penting",
+    "tujuan": "Beri tips memakai daftar periksa ini dan sebut hal yang paling sering terlewat untuk topik tersebut.",
+    "gaya": "praktis, singkat, ramah, memakai kalimat perintah yang mudah dilakukan",
+    "pedoman": ["Jangan mengubah butir yang sudah disusun; hanya beri tips pemakaian.", "Sebut satu hal yang paling sering terlewat sesuai jenis pekerjaan.", "Anjurkan memeriksa dengan orang kedua untuk butir yang penting."],
+    "skema": { "pembahasan": "teks", "sering_terlewat": "daftar", "tips": "daftar" },
+    "contoh": { "baik": "Mulai dari area yang paling sering dipakai dan foto kondisi sebelum dan sesudah.", "buruk": "Periksa semuanya dengan baik." },
+    "batas": { "pembahasan": 500, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["periksa"], "minPanjang": 40, "maksPanjang": 500 },
+    "contohAI": "{\"pembahasan\":\"Periksa area satu per satu dan tandai statusnya langsung supaya tidak ada butir yang terlewat.\",\"sering_terlewat\":[\"Butir di area yang jarang dikunjungi\"],\"tips\":[\"Ajak orang kedua memeriksa butir penting\",\"Foto kondisi saat memeriksa\"]}"
+  },
+  "evaluasi": [
+    {
+      "nama": "pemeriksaan stok tiga area",
+      "input": { "jenis": "audit", "topik": "Pemeriksaan stok gudang", "area": "Rak A\nRak B\nGudang depan", "jumlah": "biasa", "penanggung": "Budi" },
+      "ai": "{\"pembahasan\":\"Periksa tiap rak satu per satu dan tandai statusnya langsung agar tidak ada butir yang terlewat.\",\"sering_terlewat\":[\"Selisih stok yang belum dijelaskan\"],\"tips\":[\"Ajak orang kedua memeriksa\"]}",
+      "kriteria": { "mengandung": ["periksa", "Rak A"], "mengandungAturan": ["Rak B", "Budi", "Angka cocok dengan bukti"], "panjangMin": 150, "panjangMaks": 8000, "nilai": [{ "path": "data.n", "min": 15, "max": 15 }, { "path": "data.area", "min": 3, "max": 3 }] }
+    },
+    {
+      "nama": "pembersihan rinci dengan pemisah campur",
+      "input": { "jenis": "bersih", "topik": "Bersih-bersih akhir pekan", "area": "Dapur, Toilet; Teras", "jumlah": "rinci" },
+      "ai": "{\"pembahasan\":\"Mulai dari area yang paling kotor lalu periksa ulang dengan orang kedua sebelum selesai.\",\"sering_terlewat\":[\"Sudut dan jalur jalan\"],\"tips\":[\"Foto kondisi akhir\"]}",
+      "kriteria": { "mengandung": ["periksa"], "mengandungAturan": ["Dapur", "Teras", "Belum ditentukan", "Lantai bersih dan kering"], "panjangMin": 150, "panjangMaks": 12000, "nilai": [{ "path": "data.n", "min": 24, "max": 24 }, { "path": "data.area", "min": 3, "max": 3 }, { "path": "data.per", "min": 8, "max": 8 }] }
+    },
+    {
+      "nama": "area kosong jadi umum",
+      "input": { "jenis": "toko", "topik": "Tampilan toko pagi", "area": " , ; ", "jumlah": "ringkas", "penanggung": "Rina" },
+      "ai": "{\"pembahasan\":\"Periksa tampilan sebelum toko dibuka dan rapikan rak depan lebih dulu.\",\"sering_terlewat\":[\"Harga yang belum diganti\"],\"tips\":[\"Periksa dari sisi pembeli\"]}",
+      "kriteria": { "mengandung": ["periksa"], "mengandungAturan": ["Umum", "Produk tertata rapi", "Rina"], "panjangMin": 100, "panjangMaks": 8000, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.area", "min": 1, "max": 1 }] }
+    },
+    {
+      "nama": "terlalu banyak area dipotong",
+      "input": { "jenis": "label", "topik": "Label seluruh produk", "area": "a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14", "jumlah": "rinci" },
+      "ai": "{\"pembahasan\":\"Periksa label per produk dan catat yang belum lengkap supaya bisa dicetak ulang.\",\"sering_terlewat\":[\"Tanggal kedaluwarsa\"],\"tips\":[\"Bandingkan dengan contoh label benar\"]}",
+      "kriteria": { "mengandung": ["periksa"], "mengandungAturan": ["a12", "Nomor izin tertulis"], "panjangMin": 150, "panjangMaks": 30000, "nilai": [{ "path": "data.n", "min": 96, "max": 96 }, { "path": "data.area", "min": 12, "max": 12 }] }
+    }
+  ]
+}

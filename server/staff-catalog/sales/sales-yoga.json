@@ -177,31 +177,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Account Executive di divisi Sales, memakai bahasa awam",
-    "tujuan": "Susun penawaran harga resmi dari daftar barang, lengkap dengan diskon, PPN, masa berlaku, dan syarat pembayaran. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "penawaran",
+      "quotation",
+      "proposal harga",
+      "diskon",
+      "syarat pembayaran"
+    ],
+    "data": [
+      "nama calon pembeli",
+      "tanggal penawaran",
+      "daftar barang (satu baris: nama | jumlah | harga satuan)",
+      "diskon"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
     "contoh": {
-      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
-      "buruk": "Beli sekarang atau rugi."
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "penawaran"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun surat penawaran harga perlu dibaca bersama: penawaran menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

@@ -187,6 +187,7 @@ export function checkProfil(p) {
   }
   if (p.contoh !== undefined) for (const k of ['baik', 'buruk']) if (p.contoh?.[k] !== undefined && (typeof p.contoh[k] !== 'string' || p.contoh[k].length > 400)) m.push('contoh.' + k + ' teks maks 400');
   const b = p.batas || {}; if ((b.pembahasan !== undefined && !(b.pembahasan >= 100 && b.pembahasan <= 1500)) || (b.butir !== undefined && !(b.butir >= 1 && b.butir <= 8))) m.push('"batas" pembahasan 100-1500, butir 1-8');
+  if (p.pedoman !== undefined && (!Array.isArray(p.pedoman) || p.pedoman.length > 12 || p.pedoman.some((x) => typeof x !== 'string' || x.length > 400))) m.push('"pedoman" daftar kalimat (maks 12, tiap maks 400 huruf)');
   if (p.model !== undefined && !['kecil', 'sedang'].includes(p.model)) m.push('"model" kecil atau sedang');
   const k = p.kriteria; if (!k || typeof k !== 'object' || !Array.isArray(k.kataKunci) || !k.kataKunci.length || k.kataKunci.length > 5 || k.kataKunci.some((x) => typeof x !== 'string' || !x.trim())) m.push('"kriteria.kataKunci" 1-5 kata wajib');
   else if (!(k.minPanjang >= 10) || !(k.maksPanjang >= k.minPanjang)) m.push('"kriteria" minPanjang >=10 dan maksPanjang >= minPanjang');

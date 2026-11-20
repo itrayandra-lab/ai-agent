@@ -161,31 +161,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Export & International Expansion Analyst di divisi Business Development & Partnerships, memakai bahasa awam",
-    "tujuan": "Hitung harga jual ke luar negeri dari harga pabrik, kemasan, ongkos kirim, asuransi, dan bea yang Anda isi, dalam rupiah dan mata uang tujuan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "ekspor",
+      "harga ekspor",
+      "fob",
+      "cif",
+      "bea masuk"
+    ],
+    "data": [
+      "nama produk",
+      "negara tujuan",
+      "harga pabrik per satuan (rp)",
+      "biaya kemasan ekspor per satuan (rp)"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
     "contoh": {
-      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
-      "buruk": "Peluangnya besar."
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "ekspor"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil kalkulator harga ekspor perlu dibaca bersama: ekspor menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
   }
 }

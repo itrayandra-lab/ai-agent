@@ -1,0 +1,162 @@
+[
+  {
+    "id": "01-beranda",
+    "label": "Beranda",
+    "key": "home",
+    "svg": "svg/01-beranda.svg",
+    "compact": "svg-compact/01-beranda.svg",
+    "png": "png-512/01-beranda.png"
+  },
+  {
+    "id": "02-kantor-3d",
+    "label": "Kantor 3D",
+    "key": "office",
+    "svg": "svg/02-kantor-3d.svg",
+    "compact": "svg-compact/02-kantor-3d.svg",
+    "png": "png-512/02-kantor-3d.png"
+  },
+  {
+    "id": "03-chat",
+    "label": "Chat",
+    "key": "chat",
+    "svg": "svg/03-chat.svg",
+    "compact": "svg-compact/03-chat.svg",
+    "png": "png-512/03-chat.png"
+  },
+  {
+    "id": "04-second-brain",
+    "label": "Second Brain",
+    "key": "brain",
+    "svg": "svg/04-second-brain.svg",
+    "compact": "svg-compact/04-second-brain.svg",
+    "png": "png-512/04-second-brain.png"
+  },
+  {
+    "id": "05-pekerjaan",
+    "label": "Pekerjaan",
+    "key": "tasks",
+    "svg": "svg/05-pekerjaan.svg",
+    "compact": "svg-compact/05-pekerjaan.svg",
+    "png": "png-512/05-pekerjaan.png"
+  },
+  {
+    "id": "06-persetujuan",
+    "label": "Persetujuan",
+    "key": "approvals",
+    "svg": "svg/06-persetujuan.svg",
+    "compact": "svg-compact/06-persetujuan.svg",
+    "png": "png-512/06-persetujuan.png"
+  },
+  {
+    "id": "07-tim-divisi",
+    "label": "Tim & Divisi",
+    "key": "team",
+    "svg": "svg/07-tim-divisi.svg",
+    "compact": "svg-compact/07-tim-divisi.svg",
+    "png": "png-512/07-tim-divisi.png"
+  },
+  {
+    "id": "08-agent-studio",
+    "label": "Agent Studio",
+    "key": "studio",
+    "svg": "svg/08-agent-studio.svg",
+    "compact": "svg-compact/08-agent-studio.svg",
+    "png": "png-512/08-agent-studio.png"
+  },
+  {
+    "id": "09-ruang-pengetahuan",
+    "label": "Ruang Pengetahuan",
+    "key": "knowledge",
+    "svg": "svg/09-ruang-pengetahuan.svg",
+    "compact": "svg-compact/09-ruang-pengetahuan.svg",
+    "png": "png-512/09-ruang-pengetahuan.png"
+  },
+  {
+    "id": "10-pengaturan",
+    "label": "Pengaturan",
+    "key": "settings",
+    "svg": "svg/10-pengaturan.svg",
+    "compact": "svg-compact/10-pengaturan.svg",
+    "png": "png-512/10-pengaturan.png"
+  },
+  {
+    "id": "11-lainnya",
+    "label": "Lainnya",
+    "key": "more",
+    "svg": "svg/11-lainnya.svg",
+    "compact": "svg-compact/11-lainnya.svg",
+    "png": "png-512/11-lainnya.png"
+  },
+  {
+    "id": "12-label-nama",
+    "label": "Label nama",
+    "key": "label",
+    "svg": "svg/12-label-nama.svg",
+    "compact": "svg-compact/12-label-nama.svg",
+    "png": "png-512/12-label-nama.png"
+  },
+  {
+    "id": "13-visual",
+    "label": "Visual",
+    "key": "visual",
+    "svg": "svg/13-visual.svg",
+    "compact": "svg-compact/13-visual.svg",
+    "png": "png-512/13-visual.png"
+  },
+  {
+    "id": "14-aplikasi",
+    "label": "Aplikasi",
+    "key": "apps",
+    "svg": "svg/14-aplikasi.svg",
+    "compact": "svg-compact/14-aplikasi.svg",
+    "png": "png-512/14-aplikasi.png"
+  },
+  {
+    "id": "15-karakter-saya",
+    "label": "Karakter saya",
+    "key": "character",
+    "svg": "svg/15-karakter-saya.svg",
+    "compact": "svg-compact/15-karakter-saya.svg",
+    "png": "png-512/15-karakter-saya.png"
+  },
+  {
+    "id": "16-info-sistem",
+    "label": "Info sistem",
+    "key": "info",
+    "svg": "svg/16-info-sistem.svg",
+    "compact": "svg-compact/16-info-sistem.svg",
+    "png": "png-512/16-info-sistem.png"
+  },
+  {
+    "id": "17-bantuan",
+    "label": "Bantuan",
+    "key": "help",
+    "svg": "svg/17-bantuan.svg",
+    "compact": "svg-compact/17-bantuan.svg",
+    "png": "png-512/17-bantuan.png"
+  },
+  {
+    "id": "18-teleport",
+    "label": "Teleport",
+    "key": "teleport",
+    "svg": "svg/18-teleport.svg",
+    "compact": "svg-compact/18-teleport.svg",
+    "png": "png-512/18-teleport.png"
+  },
+  {
+    "id": "19-play",
+    "label": "Play",
+    "key": "play",
+    "svg": "svg/19-play.svg",
+    "compact": "svg-compact/19-play.svg",
+    "png": "png-512/19-play.png"
+  },
+  {
+    "id": "20-layar-penuh",
+    "label": "Layar penuh",
+    "key": "fullscreen",
+    "svg": "svg/20-layar-penuh.svg",
+    "compact": "svg-compact/20-layar-penuh.svg",
+    "png": "png-512/20-layar-penuh.png"
+  }
+]

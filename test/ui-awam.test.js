@@ -211,18 +211,20 @@ test('Pengaturan: hanya Akun, Tampilan, Ruang kerja dan undangan, Sambungan; tan
 test('navigasi: pengguna biasa hanya melihat Beranda, Hasil Saya, Catatan, Tim Saya (+ Kantor 3D dan Pengaturan di Lainnya); halaman teknis hanya lewat #admin', () => {
   const app = read('public/js/app.js'); const views = read('public/js/views.js');
   const core = JSON.parse(app.match(/const CORE = (\[[^\]]*\])/)[1].replace(/'/g, '"')); const more = JSON.parse(app.match(/const MORE = (\[[^\]]*\])/)[1].replace(/'/g, '"'));
-  assert.deepEqual(core, ['dashboard', 'tasks', 'brain', 'team']); assert.deepEqual(more, ['office', 'settings']);
+  assert.deepEqual(core, ['office', 'dashboard', 'pesan', 'tasks', 'brain', 'team']); assert.deepEqual(more, ['settings']);   // Kantor 3D utama (keputusan Owner 2026-11-19)
   const tail = views.slice(views.indexOf('export const VIEWS = {'));
-  for (const id of [...core, ...more]) assert.match(tail, new RegExp(`\\n  ${id}: \\{ title: '[^']+', (short: '[^']+', )?icon: '[a-z]+', view: \\w+ \\}`), `${id} harus layar pengguna biasa (tanpa admin)`);
-  for (const id of ['chat', 'approvals', 'studio', 'knowledge', 'browser']) assert.match(tail, new RegExp(`'admin-${id}': \\{[^}]*admin: true`), `admin-${id} dilindungi`);
+  for (const id of [...core, ...more]) assert.match(tail, new RegExp(`\\n  ${id}: \\{ title: '[^']+', (short: '[^']+', )?icon: '[a-z]+', (ic: '[a-z]+', )?view: \\w+ \\}`), `${id} harus layar pengguna biasa (tanpa admin)`);
+  assert.match(tail, /LEGACY = \{ chat: 'pesan', 'admin-chat': 'pesan'/, 'obrolan lama (#chat, #admin-chat) dialihkan ke halaman Pesan, tanpa salinan kode');
+  assert.doesNotMatch(tail, /ChatView/, 'ChatView lama sudah dihapus: satu UI pesan');
+  for (const id of ['approvals', 'studio', 'knowledge', 'browser']) assert.match(tail, new RegExp(`'admin-${id}': \\{[^}]*admin: true`), `admin-${id} dilindungi`);
   assert.match(app, /bisaKelola\(S\.data\)/, 'rute admin dilindungi peran');
   const judul = [...tail.matchAll(/\n  (\w+): \{ title: '([^']+)'/g)].filter((m) => core.includes(m[1]) || more.includes(m[1])).map((m) => m[2]);
-  assert.deepEqual(judul, ['Kantor 3D', 'Beranda', 'Hasil Saya', 'Catatan', 'Tim Saya', 'Pengaturan'], 'satu nama per layar: tidak ada Dashboard/Konfirmasi/Obrolan/Brain ganda');
+  assert.deepEqual(judul, ['Kantor 3D', 'Obrolan', 'Pesan', 'Hasil Saya', 'Catatan', 'Tim Saya', 'Pengaturan'], 'satu nama per layar: tidak ada Dashboard/Konfirmasi/Obrolan/Brain ganda');
 });
 
 test('Kantor 3D: HUD satu kalimat awam, tombol Kembali ke Beranda, dock tanpa istilah teknis, tanpa "restart npm start"', () => {
   const v = U.bersihkan('views.js', read('public/js/views.js')); const a = read('public/js/app.js');
-  assert.match(v, /data-cam="home" aria-label="Kembali ke Beranda"/); assert.match(v, /class="hud-s"/);
+  assert.doesNotMatch(v, /class="ov-tabs/); assert.match(v, /aria-label="Tutup dan kembali ke kantor"/);   /* tab dihapus (keputusan Owner): Kantor 3D = ruang kerja utama, halaman lain di panel kiri */ assert.match(v, /class="hud-s"/);
   for (const jargon of ['Tokens', 'Build</span>', 'Sessions', 'CPU ${meter', 'groq live', 'Info sistem']) assert.ok(!v.includes(jargon), `HUD masih memuat "${jargon}"`);
   assert.ok(!/npm start/i.test(v + a), 'tidak ada pesan "npm start"');
   assert.match(v, /Pilihkan.*Ngobrol.*Kerjakan/s, 'mode dock memakai kata awam'); assert.ok(!/'Otomatis', chat: 'Obrolan', goal: 'Goal'/.test(v));

@@ -99,31 +99,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "IP & Trademark Specialist di divisi Legal & Compliance, memakai bahasa awam",
-    "tujuan": "Daftar aset merek dan lisensi dengan tanggal berakhirnya, kapan harus mulai mengurus, dan biaya yang perlu disiapkan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "perpanjangan",
+      "lisensi",
+      "masa berlaku",
+      "merek",
+      "pengingat"
+    ],
+    "data": [
+      "hitung per tanggal",
+      "mulai mengurus berapa lama sebelum berakhir",
+      "aset (nama | tanggal berakhir | biaya perpanjangan)"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
     "contoh": {
       "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
-      "buruk": "Pasti aman secara hukum."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "perpanjangan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pengingat perpanjangan merek dan lisensi perlu dibaca bersama: perpanjangan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
   }
 }

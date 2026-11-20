@@ -1,6 +1,6 @@
 # Pagar sinkronisasi (Fase P0)
 
-Tiga pengaman sebelum arsitektur "staf = workflow n8n" dikerjakan: cadangan data yang bisa dipulihkan, bendera fitur, dan tes invarian yang memperlihatkan apa yang belum sinkron. Rencana lengkap: `docs/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md`.
+Tiga pengaman sebelum arsitektur "staf = workflow n8n" dikerjakan: cadangan data yang bisa dipulihkan, bendera fitur, dan tes invarian yang memperlihatkan apa yang belum sinkron. Rencana lengkap: `docs/arsip/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md`.
 
 ## 1. Cadangan
 

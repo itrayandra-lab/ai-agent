@@ -147,5 +147,31 @@
         "Serum Cerah melembapkan"
       ]
     }
+  },
+  "kemampuan": [
+    "tulis-naskah-video"
+  ],
+  "keahlian": {
+    "istilah": [
+      "naskah",
+      "skrip iklan",
+      "storyboard",
+      "narasi",
+      "copy video"
+    ],
+    "data": [
+      "nama produk",
+      "panjang iklan",
+      "gaya bahasa",
+      "manfaat produk (satu per baris, maks 5)"
+    ],
+    "gaya": "visual dan hidup, adegan pendek, tanpa klaim berlebihan",
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hak cipta musik dan gambar harus aman."
+    ]
   }
 }

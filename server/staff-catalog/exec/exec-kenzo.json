@@ -105,31 +105,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Strategy Analyst di divisi Executive Office, memakai bahasa awam",
-    "tujuan": "Nilai kekuatan, kelemahan, peluang, dan ancaman dengan bobot, lalu tentukan arah strategi yang disarankan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan, lalu keputusan yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "prioritas-keputusan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "swot",
+      "strategi",
+      "kekuatan",
+      "peluang",
+      "analisis"
+    ],
+    "data": [
+      "yang dianalisis",
+      "kekuatan (satu baris: poin | bobot 1-5)",
+      "kelemahan (poin | bobot)",
+      "peluang (poin | bobot)"
+    ],
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan",
     "contoh": {
       "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
-      "buruk": "Ada banyak hal yang perlu dibahas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "swot"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil analisis swot berbobot perlu dibaca bersama: swot menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan akhir ada pada pemimpin."
+    ]
   }
 }

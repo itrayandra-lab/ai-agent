@@ -1,20 +1,21 @@
 // Autonomous work engine: schedules tasks, runs agents (Claude or simulation), delegation, approvals, routines, chat.
+import * as config from './config.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import * as store from './store.js';
-import * as brain from './brain.js';
-import * as llm from './llm.js';
-import { CAPABILITIES, CAP_IDS, autoActivate, coreToolIds, groupsFor, groupOfTool, roleAllows, roleOf, TOOL_GROUPS, ROLE_BASE } from './catalog.js';
-import * as lib from './librarian.js';
+import * as store from './penyimpanan/store.js';
+import * as brain from './pengetahuan/brain.js';
+import * as llm from './otak/llm.js';
+import { CAPABILITIES, CAP_IDS, autoActivate, coreToolIds, groupsFor, groupOfTool, roleAllows, roleOf, TOOL_GROUPS, ROLE_BASE } from './otak/catalog.js';
+import * as lib from './pengetahuan/librarian.js';
 import * as collab from './collab.js';
-import * as browser from './browser.js';
-import * as otomasi from './n8n.js';
+import * as browser from './integrasi/browser.js';
+import * as otomasi from './integrasi/n8n.js';
 import * as staff from './staff/index.js';   // staf = alur n8n + karakter 3D; manajer divisi memakai satu tool "staf" (docs/ARSITEKTUR-STAF-N8N.md)
 import * as gov from './governor.js';
 import * as approvals from './approvals.js';   // satu-satunya pintu kartu persetujuan
 import { mapStatus } from './staff/status-map.js';
-import * as org from './org.js';
-import * as learn from './skills-learn.js';   // belajar mandiri: skill buatan agen, memori kecil, tinjauan pasca-tugas
+import * as org from './organisasi/org.js';
+import * as learn from './pengetahuan/skills-learn.js';   // belajar mandiri: skill buatan agen, memori kecil, tinjauan pasca-tugas
 llm.setTaskCostHook(gov.addCost);
 
 const { uid } = store;
@@ -137,7 +138,7 @@ export function stop() { clearTimeout(timer); timer = null; }
 // Aktif = ada pekerjaan terbuka (tugas todo/in_progress/waiting, rapat berjalan, job di memori, anggota sedang rapat) ATAU baru dipakai orang
 // (permintaan lewat store.run dalam ${ACTIVE_MS / 1000} detik terakhir) ATAU ruang kerja utama. Ruang kerja tidur dilewati sampai `wakeAt`
 // (rutinitas atau persetujuan berbatas waktu paling awal), jadi 1000 ruang kerja yang diam tidak memakan waktu tick.
-const ACTIVE_MS = Number(process.env.TICK_ACTIVE_MS || 60000);
+const ACTIVE_MS = config.get('TICK_ACTIVE_MS');
 const COLD_PER_PASS = 25;       // ruang kerja yang belum dimuat dibangunkan paling banyak segini per lintasan (menyebar beban saat boot)
 const WAKE_SCAN_MIN = 36 * 60;  // jadwal cron dicari sampai 36 jam ke depan; lewat itu dicek ulang
 /** keadaan kerja ruang kerja saat ini (dipanggil di dalam konteksnya) */
@@ -222,7 +223,7 @@ async function tick() {
   const liveRunning = [...jobs.values()].filter((j) => j.mode === 'live').length;
   let slots = live ? Math.max(0, settings.maxConcurrent - liveRunning) : 6;
   const order = { high: 0, medium: 1, low: 2 };
-  const queue = db().tasks.filter((t) => t.status === 'todo' && !jobs.has(t.id) && (!t.retryAt || t.retryAt <= now) && stageReady(t))
+  const queue = db().tasks.filter((t) => t.status === 'todo' && !t.paused && !jobs.has(t.id) && (!t.retryAt || t.retryAt <= now) && stageReady(t))
     .sort((a, b) => order[a.priority] - order[b.priority] || a.createdAt - b.createdAt);
   for (const t of queue) {
     if (slots <= 0) break;
@@ -341,7 +342,9 @@ function verifyEvidence(list, toolEvidence = 0) {
   const checked = items.map((text) => {
     const title = text.replace(/^\[\[|\]\]$/g, '').replace(/^.*\[\[([^\]|]+).*$/, '$1').trim();
     // a verified note (Owner / Drive / System), a URL or an integration receipt; an agent's own draft note is NOT evidence (it could cite what it just wrote)
-    const ok = /https?:\/\/\S+/.test(text) || brain.isVerified(brain.findNote(title)) || /\b(receipt|spreadsheetId|documentId|eventId|range)\b|docs\.google|drive\.google/i.test(text);
+    // KONTRAK EKSEKUSI: id jalan staf ("run-xxxxx") hanya sah bila jalan itu benar ada, berstatus selesai, dan membawa bukti; id karangan = bukan bukti
+    const runIds = staff.kontrak.runIdsDari(text);
+    const ok = runIds.length ? runIds.every((id) => staff.kontrak.runBukti(store.current(), id)) : (/https?:\/\/\S+/.test(text) || brain.isVerified(brain.findNote(title)) || /\b(receipt|spreadsheetId|documentId|eventId|range)\b|docs\.google|drive\.google/i.test(text));
     return { text: text.slice(0, 200), ok };
   });
   return { checked, verified: checked.filter((x) => x.ok).length + (toolEvidence > 0 ? 1 : 0) };
@@ -903,6 +906,10 @@ export async function runTool(e, t, name, input, state) {
     }
     case 'complete_task':
     case 'request_approval': {
+      // KONTRAK EKSEKUSI: tugas yang baru mendelegasikan subtugas belum boleh dinyatakan selesai; hasilnya baru ada setelah subtugas selesai
+      if (state?.delegated && !t.synth && children(t).some((c) => !['done', 'cancelled'].includes(c.status))) {
+        return 'Belum bisa dinyatakan selesai: subtugas yang kamu delegasikan belum selesai. Jangan memanggil complete_task sekarang. Akhiri giliranmu; hasilnya akan datang dan kamu gabungkan lalu.';
+      }
       state.finished = true;
       const needsApproval = name === 'request_approval';
       if (name === 'request_approval') logTask(t, e.id, 'tool', `🛑 request_approval: ${input.reason || ''}`);
@@ -914,13 +921,16 @@ export async function runTool(e, t, name, input, state) {
 }
 
 /** tool results that are real evidence (Brain, web, live status, integrations), not chatter like send_message */
-const realEvidence = (state) => (state?.evidence || []).filter((x) => /^### (search_brain|read_note|web_search|company_status|calculate|visit_url|ask_colleague|google_|mcp__|browser_|staf)/.test(x) && !/Tidak ada hasil|tidak ditemukan|GAGAL|belum berhasil|Belum bisa/i.test(x.slice(0, 200))).length;
+const realEvidence = (state) => (state?.evidence || []).filter((x) => /^### (search_brain|read_note|web_search|company_status|calculate|visit_url|ask_colleague|google_|mcp__|browser_|staf)/.test(x) && !/Tidak ada hasil|tidak ditemukan|GAGAL|belum berhasil|Belum bisa|butuh izin|masih bekerja/i.test(x.slice(0, 200)) && (!/^### staf/.test(x) || stafBuktiSah(x))).length;
+/** hasil tool "staf" baru dihitung sebagai bukti bila ia menyebut id jalan yang benar-benar selesai dengan bukti (kontrak eksekusi) */
+const stafBuktiSah = (x) => { const ids = staff.kontrak.runIdsDari(x); return ids.length > 0 && ids.every((id) => staff.kontrak.runBukti(store.current(), id)); };
 
 async function runLive(e, t) {
   // TITIK SAMBUNG staf = workflow (belum ada cabang `staff.run` di sini; sesi fondasi memakai tool `staf` lewat visibleTools/runTool):
   // bila kelak penerima punya workflowId dan store.staffModelOn(), cabangnya cukup SATU baris di sini: `return staff.run(e, t)` lalu hasil ke finishTask yang sama.
   const ctx =retrievedContext(e, t);
   const messages = [{ role: 'user', content: ctx ? `${taskContext(t)}\n\n${ctx}` : taskContext(t) }];
+  const stafHint = staff.taskHint(e, t); if (stafHint) messages[0].content += '\n\n' + stafHint;   // jalur kerja nyata: kemampuan staf yang cocok sebagai langkah pertama (docs/UJI-NYATA.md)
   const state = { finished: false, delegated: false, toolCalls: new Map(), evidence: [] };
   const dm = llm.defaultModels();
   const tier = gov.modelTier(e, t);
@@ -955,6 +965,22 @@ async function runLive(e, t) {
     const uses = res.content.filter((b) => b.type === 'tool_use');
     if (!uses.length) {
       if (state.delegated) break;
+      // KONTRAK EKSEKUSI: bila sistem sudah menunjuk kemampuan staf tetapi agen menjawab teks saja (tanpa menjalankan staf atau mendelegasikan), ingatkan SEKALI sebelum hasilnya dianggap selesai
+      if (stafHint && (state.nudged || 0) >= 1 && !state.evidence.some((x) => /^### staf/.test(x))) {
+        // sudah diingatkan sekali dan tetap tidak menjalankan staf: asisten pribadi/master didelegasikan otomatis oleh sistem (deterministik, tanpa AI)
+        const auto = (e.isPA || e.isMaster) ? staff.delegasiOtomatis(e, t) : null;
+        if (auto) {
+          const c = createTask({ title: auto.title, description: auto.description, assigneeId: auto.assigneeId, createdBy: e.id, parentId: t.id, priority: t.priority });
+          state.delegated = true;
+          logTask(t, e.id, 'delegate', `➡️ Sistem mendelegasikan ke ${emp(auto.assigneeId)?.name}: ${c.title}`, { childId: c.id });
+          break;
+        }
+      }
+      if (stafHint && (state.nudged || 0) < 2 && !state.evidence.some((x) => /^### staf/.test(x))) {
+        state.nudged = (state.nudged || 0) + 1;
+        messages.push({ role: 'user', content: 'Kamu belum menjalankan langkah pertama dari sistem (kemampuan staf atau delegasi ke manajer). Lakukan SEKARANG dengan memanggil tool yang sesuai, lalu susun jawaban dari hasilnya. Jangan menjawab dari perkiraanmu sendiri.' });
+        continue;
+      }
       // Model ended without calling complete_task: treat its text as the output.
       const fallback = said || state.evidence.slice(-8).join('\n\n') || 'Pekerjaan selesai tanpa keluaran teks dari model.';
       finishTask(e, t, { summary: fallback.slice(0, 200), output: fallback, needsApproval: false, toolEvidence: realEvidence(state), gaps: 'Agen tidak memanggil complete_task; hasil diambil dari teks terakhirnya.' });
@@ -1470,7 +1496,7 @@ export function chatRoute(msg, ch = {}) {
   return { tier: 'small', effort: 'low', why: 'biasa' };
 }
 // ── chat pictures: stored as files per workspace (never inside the database that is streamed to every browser)
-const uploadDir = () => path.join(process.env.DATA_DIR || path.resolve('data'), 'uploads', store.current());
+const uploadDir = () => path.join(config.dataDir(), 'uploads', store.current());
 const IMG_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
 export function saveImages(list = []) {
   const out = [];

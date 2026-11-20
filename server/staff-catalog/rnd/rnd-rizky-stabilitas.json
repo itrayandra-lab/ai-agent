@@ -98,31 +98,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Formulation Scientist di divisi R&D & Formulation, memakai bahasa awam",
-    "tujuan": "Buat jadwal titik pengujian stabilitas (dipercepat, suhu ruang, atau siklus panas-dingin) lengkap dengan daftar yang diperiksa tiap titik. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "stabilitas",
+      "uji stabilitas",
+      "shelf life",
+      "masa simpan",
+      "jadwal uji"
+    ],
+    "data": [
+      "nama produk",
+      "mulai uji tanggal",
+      "kondisi penyimpanan"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
     "contoh": {
       "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
-      "buruk": "Formula B pasti terbaik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "stabilitas"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil jadwal uji stabilitas produk perlu dibaca bersama: stabilitas menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
   }
 }

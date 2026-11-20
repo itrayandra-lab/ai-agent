@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { pickMascotLook } from './mascot-palettes.js';
+import { robotLook, robotTplId, bersihRobot, robotBawaan } from './mascot-robot.js';
 import { clone as cloneRig } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -289,8 +290,12 @@ export function resolveAppearance(e, divisionHex = '#888888') {
     earring: gender === 'female' ? (a.earring != null ? !!a.earring : (h % 3) !== 0) : false,
     build: a.build ?? (0.92 + ((h >>> 9) % 17) / 100),
     height: a.height ?? (0.95 + ((h >>> 13) % 11) / 100),
+    robot: a.robot ? bersihRobot(a.robot) : null,   // pilihan robot pemain (editor Karakter saya); null = bentuk bawaan dari id
   };
 }
+
+/** bentuk robot bawaan seseorang (yang tampil bila ia belum memilih): sama dengan pilihan deterministik di buildFbxRig */
+export function robotDefault(e) { return robotBawaan(e.id || e.name || 'x', CHIBI.ids[hashStr(e.id || e.name || 'x') % CHIBI.ids.length]); }
 
 /**
  * The material for one look of a body. All looks share one shader program and the body's atlas textures;
@@ -361,10 +366,10 @@ export function buildFbxRig(e, divisionHex) {
   const ap = resolveAppearance(e, divisionHex);
   const chibi = !!human.chibi;
   const pool = chibi ? human.chibi : (human[ap.gender] || human.male);
-  const tpl = pool[hashStr(e.id || e.name || 'x') % pool.length];
+  const tpl = (chibi && ap.robot && pool.find((t) => t.id === robotTplId(ap.robot))) || pool[hashStr(e.id || e.name || 'x') % pool.length];   // pilihan pemain bila ada
   // chibi agents wear their division colour on the suit; the human bodies use the shirt colour
   // V4.2 mascots: every agent gets its own deterministic colour set (colourway x edition x small variation); other bodies keep their template colours
-  const look = chibi && tpl.id ? pickMascotLook(e.id || e.name || 'x', String(tpl.id).split('_')[0]) : null;
+  const look = chibi && tpl.id ? (ap.robot && tpl.id === robotTplId(ap.robot) ? robotLook(ap.robot) : pickMascotLook(e.id || e.name || 'x', String(tpl.id).split('_')[0])) : null;
   const baseMat = bodyMaterial(tpl, look ? { skin: look.skin, hair: look.hair, bottom: look.bottom, top: look.top, cloth: look.cloth } : (tpl.design || { skin: PALETTE.skin[ap.skin] || ap.skin, hair: PALETTE.hair[ap.hair] || ap.hair, bottom: ap.pants, top: chibi ? ap.division : ap.shirt }));
   const mat = tpl.faceRect ? faceVariant(baseMat, tpl.faceRect) : baseMat;
   const clone = cloneRig(tpl.root);

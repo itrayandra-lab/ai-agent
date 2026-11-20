@@ -93,31 +93,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Product Development Specialist (NPD) di divisi R&D & Formulation, memakai bahasa awam",
-    "tujuan": "Bandingkan harga per ukuran produkmu dengan pesaing, tentukan posisinya, dan sajikan klaim utama tiap pesaing. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pesaing",
+      "benchmark",
+      "harga per ml",
+      "posisi harga",
+      "analisis kompetitor"
+    ],
+    "data": [
+      "nama produkmu",
+      "harga produkmu (rp)",
+      "ukuran produkmu (ml atau gram)",
+      "pesaing (satu baris: nama | harga | ukuran | klaim utama)"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
     "contoh": {
       "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
-      "buruk": "Formula B pasti terbaik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "pesaing"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembanding produk dengan pesaing perlu dibaca bersama: pesaing menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
   }
 }

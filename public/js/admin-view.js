@@ -60,6 +60,34 @@ const BAGIAN = {
     muat();
   } },
 
+  kesehatan: { judul: 'Kesehatan otak', ikon: 'dashboard', mount(el) {
+    const pct = (x) => (x == null ? '-' : x + '%'), ms = (x) => (x >= 1000 ? (x / 1000).toFixed(1) + ' dtk' : x + ' md'), usd = (x) => '$' + Number(x || 0).toFixed(4);
+    const tingkatChip = (x) => chip(pct(x.tingkat), x.tingkat == null ? '' : x.tingkat >= 90 ? 'ok' : x.tingkat >= 70 ? '' : 'warn');
+    let timer = null; const henti = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const daftar = (rows) => `<div class="set-list">${rows.join('')}</div>`;
+    const muat = () => isi(el, 'kesehatan', (d) => {
+      const r = d.ringkasan, u = d.ujiTerakhir, j = d.uji;
+      el.innerHTML = kartu('khRing', `Pekerjaan staf nyata (${esc(d.periode)})`, `<div class="adm-tiles">${tile('Jalan', r.total)}${tile('Tingkat sukses', pct(r.tingkat), 'selesai dan berbukti')}${tile('Gagal', r.gagal)}${tile('Waktu rata-rata', ms(r.msRata))}${tile('Biaya rata-rata', usd(r.biayaRata))}${tile('Ditulis AI', pct(r.pakaiAI))}</div>`)
+        + kartu('khDiv', 'Tingkat sukses per divisi', d.perDivisi.length ? daftar(d.perDivisi.map((x) => baris(`<b>${esc(x.nama)}</b>`, tingkatChip(x) + chip(`${x.total} jalan`) + chip(ms(x.msRata)) + chip(usd(x.biayaRata))))) : '<p class="muted">Belum ada pekerjaan staf.</p>')
+        + kartu('khKem', 'Tingkat sukses per kemampuan', d.perKemampuan.length ? daftar(d.perKemampuan.map((x) => baris(`<b>${esc(x.kemampuan)}</b>`, tingkatChip(x) + chip(`${x.total} jalan`) + chip(ms(x.msRata)) + chip(usd(x.biayaRata))))) : '<p class="muted">Belum ada data.</p>')
+        + kartu('khGalat', 'Galat terbanyak', d.galatTerbanyak.length ? daftar(d.galatTerbanyak.map((g) => baris(esc(g.galat), chip(`${g.jumlah}x`, 'warn') + chip(g.kemampuan.join(', '))))) : '<p class="muted">Tidak ada galat.</p>')
+        + kartu('khMacet', `Pekerjaan macet (lebih dari ${d.macetMenit} menit)`, d.macet.length ? daftar(d.macet.map((m) => baris(`<b>${esc(m.nama)}</b>`, chip(m.jenis) + chip(m.status, 'warn') + chip(`${m.menit} menit`)))) : '<p class="muted">Tidak ada yang macet.</p>')
+        + kartu('khUji', 'Uji nyata terakhir', u ? `<div class="adm-tiles">${tile('Waktu', tgl(u.selesai))}${tile('Biaya', usd(u.biaya), `${u.panggilan} panggilan`)}${tile('Skenario lulus', u.ringkasan?.skenario ? `${u.ringkasan.skenario.lulus}/${u.ringkasan.skenario.dijalankan}` : '-')}${tile('Kemampuan lulus', u.ringkasan?.kemampuan?.total ? `${u.ringkasan.kemampuan.kemampuanLulusSemua}/${u.ringkasan.kemampuan.total}` : '-')}</div>${u.perDivisi ? daftar(Object.entries(u.perDivisi).map(([k, x]) => baris(`<b>${esc(k)}</b>`, chip(`${x.lulus}/${x.total}`, x.lulus === x.total ? 'ok' : 'warn') + chip(ms(x.msRata)) + chip(usd(x.biaya))))) : ''}${u.berhenti ? `<p class="muted">${esc(u.berhenti)}</p>` : ''}` : '<p class="muted">Belum pernah diuji.</p>')
+        + kartu('khUlang', 'Uji ulang', `<p class="muted">Menjalankan skenario dan kemampuan dengan model AI asli di salinan data (data asli tidak disentuh). Biaya dibatasi; uji berhenti sendiri bila mendekati batas.</p>
+          <div class="adm-form"><label class="f" for="kh-cakupan">Yang diuji</label><select class="input" id="kh-cakupan"><option value="kemampuan">31 kemampuan (murah, sekitar $0,02)</option><option value="skenario">Skenario lintas divisi (lebih mahal)</option><option value="semua">Semuanya</option></select>
+          <label class="f" for="kh-batas">Batas biaya (USD, maksimal 0,3)</label><input class="input" id="kh-batas" type="number" min="0.005" max="0.3" step="0.005" value="0.05"></div>
+          <div class="set-pil">${tombol(j.jalan ? 'Sedang berjalan…' : 'Uji ulang sekarang', 'data-uji' + (j.jalan ? ' disabled' : ''), 'primary', 'play')}</div>
+          <p class="muted" role="status">${j.jalan ? `Berjalan sejak ${tgl(j.mulai)} (${esc(j.cakupan)}, batas $${j.batasUSD}).` : esc(j.pesan || '')}</p>`);
+      el.querySelector('[data-uji]')?.addEventListener('click', async (e) => {
+        const tb = e.currentTarget; tb.disabled = true;
+        try { await adm('POST', 'kesehatan/uji', { cakupan: el.querySelector('#kh-cakupan').value, batasUSD: Number(el.querySelector('#kh-batas').value) }); toast('Uji ulang dimulai.', 'ok'); muat(); } catch (x) { toast(x.message || 'Tidak bisa memulai uji.', 'warn'); tb.disabled = false; }
+      });
+      henti();
+      if (j.jalan) timer = setInterval(() => { if (!el.isConnected) { henti(); return; } adm('GET', 'kesehatan').then((n) => { if (!n.uji.jalan) { henti(); muat(); } }).catch(() => {}); }, 4000);
+    });
+    muat();
+  } },
+
   pengguna: { judul: 'Pengguna', ikon: 'user', mount: (el) => Pengguna.mount(el) },
   integrasi: { judul: 'Integrasi', ikon: 'plug', mount: (el) => Integrasi.mount(el) },
   staf: { judul: 'Staf dan katalog', ikon: 'team', mount: (el) => Staf.mount(el) },

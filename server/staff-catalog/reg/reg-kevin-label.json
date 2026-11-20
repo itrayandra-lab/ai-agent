@@ -106,31 +106,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Claims & Labeling Specialist di divisi Regulatory Affairs, memakai bahasa awam",
-    "tujuan": "Cocokkan isi label kemasan Anda dengan daftar unsur wajib dan lihat mana yang belum ada. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat, tanpa menjanjikan persetujuan",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "label",
+      "kemasan",
+      "komposisi",
+      "netto",
+      "kelengkapan"
+    ],
+    "data": [
+      "produk berlabel halal?",
+      "produk atau bahan diimpor?",
+      "tulis yang sudah ada di label (satu per baris)"
+    ],
+    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat",
     "contoh": {
       "baik": "Dua dokumen belum lengkap; lengkapi sebelum diajukan.",
-      "buruk": "Pasti disetujui."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "label"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kelengkapan label kemasan perlu dibaca bersama: label menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menjanjikan persetujuan lembaga."
+    ]
   }
 }

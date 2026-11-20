@@ -105,31 +105,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Store Manager di divisi Retail & Beauty Stores, memakai bahasa awam",
-    "tujuan": "Bandingkan penjualan sejauh ini dengan target bulan, perkirakan hasil akhir bulan, dan hitung berapa yang harus dicapai tiap hari sisanya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "target harian",
+      "target bulanan",
+      "pencapaian",
+      "briefing pagi",
+      "toko"
+    ],
+    "data": [
+      "target penjualan bulan ini (rp)",
+      "jumlah hari buka bulan ini",
+      "hari buka ke berapa sekarang (sudah selesai)",
+      "penjualan sampai hari itu (rp)"
+    ],
     "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
-      "buruk": "Toko harus lebih bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "target harian"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemantau target penjualan harian toko perlu dibaca bersama: target harian menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
   }
 }

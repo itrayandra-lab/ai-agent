@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-catat-produksi-mutu",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan catat produksi dan mutu",
+  "version": 1,
+  "name": "Catat produksi dan mutu",
+  "ringkas": "Catat hasil produksi per kelompok, hitung hasil jadi terhadap bahan, efektivitas mesin, selisih dari target, dan rangkum kejadian di tempat kerja.",
+  "kataKunci": ["produksi", "mutu", "rendemen", "efektivitas mesin", "kejadian kerja", "target"],
+  "kemampuan": {
+    "id": "catat-produksi-mutu",
+    "kelompok": "operasional",
+    "tujuanAwam": "Mencatat dan menilai hasil produksi, kinerja mesin, dan kejadian di tempat kerja supaya masalah mutu dan keselamatan cepat terlihat."
+  },
+  "inputs": [
+    { "key": "nama", "type": "text", "label": "Periode atau lokasi yang dicatat", "required": true, "contoh": "Produksi minggu ke-3" },
+    { "key": "jenis", "type": "choice", "label": "Apa yang dicatat?", "required": true, "default": "batch", "choices": [{ "v": "batch", "t": "Hasil produksi: kelompok | bahan | jadi | baik" }, { "v": "mesin", "t": "Kinerja mesin: mesin | menit sedia | menit jalan | hasil | hasil baik | kecepatan ideal" }, { "v": "kejadian", "t": "Kejadian kerja: tanggal | tempat | uraian | tingkat" }] },
+    { "key": "target", "type": "number", "label": "Target (jumlah hasil baik, atau persen efektivitas mesin; boleh kosong)", "required": false, "contoh": "2000" },
+    { "key": "data", "type": "longtext", "label": "Datanya satu per baris, kolom dipisah garis tegak | (lihat contoh)", "required": true, "contoh": "B1 | 1000 | 900 | 880\nB2 | 1000 | 800 | 700" }
+  ],
+  "steps": [
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca data",
+      "set": {
+        "rows": "baris(input.data).map((t) => t.replace(/;/g, '|').split('|').map((c) => c.trim())).filter((r) => r.length >= 2 && r[0] !== '').slice(0, 1000)",
+        "n": "v.rows.length",
+        "tg": "Number.isFinite(Number(input.target)) && Number(input.target) > 0 ? Number(input.target) : 0"
+      }
+    },
+    {
+      "id": "batch",
+      "use": "hitung",
+      "label": "Hitung hasil produksi",
+      "set": {
+        "bt": "((g) => v.rows.map((r) => [r[0], g(r[1]), g(r[2]), g(r[3])]))((x) => Number.isFinite(num(x)) ? num(x) : 0)",
+        "btMasuk": "v.bt.reduce((s, r) => s + r[1], 0)",
+        "btJadi": "v.bt.reduce((s, r) => s + r[2], 0)",
+        "btBaik": "v.bt.reduce((s, r) => s + r[3], 0)",
+        "rend": "v.btMasuk ? Math.round(v.btJadi / v.btMasuk * 1000) / 10 : 0",
+        "mutu": "v.btJadi ? Math.round(v.btBaik / v.btJadi * 1000) / 10 : 0",
+        "selisih": "v.tg ? v.btBaik - v.tg : 0",
+        "btH": "v.bt.map((r) => [r[0], r[1], r[2], r[3], r[1] ? Math.round(r[2] / r[1] * 1000) / 10 : 0, r[2] ? Math.round(r[3] / r[2] * 1000) / 10 : 0])",
+        "btRendah": "v.btH.filter((r) => r[4] < v.rend - 5)"
+      }
+    },
+    {
+      "id": "mesin",
+      "use": "hitung",
+      "label": "Hitung efektivitas mesin",
+      "set": {
+        "oe": "((g) => v.rows.map((r) => [r[0], g(r[1]), g(r[2]), g(r[3]), g(r[4]), g(r[5])]))((x) => Number.isFinite(num(x)) ? num(x) : 0)",
+        "oeH": "v.oe.map((r) => [r[0], r[2] && r[1] ? Math.round(r[2] / r[1] * 1000) / 10 : 0, r[2] && r[5] ? Math.round(r[3] / (r[2] * r[5]) * 1000) / 10 : 0, r[3] ? Math.round(r[4] / r[3] * 1000) / 10 : 0].concat([0]))",
+        "oeHasil": "v.oeH.map((r) => [r[0], r[1], r[2], r[3], Math.round(r[1] * r[2] * r[3] / 1000) / 10])",
+        "oeRata": "v.oeHasil.length ? Math.round(v.oeHasil.reduce((s, r) => s + r[4], 0) / v.oeHasil.length * 10) / 10 : 0",
+        "oeBatas": "v.tg > 0 ? v.tg : 85",
+        "oeRendah": "v.oeHasil.filter((r) => r[4] < v.oeBatas)"
+      }
+    },
+    {
+      "id": "kejadian",
+      "use": "hitung",
+      "label": "Rangkum kejadian kerja",
+      "set": {
+        "kj": "v.rows.map((r) => [r[0], r[1], r[2] || '-', ['berat', 'sedang'].indexOf(String(r[3] || '').toLowerCase()) >= 0 ? String(r[3]).toLowerCase() : 'ringan'])",
+        "jmlBerat": "v.kj.filter((r) => r[3] === 'berat').length",
+        "jmlSedang": "v.kj.filter((r) => r[3] === 'sedang').length",
+        "jmlRingan": "v.kj.filter((r) => r[3] === 'ringan').length",
+        "tempat": "v.kj.map((r) => r[1]).filter((t, i, a) => a.indexOf(t) === i).map((t) => [t, v.kj.filter((r) => r[1] === t).length])",
+        "tempatTop": "v.tempat.reduce((m, t) => t[1] > m[1] ? t : m, ['-', 0])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "!v.n ? 'Tidak ada baris yang terbaca, periksa lagi isiannya' : input.jenis === 'batch' ? v.n + ' kelompok ' + input.nama + ': hasil jadi ' + v.rend + ' persen dari bahan, hasil baik ' + v.mutu + ' persen dari yang jadi' + (v.tg ? ', ' + (v.selisih >= 0 ? 'lebih ' : 'kurang ') + Math.abs(v.selisih) + ' dari target' : '') : input.jenis === 'mesin' ? v.n + ' mesin ' + input.nama + ': efektivitas rata-rata ' + v.oeRata + ' persen, ' + v.oeRendah.length + ' mesin di bawah ' + v.oeBatas + ' persen' : v.n + ' kejadian ' + input.nama + ': ' + v.jmlBerat + ' berat, ' + v.jmlSedang + ' sedang, ' + v.jmlRingan + ' ringan; terbanyak di ' + v.tempatTop[0]",
+    "teks": "'# Catatan ' + input.nama + '\\n\\n' + (!v.n ? 'Tidak ada data yang terbaca.' : input.jenis === 'batch' ? tabel(['Kelompok', 'Bahan masuk', 'Hasil jadi', 'Hasil baik', 'Jadi dari bahan (persen)', 'Baik dari jadi (persen)'], v.btH) + '\\n\\nTotal bahan ' + v.btMasuk + ', jadi ' + v.btJadi + ', baik ' + v.btBaik + '. Kelompok hasil jadinya rendah: ' + (v.btRendah.length ? v.btRendah.map((r) => r[0]).join(', ') : 'tidak ada') : input.jenis === 'mesin' ? tabel(['Mesin', 'Ketersediaan (persen)', 'Kinerja (persen)', 'Kualitas (persen)', 'Efektivitas (persen)'], v.oeHasil) + '\\n\\nMesin di bawah ' + v.oeBatas + ' persen: ' + (v.oeRendah.length ? v.oeRendah.map((r) => r[0]).join(', ') : 'tidak ada') : tabel(['Tanggal', 'Tempat', 'Uraian', 'Tingkat'], v.kj) + '\\n\\nKejadian berat: ' + v.jmlBerat + '. Tempat terbanyak: ' + v.tempatTop[0] + ' (' + v.tempatTop[1] + ' kejadian).')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'catatan-' + cut(String(input.nama).toLowerCase(), 30)", "isi": "input.jenis === 'batch' ? csv([['kelompok', 'bahan', 'jadi', 'baik', 'jadi persen', 'baik persen']].concat(v.btH)) : input.jenis === 'mesin' ? csv([['mesin', 'ketersediaan persen', 'kinerja persen', 'kualitas persen', 'efektivitas persen']].concat(v.oeHasil)) : csv([['tanggal', 'tempat', 'uraian', 'tingkat']].concat(v.kj))" }
+    ],
+    "data": "({ n: v.n, bahan: v.btMasuk, jadi: v.btJadi, baik: v.btBaik, rendemen: v.rend, mutu: v.mutu, selisih: v.selisih, oee: v.oeRata, mesinRendah: v.oeRendah.length, berat: v.jmlBerat, sedang: v.jmlSedang, ringan: v.jmlRingan, kelompokRendah: v.btRendah.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "nama": "Produksi minggu ini", "jenis": "batch", "target": 2000, "data": "B1 | 1000 | 900 | 880\nB2 | 1000 | 800 | 700\nB3 | 500 | 480 | 470" }, "expect": { "berkas": 1, "mengandung": ["3 kelompok Produksi minggu ini", "87.2 persen"] } },
+  "otakProfil": {
+    "peran": "pengawas mutu yang menjelaskan hasil produksi dan keselamatan kerja kepada orang awam",
+    "tujuan": "Terangkan di mana hasil produksi atau mesin kurang baik, apa kemungkinan dampaknya, dan langkah pemeriksaan yang paling dulu dilakukan.",
+    "gaya": "tenang, rinci, mengutamakan keselamatan",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan mengarang penyebab sebagai kepastian.", "Untuk kejadian kerja, sebut yang berat lebih dulu dan sarankan tindak lanjut.", "Beri langkah pemeriksaan sederhana yang bisa dilakukan tim sendiri."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar", "keadaan": "pilihan:baik|waspada|bermasalah" },
+    "contoh": { "baik": "Kelompok kedua hasil jadinya jauh di bawah yang lain; periksa bahan dan pengaturan mesin pada kelompok itu.", "buruk": "Produksi kurang bagus." },
+    "batas": { "pembahasan": 700, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["produksi"], "minPanjang": 40, "maksPanjang": 700 },
+    "contohAI": "{\"pembahasan\":\"Produksi secara umum cukup baik, tetapi satu kelompok hasil jadinya jauh lebih rendah dari yang lain. Periksa bahan dan pengaturan mesin pada kelompok itu lebih dulu.\",\"poin\":[\"Satu kelompok hasil jadinya rendah\",\"Hasil baik masih mendekati target\"],\"langkah\":[\"Periksa bahan kelompok yang rendah\",\"Catat penyebab setiap kali ada hasil rusak\"],\"keadaan\":\"waspada\"}"
+  },
+  "evaluasi": [
+    { "nama": "hasil produksi terhadap target", "input": { "nama": "Produksi minggu ini", "jenis": "batch", "target": 2000, "data": "B1 | 1000 | 900 | 880\nB2 | 1000 | 800 | 700\nB3 | 500 | 480 | 470" }, "ai": "{\"pembahasan\":\"Produksi melewati target sedikit, tetapi kelompok B2 hasil jadinya paling rendah. Periksa bahan dan mesin pada kelompok itu.\",\"poin\":[\"Target terlampaui 50\",\"B2 paling rendah\"],\"langkah\":[\"Periksa bahan B2\"],\"keadaan\":\"waspada\"}", "kriteria": { "mengandung": ["produksi", "B2"], "mengandungAturan": ["87.2 persen", "lebih 50"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.baik", "min": 2050, "max": 2050 }, { "path": "data.rendemen", "min": 87.1, "max": 87.3 }, { "path": "data.mutu", "min": 93.9, "max": 94.1 }, { "path": "data.selisih", "min": 50, "max": 50 }, { "path": "data.kelompokRendah", "min": 1, "max": 1 }] } },
+    { "nama": "efektivitas mesin tanpa target", "input": { "nama": "Lini pengemasan", "jenis": "mesin", "data": "Mesin 1 | 480 | 400 | 3600 | 3420 | 10\nMesin 2 | 480 | 300 | 1500 | 1200 | 6" }, "ai": "{\"pembahasan\":\"Kedua mesin masih di bawah batas efektivitas yang wajar, dan Mesin 2 paling jauh karena banyak berhenti dan hasil rusaknya tinggi. Produksi lini ini perlu diperiksa.\",\"poin\":[\"Mesin 2 paling rendah\"],\"langkah\":[\"Catat penyebab berhenti Mesin 2\"],\"keadaan\":\"bermasalah\"}", "kriteria": { "mengandung": ["Mesin 2", "produksi"], "mengandungAturan": ["Efektivitas", "di bawah 85 persen"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.oee", "min": 56, "max": 57 }, { "path": "data.mesinRendah", "min": 2, "max": 2 }] } },
+    { "nama": "kejadian kerja dengan baris tanpa pemisah", "input": { "nama": "Gudang dan dapur", "jenis": "kejadian", "data": "2025-01-05 | Gudang | Terpeleset di lantai basah | ringan\n2025-01-09 | Gudang | Jari terjepit | berat\n2025-01-10 | Dapur | Tersiram air panas | SEDANG\nbaris tanpa pemisah\n2025-01-12 | Gudang | Hampir tertabrak forklift | Hampir celaka" }, "ai": "{\"pembahasan\":\"Kejadian paling banyak terjadi di Gudang dan satu di antaranya berat. Keselamatan kerja di gudang perlu diperiksa, terutama lantai dan alat angkut.\",\"poin\":[\"Satu kejadian berat\"],\"langkah\":[\"Periksa lantai dan jalur alat angkut gudang\"],\"keadaan\":\"bermasalah\"}", "kriteria": { "mengandung": ["Gudang", "keselamatan"], "mengandungAturan": ["Kejadian berat: 1", "Tempat terbanyak: Gudang"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.n", "min": 4, "max": 4 }, { "path": "data.berat", "min": 1, "max": 1 }, { "path": "data.sedang", "min": 1, "max": 1 }, { "path": "data.ringan", "min": 2, "max": 2 }] } }
+  ]
+}

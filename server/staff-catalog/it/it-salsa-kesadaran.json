@@ -129,31 +129,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Security Analyst di divisi IT & Security, memakai bahasa awam",
-    "tujuan": "Susun materi singkat kesadaran keamanan sesuai topik dan peserta, lengkap dengan kuis tiga soal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "security awareness",
+      "pelatihan keamanan",
+      "phishing",
+      "kata sandi",
+      "materi"
+    ],
+    "data": [
+      "topik materi",
+      "untuk siapa?",
+      "berapa lama sesinya?"
+    ],
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar",
     "contoh": {
       "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
-      "buruk": "Sistem mungkin kurang aman."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "security awareness"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembuat materi kesadaran keamanan perlu dibaca bersama: security awareness menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan meminta atau menyebut kata sandi asli."
+    ]
   }
 }

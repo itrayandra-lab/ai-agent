@@ -102,31 +102,29 @@
     "folder": "Report",
     "simpan": false
   },
-  "otakProfil": {
-    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
-    "tujuan": "Hitung PPN dari harga: tambahkan PPN ke harga, atau pisahkan PPN dari harga yang sudah termasuk PPN. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "ppn",
+      "pajak",
+      "dpp",
+      "harga",
+      "faktur"
+    ],
+    "data": [
+      "nominal (rp)",
+      "nominal ini",
+      "tarif ppn"
+    ],
     "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
-      "buruk": "Hasil sudah benar."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "ppn"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung ppn perlu dibaca bersama: ppn menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
   }
 }

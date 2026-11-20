@@ -110,31 +110,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Executive Assistant di divisi Executive Office, memakai bahasa awam",
-    "tujuan": "Rapikan hasil rapat menjadi notulen lengkap dengan keputusan dan daftar tindak lanjut beserta peringatan tenggat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan, lalu keputusan yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "notulen",
+      "rapat",
+      "tindak lanjut",
+      "keputusan",
+      "action item"
+    ],
+    "data": [
+      "judul rapat",
+      "tanggal rapat",
+      "peserta (pisahkan dengan koma)",
+      "yang dibahas (satu per baris)"
+    ],
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan",
     "contoh": {
       "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
-      "buruk": "Ada banyak hal yang perlu dibahas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "notulen"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun notulen rapat perlu dibaca bersama: notulen menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan akhir ada pada pemimpin."
+    ]
   }
 }

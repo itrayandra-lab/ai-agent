@@ -85,5 +85,28 @@
       ]
     },
     "ai": "{\"ringkasan\":\"Pelanggan puas dengan kualitas dan keramahan admin, tetapi pengiriman dan harga jadi keluhan.\",\"nada\":\"campuran\",\"saran\":[\"Perbaiki kecepatan pengiriman\",\"Jelaskan nilai produk agar harga terasa wajar\"]}"
+  },
+  "kemampuan": [
+    "ringkas-umpan-balik"
+  ],
+  "keahlian": {
+    "istilah": [
+      "umpan balik",
+      "feedback",
+      "komentar",
+      "ulasan",
+      "tema"
+    ],
+    "data": [
+      "komentar pelanggan (satu komentar per baris)"
+    ],
+    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan",
+    "contoh": {
+      "baik": "Mohon maaf atas keterlambatan; kami cek pesanan Anda dan kabari dalam 2 jam.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menjanjikan ganti rugi tanpa persetujuan."
+    ]
   }
 }

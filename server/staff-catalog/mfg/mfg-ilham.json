@@ -75,31 +75,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Maintenance & Packaging Engineer di divisi Manufacturing, memakai bahasa awam",
-    "tujuan": "Hitung kapan tiap mesin harus dirawat lagi, tandai yang telat atau segera, dan urutkan dari yang paling mendesak. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "perawatan mesin",
+      "maintenance",
+      "jadwal perawatan",
+      "preventive",
+      "mesin"
+    ],
+    "data": [
+      "tanggal hari ini",
+      "mesin (satu baris: nama | selang hari | terakhir dirawat yyy"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
     "contoh": {
-      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
-      "buruk": "Produksi lancar."
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "perawatan mesin"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil jadwal perawatan mesin berkala perlu dibaca bersama: perawatan mesin menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
   }
 }

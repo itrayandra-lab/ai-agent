@@ -153,5 +153,31 @@
       ]
     },
     "ai": "{\"hook\":\"Serum niacinamide: ini cara pakai yang sering salah\",\"caption\":\"Banyak yang salah urutan pakai serum. Simpan dulu, coba nanti!\",\"tagar\":[\"#skincare\",\"#serum\",\"#niacinamide\"]}"
+  },
+  "kemampuan": [
+    "tulis-naskah-video"
+  ],
+  "keahlian": {
+    "istilah": [
+      "naskah video",
+      "tiktok",
+      "reels",
+      "konten skincare",
+      "script"
+    ],
+    "data": [
+      "topik video",
+      "produk yang disebut (boleh kosong)",
+      "lama video",
+      "gaya video"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

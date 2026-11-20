@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import * as store from '../store.js';
 import { validateSpec, isStub } from './schema.js';
 import { readDeploy } from './data.js';
+import * as kem from './kemampuan.js';
 
 export const catalogDir = () => process.env.STAFF_CATALOG_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'staff-catalog');
 let cache = null, cacheAt = 0;
@@ -27,6 +28,12 @@ export function load({ force = false } = {}) {
       if (out.specs.has(j.key)) { out.problems.push({ file: `${d.name}/${f}`, errors: ['key dobel'] }); continue; }
       const v = validateSpec(j);
       if (v.kind === 'invalid') { out.problems.push({ file: `${d.name}/${f}`, errors: v.errors }); continue; }
+      if (j.kemampuan !== undefined || j.keahlian !== undefined) {   // staf = orang: rujukan kemampuan + keahlian khusus
+        const ids = j.kemampuan, caps = kem.load();
+        if (!Array.isArray(ids) || !ids.length || ids.length > 4 || ids.some((id) => !caps.caps.has(id))) { out.problems.push({ file: `${d.name}/${f}`, errors: ['"kemampuan" harus daftar 1-4 id kemampuan yang ada: ' + JSON.stringify(ids)] }); continue; }
+        if (j.keahlian !== undefined && (typeof j.keahlian !== 'object' || Array.isArray(j.keahlian))) { out.problems.push({ file: `${d.name}/${f}`, errors: ['"keahlian" harus objek'] }); continue; }
+        if (v.kind === 'ready' && !j.otakProfil && !(j.steps || []).some((x) => x.use === 'otak' || x.use === 'minta_ai')) j.otakProfil = kem.composeProfil(caps.caps.get(ids[0]), j);
+      }
       out.specs.set(j.key, Object.assign(j, { __kind: v.kind }));
     }
   }

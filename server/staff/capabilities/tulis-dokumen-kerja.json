@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-tulis-dokumen-kerja",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menulis dokumen kerja",
+  "version": 1,
+  "name": "Tulis dokumen kerja",
+  "ringkas": "Susun dokumen kebutuhan produk, brief desain, panduan kerja, laporan masalah, laporan kejadian, agenda, atau catatan rapat dan periksa kelengkapannya.",
+  "kataKunci": ["dokumen", "kebutuhan produk", "brief", "panduan", "laporan bug", "insiden", "agenda", "notulen"],
+  "kemampuan": {
+    "id": "tulis-dokumen-kerja",
+    "kelompok": "menulis",
+    "tujuanAwam": "Mengubah catatan mentah menjadi dokumen kerja yang rapi dan menunjukkan bagian mana yang masih kurang."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Dokumen apa yang dibutuhkan?", "required": true, "default": "kebutuhan", "choices": [{ "v": "kebutuhan", "t": "Kebutuhan produk" }, { "v": "brief", "t": "Brief desain atau kreator" }, { "v": "panduan", "t": "Panduan kerja" }, { "v": "bug", "t": "Laporan masalah pada produk" }, { "v": "insiden", "t": "Laporan kejadian atau penyimpangan" }, { "v": "agenda", "t": "Agenda rapat" }, { "v": "notulen", "t": "Catatan hasil rapat" }] },
+    { "key": "judul", "type": "text", "label": "Judul dokumen", "required": true, "contoh": "Fitur pembayaran dengan kode QR" },
+    { "key": "catatan", "type": "longtext", "label": "Catatan mentah (satu hal per baris)", "required": true, "contoh": "Tujuan: pelanggan bisa bayar tanpa tunai\nSyarat: berjalan di ponsel\nBatas waktu: akhir bulan" },
+    { "key": "pemilik", "type": "text", "label": "Penanggung jawab", "required": false, "contoh": "Dewi" },
+    { "key": "tanggal", "type": "date", "label": "Tanggal dokumen", "required": false }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa kelengkapan bagian",
+      "set": {
+        "baris": "baris(input.catatan || '').map((t) => t.replace(/^[-*0-9. ]+/, '')).filter((t) => t !== '').slice(0, 100)",
+        "teks": "v.baris.join(' ').toLowerCase()",
+        "namaJenis": "({ kebutuhan: 'Dokumen kebutuhan produk', brief: 'Brief desain atau kreator', panduan: 'Panduan kerja', bug: 'Laporan masalah', insiden: 'Laporan kejadian', agenda: 'Agenda rapat', notulen: 'Catatan hasil rapat' })[input.jenis] || 'Dokumen kerja'",
+        "bagian": "({ kebutuhan: [['Tujuan', ['tujuan', 'agar', 'supaya']], ['Pengguna', ['pengguna', 'pelanggan', 'pembeli']], ['Kebutuhan utama', ['kebutuhan', 'harus', 'fitur', 'syarat']], ['Batasan', ['batas', 'tidak boleh', 'maksimal']], ['Ukuran berhasil', ['berhasil', 'target', 'ukuran']], ['Waktu', ['waktu', 'tanggal', 'minggu', 'bulan']]], brief: [['Tujuan', ['tujuan', 'agar', 'supaya']], ['Sasaran penonton', ['sasaran', 'penonton', 'target pasar', 'untuk']], ['Pesan utama', ['pesan', 'inti']], ['Gaya dan contoh', ['gaya', 'contoh', 'warna', 'nuansa']], ['Ukuran dan format', ['ukuran', 'format', 'durasi']], ['Batas waktu', ['batas', 'tanggal', 'deadline']]], panduan: [['Tujuan', ['tujuan', 'agar']], ['Bahan atau alat', ['alat', 'bahan', 'siapkan']], ['Langkah', ['langkah', 'lalu', 'kemudian', 'buka', 'klik']], ['Kesalahan umum', ['kesalahan', 'hindari', 'jangan']], ['Bila ada masalah', ['masalah', 'hubungi', 'bantuan']]], bug: [['Apa yang terjadi', ['terjadi', 'muncul', 'gagal', 'error']], ['Langkah mengulang', ['langkah', 'klik', 'buka', 'saat']], ['Seharusnya', ['seharusnya', 'harapan']], ['Perangkat atau versi', ['ponsel', 'laptop', 'versi', 'browser', 'perangkat']], ['Dampak', ['dampak', 'pengguna', 'pelanggan', 'rugi']]], insiden: [['Waktu kejadian', ['waktu', 'jam', 'tanggal', 'pukul']], ['Apa yang terjadi', ['terjadi', 'rusak', 'hilang', 'salah']], ['Dampak', ['dampak', 'rugi', 'terlambat', 'pelanggan']], ['Penanganan awal', ['ditangani', 'tindakan', 'segera', 'perbaiki']], ['Penyebab', ['penyebab', 'karena']], ['Pencegahan', ['pencegahan', 'agar tidak', 'ke depan']]], agenda: [['Tujuan rapat', ['tujuan', 'agar']], ['Daftar pokok bahasan', ['bahas', 'topik', 'agenda']], ['Waktu dan tempat', ['jam', 'pukul', 'ruang', 'tempat', 'daring']], ['Peserta', ['peserta', 'hadir', 'undang']], ['Bahan yang disiapkan', ['siapkan', 'bawa', 'bahan']]], notulen: [['Peserta hadir', ['hadir', 'peserta']], ['Keputusan', ['putus', 'sepakat', 'disetujui']], ['Tugas dan penanggung jawab', ['tugas', 'bertugas', 'penanggung']], ['Batas waktu', ['batas', 'tanggal', 'minggu', 'besok']], ['Hal yang belum selesai', ['belum', 'tunda', 'lanjut']]] })[input.jenis] || [['Isi', ['isi']]]",
+        "periksa": "v.bagian.map((b) => ({ nama: b[0], ada: b[1].some((w) => v.teks.indexOf(w) >= 0) }))",
+        "lengkap": "v.periksa.filter((b) => b.ada).length",
+        "persen": "v.periksa.length ? Math.round(v.lengkap / v.periksa.length * 100) : 0",
+        "kurang": "v.periksa.filter((b) => !b.ada).map((b) => b.nama)",
+        "tanggalTeks": "input.tanggal ? tgl(input.tanggal) : 'belum diisi'",
+        "status": "v.persen >= 80 ? 'hampir lengkap' : v.persen >= 50 ? 'cukup' : 'banyak yang kurang'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.namaJenis + ': ' + v.lengkap + ' dari ' + v.periksa.length + ' bagian sudah ada (' + v.persen + '%), ' + v.status",
+    "teks": "'# ' + v.namaJenis + ': ' + input.judul + '\\n\\nPenanggung jawab: ' + (String(input.pemilik || '').trim() || 'belum diisi') + '\\nTanggal: ' + v.tanggalTeks + '\\n\\n' + tabel(['Bagian wajib', 'Keadaan'], v.periksa.map((b) => [b.nama, b.ada ? 'sudah ada di catatan' : 'perlu dilengkapi'])) + '\\n\\nKelengkapan: ' + v.persen + '% (' + v.status + ')' + (v.kurang.length ? '\\n\\n## Yang perlu dilengkapi\\n\\n' + v.kurang.map((k) => '- ' + k).join('\\n') : '')",
+    "berkas": [
+      { "jenis": "md", "nama": "'dokumen-' + cut(String(input.judul).toLowerCase(), 30)", "isi": "'# ' + input.judul + '\\n\\n' + v.namaJenis + ' | ' + v.tanggalTeks + ' | ' + (String(input.pemilik || '').trim() || 'penanggung jawab belum diisi') + '\\n\\n' + v.periksa.map((b) => '## ' + b.nama + '\\n' + (b.ada ? 'Isi dari catatan.' : '(belum ada, lengkapi)')).join('\\n\\n') + '\\n\\n## Catatan mentah\\n\\n' + v.baris.map((t) => '- ' + t).join('\\n')" },
+      { "jenis": "csv", "nama": "'kelengkapan-' + cut(String(input.jenis), 20)", "isi": "csv([['bagian', 'ada']].concat(v.periksa.map((b) => [b.nama, b.ada ? 'ya' : 'belum'])))" }
+    ],
+    "data": "({ bagian: v.periksa.length, lengkap: v.lengkap, persen: v.persen, kurang: v.kurang.length, baris: v.baris.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "kebutuhan", "judul": "Fitur pembayaran QR", "catatan": "Tujuan: pelanggan bisa bayar tanpa tunai\nPengguna: pembeli di toko\nSyarat: berjalan di ponsel", "pemilik": "Dewi" }, "expect": { "berkas": 2, "mengandung": ["3 dari 6 bagian", "50%"] } },
+  "otakProfil": {
+    "peran": "penulis dokumen kerja yang rapi",
+    "tujuan": "Rapikan catatan mentah menjadi dokumen dengan bagian yang jelas dan tunjukkan bagian yang masih harus dilengkapi.",
+    "gaya": "lugas, terstruktur, tanpa istilah yang tidak perlu",
+    "pedoman": ["Pakai hanya isi dari catatan; bagian yang kosong ditandai, jangan dikarang.", "Tulis kalimat pendek dan satu hal per butir.", "Sebut penanggung jawab dan batas waktu bila ada."],
+    "skema": { "pembahasan": "teks", "butir": "daftar", "pertanyaan": "daftar" },
+    "contoh": { "baik": "Tujuan: pelanggan dapat membayar tanpa tunai lewat kode QR di ponsel, selesai akhir bulan.", "buruk": "Fitur harus bagus dan cepat." },
+    "batas": { "pembahasan": 700, "butir": 6 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["tujuan"], "minPanjang": 30, "maksPanjang": 900 },
+    "contohAI": "{\"pembahasan\":\"Tujuan fitur adalah pembayaran tanpa tunai lewat kode QR di ponsel. Bagian ukuran berhasil dan batasan belum ada dan perlu dijawab.\",\"butir\":[\"Tujuan jelas\",\"Pengguna: pembeli di toko\"],\"pertanyaan\":[\"Apa ukuran berhasilnya?\",\"Apa batas nilai transaksi?\"]}"
+  },
+  "evaluasi": [
+    { "nama": "kebutuhan produk setengah lengkap", "input": { "jenis": "kebutuhan", "judul": "Fitur pembayaran QR", "catatan": "Tujuan: pelanggan bisa bayar tanpa tunai\nPengguna: pembeli di toko\nSyarat: berjalan di ponsel", "pemilik": "Dewi" }, "ai": "{\"pembahasan\":\"Tujuan fitur adalah pembayaran tanpa tunai lewat kode QR di ponsel. Bagian batasan dan ukuran berhasil belum ada.\",\"butir\":[\"Tujuan jelas\"],\"pertanyaan\":[\"Apa ukuran berhasilnya?\"]}", "kriteria": { "mengandung": ["tujuan", "kebutuhan produk"], "mengandungAturan": ["perlu dilengkapi", "Dewi", "Batasan"], "panjangMin": 150, "panjangMaks": 4000, "nilai": [{ "path": "data.bagian", "min": 6, "max": 6 }, { "path": "data.lengkap", "min": 3, "max": 3 }, { "path": "data.persen", "min": 50, "max": 50 }] } },
+    { "nama": "laporan masalah lengkap", "input": { "jenis": "bug", "judul": "Tombol bayar tidak bisa ditekan", "catatan": "- Saat klik bayar halaman berhenti, muncul error\n- Langkah: buka keranjang lalu klik bayar\n- Seharusnya masuk ke halaman pembayaran\n- Terjadi di ponsel, browser versi terbaru\n- Dampak: pelanggan tidak bisa membeli", "tanggal": "2026-03-05" }, "ai": "{\"pembahasan\":\"Masalah muncul saat tombol bayar ditekan di ponsel dan menghalangi pelanggan membeli, perlu diperbaiki segera.\",\"butir\":[\"Terjadi di ponsel\",\"Dampak pada pembelian\"],\"pertanyaan\":[\"Sejak kapan terjadi?\"]}", "kriteria": { "mengandung": ["bayar", "5 dari 5"], "mengandungAturan": ["hampir lengkap", "2026"], "panjangMin": 150, "panjangMaks": 4000, "nilai": [{ "path": "data.persen", "min": 100, "max": 100 }, { "path": "data.baris", "min": 5, "max": 5 }, { "path": "data.kurang", "min": 0, "max": 0 }] } },
+    { "nama": "catatan rapat berantakan tanpa kata kunci", "input": { "jenis": "notulen", "judul": "Rapat mingguan", "catatan": "ok\n\n   \nlanjut besok" }, "ai": "{\"pembahasan\":\"Catatan rapat sangat singkat; keputusan dan penanggung jawab belum tercatat sehingga perlu ditanyakan ke peserta.\",\"butir\":[\"Catatan terlalu singkat\"],\"pertanyaan\":[\"Siapa yang hadir?\",\"Apa keputusannya?\"]}", "kriteria": { "mengandung": ["rapat", "catatan"], "mengandungAturan": ["banyak yang kurang", "Keputusan"], "panjangMin": 150, "panjangMaks": 4000, "nilai": [{ "path": "data.baris", "min": 2, "max": 2 }, { "path": "data.persen", "min": 0, "max": 40 }] } }
+  ]
+}

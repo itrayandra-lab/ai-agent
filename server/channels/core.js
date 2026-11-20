@@ -186,7 +186,7 @@ async function converse(ad, link, acc, { input = '', choiceId = '' }) {
   await deliverReply(ad, link, r);
   if (r.kind === 'progress') follow(ad, link, my);
 }
-const runTurn = (link, acc, { input, choiceId }) => store.run(acc.ws, () => turnImpl({ userId: acc.employeeId, sessionId: sessionOf(link), input, choiceId, canAutomate: acc.canAutomate }));
+const runTurn = (link, acc, { input, choiceId }) => store.run(acc.ws, () => turnImpl({ userId: acc.employeeId, sessionId: sessionOf(link), input, choiceId, canAutomate: acc.canAutomate, source: link.service }));   // percakapan Telegram/Discord tercatat dengan sumbernya
 
 /** selama pekerjaan berjalan, cek berkala dan kirim hasilnya begitu siap (berhenti bila pengguna sudah berbuat hal lain) */
 function follow(ad, link, my) {

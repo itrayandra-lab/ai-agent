@@ -101,31 +101,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Packaging & Motion Designer di divisi Creative & Design, memakai bahasa awam",
-    "tujuan": "Cocokkan isi label yang sudah ada dengan daftar elemen yang umumnya wajib dicantumkan, tampilkan yang masih kurang. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "label kemasan",
+      "checklist kemasan",
+      "netto",
+      "izin edar",
+      "komposisi"
+    ],
+    "data": [
+      "nama produk",
+      "jenis produk",
+      "yang sudah ada di label (satu per baris)"
+    ],
+    "gaya": "rapi dan jelas, jelaskan alasan desain",
     "contoh": {
       "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
-      "buruk": "Desainnya kurang bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "label kemasan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil daftar cek isi label kemasan perlu dibaca bersama: label kemasan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ukuran dan warna mengikuti panduan merek."
+    ]
   }
 }

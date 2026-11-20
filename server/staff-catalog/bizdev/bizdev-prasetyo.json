@@ -153,31 +153,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Corporate Sales & B2B Gifting Specialist di divisi Business Development & Partnerships, memakai bahasa awam",
-    "tujuan": "Hitung harga hampers untuk perusahaan dengan diskon jumlah, biaya kartu atau logo, dan PPN, lengkap dengan tanggal terakhir pemesanan dan produksi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "hampers",
+      "gifting",
+      "paket korporat",
+      "hari raya",
+      "penawaran perusahaan"
+    ],
+    "data": [
+      "nama perusahaan",
+      "pilihan paket",
+      "jumlah paket",
+      "kartu atau logo perusahaan"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
     "contoh": {
-      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
-      "buruk": "Peluangnya besar."
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "hampers"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun penawaran paket hampers perusahaan perlu dibaca bersama: hampers menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
   }
 }

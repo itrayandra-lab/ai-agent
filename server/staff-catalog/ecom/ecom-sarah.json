@@ -94,5 +94,29 @@
   "brain": {
     "folder": "Report",
     "simpan": true
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "profitabilitas",
+      "laba per produk",
+      "kanal",
+      "sku",
+      "margin"
+    ],
+    "data": [
+      "penjualan (satu baris: sku | kanal | terjual | harga | harga",
+      "total biaya iklan yang dibagi rata ke semua baris (rp)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

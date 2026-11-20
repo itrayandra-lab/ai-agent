@@ -125,5 +125,31 @@
   "brain": {
     "folder": "Report",
     "simpan": true
+  },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "outreach",
+      "pesan prospek",
+      "whatsapp",
+      "email penawaran",
+      "calon pelanggan"
+    ],
+    "data": [
+      "nama calon pelanggan",
+      "nama usahanya",
+      "masalah yang mungkin mereka hadapi",
+      "yang kita tawarkan"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

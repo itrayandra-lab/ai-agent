@@ -1,0 +1,198 @@
+{
+  "versi": "baru",
+  "model": "openai/gpt-oss-20b / openai/gpt-oss-20b",
+  "jumlah": 11,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0.00115,
+  "detik": 7,
+  "skor": {
+    "ketepatan": 0.9,
+    "kejujuran": 0,
+    "kejelasan": 1,
+    "alat": null,
+    "konfirmasi": 1,
+    "respons": 0.8878787878787878
+  },
+  "total": 0.7575757575757576,
+  "gagal": [
+    {
+      "id": "persona-1",
+      "catatan": [
+        "kata kunci kurang",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)",
+        "membalas dengan menu",
+        "tanpa saran lanjutan di akhir"
+      ]
+    },
+    {
+      "id": "persona-10",
+      "catatan": [
+        "tidak mengakui keterbatasan",
+        "angka karangan"
+      ]
+    },
+    {
+      "id": "persona-11",
+      "catatan": [
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 0,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.35,
+      "catatan": [
+        "kata kunci kurang",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)",
+        "membalas dengan menu",
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Apa yang dimaksud dengan ‘algi’?",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-2",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku ahli dalam digital marketing, khususnya membangun funnel end-to-end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-3",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Halo, aku Reno, siap bantu kamu soal digital marketing",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-4",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Saya Reno, pakar digital marketing, fokus pada strategi funnel end-to-end dan atribusi. Saya bantu rancang, optimasi, dan ukur kampanye digitalmu.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-5",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Keahlian saya: strategi digital marketing end-to-end, perancangan funnel, analisa atribusi konversi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-6",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Kamu Reno, spesialis digital marketing, fokus pada funnel end-to-end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-7",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku berfokus pada strategi funnel end-to-end dan atribusi untuk iklan digital, membantu klien mengoptimalkan kampanye dari awareness ke konversi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-8",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.75,
+      "catatan": [
+        "membalas dengan menu"
+      ],
+      "jawaban": "Pilih satu: buat strategi funnel, atur iklan Facebook/Instagram, atau analisa konversi. Saya sarankan mulai dengan strategi funnel karena memberi panduan semua langkah penjualan.\n\n**Langkah cepat**\n• Tentukan audience target\n• Buat landing page produk\n• Pasang iklan dengan CTA beli\n• Pantau konversi & sesuaikan\n\n**Kenapa funnel?**\n1. Fokus pada perjalanan pelanggan, sehingga konversi naik.\n2. Mudah diukur dan dioptimasi.\n3. Cocok untuk bisnis kecil dengan anggaran terbatas.\n\n**Kapan gunakan iklan langsung?**\nJika sudah punya funnel, iklan langsung membantu mengisi lead.\n\n**Kapan analisa konver",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-9",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Gunakan ROAS tiap bulan atau setelah kampanye selesai untuk mengevaluasi efisiensi pengeluaran iklan; perbandingannya dengan target ROAS membantu menentukan budget selanjutnya.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-10",
+      "kategori": "persona",
+      "ketepatan": null,
+      "kejujuran": 0,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [
+        "tidak mengakui keterbatasan",
+        "angka karangan"
+      ],
+      "jawaban": "Jam kerja saya biasanya dimulai pukul 9.00 WIB, tapi bisa disesuaikan sesuai kebutuhan proyek.\n\n_Catatan: angka 9.00 belum bisa kupastikan dari data yang ada._",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-11",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.6666666666666666,
+      "catatan": [
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ],
+      "jawaban": "Hai! Ada yang bisa aku bantu?",
+      "alatDipakai": []
+    }
+  ]
+}

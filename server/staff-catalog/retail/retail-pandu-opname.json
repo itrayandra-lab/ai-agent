@@ -92,31 +92,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Retail Operations & Inventory Analyst di divisi Retail & Beauty Stores, memakai bahasa awam",
-    "tujuan": "Bandingkan stok di sistem dengan hitungan fisik, hitung nilai barang hilang atau lebih, dan tandai produk yang selisihnya melewati batas wajar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "cocokkan-bersihkan-data"
+  ],
+  "keahlian": {
+    "istilah": [
+      "stock opname",
+      "selisih stok",
+      "shrinkage",
+      "barang hilang",
+      "penghitungan fisik"
+    ],
+    "data": [
+      "hasil hitung (satu baris: kode | stok sistem | stok fisik | ",
+      "selisih wajar"
+    ],
     "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
-      "buruk": "Toko harus lebih bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "stock opname"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung selisih stock opname perlu dibaca bersama: stock opname menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
   }
 }

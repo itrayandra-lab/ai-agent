@@ -118,31 +118,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Marketplace Ads Specialist di divisi E-commerce & Marketplace, memakai bahasa awam",
-    "tujuan": "Nilai tiap iklan dari biaya, penjualan, dan titik impas lalu beri saran naikkan, pertahankan, atau hentikan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "iklan marketplace",
+      "roas",
+      "acos",
+      "bid",
+      "titik impas"
+    ],
+    "data": [
+      "data iklan (satu baris: nama | biaya | omzet | klik | pesana",
+      "untung kotor produk",
+      "target balik modal iklan (kali lipat)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
     "contoh": {
       "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
-      "buruk": "Jualan perlu ditingkatkan."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "iklan marketplace"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penilai iklan marketplace dan saran tawaran perlu dibaca bersama: iklan marketplace menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

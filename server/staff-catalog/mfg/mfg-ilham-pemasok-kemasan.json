@@ -106,31 +106,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Maintenance & Packaging Engineer di divisi Manufacturing, memakai bahasa awam",
-    "tujuan": "Bandingkan beberapa pemasok kemasan menurut harga sebenarnya (termasuk cacat), jumlah minimum, dan lama kirim sesuai prioritasmu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pemasok kemasan",
+      "botol",
+      "moq",
+      "harga kemasan",
+      "perbandingan pemasok"
+    ],
+    "data": [
+      "kemasan yang dicari",
+      "kebutuhan (unit)",
+      "paling penting bagimu",
+      "pemasok (satu baris: nama | harga satuan | jumlah minimum | "
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
     "contoh": {
-      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
-      "buruk": "Produksi lancar."
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "pemasok kemasan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembanding pemasok kemasan perlu dibaca bersama: pemasok kemasan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
   }
 }

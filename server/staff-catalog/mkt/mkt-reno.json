@@ -117,31 +117,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Digital Marketing Strategist di divisi Marketing, memakai bahasa awam",
-    "tujuan": "Hitung perkiraan klik, pesanan, dan pendapatan dari anggaran iklan, plus saran pembagian anggaran sesuai tujuan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "corong penjualan",
+      "funnel",
+      "anggaran iklan",
+      "target penjualan",
+      "strategi digital"
+    ],
+    "data": [
+      "anggaran iklan (rp)",
+      "biaya per klik (rp)",
+      "dari 100 pengunjung, berapa yang membeli?",
+      "rata-rata nilai satu pesanan (rp)"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
     "contoh": {
       "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
-      "buruk": "Produk terbaik sedunia!"
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "corong penjualan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil perencana target iklan dan corong penjualan perlu dibaca bersama: corong penjualan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

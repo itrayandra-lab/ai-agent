@@ -88,31 +88,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "DevOps Engineer di divisi Product & Engineering, memakai bahasa awam",
-    "tujuan": "Cari layanan cloud yang jarang terpakai dan hitung berapa yang bisa dihemat tiap bulan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-hemat-otomasi"
+  ],
+  "keahlian": {
+    "istilah": [
+      "biaya cloud",
+      "hemat",
+      "finops",
+      "server",
+      "rightsizing"
+    ],
+    "data": [
+      "daftar layanan (satu baris: nama | jenis | biaya per bulan d",
+      "seberapa berani berhemat?"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
     "contoh": {
       "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
-      "buruk": "Coba perbaiki kodenya."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "biaya cloud"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung biaya cloud dan saran hemat perlu dibaca bersama: biaya cloud menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
   }
 }

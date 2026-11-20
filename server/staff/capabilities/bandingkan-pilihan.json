@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-bandingkan-pilihan",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan bandingkan pilihan",
+  "version": 1,
+  "name": "Bandingkan beberapa pilihan",
+  "ringkas": "Bandingkan beberapa pilihan (pemasok, kurir, penawaran) menurut biaya dan mutu, urutkan, lalu beri rekomendasi.",
+  "kataKunci": ["bandingkan", "pilihan", "pemasok", "harga", "rekomendasi", "vendor"],
+  "kemampuan": {
+    "id": "bandingkan-pilihan",
+    "kelompok": "analisis",
+    "tujuanAwam": "Membandingkan beberapa pilihan dari sisi biaya dan mutu, mengurutkannya, dan menyarankan yang paling pantas dipilih."
+  },
+  "inputs": [
+    { "key": "tujuan", "type": "text", "label": "Apa yang sedang dipilih?", "required": true, "contoh": "Pemasok kain" },
+    { "key": "pilihan", "type": "longtext", "label": "Daftar pilihan, satu baris satu pilihan: nama | biaya | mutu (nilai 1 sampai 10)", "required": true, "contoh": "Toko A | 1.200.000 | 7\nToko B | 950.000 | 5\nToko C | 1.500.000 | 9" },
+    { "key": "utama", "type": "choice", "label": "Mana yang paling penting?", "required": true, "default": "seimbang", "choices": [{ "v": "murah", "t": "Biaya paling murah" }, { "v": "mutu", "t": "Mutu paling baik" }, { "v": "seimbang", "t": "Seimbang" }] },
+    { "key": "catatan", "type": "text", "label": "Hal lain yang perlu dipertimbangkan (boleh kosong)", "required": false, "contoh": "Harus sampai sebelum akhir bulan" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skor tiap pilihan",
+      "set": {
+        "p": "baris(input.pilihan).map((l) => l.split('|').map((t) => t.trim())).filter((c) => c.length >= 3 && c[0] !== '').map((c) => ({ nama: cut(c[0], 40), biaya: num(c[1]), mutu: Math.min(10, Math.max(0, num(c[2]))) })).filter((o) => Number.isFinite(o.biaya) && o.biaya >= 0 && Number.isFinite(o.mutu)).slice(0, 30)",
+        "n": "v.p.length",
+        "bobotBiaya": "input.utama === 'murah' ? 0.7 : input.utama === 'mutu' ? 0.3 : 0.5",
+        "minB": "v.n ? Math.min(...v.p.map((o) => o.biaya)) : 0",
+        "maxB": "v.n ? Math.max(...v.p.map((o) => o.biaya)) : 0",
+        "urut": "v.p.map((o) => ({ nama: o.nama, biaya: o.biaya, mutu: o.mutu, skor: Math.round(v.bobotBiaya * (v.maxB === v.minB ? 100 : (v.maxB - o.biaya) / (v.maxB - v.minB) * 100) + (1 - v.bobotBiaya) * o.mutu * 10) })).sort((a, b) => b.skor - a.skor)",
+        "terbaik": "v.n ? v.urut[0] : null",
+        "termurah": "v.n ? v.p.slice().sort((a, b) => a.biaya - b.biaya)[0] : null",
+        "mutuTop": "v.n ? v.p.slice().sort((a, b) => b.mutu - a.mutu)[0] : null",
+        "selisih": "v.n > 1 ? v.urut[0].skor - v.urut[1].skor : 0",
+        "peringatan": "v.n < 2 ? 'Minimal dua pilihan agar bisa dibandingkan.' : v.selisih < 5 ? 'Skor teratas hampir sama; pertimbangkan hal lain di luar angka.' : 'Pilihan teratas unggul cukup jelas.'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? v.n + ' pilihan dibandingkan untuk ' + input.tujuan + '; terbaik: ' + v.terbaik.nama + ' (skor ' + v.terbaik.skor + ' dari 100)' : 'Tidak ada pilihan yang terbaca, tulis dengan pola: nama | biaya | mutu'",
+    "teks": "'# Perbandingan: ' + input.tujuan + '\\n\\n' + (v.n ? tabel(['Peringkat', 'Pilihan', 'Biaya', 'Mutu (1-10)', 'Skor'], v.urut.map((o, i) => [i + 1, o.nama, rp(o.biaya), o.mutu, o.skor])) + '\\n\\nTermurah: ' + v.termurah.nama + ' (' + rp(v.termurah.biaya) + '). Mutu tertinggi: ' + v.mutuTop.nama + ' (' + v.mutuTop.mutu + ').\\n\\n' + v.peringatan : 'Belum ada pilihan yang bisa dibaca. Tulis satu pilihan per baris dengan pola: nama | biaya | mutu.') + (input.catatan ? '\\n\\nCatatan: ' + cut(String(input.catatan), 200) : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'perbandingan-' + cut(String(input.tujuan).toLowerCase(), 30)", "isi": "csv([['peringkat', 'pilihan', 'biaya', 'mutu', 'skor']].concat(v.urut.map((o, i) => [i + 1, o.nama, o.biaya, o.mutu, o.skor])))" }
+    ],
+    "data": "({ n: v.n, terbaik: v.n ? v.terbaik.nama : '', skor: v.n ? v.terbaik.skor : 0, termurah: v.n ? v.termurah.nama : '', selisih: v.selisih, minBiaya: v.minB, maxBiaya: v.maxB })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "tujuan": "Pemasok kain", "pilihan": "Toko A | 1.200.000 | 7\nToko B | 950.000 | 5\nToko C | 1.500.000 | 9", "utama": "seimbang" }, "expect": { "berkas": 1, "mengandung": ["3 pilihan dibandingkan untuk Pemasok kain", "terbaik"] } },
+  "otakProfil": {
+    "peran": "penasihat pembelian yang membantu orang awam memilih dengan adil",
+    "tujuan": "Jelaskan mengapa pilihan teratas unggul, apa kelemahannya, dan hal apa yang perlu dicek sebelum memutuskan.",
+    "gaya": "jelas, berimbang, tidak memaksa, menyebut angka apa adanya",
+    "pedoman": ["Pakai hanya nama dan angka yang diberikan; jangan menambah pilihan baru.", "Sebut alasan pilihan teratas dan satu kelemahannya.", "Bila skor teratas hampir sama dengan berikutnya, katakan keputusan masih terbuka."],
+    "skema": { "pembahasan": "teks", "alasan": "daftar", "waspada": "daftar", "keputusan": "pilihan:pilih-teratas|bandingkan-lagi|cari-pilihan-lain" },
+    "contoh": { "baik": "Toko C paling mahal tetapi mutunya tertinggi, cocok bila mutu lebih penting dari biaya.", "buruk": "Pilih saja yang bagus." },
+    "batas": { "pembahasan": 600, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["skor"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Pilihan teratas unggul pada skor gabungan biaya dan mutu, tetapi jaraknya dengan pilihan kedua perlu dilihat sebelum memutuskan.\",\"alasan\":[\"Skor gabungan tertinggi\",\"Mutu memadai\"],\"waspada\":[\"Cek ketepatan waktu dan syarat pembayaran\"],\"keputusan\":\"pilih-teratas\"}"
+  },
+  "evaluasi": [
+    {
+      "nama": "tiga pilihan seimbang",
+      "input": { "tujuan": "Pemasok kain", "pilihan": "Toko A | 1.200.000 | 7\nToko B | 950.000 | 5\nToko C | 1.500.000 | 9", "utama": "seimbang" },
+      "ai": "{\"pembahasan\":\"Toko A memberi keseimbangan terbaik antara biaya dan mutu menurut skor gabungan, sedangkan Toko C unggul mutu tetapi mahal.\",\"alasan\":[\"Skor gabungan tertinggi\"],\"waspada\":[\"Cek waktu pengiriman\"],\"keputusan\":\"pilih-teratas\"}",
+      "kriteria": { "mengandung": ["Toko A", "skor"], "mengandungAturan": ["Toko B", "Termurah"], "panjangMin": 80, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.minBiaya", "min": 950000, "max": 950000 }, { "path": "data.maxBiaya", "min": 1500000, "max": 1500000 }] }
+    },
+    {
+      "nama": "utamakan murah dan baris berformat aneh",
+      "input": { "tujuan": "Kurir paket", "pilihan": "Kurir X|Rp 9.000|6\n\nKurir Y | 12000 | 9\nbaris rusak tanpa pola\nKurir Z ; 15000 ; 8", "utama": "murah" },
+      "ai": "{\"pembahasan\":\"Karena biaya diutamakan, kurir termurah mendapat skor tertinggi walau mutunya lebih rendah dari kurir lain.\",\"alasan\":[\"Biaya paling rendah\"],\"waspada\":[\"Mutu layanan rata-rata\"],\"keputusan\":\"pilih-teratas\"}",
+      "kriteria": { "mengandung": ["biaya", "skor"], "mengandungAturan": ["Kurir"], "panjangMin": 60, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 1, "max": 3 }, { "path": "data.skor", "min": 1, "max": 100 }] }
+    },
+    {
+      "nama": "satu pilihan saja",
+      "input": { "tujuan": "Vendor cetak", "pilihan": "Percetakan Maju | 500000 | 8", "utama": "mutu" },
+      "ai": "{\"pembahasan\":\"Hanya ada satu pilihan sehingga belum ada pembanding; skor tinggi belum berarti terbaik di pasar.\",\"alasan\":[\"Mutu 8 dari 10\"],\"waspada\":[\"Cari pembanding lain\"],\"keputusan\":\"cari-pilihan-lain\"}",
+      "kriteria": { "mengandung": ["pembanding"], "mengandungAturan": ["Minimal dua pilihan"], "panjangMin": 60, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 1, "max": 1 }, { "path": "data.skor", "min": 70, "max": 100 }] }
+    },
+    {
+      "nama": "tidak ada pilihan terbaca",
+      "input": { "tujuan": "Pasar baru", "pilihan": "asal tulis saja", "utama": "seimbang" },
+      "ai": "{\"pembahasan\":\"Belum ada pilihan yang terbaca, jadi belum ada yang bisa dibandingkan; tulis ulang dengan pola nama, biaya, mutu.\",\"alasan\":[\"Data kosong\"],\"waspada\":[\"Periksa pola penulisan\"],\"keputusan\":\"bandingkan-lagi\"}",
+      "kriteria": { "mengandung": ["pola"], "mengandungAturan": ["Belum ada pilihan"], "panjangMin": 40, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 0, "max": 0 }] }
+    }
+  ]
+}

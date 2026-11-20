@@ -6,7 +6,7 @@
 //   id, kind ('review' | 'policy' | 'automation' | 'browser_action'), title (kalimat awam), summary, preview (pratinjau singkat),
 //   status ('pending' | 'approved' | 'rejected'), requesterId, approverId (siapa yang boleh memutuskan), createdAt, expiresAt (null = tidak kedaluwarsa),
 //   taskId, decidedBy, decidedAt, feedback, + medan khusus jenis (evidence/gaps/expected/unverified, automationId/automationAction).
-import * as store from './store.js';
+import * as store from './penyimpanan/store.js';
 
 const db = () => store.get();
 
@@ -45,20 +45,17 @@ export function recordAuto({ kind = 'policy', title, summary = '', requesterId, 
 export const get = (id) => db().approvals.find((x) => x.id === id);
 export const pending = (kind) => db().approvals.filter((a) => a.status === 'pending' && (!kind || a.kind === kind));
 /** kartu yang boleh disetujui otomatis oleh pengaturan autoApprove */
-export const autoApprovable = (a) => a.status === 'pending' && !NEVER_AUTO.has(a.kind);
+/** "Serahkan penuh" (settings.permission === 'full', hanya pengelola ruang kerja): kartu review ikut disetujui otomatis; otomasi dan aksi browser TETAP hanya oleh manusia */
+export const fullTrust = () => db().settings.permission === 'full';
+const bolehOtomatis = (kind) => !NEVER_AUTO.has(kind) || (kind === 'review' && fullTrust());
+export const autoApprovable = (a) => a.status === 'pending' && bolehOtomatis(a.kind);
 
-/** Siapa yang boleh memutuskan kartu ini. 'owner' = pemilik/admin ruang kerja mana pun; selain itu id manusia yang ditunjuk. */
-export function canDecide(card, userId) {
-  if (!card || card.status !== 'pending') return false;
-  if (userId === 'system-auto') return !NEVER_AUTO.has(card.kind);
-  return card.approverId === 'owner' || card.approverId === userId || userId === 'owner';
-}
 
 /** Putuskan kartu. Mengembalikan kartu; efek lanjutan (selesaikan tugas, nyalakan otomasi, buka aksi) tetap di pemanggil. */
 export function decide(id, { decision, feedback = '', userId = 'owner' }) {
   const a = get(id);
   if (!a || a.status !== 'pending') throw new Error('Approval tidak ditemukan atau sudah diputuskan');
-  if (userId === 'system-auto' && NEVER_AUTO.has(a.kind)) throw new Error(`Kartu jenis ${a.kind} hanya boleh diputuskan manusia.`);
+  if (userId === 'system-auto' && !bolehOtomatis(a.kind)) throw new Error(`Kartu jenis ${a.kind} hanya boleh diputuskan manusia.`);
   Object.assign(a, { status: decision === 'approve' ? 'approved' : 'rejected', decidedBy: userId, decidedAt: Date.now(), feedback });
   return store.upsert('approvals', a);
 }

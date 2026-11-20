@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-hitung-teknis",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan hitungan teknis harian",
+  "version": 1,
+  "name": "Hitungan teknis harian",
+  "ringkas": "Ubah satuan, hitung tanggal, ubah persen ke gram, hitung pengenceran dan jumlah sampel, atau tulis nominal dengan huruf.",
+  "kataKunci": ["konversi", "satuan", "tanggal", "formula", "pengenceran", "sampel", "terbilang", "gram"],
+  "kemampuan": {
+    "id": "hitung-teknis",
+    "kelompok": "hitungan",
+    "tujuanAwam": "Menjawab hitungan teknis yang sering muncul: ubah satuan, selisih tanggal, takaran formula, pengenceran, jumlah sampel, dan terbilang rupiah."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau menghitung apa?", "required": true, "default": "satuan", "choices": [{ "v": "satuan", "t": "Ubah satuan" }, { "v": "tanggal", "t": "Hitung tanggal" }, { "v": "formula", "t": "Persen ke gram" }, { "v": "encer", "t": "Pengenceran" }, { "v": "sampel", "t": "Jumlah sampel" }, { "v": "terbilang", "t": "Tulis dengan huruf" }] },
+    { "key": "nilai", "type": "number", "label": "Angka utama: jumlah, tambahan hari, berat adonan (gram), konsentrasi awal, populasi, atau rupiah", "required": false, "contoh": "2,5" },
+    { "key": "satuan", "type": "text", "label": "Khusus ubah satuan: tulis dari ke, contoh kg ke g (juga cm, m, ml, l, menit, jam, c, f)", "required": false, "contoh": "kg ke g" },
+    { "key": "tanggal", "type": "date", "label": "Tanggal awal (untuk hitung tanggal)", "required": false, "contoh": "2026-01-31" },
+    { "key": "tanggal2", "type": "date", "label": "Tanggal kedua, bila ingin mencari selisih dua tanggal", "required": false, "contoh": "2026-03-15" },
+    { "key": "daftar", "type": "longtext", "label": "Daftar: bahan per baris (nama | persen); pengenceran (akhir | volume); sampel (galat % | keyakinan %)", "required": false, "contoh": "Air | 70" }
+  ],
+  "steps": [
+    {
+      "id": "urai",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "nilai": "num(input.nilai)",
+        "sat": "baris(String(input.satuan === undefined ? '' : input.satuan)).join(' ').toLowerCase().replace(/[;>-]/g, ' ').split(' ').filter((t) => t !== '' && t !== 'ke' && t !== 'to').map((t) => ({ gram: 'g', kilogram: 'kg', liter: 'l', meter: 'm', mililiter: 'ml', sentimeter: 'cm', celsius: 'c', fahrenheit: 'f', kelvin: 'k' })[t] || t)",
+        "bar": "baris(String(input.daftar === undefined ? '' : input.daftar)).slice(0, 60)",
+        "bagian": "(v.bar[0] || '').split('|').map((t) => t.trim())"
+      }
+    },
+    {
+      "id": "satuan_tanggal",
+      "use": "hitung",
+      "label": "Hitung satuan dan tanggal",
+      "set": {
+        "hk": "(() => { const U = { mg: ['massa', 0.001], g: ['massa', 1], kg: ['massa', 1000], ons: ['massa', 100], ton: ['massa', 1000000], mm: ['panjang', 0.001], cm: ['panjang', 0.01], m: ['panjang', 1], km: ['panjang', 1000], inci: ['panjang', 0.0254], kaki: ['panjang', 0.3048], ml: ['volume', 0.001], l: ['volume', 1], detik: ['waktu', 1], menit: ['waktu', 60], jam: ['waktu', 3600], hari: ['waktu', 86400] }; const ada = (u) => Object.keys(U).includes(u); const suhu = ['c', 'f', 'k']; const a = v.sat[0] || '', b = v.sat[1] || ''; const ok = (ada(a) && ada(b) && U[a][0] === U[b][0]) || (suhu.includes(a) && suhu.includes(b)); const toC = (x, u) => u === 'c' ? x : u === 'f' ? (x - 32) * 5 / 9 : x - 273.15; const fromC = (c, u) => u === 'c' ? c : u === 'f' ? c * 9 / 5 + 32 : c + 273.15; const hasil = !ok ? 0 : suhu.includes(a) ? fromC(toC(v.nilai, a), b) : v.nilai * U[a][1] / U[b][1]; const bulat = Math.round(hasil * 1000000) / 1000000; return { judul: 'Ubah satuan', inti: ok ? v.nilai + ' ' + a + ' sama dengan ' + bulat + ' ' + b : 'satuan belum dikenal', kepala: ['Hitungan', 'Hasil'], rows: ok ? [['Angka awal', v.nilai + ' ' + a], ['Hasil', bulat + ' ' + b], ['Cara', 'ubah ke satuan dasar, lalu ke ' + b]] : [['Satuan yang dibaca', (a || '-') + ' ke ' + (b || '-')], ['Satuan yang dikenal', Object.keys(U).join(' ') + ' c f k']], data: { hasil: bulat, ok: ok ? 1 : 0 } }; })()",
+        "ht": "(() => { const a = Date.parse(input.tanggal), b = Date.parse(input.tanggal2); const dd = 86400000; const hn = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']; if (Number.isFinite(a) && Number.isFinite(b)) { const sel = Math.round((b - a) / dd); const ab = Math.abs(sel); return { judul: 'Selisih tanggal', inti: 'selisih ' + sel + ' hari antara ' + input.tanggal + ' dan ' + input.tanggal2, kepala: ['Hitungan', 'Hasil'], rows: [['Tanggal awal', input.tanggal + ' (' + hn[new Date(a).getUTCDay()] + ')'], ['Tanggal kedua', input.tanggal2 + ' (' + hn[new Date(b).getUTCDay()] + ')'], ['Selisih', sel + ' hari'], ['Sekitar', Math.floor(ab / 7) + ' minggu ' + (ab % 7) + ' hari'], ['Dalam bulan', Math.round(ab / 30.44 * 10) / 10 + ' bulan']], data: { selisih: sel, ok: 1 } }; } if (Number.isFinite(a)) { const n = Math.max(-36500, Math.min(36500, Math.round(v.nilai))); const t = new Date(a + n * dd); return { judul: 'Tambah atau kurangi hari', inti: input.tanggal + ' ditambah ' + n + ' hari menjadi ' + t.toISOString().slice(0, 10), kepala: ['Hitungan', 'Hasil'], rows: [['Tanggal awal', input.tanggal + ' (' + hn[new Date(a).getUTCDay()] + ')'], ['Tambahan hari', n], ['Tanggal hasil', t.toISOString().slice(0, 10) + ' (' + hn[t.getUTCDay()] + ')']], data: { tambah: n, bulan: t.getUTCMonth() + 1, hari: t.getUTCDate(), ok: 1 } }; } return { judul: 'Hitung tanggal', inti: 'tanggal awal belum diisi', kepala: ['Hitungan', 'Hasil'], rows: [['Tanggal awal', 'belum diisi']], data: { ok: 0 } }; })()"
+      }
+    },
+    {
+      "id": "campuran",
+      "use": "hitung",
+      "label": "Hitung formula, pengenceran, dan sampel",
+      "set": {
+        "hf": "(() => { const it = v.bar.map((l) => { const p = l.split('|'); return { n: p[0].trim(), p: num(p[1]) }; }).filter((o) => o.n !== '' && o.p > 0); const tot = Math.round(it.reduce((s, o) => s + o.p, 0) * 100) / 100; const g = (p) => Math.round(p * v.nilai) / 100; return { judul: 'Persen ke gram', inti: it.length ? it.length + ' bahan dari adonan ' + v.nilai + ' g, jumlah persen ' + tot + '%' : 'belum ada bahan yang terbaca', kepala: ['Bahan', 'Persen', 'Berat'], rows: it.length ? it.map((o) => [o.n, o.p + '%', g(o.p) + ' g']).concat([['Jumlah', tot + '%', g(tot) + ' g']]) : [['belum ada bahan', '-', '-']], data: { jumlahPersen: tot, bahan: it.length, totalGram: g(tot), ok: it.length ? 1 : 0 } }; })()",
+        "he": "(() => { const c1 = v.nilai, c2 = num(v.bagian[0]), v2 = num(v.bagian[1]); const ok = c1 > 0 && c2 > 0 && v2 > 0 && c2 <= c1; const v1 = ok ? Math.round(c2 * v2 / c1 * 100) / 100 : 0; const pel = ok ? Math.round((v2 - v1) * 100) / 100 : 0; return { judul: 'Pengenceran', inti: ok ? 'ambil ' + v1 + ' larutan pekat lalu tambah pelarut ' + pel + ' sampai ' + v2 : 'isian pengenceran belum lengkap', kepala: ['Hitungan', 'Hasil'], rows: [['Konsentrasi awal', c1], ['Konsentrasi akhir', c2], ['Volume akhir', v2], ['Ambil larutan pekat', v1], ['Tambahkan pelarut', pel], ['Rumus', 'K1 x V1 = K2 x V2']], data: { ambil: v1, pelarut: pel, ok: ok ? 1 : 0 } }; })()",
+        "hs": "(() => { const pe = num(v.bagian[0]) > 0 ? num(v.bagian[0]) : 5; const lv = num(v.bagian[1]) > 0 ? num(v.bagian[1]) : 95; const z = ({ 80: 1.282, 85: 1.44, 90: 1.645, 95: 1.96, 99: 2.576 })[Math.round(lv)] || 1.96; const e = Math.max(0.001, Math.min(0.5, pe / 100)); const n0 = z * z * 0.25 / (e * e); const N = v.nilai; const n = N > 0 ? n0 / (1 + (n0 - 1) / N) : n0; const sl = N > 0 ? N / (1 + N * e * e) : 0; return { judul: 'Jumlah sampel', inti: N > 0 ? 'perlu sekitar ' + Math.ceil(n) + ' sampel dari ' + N : 'perlu sekitar ' + Math.ceil(n0) + ' sampel', kepala: ['Hitungan', 'Hasil'], rows: [['Jumlah populasi', N > 0 ? N : 'tidak diisi'], ['Galat yang diterima', pe + '%'], ['Tingkat keyakinan', lv + '%'], ['Sampel (cara Cochran, disesuaikan populasi)', Math.ceil(n)], ['Sampel (cara Slovin)', Math.ceil(sl)]], data: { cochran: Math.ceil(n), slovin: Math.ceil(sl), ok: 1 } }; })()",
+        "hb": "(() => { const sat = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas']; const t = (n) => n < 12 ? sat[n] : n < 20 ? sat[n - 10] + ' belas' : n < 100 ? sat[Math.floor(n / 10)] + ' puluh' + (n % 10 ? ' ' + sat[n % 10] : '') : n < 200 ? 'seratus' + (n % 100 ? ' ' + t(n % 100) : '') : n < 1000 ? sat[Math.floor(n / 100)] + ' ratus' + (n % 100 ? ' ' + t(n % 100) : '') : n < 2000 ? 'seribu' + (n % 1000 ? ' ' + t(n % 1000) : '') : n < 1000000 ? t(Math.floor(n / 1000)) + ' ribu' + (n % 1000 ? ' ' + t(n % 1000) : '') : n < 1000000000 ? t(Math.floor(n / 1000000)) + ' juta' + (n % 1000000 ? ' ' + t(n % 1000000) : '') : n < 1000000000000 ? t(Math.floor(n / 1000000000)) + ' miliar' + (n % 1000000000 ? ' ' + t(n % 1000000000) : '') : t(Math.floor(n / 1000000000000)) + ' triliun' + (n % 1000000000000 ? ' ' + t(n % 1000000000000) : ''); const n = Math.floor(Math.abs(v.nilai)); const ok = n <= 999000000000000; const s = n === 0 ? 'nol' : ok ? t(n) : ''; const hasil = ok ? (s.charAt(0).toUpperCase() + s.slice(1) + ' rupiah') : 'Angka terlalu besar'; return { judul: 'Terbilang rupiah', inti: ok ? rp(v.nilai) + ' dibaca ' + hasil.toLowerCase() : 'angka terlalu besar untuk ditulis', kepala: ['Hitungan', 'Hasil'], rows: [['Angka', rp(v.nilai)], ['Terbilang', hasil]], data: { nilai: n, kata: ok ? s.split(' ').length : 0, ok: ok ? 1 : 0 } }; })()",
+        "pilih": "({ satuan: v.hk, tanggal: v.ht, formula: v.hf, encer: v.he, sampel: v.hs, terbilang: v.hb })[input.jenis] || v.hk",
+        "peringatan": "[input.jenis === 'satuan' && v.hk.data.ok === 0 ? 'Satuan belum dikenal; tulis seperti: kg ke g.' : '', input.jenis === 'tanggal' && v.ht.data.ok === 0 ? 'Isi tanggal awal. Untuk selisih isi juga tanggal kedua; untuk menambah isi jumlah hari.' : '', input.jenis === 'formula' && v.hf.data.bahan === 0 ? 'Tulis bahan satu per baris dengan bentuk nama | persen.' : '', input.jenis === 'formula' && v.hf.data.bahan > 0 && Math.abs(v.hf.data.jumlahPersen - 100) > 0.01 ? 'Jumlah persen bahan tidak 100, periksa formula.' : '', input.jenis === 'formula' && v.nilai <= 0 ? 'Isi berat total adonan dalam gram.' : '', input.jenis === 'encer' && v.he.data.ok === 0 ? 'Isi kolom daftar dengan konsentrasi akhir | volume akhir; konsentrasi akhir harus lebih kecil dari konsentrasi awal.' : '', input.jenis === 'terbilang' && v.hb.data.ok === 0 ? 'Angka terlalu besar.' : ''].filter((t) => t !== '')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.pilih.judul + ': ' + v.pilih.inti",
+    "teks": "'# ' + v.pilih.judul + '\\n\\n' + tabel(v.pilih.kepala, v.pilih.rows) + (v.peringatan.length ? '\\n\\nPerhatian: ' + v.peringatan.join(' ') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'hitungan-' + input.jenis", "isi": "csv([v.pilih.kepala].concat(v.pilih.rows))" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, peringatan: v.peringatan.length }, v.pilih.data)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "satuan", "nilai": "2,5", "satuan": "kg ke g" }, "expect": { "berkas": 1, "mengandung": ["2500 g", "Ubah satuan"] } },
+  "otakProfil": {
+    "peran": "pendamping hitungan teknis yang menjelaskan hasil kepada orang awam",
+    "tujuan": "Terangkan hasil hitungan teknis dengan bahasa sederhana, sebut apa yang perlu dicek dua kali, dan beri langkah berikutnya.",
+    "gaya": "teliti, ringkas, sebut satuan dengan jelas",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Selalu sebut satuan bersama angka.", "Untuk pengenceran atau takaran bahan, ingatkan agar hasil dicek ulang sebelum dipakai."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "2,5 kg sama dengan 2500 gram; satu kilogram berisi seribu gram.", "buruk": "Sudah dihitung, silakan pakai." },
+    "batas": { "pembahasan": 500, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["hasil"], "minPanjang": 30, "maksPanjang": 500 },
+    "contohAI": "{\"pembahasan\":\"Hasil hitungan sudah ditulis lengkap dengan satuannya. Cek sekali lagi angka awal sebelum dipakai untuk keputusan atau takaran.\",\"poin\":[\"Satuan hasil sudah jelas\"],\"langkah\":[\"Cek ulang angka awal\"]}"
+  },
+  "evaluasi": [
+    { "nama": "ubah satuan dengan huruf besar dan koma desimal", "input": { "jenis": "satuan", "nilai": "2,5", "satuan": "KG ke G" }, "ai": "{\"pembahasan\":\"Hasil sudah benar: dua setengah kilogram sama dengan dua ribu lima ratus gram.\",\"poin\":[\"Satu kilogram seribu gram\"],\"langkah\":[\"Cek timbangan\"]}", "kriteria": { "mengandung": ["hasil", "kilogram"], "mengandungAturan": ["2500 g"], "panjangMin": 80, "panjangMaks": 1500, "nilai": [{ "path": "data.hasil", "min": 2500, "max": 2500 }, { "path": "data.ok", "min": 1, "max": 1 }] } },
+    { "nama": "tambah hari melewati akhir bulan", "input": { "jenis": "tanggal", "nilai": "30", "tanggal": "2026-01-31" }, "ai": "{\"pembahasan\":\"Hasil jatuh di awal Maret karena Februari hanya punya dua puluh delapan hari tahun ini.\",\"poin\":[\"Februari 28 hari\"],\"langkah\":[\"Catat tanggal hasil\"]}", "kriteria": { "mengandung": ["hasil", "maret"], "mengandungAturan": ["2026-03-02"], "panjangMin": 80, "panjangMaks": 1500, "nilai": [{ "path": "data.bulan", "min": 3, "max": 3 }, { "path": "data.hari", "min": 2, "max": 2 }] } },
+    { "nama": "terbilang angka bertitik", "input": { "jenis": "terbilang", "nilai": "1.250.500" }, "ai": "{\"pembahasan\":\"Hasil terbilang ditulis dengan huruf agar tidak salah baca di kuitansi atau surat.\",\"poin\":[\"Ditulis dengan huruf\"],\"langkah\":[\"Cocokkan dengan angka di dokumen\"]}", "kriteria": { "mengandung": ["terbilang", "kuitansi"], "mengandungAturan": ["Satu juta dua ratus lima puluh ribu lima ratus rupiah"], "panjangMin": 80, "panjangMaks": 1500, "nilai": [{ "path": "data.nilai", "min": 1250500, "max": 1250500 }] } },
+    { "nama": "persen ke gram dengan baris campur", "input": { "jenis": "formula", "nilai": "2000", "daftar": "Air | 70\nGliserin | 5,5\nPengawet | 0.5\nEmulsi | 24\nbaris tanpa pemisah" }, "ai": "{\"pembahasan\":\"Hasil takaran menjumlah tepat seratus persen sehingga adonan dua kilogram terbagi habis ke semua bahan.\",\"poin\":[\"Jumlah persen seratus\"],\"langkah\":[\"Timbang sesuai tabel\"]}", "kriteria": { "mengandung": ["takaran", "seratus"], "mengandungAturan": ["1400 g", "110 g", "480 g"], "panjangMin": 120, "panjangMaks": 2000, "nilai": [{ "path": "data.jumlahPersen", "min": 100, "max": 100 }, { "path": "data.bahan", "min": 4, "max": 4 }, { "path": "data.totalGram", "min": 2000, "max": 2000 }] } },
+    { "nama": "jumlah sampel dari populasi", "input": { "jenis": "sampel", "nilai": "1000", "daftar": "5 | 95" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan jumlah sampel yang cukup untuk keyakinan sembilan puluh lima persen dengan galat lima persen.\",\"poin\":[\"Dua cara hitung memberi angka berdekatan\"],\"langkah\":[\"Ambil sampel secara acak\"]}", "kriteria": { "mengandung": ["sampel", "keyakinan"], "mengandungAturan": ["Cochran", "Slovin"], "panjangMin": 120, "panjangMaks": 2000, "nilai": [{ "path": "data.cochran", "min": 277, "max": 279 }, { "path": "data.slovin", "min": 285, "max": 287 }] } },
+    { "nama": "pengenceran", "input": { "jenis": "encer", "nilai": "70", "daftar": "5 | 250" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan larutan pekat perlu diambil sedikit lalu ditambah pelarut sampai volume akhir tercapai.\",\"poin\":[\"Rumus K1 V1 sama dengan K2 V2\"],\"langkah\":[\"Aduk sampai rata\"]}", "kriteria": { "mengandung": ["pelarut", "volume"], "mengandungAturan": ["Tambahkan pelarut"], "panjangMin": 100, "panjangMaks": 1500, "nilai": [{ "path": "data.ambil", "min": 17.8, "max": 17.9 }, { "path": "data.pelarut", "min": 232.1, "max": 232.2 }] } }
+  ]
+}

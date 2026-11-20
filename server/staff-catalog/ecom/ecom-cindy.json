@@ -146,5 +146,31 @@
   "brain": {
     "folder": "Report",
     "simpan": true
+  },
+  "kemampuan": [
+    "tulis-konten-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "deskripsi produk",
+      "judul produk",
+      "listing",
+      "katalog",
+      "marketplace"
+    ],
+    "data": [
+      "merek",
+      "nama produk",
+      "varian atau ukuran",
+      "manfaat utama (satu baris per manfaat)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

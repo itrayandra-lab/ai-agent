@@ -89,31 +89,28 @@
     "folder": "Report",
     "simpan": false
   },
-  "otakProfil": {
-    "peran": "Alat umum di divisi alat umum, memakai bahasa awam",
-    "tujuan": "Ubah daftar teks (satu baris satu data) menjadi berkas CSV rapi dan tabel yang siap dibuka di Excel atau Sheets. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "cocokkan-bersihkan-data"
+  ],
+  "keahlian": {
+    "istilah": [
+      "csv",
+      "tabel",
+      "excel",
+      "sheets",
+      "daftar"
+    ],
+    "data": [
+      "isi daftar (baris pertama = judul kolom)",
+      "kolom dipisah dengan"
+    ],
     "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
-      "buruk": "Hasil sudah benar."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "csv"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembuat berkas csv dari teks perlu dibaca bersama: csv menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
   }
 }

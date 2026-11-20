@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-analisis-angka",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan analisis angka",
+  "version": 1,
+  "name": "Analisis daftar angka",
+  "ringkas": "Hitung rata-rata, nilai tengah, sebaran, dan angka janggal dari sederet angka, lalu bahas artinya dengan bahasa sederhana.",
+  "kataKunci": ["analisis", "angka", "statistik", "rata-rata", "janggal"],
+  "kemampuan": {
+    "id": "analisis-angka",
+    "kelompok": "analisis",
+    "tujuanAwam": "Membaca sederet angka (penjualan, biaya, skor) dan menjelaskan artinya, termasuk angka yang tidak wajar."
+  },
+  "inputs": [
+    { "key": "ukuran", "type": "text", "label": "Apa yang diukur?", "required": true, "contoh": "Penjualan harian" },
+    { "key": "angka", "type": "longtext", "label": "Daftar angka (pisahkan dengan spasi, koma, atau baris baru)", "required": true, "contoh": "100 102 98 101 99 103 250 97" },
+    { "key": "fokus", "type": "choice", "label": "Mau dibahas dari sisi mana?", "required": true, "default": "ringkas", "choices": [{ "v": "ringkas", "t": "Gambaran umum" }, { "v": "tren", "t": "Naik atau turun" }, { "v": "janggal", "t": "Angka yang tidak wajar" }] }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung statistik",
+      "set": {
+        "x": "baris(input.angka).join(' ').replace(/[,;]/g, ' ').split(' ').filter((t) => t !== '').map((t) => num(t)).filter((t) => Number.isFinite(t)).slice(0, 2000)",
+        "n": "v.x.length",
+        "s": "v.x.slice().sort((a, b) => a - b)",
+        "rata": "v.n ? Math.round(v.x.reduce((a, b) => a + b, 0) / v.n * 100) / 100 : 0",
+        "median": "v.n ? (v.n % 2 ? v.s[(v.n - 1) / 2] : (v.s[v.n / 2 - 1] + v.s[v.n / 2]) / 2) : 0",
+        "terkecil": "v.n ? v.s[0] : 0",
+        "terbesar": "v.n ? v.s[v.n - 1] : 0",
+        "sd": "v.n ? Math.round(Math.sqrt(v.x.reduce((a, b) => a + (b - v.rata) * (b - v.rata), 0) / v.n) * 100) / 100 : 0",
+        "janggal": "v.x.filter((a) => v.sd > 0 && Math.abs(a - v.rata) > 2 * v.sd)",
+        "tren": "v.n > 1 ? (v.x[v.n - 1] > v.x[0] ? 'naik' : v.x[v.n - 1] < v.x[0] ? 'turun' : 'datar') : 'datar'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? v.n + ' angka ' + input.ukuran + ': rata-rata ' + v.rata + ', median ' + v.median + ', ' + v.janggal.length + ' angka janggal' : 'Tidak ada angka yang valid, periksa lagi isiannya'",
+    "teks": "'# Analisis ' + input.ukuran + '\\n\\n' + tabel(['Ukuran', 'Nilai'], [['Jumlah angka', v.n], ['Rata-rata', v.rata], ['Median', v.median], ['Terkecil', v.terkecil], ['Terbesar', v.terbesar], ['Sebaran (simpangan baku)', v.sd], ['Arah dari awal ke akhir', v.tren], ['Angka janggal', v.janggal.length ? v.janggal.join(', ') : 'tidak ada']])",
+    "berkas": [
+      { "jenis": "csv", "nama": "'statistik-' + cut(String(input.ukuran).toLowerCase(), 30)", "isi": "csv([['ukuran', 'nilai'], ['jumlah', v.n], ['rata-rata', v.rata], ['median', v.median], ['terkecil', v.terkecil], ['terbesar', v.terbesar], ['simpangan baku', v.sd], ['angka janggal', v.janggal.length]])" }
+    ],
+    "data": "({ n: v.n, rata: v.rata, median: v.median, sd: v.sd, janggal: v.janggal.length, tren: v.tren })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "ukuran": "Penjualan harian", "angka": "100 102 98 101 99 103 250 97", "fokus": "ringkas" }, "expect": { "berkas": 1, "mengandung": ["8 angka Penjualan harian", "rata-rata 118.75"] } },
+  "otakProfil": {
+    "peran": "analis angka yang menjelaskan hasil hitung kepada orang awam",
+    "tujuan": "Ubah hasil statistik menjadi penjelasan singkat: apa arti angkanya, apa yang janggal, dan apa yang sebaiknya dilakukan.",
+    "gaya": "jernih dan netral, sebut angka seperti apa adanya, jujur soal ketidakpastian",
+    "pedoman": ["Pakai hanya angka yang diberikan; jangan menambah angka baru.", "Jelaskan arti rata-rata dan angka janggal dengan kalimat pendek.", "Bila data sedikit (kurang dari 5 angka), katakan kesimpulannya masih lemah."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Satu hari jauh di atas yang lain dan menaikkan rata-rata; periksa catatan hari itu.", "buruk": "Datanya bagus." },
+    "batas": { "pembahasan": 600, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["rata-rata"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Rata-rata dipengaruhi satu angka yang jauh lebih besar dari yang lain, sehingga rata-rata terlihat lebih tinggi dari kebanyakan hari.\",\"poin\":[\"Satu angka janggal\",\"Sebagian besar angka berdekatan\"],\"langkah\":[\"Periksa catatan angka janggal\",\"Hitung ulang tanpa angka itu\"]}"
+  },
+  "evaluasi": [
+    { "nama": "ada angka janggal", "input": { "ukuran": "Penjualan harian", "angka": "100 102 98 101 99 103 250 97", "fokus": "janggal" }, "ai": "{\"pembahasan\":\"Rata-rata terdorong naik oleh satu angka yang jauh di atas yang lain, jadi gambaran rata-rata kurang mewakili hari biasa.\",\"poin\":[\"Satu angka janggal\"],\"langkah\":[\"Cek catatan angka janggal\"]}", "kriteria": { "mengandung": ["8 angka", "rata-rata"], "mengandungAturan": ["Angka janggal", "250"], "panjangMin": 80, "panjangMaks": 1500, "nilai": [{ "path": "data.rata", "min": 118, "max": 119 }, { "path": "data.janggal", "min": 1, "max": 1 }] } },
+    { "nama": "angka rapi tanpa janggal", "input": { "ukuran": "Skor kepuasan", "angka": "4, 5, 4, 4, 5, 4", "fokus": "ringkas" }, "ai": "{\"pembahasan\":\"Skor stabil dan tinggi: rata-rata dekat 4,3 dan tidak ada angka yang menyimpang jauh.\",\"poin\":[\"Skor stabil\"],\"langkah\":[\"Pertahankan layanan\"]}", "kriteria": { "mengandung": ["6 angka", "stabil"], "mengandungAturan": ["tidak ada"], "panjangMin": 80, "panjangMaks": 1500, "nilai": [{ "path": "data.rata", "min": 4.2, "max": 4.4 }, { "path": "data.janggal", "min": 0, "max": 0 }] } },
+    { "nama": "angka format Indonesia dan tren turun", "input": { "ukuran": "Omzet mingguan", "angka": "1.500.000\n1.400.000\n1.250.000\n1.100.000", "fokus": "tren" }, "ai": "{\"pembahasan\":\"Omzet turun tiap minggu; dari 1,5 juta menjadi 1,1 juta, jadi penurunannya konsisten dan perlu dicari penyebabnya.\",\"poin\":[\"Turun empat minggu berturut-turut\"],\"langkah\":[\"Periksa promo dan stok\"]}", "kriteria": { "mengandung": ["4 angka", "turun"], "mengandungAturan": ["turun"], "panjangMin": 80, "panjangMaks": 1500, "nilai": [{ "path": "data.rata", "min": 1312000, "max": 1313000 }] } }
+  ]
+}

@@ -112,31 +112,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Automation & Integration Engineer di divisi Knowledge & AI Ops, memakai bahasa awam",
-    "tujuan": "Hitung berapa jam dan rupiah yang dihemat oleh sebuah otomasi, kapan balik modal, dan layak dibuat atau belum. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-hemat-otomasi"
+  ],
+  "keahlian": {
+    "istilah": [
+      "otomasi",
+      "penghematan",
+      "roi",
+      "balik modal",
+      "efisiensi"
+    ],
+    "data": [
+      "pekerjaan yang mau diotomatiskan",
+      "berapa kali dikerjakan per minggu?",
+      "berapa menit tiap kali?",
+      "biaya per jam orang yang mengerjakan (rp)"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
     "contoh": {
       "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
-      "buruk": "Simpan saja."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "otomasi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung penghematan otomasi perlu dibaca bersama: otomasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
   }
 }

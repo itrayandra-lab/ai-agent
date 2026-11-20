@@ -220,31 +220,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Product Development Specialist (NPD) di divisi R&D & Formulation, memakai bahasa awam",
-    "tujuan": "Beri nilai lima sisi sebuah konsep produk dengan bobot, hitung skor akhir, dan putuskan lanjut, perbaiki, atau hentikan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "nilai-skor"
+  ],
+  "keahlian": {
+    "istilah": [
+      "konsep produk",
+      "kelayakan",
+      "stage gate",
+      "penilaian ide",
+      "prioritas produk"
+    ],
+    "data": [
+      "nama konsep produk",
+      "kebutuhan pasar",
+      "kemudahan membuatnya",
+      "keuntungan yang diharapkan"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
     "contoh": {
       "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
-      "buruk": "Formula B pasti terbaik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "konsep produk"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penilai kelayakan konsep produk perlu dibaca bersama: konsep produk menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
   }
 }

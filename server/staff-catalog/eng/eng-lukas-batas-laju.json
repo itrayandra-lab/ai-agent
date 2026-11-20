@@ -126,31 +126,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Backend Engineer di divisi Product & Engineering, memakai bahasa awam",
-    "tujuan": "Hitung berapa server dibutuhkan untuk jam sibuk dan berapa batas permintaan per pengguna yang aman. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "runtut dan konkret, sebut penyebab paling mungkin dan cara memeriksanya",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kapasitas",
+      "rate limit",
+      "beban puncak",
+      "server",
+      "rps"
+    ],
+    "data": [
+      "pengguna aktif bersamaan di hari biasa",
+      "rata-rata permintaan per pengguna per menit",
+      "jam sibuk berapa kali lipat dari biasa?",
+      "kemampuan satu server (permintaan per detik)"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
     "contoh": {
       "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
-      "buruk": "Coba perbaiki kodenya."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "kapasitas"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil perencana kapasitas server perlu dibaca bersama: kapasitas menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
   }
 }

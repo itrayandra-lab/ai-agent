@@ -39,7 +39,7 @@ export function pasangSambungan(box) {
   const muat = async () => {
     try { data = await fetch('/api/saluran').then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))))); }
     catch { if (!mati) box.innerHTML = galat(ramah('', 0), '<button type="button" class="btn" data-ulangi>Coba lagi</button>'); box.querySelector('[data-ulangi]')?.addEventListener('click', () => { box.innerHTML = memuat(); muat(); }); return; }
-    for (const s of data.services) if (s.linked && kode[s.id]) { delete kode[s.id]; toast(`${s.label} sudah tersambung.`, 'ok'); }
+    for (const s of data?.services || []) if (s.linked && kode[s.id]) { delete kode[s.id]; toast(`${s.label} sudah tersambung.`, 'ok'); }
     gambar();
     if (!adaKode()) henti();
   };

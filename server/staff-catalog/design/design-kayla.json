@@ -127,31 +127,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Motion Designer di divisi Creative & Design, memakai bahasa awam",
-    "tujuan": "Bagi iklan 15, 30, atau 60 detik menjadi adegan lengkap dengan waktu, isi visual, dan teks di layar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "rancang-struktur"
+  ],
+  "keahlian": {
+    "istilah": [
+      "storyboard",
+      "papan cerita",
+      "iklan video",
+      "motion",
+      "adegan"
+    ],
+    "data": [
+      "nama produk",
+      "panjang iklan",
+      "bentuk layar",
+      "pesan utama"
+    ],
+    "gaya": "rapi dan jelas, jelaskan alasan desain",
     "contoh": {
       "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
-      "buruk": "Desainnya kurang bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "storyboard"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun papan cerita iklan pendek perlu dibaca bersama: storyboard menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ukuran dan warna mengikuti panduan merek."
+    ]
   }
 }

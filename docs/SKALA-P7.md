@@ -1,6 +1,6 @@
 # Kesiapan skala publik (P7)
 
-Status: dibangun dan teruji pada salinan terisolasi, 2026-11-18. **Bawaan tetap `json` (perilaku lama).** Tidak ada data asli di `data/` yang disentuh dan belum ada ruang kerja Owner yang dipindah. Rencana induk: `docs/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md` (temuan 6, fase P7).
+Status: dibangun dan teruji pada salinan terisolasi, 2026-11-18. **Bawaan tetap `json` (perilaku lama).** Tidak ada data asli di `data/` yang disentuh dan belum ada ruang kerja Owner yang dipindah. Rencana induk: `docs/arsip/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md` (temuan 6, fase P7).
 
 ## 1. Angka (Node 26.12, Windows, satu proses; ruang kerja sintetis ±0,7 MB: 100 tugas, 600 pesan, 300 peristiwa; API key AI kosong)
 

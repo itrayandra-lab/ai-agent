@@ -1,4 +1,4 @@
-// Tes invarian lintas lapisan (P0, docs/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md bagian 5).
+// Tes invarian lintas lapisan (P0, docs/arsip/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md bagian 5).
 // Tiga keadaan yang sengaja kelihatan di laporan:
 //   - LULUS     : sinkron sekarang; jika merah berarti ada yang rusak.
 //   - DITUNDA   : tes `todo` bertanda [P<fase>]; badan tes memeriksa keadaan sebenarnya dan gagal sampai fase itu selesai.
@@ -310,7 +310,7 @@ test('INV8 tidak ada store.upsert(\'approvals\' di luar modul persetujuan; otoma
 
 // ───────────────────────── 9. migrasi ─────────────────────────
 function lastMigrationVersion() {
-  assert.ok(/db\.version\s*=\s*SCHEMA_VERSION\s*;/.test(read('server/store.js')), 'migrate() harus menetapkan db.version = SCHEMA_VERSION');
+  assert.ok(/db\.version\s*=\s*SCHEMA_VERSION\s*;/.test(read('server/penyimpanan/store.js')), 'migrate() harus menetapkan db.version = SCHEMA_VERSION');
   return rules.SCHEMA_VERSION;
 }
 const fingerprint = (db) => JSON.stringify({ v: db.version, emp: db.employees.map((e) => e.id).sort(), div: db.divisions.map((d) => d.id).sort(), notes: db.notes.map((n) => n.id).sort(), skills: db.skills.map((s) => s.id).sort(), routines: db.routines.map((r) => r.id).sort() });
@@ -410,4 +410,82 @@ test('INV14 verifikasi mascot V4.2 utuh', () => {
   const r = spawnSync(process.execPath, ['docs/mascot-v4-2/verify-v42.mjs'], { cwd: root, encoding: 'utf8' });
   assert.equal(r.status, 0, `verify-v42 gagal:\n${(r.stdout || '').slice(-600)}${(r.stderr || '').slice(-300)}`);
   assert.match(r.stdout, /0 masalah/);
+});
+
+// ───────────────────────── 15. arsitektur backend satu sistem (docs/PETA-BACKEND.md) ─────────────────────────
+// Dibaca dari kode, bukan dari dokumen: sumber kebenaran konfigurasi satu tempat, tidak ada modul yatim, peta dan indeks dokumen lengkap.
+const serverFiles = () => listJs('server').filter((f) => !f.startsWith('server/staff/') && !f.startsWith('server/staff-catalog/'));
+const stripComments = (s) => s.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+
+test('INV15a semua variabel lingkungan yang dibaca server terdaftar di server/config.js (satu sumber konfigurasi)', async () => {
+  const config = await import('../server/config.js');
+  const found = new Map();
+  const res = [/\bprocess\.env\.([A-Z][A-Z0-9_]{2,})/g, /\bprocess\.env\['([A-Z][A-Z0-9_]{2,})'\]/g, /\benv\('([A-Z][A-Z0-9_]{2,})'\)/g, /\bnum\('([A-Z][A-Z0-9_]{2,})'/g, /'((?:QUOTA|RATE|MAX|GLOBAL|GATE|WS)_[A-Z0-9_]{3,})'/g];
+  for (const f of serverFiles().filter((x) => x !== 'server/config.js')) {
+    const src = stripComments(read(f));
+    for (const re of res) for (const m of src.matchAll(re)) if (!found.has(m[1])) found.set(m[1], f);
+  }
+  const missing = [...found].filter(([n]) => !(n in config.ENV_KEYS) && !/_GLOBAL$/.test(n)).map(([n, f]) => `${n} (${f})`);
+  assert.deepEqual(missing, [], 'daftarkan di config.ENV_KEYS');
+});
+
+test('INV15b folder data dibaca lewat config.dataDir(), bukan process.env.DATA_DIR langsung (kecuali server/staff/*)', () => {
+  const hits = serverFiles().filter((f) => f !== 'server/config.js' && /process\.env\.DATA_DIR/.test(stripComments(read(f))));
+  assert.deepEqual(hits, []);
+});
+
+test('INV15c config: bawaan, tipe, validasi, dan dokumentasi tiap kunci; seed.settings seluruhnya terdokumentasi', async () => {
+  const config = await import('../server/config.js');
+  const saved = { ...process.env };
+  try {
+    for (const k of Object.keys(config.ENV_KEYS)) if (k !== 'PATH') delete process.env[k];
+    assert.equal(config.get('PORT'), 4317); assert.equal(config.get('HOST'), '127.0.0.1');
+    assert.equal(config.get('RAIVERSE_PUBLIC_MODE'), false); assert.equal(config.get('STORE_VERIFY_EVERY'), 50);
+    assert.equal(config.get('PRIVACY_TRASH_DAYS'), 7); assert.deepEqual(config.get('RAIVERSE_ADMIN_EMAILS'), []);
+    assert.deepEqual(config.validate(), []);
+    process.env.PORT = 'abc'; process.env.STORAGE_MODE = 'ajaib'; process.env.GOOGLE_CLIENT_ID = 'x';
+    const v = config.validate().join('|');
+    assert.match(v, /PORT/); assert.match(v, /STORAGE_MODE/); assert.match(v, /Login Google setengah/);
+    assert.equal(config.get('PORT'), 4317, 'angka rusak memakai bawaan');
+    assert.throws(() => config.get('TIDAK_ADA_INI'));
+  } finally { for (const k of Object.keys(process.env)) if (!(k in saved)) delete process.env[k]; Object.assign(process.env, saved); }
+  for (const [k, s] of Object.entries(config.ENV_KEYS)) assert.ok(s.grup && s.arti && s.tipe, `${k} tanpa grup/arti/tipe`);
+  for (const [k, s] of Object.entries(config.SETTINGS)) assert.ok(s.arti && ['resmi', 'usang', 'rahasia'].includes(s.status), `${k} setting tanpa arti/status`);
+  const undocumented = Object.keys(seed.settings).filter((k) => !(k in config.SETTINGS));
+  assert.deepEqual(undocumented, [], 'setiap kunci seed.settings harus ada di config.SETTINGS');
+  assert.ok(config.table().every((r) => !r.rahasia || r.nilai === undefined), 'tabel tidak boleh memuat nilai rahasia');
+});
+
+test('INV15d tidak ada modul server yatim: setiap berkas server (di luar staff/) diimpor modul lain atau tes', () => {
+  const all = [...listJs('server'), ...listJs('test'), ...listJs('scripts')].map((f) => [f, read(f)]);
+  const orphan = serverFiles().filter((f) => f !== 'server/index.js').filter((f) => {
+    const base = path.basename(f, '.js');
+    return !all.some(([g, src]) => g !== f && (src.includes(`/${base}.js'`) || src.includes(`/${base}'`) || src.includes(`/${base}/index.js'`)));
+  });
+  assert.deepEqual(orphan, []);
+});
+
+test('INV15e peta dan indeks dokumen ada dan lengkap: tiap modul server disebut di PETA-BACKEND, tiap dokumen docs/*.md ada di docs/README.md', () => {
+  for (const f of ['docs/PETA-BACKEND.md', 'docs/PETA-OTAK.md', 'docs/README.md']) assert.ok(fs.existsSync(path.join(root, f)), `${f} hilang`);
+  const peta = read('docs/PETA-BACKEND.md');
+  const tanpaPeta = fs.readdirSync(path.join(root, 'server')).filter((f) => f.endsWith('.js')).map((f) => f.replace(/\.js$/, '')).filter((b) => !peta.includes(b));
+  assert.deepEqual(tanpaPeta, [], 'modul belum disebut di docs/PETA-BACKEND.md');
+  const idx = read('docs/README.md');
+  const tanpaIndeks = fs.readdirSync(path.join(root, 'docs')).filter((f) => f.endsWith('.md') && f !== 'README.md' && !idx.includes(f));
+  assert.deepEqual(tanpaIndeks, [], 'dokumen belum masuk docs/README.md');
+  for (const f of fs.readdirSync(path.join(root, 'docs', 'arsip')).filter((x) => x.endsWith('.md'))) assert.ok(idx.includes(`arsip/${f}`), `${f} belum tercatat di tabel arsip`);
+});
+
+test('INV15f alat per peran sama dengan yang tertulis di docs/PETA-OTAK.md (dasar peran, PA/master/manajer/staf)', () => {
+  const pick = (f) => seed.employees.find((e) => e.type === 'ai' && f(e));
+  const staff = pick((e) => catalog.roleOf(e) === 'staff'), mgr = pick((e) => catalog.roleOf(e) === 'manager'), master = pick((e) => catalog.roleOf(e) === 'master'), pa = pick((e) => catalog.roleOf(e) === 'pa');
+  const ids = (e) => new Set(catalog.coreToolIds(e));
+  const BASE = ['complete_task', 'search_brain', 'web_search', 'calculate', 'request_approval'];
+  for (const t of BASE) for (const e of [staff, mgr, master, pa]) assert.ok(ids(e).has(t), `${e.id} harus punya ${t}`);
+  for (const t of ['create_subtask', 'ask_colleague', 'convene_meeting']) { assert.ok(!ids(staff).has(t), `staf tidak boleh punya ${t}`); for (const e of [mgr, master, pa]) assert.ok(ids(e).has(t), `${e.id} harus punya ${t}`); }
+  assert.ok(ids(master).has('company_status') && ids(pa).has('company_status') && !ids(mgr).has('company_status') && !ids(staff).has('company_status'));
+  for (const t of ['recruit_agent', 'create_division', 'schedule_job']) assert.ok(!ids(staff).has(t), `staf tidak boleh melihat ${t} tanpa pintu`);
+  assert.ok(catalog.groupsFor(mgr).includes('kelola') && catalog.groupsFor(mgr).includes('mcp') && !catalog.groupsFor(staff).includes('kelola') && !catalog.groupsFor(staff).includes('mcp'));
+  assert.ok(!catalog.roleAllows(mgr, 'create_division') && catalog.roleAllows(pa, 'create_division'), 'create_division hanya PA');
+  assert.ok(/MAX_OPEN_GROUPS = 4/.test(read('server/engine.js')), 'PETA-OTAK menyebut maks 4 kelompok terbuka per tugas');
 });

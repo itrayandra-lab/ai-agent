@@ -84,31 +84,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Learning & Development di divisi People & HR, memakai bahasa awam",
-    "tujuan": "Bandingkan nilai sebelum dan sesudah pelatihan, hitung kenaikan dan yang lulus, lalu beri penilaian singkat. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "hitung-sdm"
+  ],
+  "keahlian": {
+    "istilah": [
+      "evaluasi pelatihan",
+      "efektivitas",
+      "nilai sebelum sesudah",
+      "lulus",
+      "peserta"
+    ],
+    "data": [
+      "nilai peserta (nama | nilai sebelum | nilai sesudah)",
+      "nilai minimal agar lulus"
+    ],
     "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
-      "buruk": "Karyawan malas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "evaluasi pelatihan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung efektivitas pelatihan perlu dibaca bersama: evaluasi pelatihan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }

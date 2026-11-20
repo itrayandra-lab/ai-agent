@@ -86,31 +86,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Formulation Scientist di divisi R&D & Formulation, memakai bahasa awam",
-    "tujuan": "Ubah formula dalam persen menjadi berat per bahan untuk ukuran batch tertentu, dan periksa apakah totalnya tepat 100%. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan, sarankan uji kecil",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-teknis"
+  ],
+  "keahlian": {
+    "istilah": [
+      "formula",
+      "formulasi",
+      "persen ke gram",
+      "batch lab",
+      "komposisi"
+    ],
+    "data": [
+      "nama produk",
+      "ukuran batch (gram)",
+      "formula (satu baris: bahan | persen)"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
     "contoh": {
       "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
-      "buruk": "Formula B pasti terbaik."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "formula"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembagi formula (persen ke gram) perlu dibaca bersama: formula menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
   }
 }

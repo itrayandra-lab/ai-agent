@@ -98,31 +98,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "HR Operations & Payroll di divisi People & HR, memakai bahasa awam",
-    "tujuan": "Hitung hak, pemakaian, dan sisa cuti tiap karyawan sesuai lama bekerja, lalu tandai yang hampir habis atau berlebih. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "hitung-sdm"
+  ],
+  "keahlian": {
+    "istilah": [
+      "cuti",
+      "sisa cuti",
+      "masa kerja",
+      "jatah cuti",
+      "karyawan"
+    ],
+    "data": [
+      "hitung per tanggal",
+      "jatah cuti per tahun",
+      "data karyawan (nama | tanggal masuk yyyy-mm-dd | cuti terpak"
+    ],
     "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
-      "buruk": "Karyawan malas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "cuti"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung sisa cuti karyawan perlu dibaca bersama: cuti menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }

@@ -129,31 +129,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Partnership Manager — Clinics, Salons & Co-branding di divisi Business Development & Partnerships, memakai bahasa awam",
-    "tujuan": "Susun jadwal mingguan dan pembagian anggaran untuk kampanye bersama brand atau komunitas yang selaras, lengkap dengan target hasilnya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "co-branding",
+      "kampanye bersama",
+      "kolaborasi",
+      "anggaran kampanye",
+      "rencana kerja"
+    ],
+    "data": [
+      "nama brand atau komunitas mitra",
+      "tujuan utama",
+      "lama kampanye",
+      "anggaran bersama (rp)"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
     "contoh": {
-      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
-      "buruk": "Peluangnya besar."
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "co-branding"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil perencana kampanye bersama brand lain perlu dibaca bersama: co-branding menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
   }
 }

@@ -11,6 +11,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { buildLife } from './life.js';
+import { hematEfektif, norm as kualNorm, buatPenilai, MASA_INGAT_MS } from './kualitas.js';   // Kualitas Otomatis/Tinggi/Hemat
+import { tingkatEfektif, kuotaUntuk, bobotAktivitas, pilihBerbobot, pilihAgen, buatPenjadwal, SAPAAN, OBROLAN_SINGKAT, isi as isiSapaan } from './ambien.js';   // kehidupan ambien (logika murni, diuji)
 import { sfx } from './sfx.js';
 import { tts, messageSource } from './tts.js';
 import { makeProps } from './props.js';
@@ -101,6 +103,24 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   try { const q = localStorage.getItem('office-look'); if (LOOKS[q]) lookName = q; lookNow = LOOKS[lookName]; bars = localStorage.getItem('office-bars') === '1'; } catch { /* defaults */ }
   const barT = document.createElement('div'), barB = document.createElement('div'); barT.className = 'office-bar t'; barB.className = 'office-bar b'; container.appendChild(barT); container.appendChild(barB);
   let perfLite = false;
+  // ── mode hemat: tanpa blur kaca (CSS html[data-hemat]), tanpa ambien, DPR 1, 30 FPS. Otomatis bila perangkat lemah / HP / terukur lambat; sakelar di Pengaturan > Tampilan.
+  let ecoDariHemat = false, hemat = false, kualPilih = 'otomatis', dtEma = 16, kualT = 0; const penilai = buatPenilai();
+  try { kualPilih = kualNorm(localStorage.getItem('kualitas')); } catch { /* otomatis */ }
+  /** Hemat memakai jalur 'eco' yang sudah teruji (geometri digabung, tanpa bayangan dan rantai pasca-proses, lebih sedikit pejalan). Saat memuat: langsung; saat berjalan: bangun ulang tata letak sekali. */
+  function setHemat(on, awal = false) {
+    if (on === hemat && !awal) return; hemat = on; document.documentElement.dataset.hemat = on ? '1' : '';
+    if (on && gfx !== 'eco') { gfx = 'eco'; quality = 0; resScale = 0.8; ecoDariHemat = true; if (!awal) { try { applyQuality(); layoutKey = ''; if (data) sync(data); } catch { /* belum siap */ } } }
+    else if (!on && ecoDariHemat) { ecoDariHemat = false; gfx = 'auto'; quality = 1; resScale = 1; if (!awal) { try { applyQuality(); layoutKey = ''; if (data) sync(data); } catch { /* belum siap */ } } }
+    else if (!awal) { try { applyQuality(); } catch { /* belum siap */ } }
+  }
+  function kualInit(awal = false) { const lemah = gfx === 'eco' && !ecoDariHemat; let sudah = false; try { sudah = Number(localStorage.getItem('kualitas-hemat-sampai')) > Date.now(); } catch { /* ignore */ } setHemat(hematEfektif(kualPilih, { lemah, hp: isMobile, sudahHemat: sudah }), awal); }
+  window.addEventListener('raiverse:kualitas', (ev) => { kualPilih = kualNorm(ev.detail?.pilihan); penilai.reset(); try { if (kualPilih !== 'hemat') localStorage.removeItem('kualitas-hemat-sampai'); } catch { /* ignore */ } kualInit(); });
+  function kualJudge(now) {
+    if (now < kualT) return; kualT = now + 1000;
+    if (kualPilih !== 'otomatis' || hemat) return;   // hemat otomatis menempel selama sesi (dan 7 hari) agar tidak berkedip
+    if (penilai.nilai(dtEma)) { setHemat(true); try { localStorage.setItem('kualitas-hemat-sampai', String(Date.now() + MASA_INGAT_MS)); } catch { /* ignore */ } console.info('[office3d] lambat: mode hemat otomatis'); }
+  }
+  kualInit(true);
   const applyLook = () => {
     const u = grade.uniforms; u.uTeal.value = lookNow.teal; u.uSat.value = lookNow.sat * V.sat; u.uCon.value = lookNow.con; u.uCA.value = Math.min(1.6, lookNow.ca * (V.ca / 0.25)); u.uGlow.value = 0; u.uTaps.value = perfLite ? 8 : 14;
     u.uHi.value = V.hi; u.uSh.value = V.sh; u.uTemp.value = THREE.MathUtils.clamp((6600 - V.temp) / 3400, -1, 1); u.uHazeK.value = Math.min(2, V.fog / 20);
@@ -132,7 +152,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     bloom.enabled = quality >= 1 && V.bloom > 0;
     sun.castShadow = quality >= 1;
     RES_FLOOR = gfx === 'eco' ? 0.6 : 0.8;
-    renderer.setPixelRatio((quality >= 2 ? Math.min(devicePixelRatio, 1.5) : quality === 1 ? Math.min(devicePixelRatio, 1.0) : 0.85) * resScale);
+    renderer.setPixelRatio((quality >= 2 ? Math.min(devicePixelRatio, hemat ? 1 : 1.5) : quality === 1 ? Math.min(devicePixelRatio, 1.0) : 0.85) * resScale);
     const w = container.clientWidth, h = container.clientHeight;
     if (w && h) { renderer.setSize(w, h, false); composer.setSize(w, h); try { fxaaRes(); } catch { /* not created yet */ } }
     applyBars(); applyLook();
@@ -1951,6 +1971,41 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       if (best) return startConvo(a, best, now);
     }
   }
+  // ───── kehidupan ambien: satu detak global (±2-4 s), memilih agen BEBAS di dekat pandangan untuk mampir ke taman/pantri/bangku; status nyata tetap menang
+  const ambJadwal = buatPenjadwal(); let ambPilihan = null, ambSapa = 0;
+  try { ambPilihan = localStorage.getItem('suasana-hidup'); } catch { /* bawaan */ }
+  window.addEventListener('raiverse:suasana', (ev) => { ambPilihan = ev.detail?.tingkat ?? null; ambJadwal.reset(); });
+  const ambTingkat = () => tingkatEfektif(ambPilihan, { hp: isMobile, hemat: gfx === 'eco' || perfLite, tersembunyi: !visible || document.hidden, penuhLayar: uiBlock || winDim, fpsRendah: dtEma > 22.5, hematTotal: hemat });
+  if (window.__ray3d) window.__ray3d.ambien = () => ({ tingkat: ambTingkat(), hemat, dtEma: Math.round(dtEma * 10) / 10, aktif: [...avatars.values()].filter((x) => x.amb && x.mode !== 'desk').length });   // pemeriksaan/ukur
+  const AMB_SPOT = { pantri: 'cafe', bangku: 'lounge', rapat: 'play', baca: 'library' };
+  function ambientTick(now) {
+    if (!visible) return;
+    const tk = ambTingkat();
+    ambJadwal.tik(now, tk, () => {
+      const kand = []; const pusat = controls.target;
+      for (const a of avatars.values()) {
+        if (a.e.type !== 'ai' || a.player) continue;
+        if (a.amb && a.mode === 'desk' && !a.path.length) a.amb = false;   // sudah kembali ke meja
+        kand.push({ a, id: a.id, jarak: wp(a, tmpW).distanceTo(pusat), bebas: want(a) === 'free', diMeja: a.mode === 'desk' && !a.path.length, lod: a.lod ?? 0, ambien: !!a.amb });
+      }
+      const k = pilihAgen(kand, { kuota: kuotaUntuk(tk, { hp: isMobile }) }); if (!k) return;
+      const a = k.a, jenis = pilihBerbobot(bobotAktivitas(tod < 11 ? 'pagi' : tod < 15 ? 'siang' : tod < 18.5 ? 'sore' : 'malam'));
+      let ok = false;
+      if (jenis === 'taman') ok = goPlaza(a);
+      else { const sp = claimSpot(a, AMB_SPOT[jenis] || 'cafe', 'leisure'); if (sp) { goSpot(a, sp, 'leisure', 12000 + Math.random() * 18000); ok = true; } }
+      if (ok) { a.amb = true; a.nextIdle = now + 30000; if (Math.random() < 0.5) emote(a, ['☕', '🌿', '😌', '✨', '🎧'][(Math.random() * 5) | 0], 2400); }
+    });
+    // sapaan: agen bebas yang dekat pengguna (mode Play) menyapa sesekali
+    if (tk !== 'mati' && player && now > ambSapa) {
+      ambSapa = now + 14000 + Math.random() * 16000;
+      for (const a of avatars.values()) {
+        if (a.e.type !== 'ai' || a.player || a.bubble || a.lod > 2 || a.path.length || want(a) !== 'free') continue;
+        if (a.g.position.distanceTo(player.a.g.position) > 7) continue;
+        a.lookAt = player.a.g.position; a.faceTo = Math.atan2(player.a.g.position.x - a.g.position.x, player.a.g.position.z - a.g.position.z);
+        say(a, isiSapaan(SAPAAN[(Math.random() * SAPAAN.length) | 0], player.a.e.name), 3600, true); gesture(a, 'cheer', 1600); feel(a, 'smile', 2600); break;
+      }
+    }
+  }
   // ───── the player's hands-on actions
   function playerSit(sp) {
     const a = player.a; player.sitting = sp; claimed.set(sp.key, a.id);
@@ -2518,7 +2573,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     ['free', 'Act:lookLeft', 'KeyZ', 'Tengok kiri (menoleh di tempat)'], ['free', 'Act:lookRight', 'KeyC', 'Tengok kanan (menoleh di tempat)'], ['free', 'Act:up', 'KeyQ', 'Naik'], ['free', 'Act:down', 'KeyE', 'Turun'],
     ['free', 'Space', 'Space', 'Mode jalan / terbang'], ['free', 'KeyP', 'KeyP', 'Main sebagai karakter'], ['free', 'Tab', 'Tab', 'Orang berikutnya'],
     ['free', 'KeyU', 'KeyU', 'Waktu mundur'], ['free', 'KeyI', 'KeyI', 'Waktu maju'], ['free', 'KeyT', 'KeyT', 'Siang-malam otomatis'],
-    ['free', 'KeyL', 'KeyL', 'Label nama'], ['free', 'KeyH', 'KeyH', 'Bantuan'], ['free', 'KeyB', 'KeyB', 'Simpan tampilan favorit'], ['free', 'PageUp', 'PageUp', 'Favorit sebelumnya'], ['free', 'PageDown', 'PageDown', 'Favorit berikutnya'],
+    ['free', 'KeyL', 'KeyL', 'Label nama'], ['free', 'KeyH', 'KeyH', 'Petunjuk tombol'], ['free', 'KeyB', 'KeyB', 'Simpan tampilan favorit'], ['free', 'PageUp', 'PageUp', 'Favorit sebelumnya'], ['free', 'PageDown', 'PageDown', 'Favorit berikutnya'],
     ['free', 'Digit8', 'Digit8', 'Tampilan dari atas'], ['free', 'Digit5', 'Digit5', 'Tampilan isometrik'], ['free', 'Digit4', 'Digit4', 'Putar 90° ke kiri'], ['free', 'Digit6', 'Digit6', 'Putar 90° ke kanan'], ['free', 'Digit2', 'Digit2', 'Tampilan depan'], ['free', 'Digit0', 'Digit0', 'Posisi awal'],
     ['play', 'KeyW', 'KeyW', 'Maju'], ['play', 'KeyS', 'KeyS', 'Mundur'], ['play', 'KeyA', 'KeyA', 'Kiri'], ['play', 'KeyD', 'KeyD', 'Kanan'],
     ['play', 'KeyQ', 'KeyQ', 'Putar kamera ke kiri'], ['play', 'KeyR', 'KeyR', 'Putar kamera ke kanan'], ['play', 'KeyE', 'KeyE', 'Panggil & bicara'], ['play', 'KeyF', 'KeyF', 'Beri tugas'], ['play', 'KeyG', 'KeyG', 'Lambai'], ['play', 'Space', 'Space', 'Lompat'], ['play', 'KeyH', 'KeyH', 'Bantuan'], ['play', 'KeyV', 'KeyV', 'Teleport (menu tujuan)'], ['free', 'KeyV', 'KeyV', 'Teleport (menu tujuan)'],
@@ -3068,7 +3123,9 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     // step === true renders one frame on demand (inspection hook), without starting a second loop
     if (step !== true) { raf = requestAnimationFrame(frame); const off = !visible || document.hidden; if (off !== sndOff) { sndOff = off; sfx.pause(off); if (off) sfx.brain(0); } if (off) return; }
     const now = performance.now();
-    if (step !== true && gfx === 'eco' && now - lastDraw < 30) return;
+    if (step !== true && (gfx === 'eco' || hemat) && now - lastDraw < 30) return;
+    if (step !== true && !document.hasFocus() && now - lastDraw < 100) return;   /* jendela tidak fokus (aplikasi lain di depan): paling banyak 10 FPS */
+    if (step !== true && lastDraw) { const dR = now - lastDraw; if (dR < 400 && (player || now - lastInput < 12000)) dtEma = dtEma * 0.9 + dR * 0.1; kualJudge(now); }   /* waktu bingkai saat aktif: penilai hemat dan ambien */
     if (step !== true && winDim && now - lastDraw < 66) return;
     if (step !== true && !player && !chaseId && !camAnim && now - lastInput > 4000 && now - lastDraw < (() => { const idle = now - lastInput; return idle > 120000 ? 200 : idle > 45000 ? 100 : idle > 12000 ? 50 : 32; })()) return;   /* idle tiers: ~30 fps, 20, 10, 5; any input wakes it at once. The scene is GPU-bound (~40 ms/frame on an integrated GPU), so frame rate is the lever that cuts average load without touching how it looks while you use it */
     if ((frameNo % 8) === 0) {
@@ -3077,7 +3134,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
       list.sort((x, y) => x[0] - y[0]);
       list.forEach(([d, a], i) => { const k = d > 36 || i >= 6 ? 0 : 1 - Math.max(0, (d - 14) / 22); a.bubble.visible = k > 0.04; a.bubble.userData.k = k; });
     }
-    sfx.tick(now / 1000); animateTele(now); socialTick(now); animateFloaters(now / 1000, Math.min((now - lastT) / 1000, 0.1));
+    sfx.tick(now / 1000); animateTele(now); socialTick(now); ambientTick(now); animateFloaters(now / 1000, Math.min((now - lastT) / 1000, 0.1));
     PR.l = performance.now(); trackFps(now); renderer.info.reset();
     const realDt = Math.min((now - lastT) / 1000, 0.5); const dt = Math.min(realDt, 0.05); lastT = now; // movement uses real time so walking speed survives low FPS
     let crowdCount = 0;
@@ -3227,7 +3284,8 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
   }
   renderer.info.autoReset = false; // count draw calls across all composer passes of a frame
   applyQuality();
-  frame();
+  // perf: program shader dikompilasi paralel di luar utas utama (KHR_parallel_shader_compile) sebelum bingkai pertama; tanpa dukungan = perilaku lama
+  (typeof renderer.compileAsync === 'function' ? renderer.compileAsync(scene, camera).catch(() => {}) : Promise.resolve()).then(() => { if (!raf) frame(); });
 
   function setTheme(t) {
     const light = t === 'light';
@@ -3285,6 +3343,7 @@ export function createOffice(container, { onSelect, onAgentPie, onApp, onLower, 
     joystickActive: () => joy.id !== null,
     /** screen position (px inside the 3D container) of a point just above an agent's head, or null when behind the camera */
     agentMenuAt: (id) => { const a = avatars.get(id); if (!a) return; const v = wp(a); v.y += (a.topY || 1.3) * 0.55; v.project(camera); const cr = renderer.domElement.getBoundingClientRect(); agentMenu(id, { clientX: cr.left + (v.x * 0.5 + 0.5) * cr.width, clientY: cr.top + (-v.y * 0.5 + 0.5) * cr.height }); },
+    focusScreen: () => { const v = controls.target.clone().project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; },   // titik pusat pandangan (target orbit) dalam piksel layar; hanya baca, dipakai tes tata letak
     screenOf: (id) => { const a = avatars.get(id); if (!a) return null; const v = wp(a); v.y += (a.topY || 1.3) * 0.55; v.project(camera); if (v.z > 1) return null; const r = renderer.domElement.getBoundingClientRect(); return { x: (v.x * 0.5 + 0.5) * r.width, y: (-v.y * 0.5 + 0.5) * r.height }; },
     /** roof: 'auto' (cutaway), 'on' or 'off'; returns the new mode */
     floorCount: () => floors.length, getFloor: () => viewFloor, setFloor: (k) => { setFloor(k); return viewFloor; },

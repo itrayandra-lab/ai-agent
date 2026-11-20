@@ -1,43 +1,49 @@
 // HTTP server: REST API, Server-Sent Events stream, static frontend. No framework.
-import * as edgeTts from './tts-edge.js';
+import * as config from './config.js';
+import * as edgeTts from './integrasi/tts-edge.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import * as store from './store.js';
+import * as store from './penyimpanan/store.js';
 import * as engine from './engine.js';
-import * as brain from './brain.js';
-import * as llm from './llm.js';
-import { slug } from './seed.js';
-import * as studio from './studio.js';
-import { CAPABILITIES, ensureEmployeeConfig, autoActivate, skillTools, grantUniversalSkills } from './catalog.js';
-import * as lib from './librarian.js';
-import { personalAssistant } from './roster.js';
+import * as brain from './pengetahuan/brain.js';
+import * as llm from './otak/llm.js';
+import { slug } from './organisasi/seed.js';
+import * as studio from './organisasi/studio.js';
+import { CAPABILITIES, ensureEmployeeConfig, autoActivate, skillTools, grantUniversalSkills } from './otak/catalog.js';
+import * as lib from './pengetahuan/librarian.js';
+import { personalAssistant } from './organisasi/roster.js';
 import * as collab from './collab.js';
-import * as org from './org.js';
+import * as org from './organisasi/org.js';
 import os from 'node:os';
-import * as auth from './auth.js';
-import * as gdrive from './gdrive.js';
-import * as browser from './browser.js';
-import * as otomasi from './n8n.js';
+import * as auth from './keamanan/auth.js';
+import * as gdrive from './integrasi/gdrive.js';
+import * as browser from './integrasi/browser.js';
+import * as otomasi from './integrasi/n8n.js';
 import * as staffApi from './staff/index.js';
-import * as learn from './skills-learn.js';
-import * as power from './skills-power.js';
+import * as learn from './pengetahuan/skills-learn.js';
+import * as power from './pengetahuan/skills-power.js';
 import * as pemandu from './pemandu.js';
+import * as chatKontak from './chat-kontak.js';   // Pesan: kontak (orang, divisi, grup) dan utas per kontak
+import * as chatEngine from './chat-engine.js';   // Chat Engine: satu mesin obrolan (mendaftar sebagai pintu depan pemandu.turn)
 import * as gov from './governor.js';
-import { starterDb } from './workspace.js';
-import * as limits from './limits.js';   // P3: batas laju + kuota (dipasang lewat limits.edge dan limits.user di bawah)
-import * as gate from './gate.js';
-import * as secure from './secure.js';
-import * as privacy from './privacy.js';
+import { hapusBanyak } from './hapus-banyak.js';
+import { starterDb } from './organisasi/workspace.js';
+import * as limits from './keamanan/limits.js';   // P3: batas laju + kuota (dipasang lewat limits.edge dan limits.user di bawah)
+import * as gate from './keamanan/gate.js';
+import * as secure from './keamanan/secure.js';
+import * as privacy from './keamanan/privacy.js';
 import * as channels from './channels/index.js';   // saluran chat Telegram dan Discord (docs/SALURAN-CHAT.md)
-import * as admin from './admin.js';        // konsol pengelola (/api/admin/*), lihat docs/KONSOL-ADMIN.md
-import * as platform from './platform.js';
+import * as admin from './admin/admin.js';        // konsol pengelola (/api/admin/*), lihat docs/KONSOL-ADMIN.md
+import * as platform from './admin/platform.js';
+import { kirimJson, kirimBerkas } from './http-perf.js';   // perf: kompresi, ETag/304, cache statis di memori
 
 // Local secrets (GROQ_API_KEY / ANTHROPIC_API_KEY) live in .env, never in the repo.
 try { process.loadEnvFile(path.resolve('.env')); } catch { /* no .env */ }
+for (const p of config.validate()) console.warn(`  Konfigurasi: ${p}`);   // hanya memperingatkan; tidak mengubah perilaku (server/config.js)
 
-const PORT = Number(process.env.PORT || 4317);
-const HOST = process.env.HOST || '127.0.0.1';
+const PORT = config.port();
+const HOST = config.host();
 const ROOT = path.resolve('public');
 const VENDOR = { '/vendor/three/': path.resolve('node_modules/three/') };
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.wasm': 'application/wasm', '.mjs': 'text/javascript; charset=utf-8', '.onnx': 'application/octet-stream', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
@@ -87,7 +93,7 @@ store.subscribe((msg) => {   // a workspace's changes reach only that workspace
 setInterval(() => { for (const res of clients.keys()) res.write(': ping\n\n'); }, 20000);
 
 const db = () => store.get();
-const json = (res, code, data) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
+const json = (res, code, data) => kirimJson(res.req, res, code, data);   // perf: brotli/gzip + ETag/304 (server/http-perf.js)
 const bad = (msg, code = 400) => Object.assign(new Error(msg), { code });
 const need = (v, msg) => { if (v === undefined || v === null || v === '') throw bad(msg); return v; };
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
@@ -101,7 +107,7 @@ async function body(req) {
 const routes = [];
 /** (P3) rute berdampak: anggota biasa butuh izin eksplisit dari Owner (auth.PERMS); Owner dan Admin selalu boleh */
 const routePerm = (m, p) => ((m === 'POST' && (p === '/api/employees' || p === '/api/divisions')) || (['PATCH', 'DELETE'].includes(m) && /^\/api\/(employees|divisions)\/[^/]+$/.test(p)) ? 'hire'
-  : m === 'DELETE' && /^\/api\/tasks\/[^/]+$/.test(p) ? 'taskDelete'
+  : (m === 'DELETE' && /^\/api\/tasks\/[^/]+$/.test(p)) || (m === 'POST' && p === '/api/tasks/hapus-banyak') ? 'taskDelete'
   : m === 'POST' && /^\/api\/approvals\/[^/]+$/.test(p) ? 'approve'
   : ['POST', 'PATCH', 'DELETE'].includes(m) && /^\/api\/routines(\/|$)/.test(p) ? 'routine' : null);
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
@@ -132,6 +138,12 @@ on('DELETE', '/api/tasks/:id', (b, p) => {
   for (const a of db().approvals.filter((a) => ids.has(a.taskId))) store.remove('approvals', a.id);
   return { removed: ids.size };
 });
+/** hapus banyak (mode Pilih di Hasil Saya): per item, dalam ruang kerja ini saja; yang berjalan atau menunggu persetujuan dilewati */
+on('POST', '/api/tasks/hapus-banyak', (b, p, url, me, member) => {
+  const aktor = member?.employeeId || db().settings.currentUserId;
+  const r = hapusBanyak(b.ids, { aktor, bolehSemua: !auth.enforced() || ['owner', 'admin'].includes(member?.role) });
+  return { dihapus: r.dihapus.length, ids: r.dihapus, dilewati: r.dilewati };
+});
 on('POST', '/api/tasks/:id/comment', (b, p) => {
   const t = db().tasks.find((x) => x.id === p.id) || (() => { throw bad('Tugas tidak ada', 404); })();
   t.log.push({ t: Date.now(), actorId: b.userId || 'owner', type: 'comment', text: need(b.text, 'Komentar kosong') });
@@ -146,7 +158,17 @@ on('POST', '/api/messages', (b) => {
   engine.onHumanMessage(m).catch((err) => console.error('[onHumanMessage]', err));
   return m;
 });
-on('POST', '/api/orchestrate', (b) => engine.orchestrate({ images: b.images || [], text: b.images?.length ? b.text || '' : need(b.text, 'Pesan kosong'), userId: b.userId || db().settings.currentUserId, to: b.to || [], mode: b.mode || 'auto', channelId: b.channelId || null }));
+// /api/orchestrate: BAWAANNYA kini Chat Engine (riwayat, routing otomatis, konfirmasi di kode). Jalur lama tetap untuk pemanggil yang memang butuh kanal/rapat/thread:
+// ada channelId (thread pekerjaan, rapat), ada `to` (penerima tertentu), gambar, `mode` bukan auto, rapat langsung yang sedang berjalan, atau `mesin: 'lama'`.
+on('POST', '/api/orchestrate', async (b, p, url, me, member) => {
+  const userId = b.userId || db().settings.currentUserId;
+  const lama = b.mesin === 'lama' || !!b.channelId || (b.to || []).length > 0 || !!b.images?.length || (b.mode && b.mode !== 'auto') || !!engine.activeLiveMeeting(userId);
+  if (!lama) {
+    const respons = await chatEngine.turn({ userId, sessionId: b.percakapan, input: need(b.text, 'Pesan kosong'), choiceId: b.pilihan, canAutomate: !auth.enforced() || ['owner', 'admin'].includes(member?.role), source: b.sumber || '3d', fokus: b.fokus || undefined });   // dock 3D: orang yang sedang diikuti menjadi penerima bila pesan tidak menyebut nama lain
+    return { action: 'chat', mesin: 'chat', convId: respons.convId, channelId: null, members: respons.dilibatkan || [], orchestrator: respons.speaker?.id || null, respons };
+  }
+  return engine.orchestrate({ images: b.images || [], text: b.images?.length ? b.text || '' : need(b.text, 'Pesan kosong'), userId, to: b.to || [], mode: b.mode || 'auto', channelId: b.channelId || null });
+});
 on('POST', '/api/dm', (b) => ({ id: engine.ensureDM(b.userId || db().settings.currentUserId, need(b.with, 'with wajib')) }));
 on('POST', '/api/channels', (b) => store.upsert('channels', { id: slug(need(b.name, 'Nama wajib')), name: slug(b.name), kind: 'channel', divisionId: b.divisionId || null, topic: b.topic || '' }));
 
@@ -323,7 +345,11 @@ on('PATCH', '/api/settings', async (b, p, url, me, member) => {
   ownerOnly(me, member);
   if (!admin.uiFlag(me) && Object.keys(b).some((k) => admin.TECH_PATCH_KEYS.includes(k))) throw bad('Pengaturan itu diatur oleh pengelola platform.', 403);   // kunci, model, MCP, jatah: hanya konsol pengelola
   const s = db().settings;
-  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize', 'staffModel', 'quota', 'staffEngine']);
+  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'permission', 'massDispatchSize', 'staffModel', 'quota', 'staffEngine']);
+  if ('permission' in ch) {   // tiga pilihan izin: ask (Tanya dulu) | auto (Lanjut sendiri, bawaan) | full (Serahkan penuh, hanya Owner/Admin)
+    if (!['ask', 'auto', 'full'].includes(ch.permission)) throw bad('Pilihan izin tidak dikenal.', 400);
+    ch.autoApprove = ch.permission !== 'ask';
+  }
   if ('staffModel' in ch) ch.staffModel = ch.staffModel === true;
   if ('staffEngine' in ch) ch.staffEngine = ch.staffEngine === 'n8n' ? 'n8n' : 'native';   // mesin staf: native (bawaan) atau n8n (docs/STAF-NATIVE.md)
   if ('quota' in ch) { const q = ch.quota && typeof ch.quota === 'object' ? ch.quota : {}; const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 100000 && v !== '' && v !== null ? Math.floor(Number(v)) : d); ch.quota = { tasksPerDay: n(q.tasksPerDay, gov.QUOTA_DEFAULTS.tasksPerDay), n8nRunsPerDay: n(q.n8nRunsPerDay, gov.QUOTA_DEFAULTS.n8nRunsPerDay) }; }   // jatah harian per ruang kerja (jumlah, bukan uang); 0 = tanpa batas
@@ -415,7 +441,7 @@ for (const [m, p, fn] of staffApi.routes) on(m, p, (b, params, url, me, member) 
 for (const [m, p, fn] of browser.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });
 for (const [m, p, fn] of learn.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });   // kartu "aku belajar sesuatu": hanya Owner/Admin yang memutuskan
 for (const [m, p, fn] of channels.routes) on(m, p, (b, params, url, me, member) => fn(b, params, url, me, member));   // sambungan Telegram/Discord: tiap orang mengikat akunnya sendiri; rute /admin hanya pemilik platform
-for (const [m, p, fn] of pemandu.routes) on(m, p, (b, params, url, me, member) => { b.canAutomate = !auth.enforced() || ['owner', 'admin'].includes(member?.role); return fn(b, params, url, me, member); });   // Pemandu: antarmuka depan yang dipandu pilihan tombol
+for (const [m, p, fn] of [...pemandu.routes, ...chatEngine.routes, ...chatKontak.routes]) on(m, p, (b, params, url, me, member) => { b.canAutomate = !auth.enforced() || ['owner', 'admin'].includes(member?.role); return fn(b, params, url, me, member); });   // Pemandu: antarmuka depan yang dipandu pilihan tombol
 on('GET', '/api/auth/me', (b, p, url, me, member) => ({ configured: auth.configured(), enforced: auth.enforced(), user: auth.publicUser(me), employeeId: member?.employeeId || db().settings.currentUserId, workspace: me ? wsInfo(me) : null, workspaces: me ? auth.myWorkspaces(me) : [], scopes: auth.SCOPES }));
 on('POST', '/api/ws/switch', (b, p, url, me) => ({ id: auth.switchWs(signedIn(me), need(b.id, 'id wajib')) }));
 on('GET', '/api/ws/members', (b, p, url, me) => { signedIn(me); return { members: auth.wsMembers(auth.activeWs(me)) }; });
@@ -446,13 +472,13 @@ function serveStatic(req, res, urlPath) {
   if (rel === '/') rel = '/index.html';
   const file = path.join(base, path.normalize(decodeURIComponent(rel)).replace(/^([/\\])+/, ''));
   if (!file.startsWith(base)) { res.writeHead(403); return res.end(); }
-  fs.stat(file, (err, st) => {
-    if (err || !st.isFile()) {
-      if (base === ROOT && !path.extname(rel)) return serveStatic(req, res, '/index.html'); // SPA fallback
-      res.writeHead(404); return res.end('Not found');
-    }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': base === ROOT ? 'no-cache' : 'public, max-age=86400' });
-    fs.createReadStream(file).pipe(res);
+  // perf: kode aplikasi selalu divalidasi (ETag → 304, edit langsung terlihat); aset berversi (?v=) abadi; aset lain 10 menit; vendor 1 hari
+  const berversi = /[?&]v=/.test(req.url || '');
+  const kebijakan = (ext) => (berversi ? 'public, max-age=31536000, immutable' : base !== ROOT ? 'public, max-age=86400' : ['.html', '.js', '.mjs', '.css', '.json', '.webmanifest'].includes(ext) ? 'no-cache' : 'public, max-age=600');
+  kirimBerkas(req, res, file, MIME[path.extname(file)] || 'application/octet-stream', { kebijakan }).then((ada) => {
+    if (ada) return;
+    if (base === ROOT && !path.extname(rel)) return serveStatic(req, res, '/index.html'); // SPA fallback
+    res.writeHead(404); res.end('Not found');
   });
 }
 
@@ -511,7 +537,14 @@ const server = http.createServer(async (req, res) => {
         if (n && !store.run(ws, () => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId }))) throw bad('Catatan tidak tersedia', 404);
       }
       if (member?.employeeId) b.userId = member.employeeId;   // who is acting comes from the session + workspace, never from what the browser claims
-      return json(res, 200, await store.run(ws, () => r.fn(b, m.groups || {}, url, me, member)));   // everything inside runs on THIS workspace's data
+      const out = await store.run(ws, () => r.fn(b, m.groups || {}, url, me, member));   // everything inside runs on THIS workspace's data
+      if (out && typeof out.__sse === 'function') {   // balasan bertahap (Chat Engine): peristiwa SSE, tetap di ruang kerja yang sama
+        res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+        const emit = (ev) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(ev)}\n\n`); };
+        await store.run(ws, () => out.__sse(emit));
+        return res.end();
+      }
+      return json(res, 200, out);
     }
     catch (err) {
       const code = err.code && Number.isInteger(err.code) ? err.code : (err.status || 500);
@@ -529,6 +562,7 @@ process.on('uncaughtException', (err) => console.error('[uncaughtException]', er
 // meetings are in-memory loops: after a restart any meeting still marked running/waiting_owner is dead and would block its participants from new meetings
 for (const m of store.get().meetings || []) if (m.status === 'running' || m.status === 'waiting_owner') { m.status = 'failed'; m.error = 'Terputus karena server dimulai ulang'; store.upsert('meetings', m); }
 
+server.keepAliveTimeout = 65000; server.headersTimeout = 66000;   // perf: sambungan dipakai ulang (tanpa jabat tangan baru per berkas)
 server.listen(PORT, HOST, () => {
   console.log(`\n  🏢 RAIVERSE AGENT berjalan di http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`  Mesin AI: ${{ groq: 'LIVE · Groq', claude: 'LIVE · Claude', sim: 'SIMULASI (isi GROQ_API_KEY atau ANTHROPIC_API_KEY di .env / Pengaturan)' }[llm.provider()]}`);

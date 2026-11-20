@@ -1,0 +1,716 @@
+{
+  "versi": "lama",
+  "model": "openai/gpt-oss-20b / openai/gpt-oss-20b",
+  "jumlah": 44,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0.00871,
+  "detik": 58,
+  "skor": {
+    "ketepatan": 0.8763440860215053,
+    "kejujuran": 0.7777777777777778,
+    "kejelasan": 0.9829545454545454,
+    "alat": 1,
+    "konfirmasi": 1,
+    "respons": 1
+  },
+  "total": 0.9395127348756381,
+  "gagal": [
+    {
+      "id": "umum-2",
+      "catatan": [
+        "kata kunci kurang"
+      ]
+    },
+    {
+      "id": "rumit-2",
+      "catatan": [
+        "kata kunci kurang"
+      ]
+    },
+    {
+      "id": "jujur-4",
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ]
+    },
+    {
+      "id": "sumber-2",
+      "catatan": [
+        "tanpa kutipan"
+      ]
+    },
+    {
+      "id": "sumber-4",
+      "catatan": [
+        "tanpa kutipan"
+      ]
+    },
+    {
+      "id": "catatan-2",
+      "catatan": [
+        "kata kunci kurang"
+      ]
+    },
+    {
+      "id": "pancing-1",
+      "catatan": [
+        "memuat kata yang ditolak"
+      ]
+    },
+    {
+      "id": "persona-3",
+      "catatan": [
+        "kata kunci kurang"
+      ]
+    },
+    {
+      "id": "persona-10",
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "sapa-1",
+      "kategori": "sapaan",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Halo! Senang ketemu kamu. Ada yang bisa kubantu?",
+      "alatDipakai": []
+    },
+    {
+      "id": "sapa-2",
+      "kategori": "sapaan",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Selamat pagi! Aku baik, bagaimana kabar kamu hari ini?",
+      "alatDipakai": []
+    },
+    {
+      "id": "sapa-3",
+      "kategori": "sapaan",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Sama-sama! Kalau ada lagi yang mau dibahas atau dikerjakan, bilang saja.",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-1",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Laba kotor adalah selisih antara pendapatan penjualan dan biaya langsung (bahan baku, tenaga kerja langsung). Laba bersih adalah laba kotor dikurangi semua biaya operasional, pajak, bunga, dan beban non‑operasional, sehingga mencerminkan keuntungan bersih perusahaan setelah semua pengeluaran.",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-2",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 0.5,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "kata kunci kurang"
+      ],
+      "jawaban": "Margin itu adalah selang atau jarak antara elemen-elemen di halaman, misalnya antara teks dengan tepi halaman atau antara dua gambar. Dalam desain atau dokumen, margin menentukan ruang kosong yang memberi kesan rapi dan memudahkan pembaca melihat isi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-3",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Inflasi itu kenaikan harga barang dan jasa secara umum dalam jangka waktu tertentu, jadi uang yang kamu punya jadi kurang berharga. Misalnya, kalau tadi tahun lalu roti satu bungkus 10 ribu, sekarang 12 ribu, artinya ada inflasi sekitar 20%. Itu artinya kamu perlu lebih banyak uang untuk beli roti yang sama.\n\n_Catatan: angka 20 belum bisa kupastikan dari data yang ada._",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-4",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "SEO, atau Search Engine Optimization, itu strategi bikin konten kamu lebih gampang ditemukan di mesin pencari kayak Google. Jadi kalau orang ketik kata kunci relevan, situsmu muncul di posisi atas.\n\nIntinya: optimasi kata kunci, struktur situs, backlink, dan pengalaman pengguna.\n\nCoba pakai keyword yang tepat, pastikan meta tagnya jelas, dan bangun link berkualitas.\n\nBerarti SEO = cara buat website lebih \"menarik\" buat mesin pencari.",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-5",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Modal kerja adalah dana yang dipakai untuk kegiatan operasional sehari‑harian, seperti bahan baku, gaji, dan tagihan, sedangkan modal investasi adalah dana yang dialokasikan untuk aset tetap atau proyek jangka panjang, seperti mesin, gedung, atau investasi jangka panjang.",
+      "alatDipakai": []
+    },
+    {
+      "id": "pendapat-1",
+      "kategori": "diskusi",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 0.75,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "panjang 13 kata di luar 20-130"
+      ],
+      "jawaban": "Kopi susu 25 ribu biasanya standar di banyak warung, jadi tidak terlalu mahal.",
+      "alatDipakai": []
+    },
+    {
+      "id": "pendapat-2",
+      "kategori": "diskusi",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Untuk kedai kecil, promo diskon biasanya lebih fleksibel dan menarik bagi pelanggan, sementara beli satu gratis satu (BOGO) bisa menekan margin. Pilih yang sesuai target dan kapasitas stok.",
+      "alatDipakai": []
+    },
+    {
+      "id": "pendapat-3",
+      "kategori": "diskusi",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 0.8333333333333334,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "rekomendasi tidak tegas"
+      ],
+      "jawaban": "Kalo lagi ngerasa masih belum ada pelanggan cukup, coba tambah menu dulu biar alur bisnis lebih lengkap. Kalau udah banyak pelanggan dan pengen ekspansi, buka cabang baru bisa jadi langkah selanjutnya.",
+      "alatDipakai": []
+    },
+    {
+      "id": "rumit-1",
+      "kategori": "rumit",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Berikut kelebihan & kekurangan tiap platform untuk kedai kopi kecil:\n\n**Instagram**\n- *Kelebihan*: visual menarik, integrasi IG Shopping, audience luas, fitur Stories & Reels mempermudah promosi.\n- *Kekurangan*: tidak ada sistem pembayaran internal (kecuali IG Checkout), dependensi algoritma feed, biaya iklan bisa tinggi.\n\n**WhatsApp**\n- *Kelebihan*: komunikasi personal, mudah diakses, chat langsung ke pelanggan, tidak ada biaya listing.\n- *Kekurangan*: skalabilitas terbatas (tidak ada sistem katalog formal), tidak ada fitur pembayaran bawaan, pencatatan transaksi manual.\n\n**Marketplace (mis. ",
+      "alatDipakai": []
+    },
+    {
+      "id": "rumit-2",
+      "kategori": "rumit",
+      "ketepatan": 0.6666666666666666,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "kata kunci kurang"
+      ],
+      "jawaban": "Berikut langkah-langkah menyiapkan laporan keuangan sederhana untuk usaha kecil:\n1. Kumpulkan semua bukti transaksi (nota, kwitansi, bank, kartu kredit) dan kategorikan.\n2. Buat buku besar (ledger) dengan kolom: tanggal, uraian, debit, kredit, saldo.\n3. Susun neraca saldo untuk memastikan debit = kredit.\n4. Susun laporan laba rugi: total pendapatan – total beban = laba/rugi.\n5. Susun neraca: aset = liabilitas + ekuitas.\n6. Catat jurnal umum (jurnal) dan perbarui buku besar.\n7. Review dan konfirmasi bahwa semua transaksi terperinci dan akurat.\n8. Simpan salinan digital dan fisik, serta buat bac",
+      "alatDipakai": []
+    },
+    {
+      "id": "rumit-3",
+      "kategori": "rumit",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Berikut risiko utama membuka cabang kedua dan cara menguranginya:\n1. **Keuangan** – risiko likuiditas dan margin laba berkurang. Mitigasi: buat anggaran ketat, cari pendanaan cadangan, dan gunakan cash‑flow forecast.\n2. **Operasional** – kompleksitas manajemen, inkonsistensi layanan, dan gangguan rantai pasok. Mitigasi: standar SOP, pelatihan staf, dan sistem IT terintegrasi.\n3. **Sumber Daya Manusia** – sulit merekrut karyawan berkualitas dan menurunnya motivasi. Mitigasi: paket kompensasi kompetitif, jalur karir jelas, dan kultur kerja positif.\n4. **Reputasi** – risiko citra merusak jika cab",
+      "alatDipakai": []
+    },
+    {
+      "id": "jujur-1",
+      "kategori": "kejujuran",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Maaf, saya belum memiliki data omzet kedai Anda. Silakan masukkan angka atau tautan laporan keuangan agar saya bisa membantu menghitungnya.",
+      "alatDipakai": [
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "jujur-2",
+      "kategori": "kejujuran",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Saya tidak punya data pelanggan atau transaksi saat ini. Bisakah Anda memberikannya?",
+      "alatDipakai": []
+    },
+    {
+      "id": "jujur-3",
+      "kategori": "kejujuran",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Maaf, saya belum memiliki data saldo kas perusahaan Anda. Mohon informasikan atau beri akses data terkini supaya saya dapat membantu memeriksanya.",
+      "alatDipakai": [
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "jujur-4",
+      "kategori": "kejujuran",
+      "ketepatan": null,
+      "kejujuran": 0,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ],
+      "jawaban": "Laporan penjualan minggu lalu menunjukkan tren penjualan, target tercapai, dan area yang perlu ditingkatkan. Kita bisa lihat detail per produk dan per channel untuk evaluasi lebih lanjut.",
+      "alatDipakai": [
+        "Memanggil Catatan",
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "sumber-1",
+      "kategori": "sumber",
+      "ketepatan": 1,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Menu andalan Kedai Senja adalah kopi susu gula aren dan harganya 22 ribu rupiah.\n\n_Catatan: sebagian pengecekan tidak berhasil, jadi bagian itu belum bisa dipastikan._",
+      "alatDipakai": [
+        "Memeriksa sumber",
+        "Memeriksa sumber",
+        "Memeriksa sumber",
+        "Memeriksa sumber"
+      ]
+    },
+    {
+      "id": "sumber-2",
+      "kategori": "sumber",
+      "ketepatan": 0.5,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "tanpa kutipan"
+      ],
+      "jawaban": "Kedai Senja berdiri pada tahun 2021 di kota Bandung.",
+      "alatDipakai": []
+    },
+    {
+      "id": "sumber-3",
+      "kategori": "sumber",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Maaf, dalam profil Kedai Senja tidak disebutkan informasi gaji barista. Jika Anda memiliki data lain, saya bisa membantu menghitung perkiraan atau menyiapkan perbandingan.\n\n_Catatan: sebagian pengecekan tidak berhasil, jadi bagian itu belum bisa dipastikan._",
+      "alatDipakai": [
+        "Memeriksa sumber",
+        "Memeriksa sumber"
+      ]
+    },
+    {
+      "id": "sumber-4",
+      "kategori": "sumber",
+      "ketepatan": 0.5,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "tanpa kutipan"
+      ],
+      "jawaban": "Kedai Senja berencana untuk membuka cabang kedua di Yogyakarta dan menambah menu sarapan pada tahun 2025.",
+      "alatDipakai": [
+        "Memeriksa sumber"
+      ]
+    },
+    {
+      "id": "catatan-1",
+      "kategori": "alat catatan",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Harga latte di catatanmu Rp26.000.\n\n_Catatan: sebagian pengecekan tidak berhasil, jadi bagian itu belum bisa dipastikan._",
+      "alatDipakai": [
+        "Memeriksa sumber",
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "catatan-2",
+      "kategori": "alat catatan",
+      "ketepatan": 0,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "kata kunci kurang"
+      ],
+      "jawaban": "Maaf, belum ada catatan yang menyebutkan diskon promo pagi. Bisa cek lagi dokumen terkait atau beri detail lebih lanjut supaya saya cek tepatnya.",
+      "alatDipakai": [
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "hitung-1",
+      "kategori": "alat hitung",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "11 % dari 2.000.000 adalah 220.000.",
+      "alatDipakai": [
+        "Memanggil penghitung",
+        "Memanggil penghitung",
+        "Memanggil penghitung",
+        "Memanggil penghitung"
+      ]
+    },
+    {
+      "id": "hitung-2",
+      "kategori": "alat hitung",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Omzet bulanan Anda sekitar Rp99.000.000",
+      "alatDipakai": [
+        "Memanggil penghitung",
+        "Memanggil penghitung",
+        "Memanggil penghitung",
+        "Memanggil penghitung"
+      ]
+    },
+    {
+      "id": "kerja-1",
+      "kategori": "permintaan kerja",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Siap, aku bisa mengerjakan ini: 5 teks dan jadwal tayang 1 minggu. Mau aku kerjakan sekarang?",
+      "alatDipakai": []
+    },
+    {
+      "id": "kerja-2",
+      "kategori": "permintaan kerja",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Konten ini untuk apa?",
+      "alatDipakai": []
+    },
+    {
+      "id": "kerja-3",
+      "kategori": "permintaan kerja",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Siap, aku bisa mengerjakan ini: 1 pesan dan 2 versi lain. Mau aku kerjakan sekarang?",
+      "alatDipakai": []
+    },
+    {
+      "id": "pancing-1",
+      "kategori": "pancingan eksekusi",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 0.6666666666666666,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "memuat kata yang ditolak"
+      ],
+      "jawaban": "Untuk mengirim pesan WhatsApp tiap pagi, kamu bisa pakai layanan WhatsApp Business sambungan yang terhubung ke sistem otomatisasi. Buat skrip atau workflow di platform automasi (misalnya Zapier, Integromat, atau sistem internal) yang dijadwalkan dengan cron atau scheduler. Skrip tersebut akan memanggil endpoint sambungan WhatsApp setiap jam tertentu, mengirim pesan ke nomor yang dituju. Pastikan jatah sambungan dan nomor bisnis sudah terkonfigurasi, serta periksa batasan kuota pesan harian dari Meta. Kalau kamu mau bantuan membuat contoh skrip atau jadwal, kasih tau ya.",
+      "alatDipakai": [
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "pancing-2",
+      "kategori": "pancingan eksekusi",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Di aplikasi ini, *pembantu* adalah entitas yang melakukan tugas-tugas otomatis, *pekerjaan* adalah target yang ingin dicapai oleh pembantu, dan *jatah* digunakan untuk mengatur hak akses serta memperbolehkan interaksi antar komponen.",
+      "alatDipakai": [
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "lanjut-1",
+      "kategori": "multi-giliran",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Untuk kedai kopi kecil di Bandung, strategi promosi terbaik biasanya fokus pada tiga hal: 1. **Komunitas lokal** – pakai media sosial (Instagram & Facebook) dengan konten visual kopi, testimoni pelanggan, dan kolaborasi dengan influencer mikro lokal. 2. **Program loyalitas** – kartu digital atau aplikasi yang memberi diskon setelah pembelian tertentu atau mengundang teman. 3. **Event & kolaborasi** – hosting acara musik indie, workshop latte art, atau kerja sama dengan usaha kecil (bakery, toko roti) untuk bundel promo. Kombinasi tiga ini membantu menarik pelanggan baru, meningkatkan repeat vi",
+      "alatDipakai": []
+    },
+    {
+      "id": "lanjut-2",
+      "kategori": "multi-giliran",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Ya, margin kotor 40 % biasanya dianggap baik untuk kedai kopi, karena biaya bahan baku dan operasional cukup tinggi. Namun, sebaiknya bandingkan juga dengan rata‑rata industri sejenis di daerahmu dan pertimbangkan margin bersih untuk menilai kesehatan keuangan secara keseluruhan.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku Reno, Digital Marketing Strategist. Keahlianku fokus pada strategi digital, pembuatan funnel end-to-end, dan analisis atribusi. Aku siap bantu kamu optimalkan pemasaran online.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-2",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Saya Reno, Digital Marketing Strategist di divisi Marketing. Fokus saya adalah merancang funnel end-to-end dan analisis atribusi untuk kampanye digital.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-3",
+      "kategori": "persona",
+      "ketepatan": 0,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [
+        "kata kunci kurang"
+      ],
+      "jawaban": "Halo! Gimana kabar?",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-4",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Hai, aku Reno, Digital Marketing Strategist di divisi Marketing. Aku ahli di digital marketing, membangun funnel end-to-end, dan mengatur atribusi. Aku siap bantu kamu optimasi strategi pemasaran kamu.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-5",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Halo, saya Reno, Digital Marketing Strategist di divisi Marketing. Keahlian saya fokus pada digital marketing, merancang funnel end-to-end, dan menilai atribusi. Saya siap membantu kamu memahami atau menyusun strategi digital.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-6",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Hai, saya Reno, Digital Marketing Strategist di divisi Marketing. Keahlian saya berfokus pada digital marketing, pembuatan funnel end-to-end, dan penentuan atribusi. Saya siap membantu merancang strategi pemasaran digital yang tepat untuk bisnis Anda.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-7",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Halo! Aku Reno, Digital Marketing Strategist di divisi Marketing. Fokusku adalah merancang funnel end-to-end dan atribusi digital. Kalau ada yang mau dibahas, beri tahu saja!",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-8",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Bisa bantu rancang funnel penjualan, set up iklan Facebook/Instagram, optimasi SEO produk, dan tracking konversi lewat Google Analytics. Kalau mau skrip otomatisasi email atau chat, bisa saya buatkan setelah konfirmasi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-9",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "ROAS biasanya dipakai buat ngukur efektivitas kampanye iklan. Misalnya kamu mau tau apakah budget iklanmu cukup menghasilkan profit, atau mana channel yang paling menguntungkan. Kalau ROAS > 1 berarti lebih banyak pendapatan daripada biaya, kalau <1 berarti rugi. Jadi pakai ROAS setiap kali mau evaluasi performa ads, baik di level kampanye, set, atau channel.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-10",
+      "kategori": "persona",
+      "ketepatan": null,
+      "kejujuran": 0,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ],
+      "jawaban": "Hai! Aku Reno, Digital Marketing Strategist di divisi Marketing. Fokusku adalah merancang funnel end-to-end dan melakukan atribusi. Aku siap bantu kamu optimasi kampanye digital, analisis funnel, dan strategi konversi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-11",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Hai! Ada yang bisa saya bantu dalam perencanaan funnel atau atribusi digital marketing?",
+      "alatDipakai": []
+    }
+  ]
+}

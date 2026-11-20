@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-kelola-pengetahuan",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan kelola pengetahuan",
+  "version": 1,
+  "name": "Kelola catatan dan panduan",
+  "ringkas": "Susun indeks catatan yang saling terhubung, rapikan nama dan folder, buat panduan kerja ringkas, serta saring dan samarkan data pribadi.",
+  "kataKunci": ["catatan", "indeks", "panduan kerja", "folder", "data pribadi", "samarkan"],
+  "kemampuan": {
+    "id": "kelola-pengetahuan",
+    "kelompok": "pengetahuan",
+    "tujuanAwam": "Menata tumpukan catatan agar mudah dicari, membuat panduan kerja singkat, dan menyamarkan data pribadi sebelum catatan dibagikan."
+  },
+  "inputs": [
+    { "key": "nama", "type": "text", "label": "Nama kumpulan catatan atau panduan", "required": true, "contoh": "Catatan layanan pelanggan" },
+    { "key": "mode", "type": "choice", "label": "Mau mengerjakan apa?", "required": true, "default": "indeks", "choices": [{ "v": "indeks", "t": "Susun indeks catatan: judul | folder | kata ciri" }, { "v": "tata", "t": "Rapikan nama dan folder: judul | folder" }, { "v": "panduan", "t": "Buat panduan kerja: satu langkah per baris" }, { "v": "bersih", "t": "Saring dan samarkan data pribadi: satu catatan per baris" }] },
+    { "key": "aksi", "type": "choice", "label": "Catatan yang memuat data pribadi", "required": true, "default": "samarkan", "choices": [{ "v": "samarkan", "t": "Samarkan saja datanya" }, { "v": "buang", "t": "Buang seluruh catatannya" }] },
+    { "key": "teks", "type": "longtext", "label": "Isinya, satu per baris (lihat contoh format pada tombol di atas)", "required": true, "contoh": "Cara retur barang | pelayanan | retur, barang, pelanggan\nAturan garansi | pelayanan | garansi, barang" }
+  ],
+  "steps": [
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "rows": "baris(input.teks).map((t) => String(t).trim()).filter((t) => t !== '').slice(0, 2000)",
+        "n": "v.rows.length",
+        "kol": "v.rows.map((t) => t.split('|').map((c) => c.trim()))",
+        "slugs": "v.kol.map((r) => String(r[0]).toLowerCase().replace(/[^a-z0-9]+/g, '-').split('-').filter((x) => x !== '').join('-') || 'tanpa-judul')",
+        "slugU": "v.slugs.map((s, i) => v.slugs.indexOf(s) === i ? s : s + '-' + (i + 1))",
+        "folder": "v.kol.map((r) => String(r[1] || 'umum').toLowerCase().replace(/[^a-z0-9]+/g, '-').split('-').filter((x) => x !== '').join('-') || 'umum')",
+        "digandakan": "v.slugs.length - v.slugs.filter((s, i) => v.slugs.indexOf(s) === i).length"
+      }
+    },
+    {
+      "id": "indeks",
+      "use": "hitung",
+      "label": "Hubungkan catatan",
+      "set": {
+        "kunci": "v.kol.map((r) => String(r[2] || '').toLowerCase().split(',').map((x) => x.trim()).filter((x) => x !== ''))",
+        "terkait": "v.kunci.map((k, i) => v.kunci.map((q, j) => j).filter((j) => j !== i && v.kunci[j].some((x) => k.indexOf(x) >= 0)))",
+        "yatim": "v.terkait.filter((t) => t.length === 0).length",
+        "tautan": "v.terkait.reduce((s, t) => s + t.length, 0)",
+        "barisIndeks": "v.kol.map((r, i) => '- [[' + v.slugU[i] + ']] ' + r[0] + ' (' + v.folder[i] + ')' + (v.terkait[i].length ? ', terkait: ' + v.terkait[i].map((j) => '[[' + v.slugU[j] + ']]').join(' ') : ''))"
+      }
+    },
+    {
+      "id": "panduan",
+      "use": "hitung",
+      "label": "Susun panduan kerja",
+      "set": {
+        "lp": "v.rows.map((t) => t.replace(/^[0-9]+[.)] */, '').split(' ').filter((x) => x !== '').join(' '))",
+        "panjang": "v.lp.filter((t) => t.split(' ').length > 25)",
+        "peringatan": "v.lp.filter((t) => ['jangan', 'hati-hati', 'awas', 'wajib'].some((k) => t.toLowerCase().indexOf(k) >= 0))",
+        "kata": "v.lp.reduce((s, t) => s + t.split(' ').length, 0)",
+        "menit": "Math.max(1, Math.round(v.kata / 150))"
+      }
+    },
+    {
+      "id": "pribadi",
+      "use": "hitung",
+      "label": "Cari data pribadi",
+      "set": {
+        "tk": "v.rows.map((r) => r.split(' ').filter((x) => x !== ''))",
+        "tags": "v.tk.map((ts) => ts.map((t) => ((d) => t.indexOf('@') > 0 && t.indexOf('.', t.indexOf('@')) > 0 ? 'EMAIL' : d.length >= 10 && t.replace(/[0-9+.()-]/g, '') === '' ? 'NOMOR' : '')(t.replace(/[^0-9]/g, ''))))",
+        "samar": "v.tk.map((ts, i) => ts.map((t, j) => v.tags[i][j] ? '[' + v.tags[i][j] + ']' : t).join(' '))",
+        "pii": "v.tags.map((g) => g.some((x) => x !== ''))",
+        "jmlTag": "v.tags.reduce((s, g) => s + g.filter((x) => x !== '').length, 0)",
+        "jmlPii": "v.pii.filter((p) => p).length",
+        "pendek": "v.samar.map((t) => t.split(' ').length < 3)",
+        "lk": "v.samar.map((t) => t.toLowerCase())",
+        "ganda": "v.lk.map((t, i) => v.lk.indexOf(t) !== i)",
+        "simpan": "v.samar.map((t, i) => !v.pendek[i] && !v.ganda[i] && !(input.aksi === 'buang' && v.pii[i]))",
+        "sisa": "v.samar.filter((t, i) => v.simpan[i])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "!v.n ? 'Tidak ada isi yang terbaca, periksa lagi isiannya' : input.mode === 'indeks' ? 'Indeks ' + input.nama + ': ' + v.n + ' catatan, ' + v.tautan + ' tautan antar catatan, ' + v.yatim + ' catatan belum terhubung' : input.mode === 'tata' ? 'Penataan ' + input.nama + ': ' + v.n + ' catatan diberi nama dan folder baru, ' + v.digandakan + ' nama kembar dibedakan' : input.mode === 'panduan' ? 'Panduan ' + input.nama + ': ' + v.lp.length + ' langkah, ' + v.peringatan.length + ' peringatan, sekitar ' + v.menit + ' menit baca' : v.n + ' catatan ' + input.nama + ' disaring: ' + v.sisa.length + ' tersisa, ' + v.jmlTag + ' data pribadi disamarkan di ' + v.jmlPii + ' catatan'",
+    "teks": "'# ' + input.nama + '\\n\\n' + (!v.n ? 'Tidak ada isi yang terbaca.' : input.mode === 'indeks' ? v.barisIndeks.join('\\n') + '\\n\\nCatatan belum terhubung: ' + v.yatim : input.mode === 'tata' ? tabel(['Judul asli', 'Nama baru'], v.kol.map((r, i) => [r[0], v.folder[i] + '/' + v.slugU[i] + '.md'])) : input.mode === 'panduan' ? v.lp.map((t, i) => (i + 1) + '. ' + t).join('\\n') + (v.panjang.length ? '\\n\\nLangkah yang terlalu panjang dan sebaiknya dipecah: ' + v.panjang.length : '') : tabel(['Ukuran', 'Jumlah'], [['Catatan awal', v.n], ['Data pribadi disamarkan', v.jmlTag], ['Catatan memuat data pribadi', v.jmlPii], ['Catatan tersisa', v.sisa.length]]) + '\\n\\n' + v.sisa.map((t) => '- ' + t).join('\\n'))",
+    "berkas": [
+      { "jenis": "csv", "nama": "'pengetahuan-' + cut(String(input.nama).toLowerCase(), 30)", "isi": "input.mode === 'indeks' ? csv([['judul', 'folder', 'nama berkas', 'jumlah terkait']].concat(v.kol.map((r, i) => [r[0], v.folder[i], v.slugU[i], v.terkait[i].length]))) : input.mode === 'tata' ? csv([['judul asli', 'nama baru']].concat(v.kol.map((r, i) => [r[0], v.folder[i] + '/' + v.slugU[i] + '.md']))) : input.mode === 'panduan' ? csv([['no', 'langkah']].concat(v.lp.map((t, i) => [i + 1, t]))) : csv([['catatan', 'dipertahankan']].concat(v.samar.map((t, i) => [t, v.simpan[i] ? 'ya' : 'tidak'])))" },
+      { "jenis": "md", "nama": "'isi-' + cut(String(input.nama).toLowerCase(), 30)", "isi": "'# ' + input.nama + '\\n\\n' + (input.mode === 'indeks' ? v.barisIndeks.join('\\n') : input.mode === 'tata' ? v.kol.map((r, i) => '- ' + v.folder[i] + '/' + v.slugU[i] + '.md') .join('\\n') : input.mode === 'panduan' ? v.lp.map((t, i) => (i + 1) + '. ' + t).join('\\n') : v.sisa.map((t) => '- ' + t).join('\\n'))" }
+    ],
+    "data": "({ n: v.n, tautan: v.tautan, yatim: v.yatim, digandakan: v.digandakan, langkah: v.lp.length, peringatan: v.peringatan.length, menit: v.menit, disamarkan: v.jmlTag, catatanPribadi: v.jmlPii, tersisa: v.sisa.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "nama": "Catatan layanan", "mode": "indeks", "aksi": "samarkan", "teks": "Cara retur barang | pelayanan | retur, barang, pelanggan\nAturan garansi | pelayanan | garansi, barang\nDaftar harga 2025 | penjualan | harga" }, "expect": { "berkas": 2, "mengandung": ["3 catatan", "2 tautan", "1 catatan belum terhubung"] } },
+  "otakProfil": {
+    "peran": "pustakawan kerja yang menjelaskan hasil penataan catatan kepada orang awam",
+    "tujuan": "Terangkan apa yang sudah dirapikan, apa yang masih berantakan atau berisiko, dan langkah selanjutnya agar catatan mudah dicari dan aman dibagikan.",
+    "gaya": "rapi, sederhana, menenangkan",
+    "pedoman": ["Pakai hanya angka dan nama dari hasil hitung.", "Bila ada data pribadi, tegaskan bahwa hasil sudah disamarkan tetapi berkas asli tetap perlu dijaga.", "Beri saran penamaan atau penautan yang mudah diikuti."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar", "kerapian": "pilihan:rapi|cukup|perlu_dibenahi" },
+    "contoh": { "baik": "Satu catatan belum terhubung ke yang lain; tambahkan kata ciri agar muncul di indeks.", "buruk": "Catatan sudah bagus." },
+    "batas": { "pembahasan": 600, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["catatan"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Catatan sudah tersusun dan sebagian saling terhubung, tetapi masih ada catatan yang berdiri sendiri. Tambahkan kata ciri agar catatan itu ikut muncul di indeks.\",\"poin\":[\"Sebagian catatan sudah terhubung\",\"Satu catatan berdiri sendiri\"],\"langkah\":[\"Tambah kata ciri pada catatan yang berdiri sendiri\",\"Simpan hasil di folder yang sesuai\"],\"kerapian\":\"cukup\"}"
+  },
+  "evaluasi": [
+    { "nama": "indeks catatan dengan satu catatan sendirian", "input": { "nama": "Catatan layanan", "mode": "indeks", "aksi": "samarkan", "teks": "Cara retur barang | pelayanan | retur, barang, pelanggan\nAturan garansi | pelayanan | garansi, barang\nDaftar harga 2025 | penjualan | harga" }, "ai": "{\"pembahasan\":\"Dua catatan layanan saling terhubung lewat kata barang, sedangkan catatan harga masih berdiri sendiri. Tambahkan kata ciri agar catatan harga ikut terhubung.\",\"poin\":[\"Satu catatan berdiri sendiri\"],\"langkah\":[\"Tambah kata ciri pada catatan harga\"],\"kerapian\":\"cukup\"}", "kriteria": { "mengandung": ["catatan", "kata ciri"], "mengandungAturan": ["cara-retur-barang", "aturan-garansi", "belum terhubung"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.tautan", "min": 2, "max": 2 }, { "path": "data.yatim", "min": 1, "max": 1 }] } },
+    { "nama": "nama kembar dan judul penuh tanda baca", "input": { "nama": "Catatan rapat", "mode": "tata", "aksi": "samarkan", "teks": "Catatan Rapat Ayah!! 2025/01 | | rapat\nCatatan Rapat Ayah!! 2025/01 | Arsip Lama | rapat" }, "ai": "{\"pembahasan\":\"Dua catatan rapat punya judul yang sama sehingga salah satunya diberi nomor agar tidak menimpa. Catatan pertama masuk folder umum karena belum punya folder.\",\"poin\":[\"Satu nama kembar dibedakan\"],\"langkah\":[\"Beri judul yang lebih spesifik\"],\"kerapian\":\"cukup\"}", "kriteria": { "mengandung": ["catatan", "folder"], "mengandungAturan": ["umum/catatan-rapat-ayah-2025-01.md", "arsip-lama/catatan-rapat-ayah-2025-01-2.md"], "panjangMin": 100, "panjangMaks": 3500, "nilai": [{ "path": "data.n", "min": 2, "max": 2 }, { "path": "data.digandakan", "min": 1, "max": 1 }] } },
+    { "nama": "samarkan email dan nomor, buang pendek dan ganda", "input": { "nama": "Percakapan pelanggan", "mode": "bersih", "aksi": "samarkan", "teks": "Hubungi Budi di budi@contoh.id atau 081234567890 segera\nok\nHubungi Budi di budi@contoh.id atau 081234567890 segera\nPesanan sudah dikirim kemarin sore ke alamat pelanggan" }, "ai": "{\"pembahasan\":\"Dua data pribadi sudah disamarkan pada catatan pelanggan, satu catatan terlalu pendek dan satu lagi kembar sehingga dibuang. Berkas asli tetap harus dijaga.\",\"poin\":[\"Email dan nomor telepon disamarkan\"],\"langkah\":[\"Simpan berkas asli di tempat aman\"],\"kerapian\":\"rapi\"}", "kriteria": { "mengandung": ["catatan", "disamarkan"], "mengandungAturan": ["[EMAIL]", "[NOMOR]", "tersisa"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.n", "min": 4, "max": 4 }, { "path": "data.disamarkan", "min": 4, "max": 4 }, { "path": "data.catatanPribadi", "min": 2, "max": 2 }, { "path": "data.tersisa", "min": 2, "max": 2 }] } },
+    { "nama": "panduan kerja dengan peringatan", "input": { "nama": "Buka toko", "mode": "panduan", "aksi": "samarkan", "teks": "1. Buka pintu dan nyalakan lampu\n2) Cek uang kembalian di laci\nJangan lupa nyalakan printer struk\nCatat penjualan pertama" }, "ai": "{\"pembahasan\":\"Panduan membuka toko terdiri dari empat langkah singkat dengan satu peringatan soal printer. Urutannya jelas dan mudah diikuti pegawai baru.\",\"poin\":[\"Empat langkah\",\"Satu peringatan\"],\"langkah\":[\"Tempel panduan di dekat kasir\"],\"kerapian\":\"rapi\"}", "kriteria": { "mengandung": ["panduan", "empat langkah"], "mengandungAturan": ["Buka pintu dan nyalakan lampu", "4."], "panjangMin": 100, "panjangMaks": 3500, "nilai": [{ "path": "data.langkah", "min": 4, "max": 4 }, { "path": "data.peringatan", "min": 1, "max": 1 }] } }
+  ]
+}

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fundamental RAIVERSE</title>
+<style>
+  :root { --bg:#f7f2ea; --card:#fffcf7; --text:#2b2f38; --head:#0f2747; --line:#e2dbd1; --muted:#565c66; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0a1426; --card:#13233b; --text:#f7f2ea; --head:#f7f2ea; --line:#2a3b50; --muted:#b7c2d1; } }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.6 Inter, system-ui, sans-serif; }
+  main { max-width:960px; margin:0 auto; padding:24px 16px 64px; }
+  h1, h2 { font-family: Newsreader, Georgia, serif; font-weight:500; color:var(--head); }
+  h1 { font-size:32px; margin:8px 0; }
+  h2 { font-size:22px; margin:32px 0 8px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin:16px 0; overflow-x:auto; }
+  .muted { color:var(--muted); font-size:14px; }
+  table { border-collapse:collapse; width:100%; font-size:14px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  .chip { padding:2px 10px; border-radius:99px; font-size:12px; white-space:nowrap; }
+  .ok { background:#e1f5ee; color:#085041; } .half { background:#faeeda; color:#633806; } .off { background:#f1efe8; color:#444441; }
+  li { margin:4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fundamental RAIVERSE</h1>
+  <p class="muted"><!--BEGIN:updated-->
+Terakhir diperbarui: 2026-11-19. Perbarui tabel ini tiap ada perubahan, lalu tambahkan satu baris di "Riwayat".
+<!--END:updated--> · sumber: <code>01-FUNDAMENTAL.md</code> dan <code>00-STATUS.md</code>; perbarui dengan <code>node scripts/sync-fundamental.mjs</code></p>
+
+  <h2>Peta lapisan</h2>
+  <section><!--BEGIN:lapisan-->
+<pre class="mermaid">flowchart TB
+  subgraph DEPAN["Depan (beku)"]
+    O3D["Kantor 3D #office"]:::ok
+    SUARA["Suara agen"]:::ok
+    BER["Beranda chat (Pemandu)"]:::half
+    HAS["Hasil Saya, Tim Saya, Catatan"]:::half
+    ADM["Konsol admin #admin"]:::half
+  end
+  subgraph OTAK["Backend / otak (sedang dirapikan)"]
+    PEM["Pemandu: paham, tanya, saran"]:::half
+    ENG["Mesin kerja: asisten + master, manajer, staf"]:::ok
+    GUARD["Penjaga: keamanan, kuota, persetujuan"]:::ok
+    MEM["Ingatan: catatan, skill, memori"]:::ok
+    DATA["Data: JSON (SQLite mati)"]:::ok
+  end
+  subgraph LUAR["Dunia luar"]
+    GROQ["Groq (AI)"]:::ok
+    TG["Telegram dan Discord"]:::half
+    N8N["n8n: 221 staf tersimpan, 0 aktif"]:::off
+    WEB["Browser agen dan web"]:::half
+  end
+  DEPAN --&gt; OTAK --&gt; LUAR
+  classDef ok fill:#E1F5EE,stroke:#0F6E56,color:#085041
+  classDef half fill:#FAEEDA,stroke:#854F0B,color:#633806
+  classDef off fill:#F1EFE8,stroke:#5F5E5A,color:#444441</pre>
+<!--END:lapisan--></section>
+
+  <h2>Alur satu permintaan</h2>
+  <section><!--BEGIN:alur-->
+<pre class="mermaid">flowchart LR
+  U["Pengguna: ngobrol (web atau Telegram)"] --&gt; P["Pemandu: paham, tanya sedikit"]
+  P --&gt; M["Master: pilih divisi"]
+  M --&gt; MG["Manajer divisi: pilih kemampuan"]
+  MG --&gt; S["Staf: kemampuan + keahlian"]
+  S --&gt; H["Hasil: teks, berkas, data"]
+  H --&gt; C["Chat: hasil + 2-4 tombol saran"]
+  C --&gt; N["Catatan otomatis"]
+  H -. aksi berdampak .-&gt; K["Konfirmasi: pratinjau, Ya atau Batal"]
+  K --&gt; H</pre>
+<!--END:alur--></section>
+
+  <h2>Hierarki dan staf</h2>
+  <section><!--BEGIN:hierarki-->
+<pre class="mermaid">flowchart TB
+  OW["Owner / pengguna"] --&gt; PA["Asisten pribadi"]
+  OW --&gt; MA["Master orkestrator"]
+  MA --&gt; MG["Manajer divisi (22)"]
+  MG --&gt; ST["Staf (238) = orang 3D"]
+  ST --&gt; KM["Kemampuan inti (sekitar 30)"]
+  ST --&gt; KH["Keahlian khusus staf"]</pre>
+<!--END:hierarki--></section>
+
+  <h2>Status terkini</h2>
+  <section><!--BEGIN:status-->
+<table><thead><tr><th>Bagian</th><th>Status</th><th>Catatan</th></tr></thead><tbody><tr><td>Kantor 3D, suara</td><td><span class="chip ok">Jalan, beku</span></td><td>Jangan diubah</td></tr><tr><td>Beranda chat (Pemandu)</td><td><span class="chip half">Setengah</span></td><td>Kode ada, belum dicoba Owner</td></tr><tr><td>Tim Saya, Hasil Saya, Catatan</td><td><span class="chip half">Setengah</span></td><td>Baru, belum dicoba Owner</td></tr><tr><td>Konsol admin</td><td><span class="chip half">Setengah</span></td><td>Terpisah dari pengguna, 17 tes lolos</td></tr><tr><td>Agen AI lama (Groq)</td><td><span class="chip ok">Jalan</span></td><td>171 agen, 22 divisi; ini yang bekerja sekarang</td></tr><tr><td>Keamanan, kuota, persetujuan</td><td><span class="chip ok">Jalan (teruji tes)</span></td><td>Belum dipakai publik</td></tr><tr><td>Data</td><td><span class="chip half">JSON jalan, SQLite mati</span></td><td>Bendera, bawaan JSON</td></tr><tr><td>Staf 238</td><td><span class="chip off">Belum aktif</span></td><td>Katalog lengkap; `staffModel` mati di data Owner</td></tr><tr><td>Kemampuan inti</td><td><span class="chip half">Setengah</span></td><td>31 kemampuan ditulis dan lulus evaluasi dengan model TIRUAN; 0 panggilan model asli, mutu AI sungguhan belum dinilai</td></tr><tr><td>n8n</td><td><span class="chip off">Ada, tidak aktif</span></td><td>253 workflow: 30 milik Owner, 221 staf tersimpan, 0 aktif</td></tr><tr><td>Telegram</td><td><span class="chip half">Setengah</span></td><td>Bot `@raiverse_bot` hidup di salinan uji (port 4611)</td></tr><tr><td>Discord</td><td><span class="chip half">Dibangun, belum diuji nyata</span></td><td>Butuh token</td></tr><tr><td>WhatsApp, email, Sheets lewat RAIVERSE</td><td><span class="chip off">Belum ada</span></td><td>WAHA/SMTP kosong, konektor Apps Script belum diisi</td></tr><tr><td>Perapian backend</td><td><span class="chip half">Selesai</span></td><td>Peta: docs/PETA-BACKEND.md, docs/PETA-OTAK.md, docs/README.md; kode dipindah ke folder (33 dari 41 berkas akar kini hanya peneruskan satu baris); 295 tes, 0 gagal</td></tr><tr><td>Uji nyata dengan model asli</td><td><span class="chip off">Belum dimulai</span></td><td>Kartu sesi menunggu; biaya dibatasi sekitar 0,5 USD</td></tr><tr><td>Menu</td><td><span class="chip half">Kantor 3D utama</span></td><td>Urutan: Kantor 3D, Beranda, Hasil Saya, Catatan, Tim Saya; di HP layar pertama tetap Beranda</td></tr><tr><td>Peta isi website (dari kode)</td><td><span class="chip ok">Jalan</span></td><td>docs/PETA-WEBSITE.md: 15 halaman, 20 jalur #hash, sekitar 170 tombol, 0 rute hilang</td></tr><tr><td>Kartu Telegram/Discord di layar</td><td><span class="chip off">Belum tertaut</span></td><td>Komponen ada, tidak pernah diimpor; rute /api/saluran/* sudah ada</td></tr><tr><td>Peta halaman lengkap (diagram)</td><td><span class="chip ok">Jalan</span></td><td>peta-halaman/PETA-HALAMAN-LENGKAP.md + artifact; 12 diagram lolos parser, belum dilihat di layar; konsol admin ternyata 10 tab; dock Kantor 3D belum memakai Mesin Chat baru</td></tr><tr><td>Perapian berkas</td><td><span class="chip half">Selesai</span></td><td>Gambar ke docs/gambar/, bacaan luar ke docs/riset/, rahasia OAuth ke _rahasia-lokal/ (diabaikan git); daftar: _arsip-sampah/DAFTAR.md</td></tr></tbody></table>
+<!--END:status--></section>
+
+  <h2>Prinsip yang sudah diputuskan</h2>
+  <section>
+    <ol>
+      <li>Satu antarmuka untuk semua orang, tanpa mode, dipandu pilihan tombol seperti ChatGPT.</li>
+      <li>Depan (kantor 3D, suara, UI) dibekukan; perubahan ada di backend.</li>
+      <li>Hal teknis hanya di konsol admin untuk pengelola.</li>
+      <li>Hierarki: Owner, asisten pribadi dan master, manajer divisi (22), staf.</li>
+      <li>Staf = orang (karakter 3D) + kemampuan inti bersama (sekitar 30) + keahlian khusus.</li>
+      <li>Staf berjalan native di RAIVERSE; n8n hanya untuk jadwal dan pemicu luar.</li>
+      <li>Saluran luar: Telegram dan Discord, tiap pengguna sesi sendiri.</li>
+      <li>Jujur bila sesuatu belum tersambung; tidak memalsukan hasil.</li>
+    </ol>
+  </section>
+</main>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'strict' });
+</script>
+</body>
+</html>

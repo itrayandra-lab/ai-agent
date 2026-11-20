@@ -129,31 +129,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "CRM & Email Specialist di divisi Marketing, memakai bahasa awam",
-    "tujuan": "Buat rangkaian empat pesan (email atau WhatsApp) lengkap dengan jadwal dan naskah untuk menyambut, mendorong beli, mengaktifkan kembali, atau meminta ulasan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "email",
+      "whatsapp",
+      "crm",
+      "urutan pesan",
+      "pelanggan lama"
+    ],
+    "data": [
+      "nama brand",
+      "tujuan pesan",
+      "lewat mana?",
+      "mulai kirim tanggal"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
     "contoh": {
       "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
-      "buruk": "Produk terbaik sedunia!"
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "email"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun urutan pesan ke pelanggan perlu dibaca bersama: email menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

@@ -98,31 +98,29 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Account Executive di divisi Sales, memakai bahasa awam",
-    "tujuan": "Tentukan harga terendah yang masih aman dan siapkan tiga langkah konsesi bertahap untuk menghadapi tawar-menawar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "negosiasi",
+      "batas diskon",
+      "harga terendah",
+      "konsesi",
+      "closing"
+    ],
+    "data": [
+      "harga penawaran awal (rp)",
+      "biaya pokok (rp)",
+      "untung minimal yang harus dijaga"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
     "contoh": {
-      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
-      "buruk": "Beli sekarang atau rugi."
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "negosiasi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung batas diskon saat negosiasi perlu dibaca bersama: negosiasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

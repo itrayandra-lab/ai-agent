@@ -90,31 +90,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Warehouse & Inventory Specialist di divisi Supply Chain & Warehouse, memakai bahasa awam",
-    "tujuan": "Bandingkan hasil hitung fisik gudang dengan catatan sistem, tandai selisihnya, dan hitung tingkat ketepatan stok. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "cocokkan-bersihkan-data"
+  ],
+  "keahlian": {
+    "istilah": [
+      "stock opname",
+      "stok fisik",
+      "selisih stok",
+      "rekonsiliasi",
+      "ketepatan stok"
+    ],
+    "data": [
+      "selisih yang masih dimaklumi",
+      "hitungan (barang | stok di sistem | stok fisik)"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
     "contoh": {
       "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
-      "buruk": "Stok sepertinya cukup."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "stock opname"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pencocok stok sistem dengan stok fisik perlu dibaca bersama: stock opname menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
   }
 }

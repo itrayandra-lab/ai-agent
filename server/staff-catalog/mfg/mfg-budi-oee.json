@@ -112,31 +112,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Filling & Packing Line Lead di divisi Manufacturing, memakai bahasa awam",
-    "tujuan": "Hitung seberapa efektif mesin bekerja dari waktu, kecepatan, dan mutu, lalu tunjukkan bagian yang paling perlu diperbaiki. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "catat-produksi-mutu"
+  ],
+  "keahlian": {
+    "istilah": [
+      "oee",
+      "efektivitas mesin",
+      "downtime",
+      "kecepatan mesin",
+      "kinerja lini"
+    ],
+    "data": [
+      "nama jalur atau mesin",
+      "waktu kerja terjadwal (menit)",
+      "waktu berhenti (menit)",
+      "kecepatan ideal mesin (unit per menit)"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
     "contoh": {
-      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
-      "buruk": "Produksi lancar."
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "oee"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung efektivitas mesin (oee) perlu dibaca bersama: oee menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
   }
 }

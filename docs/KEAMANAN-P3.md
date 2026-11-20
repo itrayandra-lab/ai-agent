@@ -1,6 +1,6 @@
 # Keamanan publik (Fase P3)
 
-Status: selesai dan teruji pada 2026-11-18 (tes: `test/security.test.js`, 18 tes; ikut `npm test`). Bagian 7 menjelaskan dengan jujur apa yang **belum** aman untuk rilis publik. Rencana induk: `docs/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md`.
+Status: selesai dan teruji pada 2026-11-18 (tes: `test/security.test.js`, 18 tes; ikut `npm test`). Bagian 7 menjelaskan dengan jujur apa yang **belum** aman untuk rilis publik. Rencana induk: `docs/arsip/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md`.
 
 ## 1. Ringkasan: apa yang sekarang aman
 

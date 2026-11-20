@@ -51,26 +51,62 @@ Di alur n8n (kompatibel mundur) langkah ini hanya menghitung cadangan aturan (`d
 `data-citra` (bahas angka janggal), `ecom-sarah` (untung rugi), `sales-rafi` (pipeline), `hr-dafa-survei` (survei karyawan), `mkt-bram-diagnosa-iklan` (diagnosa iklan).
 Dibuat oleh `scripts/staff-otak-pilot.mjs` (idempoten). Versi tiap spesifikasi naik 1.
 
-### Otak berbasis data untuk SEMUA staf (`otakProfil`)
-Perluasan: setiap staf lengkap (216) kini "berpikir", tanpa kode per staf. Spesifikasi punya blok data `otakProfil` (peran, tujuan, gaya, skema keluaran, contoh baik dan buruk,
-batas panjang, kriteria lulus, `contohAI`) yang dirakit dari data yang sudah ada (jabatan, ringkasan, kata kunci, divisi) plus tabel gaya per divisi
-(`scripts/staff-otak-profil.mjs`, idempoten). 201 staf memakai blok ini; 15 staf lain sudah punya langkah AI sendiri (8 `otak` percontohan + 7 `minta_ai`) dan dilewati.
-Cara kerjanya di mesin native: aturan lama jalan dulu dan tetap menjadi kerangka serta pemeriksa (angka, format, batas); lalu mesin merakit permintaan dari blok itu
-(ringkasan hasil aturan + isian pengguna yang sudah disamarkan), meminta JSON sesuai skema, memeriksanya, dan **hanya bila sah** menempelkan bagian "Pembahasan (ditulis AI, sudah diperiksa)"
-ke teks, menambah berkas `<kunci>-pembahasan.md`, dan mengisi `data.pembahasanAI`. Bila AI mati/anggaran habis/jatah habis/jawaban tidak sah, hasil persis seperti versi aturan (identik dengan n8n).
+### Kemampuan (apa yang dikerjakan) dan staf (siapa yang mengerjakan)
+Keputusan akhir: **orang dipisah dari kemampuan**. 216 staf tetap ada (id, karakter 3D, divisi, status; tidak ada yang dihapus), dan di belakangnya ada **31 kemampuan inti**
+(`server/staff/capabilities/<id>.json`, dikelompokkan dari apa yang sebenarnya dikerjakan seluruh katalog: hitung harga, analisis angka, susun jadwal, tulis konten, periksa kepatuhan, dan seterusnya).
 
-Kendali biaya dan mutu: model kecil bawaan (`model: "sedang"` hanya bila diminta spesifikasi); maks 600-900 token per panggilan dan satu panggilan per eksekusi;
-**cache** 1 jam per ruang kerja untuk masukan identik (tanpa biaya dan tanpa memakai jatah); jawaban tidak sah **diulang sekali** lalu jatuh ke aturan; jatah harian dan biaya per ruang kerja di `usage.staf`;
-**privasi**: email, nomor telepon, deret angka panjang disamarkan, dan isian bernama email/telepon/NIK/rekening/alamat/sandi tidak pernah dikirim ke model.
+- **Kemampuan** = spesifikasi lengkap yang bisa jalan sendiri (division `kap`, key `kap-<id>`): tujuan awam, masukan (minimal satu bidang berpilihan tombol untuk Pemandu), langkah aturan sebagai kerangka dan pemeriksa,
+  blok `otakProfil` (peran, tujuan, gaya, pedoman, skema keluaran terstruktur, contoh baik dan buruk, batas panjang, kriteria, jawaban contoh), keluaran nyata (teks, berkas CSV/Markdown, data), jatuh-balik ke aturan bila AI gagal,
+  dan **set evaluasi minimal 3 masukan contoh** dengan kriteria lulus otomatis (kata kunci wajib, panjang, nilai angka yang masuk akal, dan uji saat AI mati).
+- **Staf (orang)** = berkas di `server/staff-catalog/<divisi>/` dengan `kemampuan: [id…]` (1-4) + `keahlian` (istilah, data yang biasa ditangani, gaya, contoh, batasan khas peran). Aturan khas staf (`steps`/`output`) tetap menjadi kerangkanya.
+- **Perakitan**: `kemampuan.composeProfil(kemampuan, staf)` menggabungkan keduanya menjadi blok otak (jabatan staf, istilah dan batasan perannya masuk ke permintaan AI). Registri melakukannya saat memuat katalog; hasil tanpa AI tetap identik dengan versi lama.
+- **Manajer memilih kemampuan**: tool `staf` punya aksi `kemampuan` (daftar ringkas jenis pekerjaan divisinya, 10 per halaman, bertahap) dan `jalankan_kemampuan` (memilih kemampuan; staf yang paling cocok mengerjakan dan **karakternya yang tampil bekerja** lewat `setStatus`). Aksi `lihat` + `kemampuan` menampilkan isiannya. Daftar staf lama tetap bisa dipakai.
+- **Jalur AI** (sama untuk semua): model kecil bawaan, cache 1 jam masukan identik, jawaban tidak sah diulang sekali lalu jatuh ke aturan, jatah/biaya/token per ruang kerja (`usage.staf`), data pribadi disamarkan, isian sensitif tidak dikirim. Bila AI mati atau jatah habis, hasil aturan tetap jadi dan jujur.
 
-**Evaluasi mutu otomatis** (`server/staff/mutu.js`, `node scripts/staff-mutu.mjs`): tiap staf punya contoh masukan (`sample.input`) dan kriteria lulus (`otakProfil.kriteria`: panjang, kata kunci wajib) plus
-struktur (jawaban sesuai skema, bagian dan berkas pembahasan muncul) dan kerangka aturan tetap utuh (`sample.expect`). Hasil dengan **model tiruan**: **216 dari 216 staf lulus**; jawaban dangkal atau ngawur diuji gagal.
-Ini memeriksa kerapian alur, bukan kecerdasan model: **tidak ada uji dengan model asli** (kunci AI sengaja kosong; 0 panggilan, Rp 0). Kualitas bahasa model asli belum dinilai.
-Catatan jujur: blok `otakProfil` dirakit oleh skrip dari data dan tabel gaya per divisi, bukan ditulis tangan per staf lewat subagen; keberagaman ada di tingkat divisi dan jabatan,
-sedangkan spesifikasi tingkat staf (contoh khusus, kriteria khusus) bisa diperkaya satu per satu lewat berkas JSON masing-masing.
+**Menambah kemampuan baru**: salin `analisis-angka.json` sebagai teladan, isi semua bagian di atas, jalankan `node scripts/kemampuan-cek.mjs <id>` sampai LULUS (validator dan evaluasi). Hindari regex bergaris miring di ekspresi; tulis berkas lewat alat edit.
+**Menambah staf baru**: buat berkas JSON staf (aturan khasnya) dengan `kemampuan` dan `keahlian`; `node scripts/staff-validate.mjs` lalu `node scripts/staff-mutu.mjs`. Peta awal 216 staf dibuat `scripts/staff-kemampuan-peta.mjs`.
+**Evaluasi**: `node scripts/kemampuan-cek.mjs` (semua kemampuan), `node scripts/staff-mutu.mjs` (semua staf: struktur, panjang, kata kunci, kerangka aturan utuh), `node scripts/kemampuan-tabel.mjs` (tabel di bawah).
 
-**Dunia luar.** Staf tidak mengirim apa pun sendiri. Titik sambung pengiriman: `native.kirimKeluar({ ws, employeeId, teks })` memakai modul saluran (`server/channels`, milik sesi lain; tidak diduplikasi)
-dan jujur mengembalikan `terkirim:false` bila belum ada saluran tertaut. Status Telegram/Discord tampil di `GET /api/staff/konektor` apa adanya. Tulis ke Google tetap lewat konfirmasi dan konektor Google; bila belum terisi gagal jujur.
+**Hasil evaluasi (model tiruan)**: seluruh 31 kemampuan lulus (116 dari 116 kasus, tiap kemampuan memuat uji AI hidup dan AI mati) dan 216 dari 216 staf lulus regresi (hasil tanpa AI identik dengan alur n8n; dengan AI memuat pembahasan sah).
+
+| Kemampuan | Kelompok | Staf pemakai | Kasus lulus/total |
+|---|---|---|---|
+| analisis-angka | analisis | 6 | 3/3 |
+| analisis-hasil-uji | analisis | 6 | 5/5 |
+| analisis-kinerja-penjualan | analisis | 11 | 3/3 |
+| bandingkan-pilihan | analisis | 7 | 4/4 |
+| catat-produksi-mutu | operasional | 3 | 3/3 |
+| cocokkan-bersihkan-data | data | 8 | 4/4 |
+| desain-visual-teknis | desain | 4 | 5/5 |
+| hitung-harga-biaya | hitungan | 18 | 5/5 |
+| hitung-hemat-otomasi | hitungan | 4 | 4/4 |
+| hitung-sdm | hitungan | 3 | 5/5 |
+| hitung-teknis | hitungan | 9 | 6/6 |
+| kelola-pengetahuan | pengetahuan | 6 | 4/4 |
+| klasifikasi-pilah | data | 5 | 3/3 |
+| laporan-ringkasan-kerja | pelaporan | 2 | 3/3 |
+| nilai-skor | analisis | 6 | 4/4 |
+| periksa-kepatuhan | pemeriksaan | 8 | 4/4 |
+| periksa-mutu-teks | pemeriksaan | 3 | 4/4 |
+| perkiraan-stok-kapasitas | perkiraan | 11 | 5/5 |
+| peta-risiko | analisis | 5 | 4/4 |
+| prioritas-keputusan | perencanaan | 5 | 4/4 |
+| rancang-struktur | perencanaan | 9 | 3/3 |
+| ringkas-umpan-balik | analisis | 5 | 3/3 |
+| riset-halaman-web | riset | 4 | 3/3 |
+| susun-daftar-periksa | pemeriksaan | 9 | 4/4 |
+| susun-jadwal | perencanaan | 14 | 3/3 |
+| susun-rencana-kerja | perencanaan | 5 | 3/3 |
+| susun-rencana-pemasaran | perencanaan | 11 | 3/3 |
+| tulis-dokumen-kerja | menulis | 12 | 3/3 |
+| tulis-konten-pemasaran | menulis | 5 | 3/3 |
+| tulis-naskah-video | menulis | 4 | 3/3 |
+| tulis-pesan-pelanggan | menulis | 8 | 3/3 |
+| **Jumlah** | | 216 | 116/116 |
+
+
+Jujur: ini memeriksa kerapian alur dan kebenaran aturan, bukan kecerdasan model. **Model asli tidak dipakai** (0 panggilan, Rp 0); mutu bahasa AI sungguhan belum dinilai. Patokan BPJS di `hitung-sdm` dan ambang "pelatihan efektif" (naik 10 persen) di `hitung-sdm` adalah aturan sederhana
+yang harus dicocokkan dengan aturan terbaru sebelum dipakai untuk keputusan nyata. Kemampuan ditulis oleh subagen paralel per kelompok lalu saya jalankan ulang evaluasinya; keahlian tiap staf dirakit dari data spesifikasi dan tabel gaya per divisi (bukan ditulis tangan per orang).
 
 ## Keluaran nyata (tanpa n8n)
 - Berkas CSV/Markdown/teks/JSON/HTML (siap cetak) di `data/staff-out/<ruang kerja>/<id jalan>/`; jenis dibatasi lima macam, nama dibersihkan, maks 6 berkas, 300 KB per berkas, 600 KB total. PDF sengaja tidak dibuat (tanpa unduhan besar; cetak HTML ke PDF dari peramban).
@@ -123,7 +159,7 @@ pelepasan 217 pendaftaran webhook dan tidak mengecil sendiri karena pengelola me
 setelah n8n dimulai ulang (belum dilakukan; itu keputusan Owner). Yang sudah pasti: 217 pendaftaran webhook dan penyiapan alur aktif tidak lagi ada.
 Kembali ke keadaan semula: `node scripts/n8n-staf-aktifkan.mjs --jalan` (dibaca dari `data/n8n-staf-nonaktif.json`, 217 id; mode kering sudah dicoba).
 
-**Tes.** `node --test --test-concurrency=1 test/*.test.js`: 285 tes, 283 lulus, 0 gagal, 2 ditunda (INV12 dan INV13, milik fase lain). Mascot V4.2: 109 lolos, 0 masalah (sebelum dan sesudah).
+**Tes.** `node --test --test-concurrency=1 test/*.test.js`: 295 tes, 293 lulus, 0 gagal, 2 ditunda (INV12 dan INV13, milik fase lain). Mascot V4.2: 109 lolos, 0 masalah (sebelum dan sesudah).
 `test/regex-guard.test.js` hijau. `npm run check:invariants`: 25 lulus, 0 gagal; INV4b2 dan INV4c diaktifkan (tanda todo dibuang) dengan definisi yang disesuaikan ke arsitektur native
 (tiap staf punya spesifikasi siap yang jalan native; katalog JSON tanpa yatim). `npm run check:visual` melaporkan berkas baru `public/js/sambungan-view.js` yang belum ditinjau; itu bukan dari pekerjaan ini (tidak ada perubahan di `public/`).
 Tes baru (`staff-native.test.js`, 19 tes): ekuivalensi, mode AI, jawaban AI rusak, kotak pasir (ekspresi jahat dan lapisan vm), skema otak, tanpa AI, AI + biaya + jatah + status 3D,

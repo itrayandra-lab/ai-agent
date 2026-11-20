@@ -141,31 +141,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Demand Planner di divisi Supply Chain & Warehouse, memakai bahasa awam",
-    "tujuan": "Perkirakan lonjakan penjualan saat promo, hitung kebutuhan stok beserta cadangannya, dan berapa yang harus ditambah. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "promo",
+      "kebutuhan stok",
+      "diskon",
+      "kampanye",
+      "lonjakan penjualan"
+    ],
+    "data": [
+      "nama produk",
+      "penjualan normal per minggu (unit)",
+      "besar diskon",
+      "lama promo"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
     "contoh": {
       "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
-      "buruk": "Stok sepertinya cukup."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "promo"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung kebutuhan stok untuk promo perlu dibaca bersama: promo menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
   }
 }

@@ -109,5 +109,29 @@
   "brain": {
     "folder": "Report",
     "simpan": true
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pipeline",
+      "forecast",
+      "peluang",
+      "deal macet",
+      "crm"
+    ],
+    "data": [
+      "daftar peluang (satu baris: nama | tahap | nilai | umur hari",
+      "dianggap macet bila lebih dari"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

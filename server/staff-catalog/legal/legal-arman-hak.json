@@ -129,31 +129,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Data Privacy Officer di divisi Legal & Compliance, memakai bahasa awam",
-    "tujuan": "Catat permintaan pelanggan atas datanya, hitung tenggat jawaban sesuai kebijakan internal, dan siapkan langkah penanganannya. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hati-hati, jelas, bedakan fakta dan saran, ingatkan bahwa ini bukan nasihat hukum final",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "permintaan data",
+      "hak pelanggan",
+      "hapus data",
+      "akses data",
+      "tenggat"
+    ],
+    "data": [
+      "nama pemohon",
+      "tanggal permintaan diterima",
+      "jenis permintaan",
+      "tenggat jawaban menurut kebijakan kita"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
     "contoh": {
       "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
-      "buruk": "Pasti aman secara hukum."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "permintaan data"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung tenggat permintaan data pelanggan perlu dibaca bersama: permintaan data menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
   }
 }

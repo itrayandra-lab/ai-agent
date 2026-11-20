@@ -122,31 +122,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Automation Specialist di divisi Operations, memakai bahasa awam",
-    "tujuan": "Hitung berapa jam dan rupiah yang dihemat bila satu pekerjaan berulang diotomasi, dan kapan biayanya balik modal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-hemat-otomasi"
+  ],
+  "keahlian": {
+    "istilah": [
+      "otomasi",
+      "hemat waktu",
+      "roi",
+      "balik modal",
+      "efisiensi"
+    ],
+    "data": [
+      "pekerjaan yang mau diotomasi",
+      "berapa menit sekali kerja",
+      "berapa kali per minggu",
+      "berapa orang mengerjakannya"
+    ],
+    "gaya": "praktis, fokus tenggat dan penanggung jawab",
     "contoh": {
       "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
-      "buruk": "Operasional perlu rapi."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "otomasi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung hemat waktu dan balik modal otomasi perlu dibaca bersama: otomasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan anggaran tetap di manajer."
+    ]
   }
 }

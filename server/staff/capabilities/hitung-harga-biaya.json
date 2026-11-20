@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-hitung-harga-biaya",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan hitung harga dan biaya",
+  "version": 1,
+  "name": "Hitung harga, biaya, dan cicilan",
+  "ringkas": "Hitung margin, PPN, diskon bertingkat, titik impas, komisi, atau cicilan, lalu jelaskan hasilnya dengan bahasa sederhana.",
+  "kataKunci": ["harga", "margin", "ppn", "diskon", "impas", "komisi", "cicilan", "biaya"],
+  "kemampuan": {
+    "id": "hitung-harga-biaya",
+    "kelompok": "hitungan",
+    "tujuanAwam": "Menghitung harga jual, laba, PPN, diskon berlapis, titik impas, komisi, dan cicilan tanpa perlu rumus."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau menghitung apa?", "required": true, "default": "margin", "choices": [{ "v": "margin", "t": "Harga jual dan laba" }, { "v": "ppn", "t": "Pajak PPN" }, { "v": "diskon", "t": "Diskon bertingkat" }, { "v": "impas", "t": "Titik impas" }, { "v": "cicilan", "t": "Cicilan bulanan" }, { "v": "komisi", "t": "Komisi penjualan" }] },
+    { "key": "nilai", "type": "number", "label": "Angka utama dalam rupiah: harga jual, harga awal, nilai penjualan, atau pokok pinjaman", "required": true, "contoh": "150000" },
+    { "key": "biaya", "type": "number", "label": "Modal atau biaya per satuan dalam rupiah (bila ada)", "required": false, "contoh": "100000" },
+    { "key": "persen", "type": "text", "label": "Persentase: margin yang diinginkan, PPN, komisi, atau bunga per tahun. Diskon bertingkat tulis beberapa, contoh 10 + 5", "required": false, "contoh": "10 + 5" },
+    { "key": "jumlah", "type": "number", "label": "Jumlah satuan, atau lama cicilan dalam bulan (bila ada)", "required": false, "contoh": "12" },
+    { "key": "tetap", "type": "number", "label": "Biaya tetap total dalam rupiah, khusus titik impas (bila ada)", "required": false, "contoh": "5000000" }
+  ],
+  "steps": [
+    {
+      "id": "urai",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "nilai": "num(input.nilai)",
+        "biaya": "num(input.biaya)",
+        "persen": "baris(String(input.persen === undefined ? '' : input.persen)).join(' ').replace(/[;+]/g, ' ').split(' ').filter((t) => t !== '' && /[0-9]/.test(t)).map((t) => num(t.endsWith(',') ? t.slice(0, -1) : t)).slice(0, 10)",
+        "p1": "v.persen.length ? v.persen[0] : 0",
+        "jumlah": "num(input.jumlah)",
+        "tetap": "num(input.tetap)",
+        "peringatan": "[v.nilai <= 0 ? 'Angka utama harus lebih dari 0.' : '', v.persen.some((p) => p < 0 || p > 100) ? 'Ada persentase di luar 0 sampai 100, periksa lagi.' : '', input.jenis === 'cicilan' && (v.jumlah < 1 || v.jumlah > 360) ? 'Lama cicilan sebaiknya 1 sampai 360 bulan.' : '', input.jenis === 'impas' && v.nilai <= v.biaya ? 'Harga jual belum di atas biaya per satuan, titik impas tidak tercapai.' : '', input.jenis === 'margin' && v.biaya <= 0 ? 'Modal belum diisi, margin belum bisa dihitung dengan benar.' : ''].filter((t) => t !== '')"
+      }
+    },
+    {
+      "id": "jenis1",
+      "use": "hitung",
+      "label": "Hitung margin, PPN, dan diskon",
+      "set": {
+        "hm": "(() => { const laba = v.nilai - v.biaya; const margin = v.nilai > 0 ? Math.round(laba / v.nilai * 10000) / 100 : 0; const markup = v.biaya > 0 ? Math.round(laba / v.biaya * 10000) / 100 : 0; const saran = v.biaya > 0 && v.p1 > 0 && v.p1 < 100 ? Math.round(v.biaya / (1 - v.p1 / 100)) : 0; return { judul: 'Harga jual, modal, dan margin', inti: 'laba ' + rp(laba) + ' per satuan, margin ' + margin + '%', kepala: ['Hitungan', 'Hasil'], rows: [['Harga jual per satuan', rp(v.nilai)], ['Modal per satuan', rp(v.biaya)], ['Laba per satuan', rp(laba)], ['Margin (laba dibanding harga jual)', margin + '%'], ['Markup (laba dibanding modal)', markup + '%'], ['Harga jual agar margin ' + v.p1 + '%', saran ? rp(saran) : '-'], ['Laba untuk ' + v.jumlah + ' satuan', v.jumlah > 0 ? rp(laba * v.jumlah) : '-']], data: { laba: laba, margin: margin, markup: markup, saran: saran } }; })()",
+        "hp": "(() => { const p = v.p1 > 0 ? v.p1 : 11; const ppn = Math.round(v.nilai * p / 100); const dpp = Math.round(v.nilai / (1 + p / 100)); return { judul: 'Pajak PPN', inti: 'PPN ' + p + '% sebesar ' + rp(ppn) + ', total ' + rp(v.nilai + ppn), kepala: ['Hitungan', 'Hasil'], rows: [['Tarif PPN', p + '%'], ['Harga sebelum PPN', rp(v.nilai)], ['PPN', rp(ppn)], ['Harga setelah PPN', rp(v.nilai + ppn)], ['Bila ' + rp(v.nilai) + ' sudah termasuk PPN, harga dasarnya', rp(dpp)], ['PPN di dalamnya', rp(v.nilai - dpp)]], data: { tarif: p, ppn: ppn, total: v.nilai + ppn, dasar: dpp } }; })()",
+        "hd": "(() => { const d = v.persen.filter((p) => p > 0 && p < 100); const akhir = d.reduce((a, p) => a * (1 - p / 100), v.nilai); const efektif = v.nilai > 0 ? Math.round((1 - akhir / v.nilai) * 10000) / 100 : 0; return { judul: 'Diskon bertingkat', inti: 'harga akhir ' + rp(akhir) + ', diskon efektif ' + efektif + '%', kepala: ['Hitungan', 'Hasil'], rows: [['Harga awal', rp(v.nilai)], ['Diskon berurutan', d.length ? d.join('%, ') + '%' : 'tidak ada'], ['Harga akhir', rp(akhir)], ['Potongan total', rp(v.nilai - akhir)], ['Diskon efektif', efektif + '%'], ['Total untuk ' + v.jumlah + ' satuan', v.jumlah > 0 ? rp(akhir * v.jumlah) : '-']], data: { akhir: Math.round(akhir), efektif: efektif, potongan: Math.round(v.nilai - akhir) } }; })()"
+      }
+    },
+    {
+      "id": "jenis2",
+      "use": "hitung",
+      "label": "Hitung titik impas, cicilan, dan komisi",
+      "set": {
+        "hi": "(() => { const k = v.nilai - v.biaya; const unit = k > 0 ? Math.ceil(v.tetap / k) : 0; return { judul: 'Titik impas', inti: k > 0 ? 'impas di ' + unit + ' satuan, penjualan ' + rp(unit * v.nilai) : 'titik impas tidak tercapai', kepala: ['Hitungan', 'Hasil'], rows: [['Harga jual per satuan', rp(v.nilai)], ['Biaya per satuan', rp(v.biaya)], ['Sisa per satuan untuk menutup biaya tetap', rp(k)], ['Biaya tetap', rp(v.tetap)], ['Impas di penjualan', k > 0 ? unit + ' satuan' : 'tidak tercapai'], ['Nilai penjualan saat impas', k > 0 ? rp(unit * v.nilai) : '-']], data: { impasUnit: unit, impasRupiah: unit * v.nilai, sisa: k } }; })()",
+        "hc": "(() => { const n = Math.round(v.jumlah); const r = v.p1 / 1200; const cic = n > 0 ? (r > 0 ? v.nilai * r / (1 - Math.pow(1 + r, -n)) : v.nilai / n) : 0; const total = cic * n; return { judul: 'Cicilan bulanan', inti: 'cicilan ' + rp(cic) + ' per bulan selama ' + n + ' bulan', kepala: ['Hitungan', 'Hasil'], rows: [['Pokok pinjaman', rp(v.nilai)], ['Bunga per tahun', v.p1 + '%'], ['Lama', n + ' bulan'], ['Cicilan per bulan', rp(cic)], ['Total yang dibayar', rp(total)], ['Total bunga', rp(total - v.nilai)]], data: { cicilan: Math.round(cic), total: Math.round(total), bunga: Math.round(total - v.nilai) } }; })()",
+        "hk": "(() => { const kom = Math.round(v.nilai * v.p1 / 100); return { judul: 'Komisi penjualan', inti: 'komisi ' + rp(kom) + ' dari penjualan ' + rp(v.nilai), kepala: ['Hitungan', 'Hasil'], rows: [['Nilai penjualan', rp(v.nilai)], ['Tarif komisi', v.p1 + '%'], ['Komisi', rp(kom)], ['Sisa setelah komisi', rp(v.nilai - kom)], ['Komisi dari ' + v.jumlah + ' penjualan serupa', v.jumlah > 0 ? rp(kom * v.jumlah) : '-']], data: { komisi: kom, sisa: v.nilai - kom } }; })()",
+        "pilih": "({ margin: v.hm, ppn: v.hp, diskon: v.hd, impas: v.hi, cicilan: v.hc, komisi: v.hk })[input.jenis] || v.hm"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.nilai > 0 ? v.pilih.judul + ': ' + v.pilih.inti : 'Angka utama belum benar, isi dengan angka lebih dari 0'",
+    "teks": "'# ' + v.pilih.judul + '\\n\\n' + tabel(v.pilih.kepala, v.pilih.rows) + (v.peringatan.length ? '\\n\\nPerhatian: ' + v.peringatan.join(' ') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'hitungan-' + input.jenis", "isi": "csv([v.pilih.kepala].concat(v.pilih.rows))" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, peringatan: v.peringatan.length }, v.pilih.data)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "margin", "nilai": "150000", "biaya": "100000", "persen": "25", "jumlah": "10" }, "expect": { "berkas": 1, "mengandung": ["33.33%", "Laba per satuan"] } },
+  "otakProfil": {
+    "peran": "pendamping hitungan harga dan biaya yang menjelaskan hasil kepada orang awam",
+    "tujuan": "Terangkan arti hasil hitungan harga, biaya, atau cicilan: apa yang menguntungkan, apa yang berisiko, dan apa langkah berikutnya.",
+    "gaya": "jernih, hati-hati dengan uang, sebut angka persis seperti hasil hitung",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Jelaskan arti angka kunci dengan kalimat pendek, misalnya margin atau cicilan.", "Bila ada perhatian atau angka tidak wajar, sebutkan dan sarankan pemeriksaan ulang.", "Jangan memberi nasihat investasi atau pinjaman; hanya jelaskan hitungannya."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Margin 33% berarti sepertiga dari harga jual menjadi laba; cukup sehat untuk usaha kecil.", "buruk": "Hasilnya bagus, langsung saja jalankan." },
+    "batas": { "pembahasan": 600, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["margin"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Margin menunjukkan berapa bagian dari harga jual yang menjadi laba. Angka ini cukup sehat, tetapi tetap periksa apakah semua biaya sudah dihitung.\",\"poin\":[\"Laba per satuan jelas\",\"Margin dan markup berbeda arti\"],\"langkah\":[\"Pastikan modal sudah lengkap\",\"Bandingkan dengan harga pesaing\"]}"
+  },
+  "evaluasi": [
+    { "nama": "harga jual dan laba", "input": { "jenis": "margin", "nilai": "150000", "biaya": "100000", "persen": "25", "jumlah": "10" }, "ai": "{\"pembahasan\":\"Margin sekitar sepertiga dari harga jual, jadi setiap penjualan menyisakan laba yang layak setelah modal.\",\"poin\":[\"Laba per satuan lima puluh ribu\"],\"langkah\":[\"Cek apakah modal sudah lengkap\"]}", "kriteria": { "mengandung": ["margin", "sepertiga"], "mengandungAturan": ["Laba per satuan", "33.33%", "133.333"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.laba", "min": 50000, "max": 50000 }, { "path": "data.margin", "min": 33.3, "max": 33.4 }, { "path": "data.saran", "min": 133000, "max": 133400 }] } },
+    { "nama": "diskon bertingkat format Indonesia", "input": { "jenis": "diskon", "nilai": "Rp 1.000.000", "persen": "10 + 5", "jumlah": "2" }, "ai": "{\"pembahasan\":\"Dua diskon berurutan tidak dijumlahkan, jadi potongan sebenarnya sedikit di bawah lima belas persen dari harga awal.\",\"poin\":[\"Diskon efektif 14,5 persen\"],\"langkah\":[\"Tulis harga akhir di nota\"]}", "kriteria": { "mengandung": ["diskon", "berurutan"], "mengandungAturan": ["Harga akhir", "14.5%"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.akhir", "min": 855000, "max": 855000 }, { "path": "data.efektif", "min": 14.4, "max": 14.6 }] } },
+    { "nama": "cicilan dengan bunga tahunan", "input": { "jenis": "cicilan", "nilai": "12.000.000", "persen": "12", "jumlah": "12" }, "ai": "{\"pembahasan\":\"Cicilan bulanan tetap sama setiap bulan, dan total bunga adalah selisih total bayar dengan pokok pinjaman.\",\"poin\":[\"Bunga total sekitar delapan ratus ribu\"],\"langkah\":[\"Bandingkan dengan tawaran lain\"]}", "kriteria": { "mengandung": ["cicilan", "bunga"], "mengandungAturan": ["Cicilan per bulan", "12 bulan"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.cicilan", "min": 1066000, "max": 1066400 }, { "path": "data.total", "min": 12794000, "max": 12795000 }] } },
+    { "nama": "PPN tanpa persentase diisi", "input": { "jenis": "ppn", "nilai": "1000000" }, "ai": "{\"pembahasan\":\"Tarif bawaan sebelas persen dipakai karena persentase tidak diisi, sehingga harga setelah pajak lebih tinggi seratus sepuluh ribu.\",\"poin\":[\"Tarif bawaan dipakai\"],\"langkah\":[\"Pastikan tarif yang berlaku\"]}", "kriteria": { "mengandung": ["tarif", "pajak"], "mengandungAturan": ["Harga setelah PPN", "11%"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.ppn", "min": 110000, "max": 110000 }, { "path": "data.total", "min": 1110000, "max": 1110000 }] } },
+    { "nama": "titik impas dengan angka bertitik", "input": { "jenis": "impas", "nilai": "50.000", "biaya": "30.000", "tetap": "5.000.000" }, "ai": "{\"pembahasan\":\"Setiap penjualan menyisakan dua puluh ribu untuk menutup biaya tetap, jadi usaha mulai untung setelah penjualan mencapai titik impas.\",\"poin\":[\"Impas di dua ratus lima puluh satuan\"],\"langkah\":[\"Pasang target penjualan\"]}", "kriteria": { "mengandung": ["impas", "penjualan"], "mengandungAturan": ["250 satuan"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.impasUnit", "min": 250, "max": 250 }, { "path": "data.impasRupiah", "min": 12500000, "max": 12500000 }] } }
+  ]
+}

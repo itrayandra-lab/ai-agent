@@ -136,31 +136,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Raw Material & Packaging Buyer di divisi Supply Chain & Warehouse, memakai bahasa awam",
-    "tujuan": "Hitung berapa banyak sebaiknya memesan sekali jalan agar biaya pesan dan simpan paling hemat, sesuai jumlah minimal pemasok. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "eoq",
+      "jumlah pesan",
+      "biaya simpan",
+      "moq",
+      "pembelian bahan"
+    ],
+    "data": [
+      "nama barang",
+      "kebutuhan per tahun",
+      "biaya sekali memesan (rp)",
+      "biaya simpan per unit per tahun (rp)"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
     "contoh": {
       "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
-      "buruk": "Stok sepertinya cukup."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "eoq"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung jumlah pesan yang paling hemat perlu dibaca bersama: eoq menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
   }
 }

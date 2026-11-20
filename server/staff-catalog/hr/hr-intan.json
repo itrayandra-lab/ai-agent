@@ -144,31 +144,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Learning & Development di divisi People & HR, memakai bahasa awam",
-    "tujuan": "Bagi topik pelatihan ke dalam minggu-minggu, lengkap dengan cara belajar dan penilaian di tiap minggu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "susun-rencana-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pelatihan",
+      "onboarding",
+      "kurikulum",
+      "karyawan baru",
+      "training"
+    ],
+    "data": [
+      "untuk peran apa?",
+      "tingkat pengalaman peserta",
+      "lama program",
+      "topik yang diajarkan (satu per baris)"
+    ],
     "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
-      "buruk": "Karyawan malas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "pelatihan"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun rencana pelatihan karyawan baru perlu dibaca bersama: pelatihan menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }

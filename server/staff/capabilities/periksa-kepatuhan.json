@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-periksa-kepatuhan",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan periksa kepatuhan",
+  "version": 1,
+  "name": "Periksa kelengkapan terhadap syarat",
+  "ringkas": "Periksa teks (label, klaim iklan, aturan, lisensi) terhadap daftar syarat, tandai yang kurang, dan beri skor kelengkapan tanpa menjanjikan persetujuan.",
+  "kataKunci": ["periksa", "syarat", "kepatuhan", "label", "klaim", "halal", "aturan"],
+  "kemampuan": {
+    "id": "periksa-kepatuhan",
+    "kelompok": "pemeriksaan",
+    "tujuanAwam": "Mencocokkan sebuah teks dengan daftar syarat dan kata terlarang agar kekurangannya terlihat sebelum diajukan atau dipublikasikan."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Apa yang diperiksa?", "required": true, "default": "label", "choices": [{ "v": "label", "t": "Label kemasan" }, { "v": "iklan", "t": "Klaim iklan" }, { "v": "halal", "t": "Syarat halal" }, { "v": "aturan", "t": "Aturan atau kebijakan" }, { "v": "lisensi", "t": "Lisensi atau izin" }] },
+    { "key": "teks", "type": "longtext", "label": "Teks yang diperiksa (tempel isi label, iklan, atau dokumen)", "required": true, "contoh": "Keripik Singkong. Berat bersih 200 g. Komposisi: singkong, garam. Kedaluwarsa 12/2027" },
+    { "key": "syarat", "type": "longtext", "label": "Daftar syarat, satu baris satu syarat: syarat | kata yang menandakan terpenuhi (pisahkan dengan koma)", "required": true, "contoh": "Berat bersih | berat bersih, isi bersih\nKomposisi | komposisi, bahan\nTanggal kedaluwarsa | kedaluwarsa, exp" },
+    { "key": "larangan", "type": "longtext", "label": "Kata atau klaim yang dilarang (pisahkan dengan koma, boleh kosong)", "required": false, "contoh": "menyembuhkan, terbaik sedunia, dijamin" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Cocokkan teks dengan syarat",
+      "set": {
+        "t": "String(input.teks).toLowerCase()",
+        "s": "baris(input.syarat).map((l) => l.split('|').map((x) => x.trim())).filter((c) => c[0] !== '').slice(0, 40).map((c) => { const kata = (c[1] ? c[1] : c[0]).replace(/;/g, ',').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x !== ''); return { syarat: cut(c[0], 80), kata: kata, ada: kata.some((x) => v.t.includes(x)) }; })",
+        "n": "v.s.length",
+        "terpenuhi": "v.s.filter((x) => x.ada).length",
+        "kurang": "v.s.filter((x) => !x.ada)",
+        "lar": "baris(String(input.larangan || '')).join(',').replace(/;/g, ',').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x !== '').slice(0, 40)",
+        "ditemu": "v.lar.filter((x) => v.t.includes(x))",
+        "skor": "v.n ? Math.max(0, Math.round(v.terpenuhi / v.n * 100) - 10 * v.ditemu.length) : 0",
+        "status": "!v.n ? 'Belum bisa dinilai' : v.skor >= 90 && !v.ditemu.length ? 'Tampak memenuhi' : v.skor >= 60 ? 'Perlu perbaikan' : 'Banyak kekurangan'",
+        "panjangTeks": "v.t.trim().length",
+        "peringatan": "'Ini pemeriksaan awal berdasarkan kata, bukan persetujuan resmi dari lembaga berwenang.'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? 'Kelengkapan ' + input.jenis + ': skor ' + v.skor + ' dari 100, ' + v.terpenuhi + ' dari ' + v.n + ' syarat terpenuhi, ' + v.ditemu.length + ' kata terlarang ditemukan (' + v.status + ')' : 'Tidak ada syarat yang terbaca, tulis dengan pola: syarat | kata penanda'",
+    "teks": "'# Pemeriksaan ' + input.jenis + '\\n\\n' + (v.n ? 'Status: **' + v.status + '** (skor ' + v.skor + ' dari 100)\\n\\n' + tabel(['Syarat', 'Hasil'], v.s.map((x) => [x.syarat, x.ada ? 'Terpenuhi' : 'Kurang'])) + '\\n\\nSyarat yang kurang: ' + (v.kurang.length ? v.kurang.map((x) => x.syarat).join(', ') : 'tidak ada') + '\\n\\nKata terlarang yang ditemukan: ' + (v.ditemu.length ? v.ditemu.join(', ') : 'tidak ada') : 'Belum ada syarat yang bisa dibaca. Tulis satu syarat per baris dengan pola: syarat | kata penanda.') + '\\n\\n' + v.peringatan",
+    "berkas": [
+      { "jenis": "csv", "nama": "'kepatuhan-' + input.jenis", "isi": "csv([['syarat', 'hasil']].concat(v.s.map((x) => [x.syarat, x.ada ? 'terpenuhi' : 'kurang'])).concat(v.ditemu.map((x) => ['kata terlarang: ' + x, 'dilanggar'])))" }
+    ],
+    "data": "({ n: v.n, terpenuhi: v.terpenuhi, kurang: v.kurang.length, terlarang: v.ditemu.length, skor: v.skor, status: v.status })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "label", "teks": "Keripik Singkong. Berat bersih 200 g. Komposisi: singkong, garam. Kedaluwarsa 12/2027", "syarat": "Nama produk | keripik\nBerat bersih | berat bersih, isi bersih\nKomposisi | komposisi\nTanggal kedaluwarsa | kedaluwarsa, exp\nNomor izin edar | pirt, md", "larangan": "terbaik sedunia, menyembuhkan" }, "expect": { "berkas": 1, "mengandung": ["skor 80 dari 100", "4 dari 5 syarat terpenuhi"] } },
+  "otakProfil": {
+    "peran": "pemeriksa kelengkapan yang membantu orang awam menyiapkan dokumen dengan benar",
+    "tujuan": "Jelaskan syarat mana yang kurang, mengapa penting, dan cara memperbaikinya, tanpa menjanjikan disetujui.",
+    "gaya": "teliti, sopan, tidak menghakimi, selalu mengingatkan bahwa ini pemeriksaan awal",
+    "pedoman": ["Pakai hanya syarat dan hasil yang diberikan; jangan menambah aturan hukum baru.", "Jangan pernah menyatakan sesuatu pasti disetujui atau pasti lolos.", "Beri langkah perbaikan yang konkret untuk tiap syarat yang kurang."],
+    "skema": { "pembahasan": "teks", "perbaikan": "daftar", "perlu_ahli": "pilihan:tidak|sebaiknya|wajib" },
+    "contoh": { "baik": "Nomor izin edar belum tertulis; tambahkan sebelum dicetak dan tanyakan ke pihak berwenang.", "buruk": "Label ini pasti lolos." },
+    "batas": { "pembahasan": 600, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["syarat"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Sebagian syarat sudah terpenuhi, tetapi ada syarat yang belum tertulis; lengkapi dulu dan konfirmasikan ke pihak berwenang karena ini baru pemeriksaan awal.\",\"perbaikan\":[\"Tambahkan syarat yang kurang\",\"Hapus klaim yang dilarang\"],\"perlu_ahli\":\"sebaiknya\"}"
+  },
+  "evaluasi": [
+    {
+      "nama": "label kemasan kurang satu syarat",
+      "input": { "jenis": "label", "teks": "Keripik Singkong. Berat bersih 200 g. Komposisi: singkong, garam. Kedaluwarsa 12/2027", "syarat": "Nama produk | keripik\nBerat bersih | berat bersih, isi bersih\nKomposisi | komposisi\nTanggal kedaluwarsa | kedaluwarsa, exp\nNomor izin edar | pirt, md", "larangan": "terbaik sedunia, menyembuhkan" },
+      "ai": "{\"pembahasan\":\"Hampir semua syarat sudah ada, hanya nomor izin edar yang belum tertulis; tambahkan sebelum dicetak dan konfirmasikan karena ini baru pemeriksaan awal.\",\"perbaikan\":[\"Tambahkan nomor izin edar\"],\"perlu_ahli\":\"sebaiknya\"}",
+      "kriteria": { "mengandung": ["izin edar", "syarat"], "mengandungAturan": ["Nomor izin edar", "bukan persetujuan resmi", "Perlu perbaikan"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.n", "min": 5, "max": 5 }, { "path": "data.terpenuhi", "min": 4, "max": 4 }, { "path": "data.skor", "min": 80, "max": 80 }, { "path": "data.terlarang", "min": 0, "max": 0 }] }
+    },
+    {
+      "nama": "klaim iklan melanggar dengan huruf besar",
+      "input": { "jenis": "iklan", "teks": "OBAT HERBAL INI MENYEMBUHKAN DIABETES! Terbaik Sedunia!!", "syarat": "Ada syarat dan ketentuan | syarat dan ketentuan, s&k", "larangan": "menyembuhkan; terbaik sedunia; dijamin" },
+      "ai": "{\"pembahasan\":\"Iklan memuat klaim menyembuhkan dan klaim terbaik sedunia yang berisiko; hapus klaim itu dan tambahkan syarat dan ketentuan.\",\"perbaikan\":[\"Hapus klaim menyembuhkan\",\"Tambahkan syarat dan ketentuan\"],\"perlu_ahli\":\"wajib\"}",
+      "kriteria": { "mengandung": ["klaim", "syarat"], "mengandungAturan": ["menyembuhkan", "terbaik sedunia", "Banyak kekurangan"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.terlarang", "min": 2, "max": 2 }, { "path": "data.skor", "min": 0, "max": 0 }, { "path": "data.terpenuhi", "min": 0, "max": 0 }] }
+    },
+    {
+      "nama": "syarat halal tanpa penanda dan tanpa larangan",
+      "input": { "jenis": "halal", "teks": "Produk bersertifikat HALAL, bahan nabati.", "syarat": "Sertifikat halal | sertifikat halal, halal\nNomor sertifikat\nlogo", "larangan": "" },
+      "ai": "{\"pembahasan\":\"Sertifikat halal sudah disebut tetapi nomor sertifikat dan logo belum terlihat; lengkapi syarat itu dan pastikan ke lembaga terkait.\",\"perbaikan\":[\"Cantumkan nomor sertifikat\",\"Tambahkan logo\"],\"perlu_ahli\":\"sebaiknya\"}",
+      "kriteria": { "mengandung": ["syarat", "sertifikat"], "mengandungAturan": ["Nomor sertifikat", "Kurang"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.terpenuhi", "min": 1, "max": 1 }, { "path": "data.skor", "min": 33, "max": 33 }] }
+    },
+    {
+      "nama": "syarat tidak terbaca",
+      "input": { "jenis": "lisensi", "teks": "Lisensi penggunaan foto berlaku satu tahun.", "syarat": "|", "larangan": "" },
+      "ai": "{\"pembahasan\":\"Belum ada syarat yang terbaca sehingga pemeriksaan belum bisa dilakukan; tulis syarat dengan pola syarat dan kata penanda.\",\"perbaikan\":[\"Tulis daftar syarat\"],\"perlu_ahli\":\"tidak\"}",
+      "kriteria": { "mengandung": ["syarat"], "mengandungAturan": ["Belum ada syarat"], "panjangMin": 40, "panjangMaks": 4000, "nilai": [{ "path": "data.n", "min": 0, "max": 0 }, { "path": "data.skor", "min": 0, "max": 0 }] }
+    }
+  ]
+}

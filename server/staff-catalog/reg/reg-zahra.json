@@ -100,31 +100,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Halal Assurance Specialist di divisi Regulatory Affairs, memakai bahasa awam",
-    "tujuan": "Periksa sertifikat halal tiap bahan dan pemasok: yang belum ada, kedaluwarsa, atau segera habis, serta bahan yang tergolong titik kritis. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat, tanpa menjanjikan persetujuan",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "klasifikasi-pilah"
+  ],
+  "keahlian": {
+    "istilah": [
+      "halal",
+      "bahan",
+      "pemasok",
+      "sertifikat halal",
+      "titik kritis"
+    ],
+    "data": [
+      "hitung per tanggal",
+      "ingatkan sebelum sertifikat habis",
+      "daftar bahan (bahan | pemasok | nomor sertifikat halal | ber"
+    ],
+    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat",
     "contoh": {
       "baik": "Dua dokumen belum lengkap; lengkapi sebelum diajukan.",
-      "buruk": "Pasti disetujui."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "halal"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeta status halal bahan baku perlu dibaca bersama: halal menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menjanjikan persetujuan lembaga."
+    ]
   }
 }

@@ -1,0 +1,214 @@
+{
+  "versi": "baru",
+  "model": "openai/gpt-oss-20b / openai/gpt-oss-20b",
+  "jumlah": 11,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0.00125,
+  "detik": 8,
+  "skor": {
+    "ketepatan": 0.8,
+    "kejujuran": 1,
+    "kejelasan": 1,
+    "alat": null,
+    "konfirmasi": 1,
+    "respons": 0.7363636363636363
+  },
+  "total": 0.9072727272727272,
+  "gagal": [
+    {
+      "id": "persona-6",
+      "catatan": [
+        "kata kunci kurang",
+        "bukan reno yang menjawab",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)",
+        "tanpa saran lanjutan di akhir"
+      ]
+    },
+    {
+      "id": "persona-8",
+      "catatan": [
+        "kata kunci kurang",
+        "bukan reno yang menjawab"
+      ]
+    },
+    {
+      "id": "persona-11",
+      "catatan": [
+        "bukan reno yang menjawab",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)",
+        "tanpa saran lanjutan di akhir"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.85,
+      "catatan": [
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Saya Reno, ahli digital marketing, fokus pada funnel end-to-end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-2",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.85,
+      "catatan": [
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Saya Reno, ahli digital marketing, funnel end‑to‑end, dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-3",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.85,
+      "catatan": [
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Ya, saya Reno, digital marketing strategist di divisi Marketing.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-4",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Sebagai Reno, saya ahli strategi pemasaran digital, fokus pada funnel end-to-end dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-5",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.85,
+      "catatan": [
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Saya ahli di digital marketing, khususnya merancang funnel end-to-end dan atribusi performa kampanye.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-6",
+      "kategori": "persona",
+      "ketepatan": 0,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.35,
+      "catatan": [
+        "kata kunci kurang",
+        "bukan reno yang menjawab",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)",
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Saya Sora, pembantu koordinasi di RAIVERSE.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-7",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.75,
+      "catatan": [
+        "bukan reno yang menjawab"
+      ],
+      "jawaban": "Pengalaman saya dalam iklan meliputi pengelolaan kampanye digital multi‑platform, optimasi budget, dan analisis funnel konversi yang berfokus pada data untuk menguatkan positioning produk.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-8",
+      "kategori": "persona",
+      "ketepatan": 0,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.75,
+      "catatan": [
+        "kata kunci kurang",
+        "bukan reno yang menjawab"
+      ],
+      "jawaban": "Aku Sora, penghubungmu di sini: aku meneruskan pertanyaan ke orang yang tepat dan membantu hal umum. Kamu juga bisa langsung menyapa siapa saja dengan namanya. Kalau kamu minta, aku bisa membuatkan tulisan, pesan, rencana, atau ringkasan, dan mencarikan informasi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-9",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.75,
+      "catatan": [
+        "bukan reno yang menjawab"
+      ],
+      "jawaban": "Gunakan ROAS saat ingin menilai efektivitas kampanye iklan: hitung ketika memiliki data pendapatan dan biaya iklan, biasanya di akhir periode kampanye atau saat laporan mingguan.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-10",
+      "kategori": "persona",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.75,
+      "catatan": [
+        "bukan reno yang menjawab"
+      ],
+      "jawaban": "Saya belum memiliki informasi mengenai jam mulai kerja Reno. Silakan beri tahu kapan Reno biasanya mulai bekerja, atau tanyakan langsung ke Reno.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-11",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.35,
+      "catatan": [
+        "bukan reno yang menjawab",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)",
+        "tanpa saran lanjutan di akhir"
+      ],
+      "jawaban": "Hai! Ada yang bisa saya bantu?",
+      "alatDipakai": []
+    }
+  ]
+}

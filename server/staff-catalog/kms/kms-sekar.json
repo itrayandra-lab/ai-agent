@@ -87,31 +87,29 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "AI Evaluation Analyst di divisi Knowledge & AI Ops, memakai bahasa awam",
-    "tujuan": "Beri nilai berbobot pada satu hasil kerja berdasarkan rubrik, tampilkan nilai akhir dan kriteria terlemah. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "nilai-skor"
+  ],
+  "keahlian": {
+    "istilah": [
+      "rubrik",
+      "penilaian",
+      "evaluasi",
+      "skor",
+      "kualitas"
+    ],
+    "data": [
+      "yang dinilai",
+      "rubrik (satu baris: kriteria | bobot)",
+      "nilai 1 sampai 5 (satu baris: kriteria | skor)"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
     "contoh": {
       "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
-      "buruk": "Simpan saja."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "rubrik"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penilai hasil kerja dengan rubrik perlu dibaca bersama: rubrik menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
   }
 }

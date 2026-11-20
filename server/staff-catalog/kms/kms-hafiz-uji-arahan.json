@@ -66,31 +66,27 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Prompt & Skill Engineer di divisi Knowledge & AI Ops, memakai bahasa awam",
-    "tujuan": "Periksa arahan untuk AI dengan enam pertanyaan (peran, tujuan, format, batasan, contoh, panjang) dan beri saran perbaikan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber dan kata kunci",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "periksa-mutu-teks"
+  ],
+  "keahlian": {
+    "istilah": [
+      "arahan ai",
+      "instruksi",
+      "mutu arahan",
+      "peran",
+      "format keluaran"
+    ],
+    "data": [
+      "teks arahan yang diperiksa"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
     "contoh": {
       "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
-      "buruk": "Simpan saja."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "arahan ai"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa mutu arahan untuk ai perlu dibaca bersama: arahan ai menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
   }
 }

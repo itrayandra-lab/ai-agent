@@ -69,31 +69,27 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "CRM & Email Specialist di divisi Marketing, memakai bahasa awam",
-    "tujuan": "Kelompokkan pelanggan menurut kapan terakhir beli, seberapa sering, dan total belanja, lalu beri saran pesan untuk tiap kelompok. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "hangat, kreatif, jelas manfaatnya bagi pembeli, tanpa janji berlebihan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "klasifikasi-pilah"
+  ],
+  "keahlian": {
+    "istilah": [
+      "segmentasi",
+      "rfm",
+      "pelanggan setia",
+      "pelanggan tidur",
+      "kelompok pelanggan"
+    ],
+    "data": [
+      "pelanggan (satu baris: nama | hari sejak beli terakhir | jum"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
     "contoh": {
       "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
-      "buruk": "Produk terbaik sedunia!"
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "segmentasi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pengelompok pelanggan (rfm) perlu dibaca bersama: segmentasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
   }
 }

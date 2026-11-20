@@ -120,31 +120,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Talent Recruiter di divisi People & HR, memakai bahasa awam",
-    "tujuan": "Buat daftar pertanyaan wawancara, lembar nilai, dan pembagian waktu dari kemampuan yang dicari. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "wawancara",
+      "interview",
+      "rubrik",
+      "pertanyaan",
+      "kandidat"
+    ],
+    "data": [
+      "nama posisi",
+      "fokus pertanyaan",
+      "kemampuan yang dicari (satu per baris)",
+      "lama wawancara"
+    ],
     "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
     "contoh": {
       "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
-      "buruk": "Karyawan malas."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "wawancara"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun kit wawancara kerja perlu dibaca bersama: wawancara menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }

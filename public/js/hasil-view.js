@@ -14,6 +14,8 @@ const UBAH = [['singkat', 'Lebih singkat'], ['santai', 'Lebih santai'], ['resmi'
 const ikonKelompok = { perlu: 'alert', jalan: 'clock', selesai: 'check' };
 
 // ───── wadah hasil: potongan apa pun → tampilan
+/** buang tanda markdown mentah (**tebal**, # judul, `kode`) dari judul dan ringkasan supaya terbaca bersih */
+const bersih = (s) => String(s ?? '').replace(/\*\*|__|`/g, '').replace(/^#+\s*/gm, '').replace(/\s+/g, ' ').trim();
 const sel = (v) => (v == null ? '' : typeof v === 'object' ? esc(JSON.stringify(v)) : esc(String(v)));
 function tabelBaris(rows) {
   const cols = [...new Set(rows.flatMap((r) => Object.keys(r || {})))].slice(0, 8);
@@ -66,7 +68,7 @@ function bahan() {
 
 const chip = (grup, kata) => `<span class="chip st-${grup}">${icon(ikonKelompok[grup] || 'dot', 14)} ${esc(kata)}</span>`;
 
-function kartuHtml(k, bukaId) {
+function kartuHtml(k, bukaId, pilih) {
   const open = bukaId === k.id;
   const apv = k.apv || (k.tipe === 'boleh' ? k.a : null);
   const aksi = [];
@@ -75,9 +77,9 @@ function kartuHtml(k, bukaId) {
   else if (k.tipe === 'tugas') aksi.push(`<button type="button" class="btn" data-ubah="${esc(k.id)}">Ubah sedikit</button><button type="button" class="btn" data-ulang="${esc(k.id)}">Ulangi</button><button type="button" class="btn" data-simpan="${esc(k.id)}">${k.t.noteId ? 'Buka di Catatan' : 'Simpan'}</button>`);
   const ada = (k.bagian || []).some((b) => (b.jenis === 'teks' && b.teks) || (b.jenis === 'berkas' && b.berkas?.length) || (b.jenis === 'data' && b.data));
   return `<article class="hasil-k g-${k.grup}" data-k="${esc(k.id)}">
-    <header class="hasil-h">${k.oleh ? avatar(k.oleh) : ''}<div class="hasil-t"><h4>${esc(awam(k.judul))}</h4><p class="small muted">${k.oleh ? `Dikerjakan ${esc(k.oleh.name)}` : 'Dikerjakan timmu'}${k.waktu ? ` · ${esc(ago(k.waktu))}` : ''}${k.langkah ? ` · ${k.langkah[0]} dari ${k.langkah[1]} langkah` : ''}</p></div>${chip(k.grup, k.kata)}</header>
-    ${k.ringkas && !open ? `<p class="hasil-r">${esc(awam(k.ringkas).slice(0, 220))}</p>` : ''}
-    ${k.tipe === 'boleh' && k.ringkas ? `<div class="hasil-pratinjau"><b>Yang akan terjadi</b><p>${esc(awam(k.ringkas))}</p></div>` : ''}
+    <header class="hasil-h">${pilih && k.tipe === 'tugas' ? `<label class="hasil-cek"><input type="checkbox" data-cek="${esc(k.id)}" ${pilih.ids.has(k.id) ? 'checked' : ''} aria-label="Pilih ${esc(bersih(awam(k.judul)).slice(0, 60))}"></label>` : ''}${k.oleh ? avatar(k.oleh) : ''}<div class="hasil-t"><h4>${esc(bersih(awam(k.judul)).slice(0, 90))}</h4><p class="small muted">${k.oleh ? `Dikerjakan ${esc(k.oleh.name)}` : 'Dikerjakan timmu'}${k.waktu ? ` · ${esc(ago(k.waktu))}` : ''}${k.langkah ? ` · ${k.langkah[0]} dari ${k.langkah[1]} langkah` : ''}</p></div>${chip(k.grup, k.kata)}</header>
+    ${k.ringkas && !open ? `<p class="hasil-r">${esc(bersih(awam(k.ringkas)).slice(0, 160))}</p>` : ''}
+    ${k.tipe === 'boleh' && k.ringkas ? `<div class="hasil-pratinjau"><b>Yang akan terjadi</b><p>${esc(bersih(awam(k.ringkas)))}</p></div>` : ''}
     ${open && ada ? `<div class="hasil-isi">${renderHasil(k.bagian)}</div>` : ''}
     <div class="hasil-a">${ada ? `<button type="button" class="btn" data-lihat="${esc(k.id)}" aria-expanded="${open}">${icon('eye', 18)} ${open ? 'Tutup hasil' : 'Lihat hasil'}</button>` : ''}${aksi.join('')}</div>
   </article>`;
@@ -86,14 +88,19 @@ function kartuHtml(k, bukaId) {
 export const HasilView = {
   runs: [],
   mount(root) {
-    this.f = this.f || { q: '' }; this.buka = S.params?.buka || null; this.root = root;
+    this.f = this.f || { q: '' }; this.pilih = { on: false, ids: new Set() }; this.buka = S.params?.buka || null; this.root = root;
     root.innerHTML = `<div class="page hasil">
       <header class="page-head"><h2>Hasil saya</h2><p class="muted">Semua pekerjaan timmu ada di sini: yang perlu kamu putuskan, yang sedang jalan, dan yang sudah jadi.</p></header>
-      <div class="hasil-bar"><label class="sr-only" for="hq">Cari pekerjaan</label><input id="hq" class="input" type="search" placeholder="Cari pekerjaan…" value="${esc(this.f.q)}" autocomplete="off"><button type="button" class="btn primary" id="hbaru">${icon('plus', 18)} Mulai pekerjaan</button></div>
-      <div id="hbody">${memuat('Menyiapkan daftar hasilmu…')}</div></div>`;
+      <div class="hasil-bar"><label class="sr-only" for="hq">Cari pekerjaan</label><input id="hq" class="input" type="search" placeholder="Cari pekerjaan…" value="${esc(this.f.q)}" autocomplete="off"><button type="button" class="btn primary" id="hbaru">${icon('plus', 18)} Mulai pekerjaan</button><button type="button" class="btn" id="hpilih" aria-pressed="false">${icon('check', 16)} Pilih</button></div>
+      <div class="hasil-massal glass" id="hmassal" role="toolbar" aria-label="Aksi untuk hasil yang dipilih" hidden><b id="hn" aria-live="polite">0 dipilih</b><span style="flex:1"></span><button type="button" class="btn sm" data-m="semua">Pilih semua</button><button type="button" class="btn sm" data-m="simpan">${icon('doc', 14)} Simpan ke Catatan</button><button type="button" class="btn sm" data-m="hapus">${icon('close', 14)} Hapus</button><button type="button" class="btn sm ghost" data-m="batal">Batal</button></div>
+      <div id="hbody">${memuat('Menyiapkan daftar hasilmu…')}</div>
+      <aside id="hdetail" class="hasil-detail" aria-label="Isi hasil yang dipilih"></aside></div>`;
     root.querySelector('#hq').oninput = (e) => { this.f.q = e.target.value; this.draw(); };
     root.querySelector('#hbaru').onclick = () => navigate('dashboard');
+    root.querySelector('#hpilih').onclick = () => this.modePilih(!this.pilih.on);
+    root.addEventListener('change', (e) => { const c = e.target.closest?.('[data-cek]'); if (!c) return; if (c.checked) this.pilih.ids.add(c.dataset.cek); else this.pilih.ids.delete(c.dataset.cek); this.barMassal(); });
     root.addEventListener('click', (e) => this.klik(e));
+    try { this._ro?.disconnect(); this._ro = new ResizeObserver(() => { if ((this.root?.clientWidth >= 640) !== this.lebar) this.draw(); }); this._ro.observe(root); } catch { /* tanpa ResizeObserver: tetap satu kolom */ }
     this.muatJalan().finally(() => this.draw());
     this.draw();
   },
@@ -105,23 +112,72 @@ export const HasilView = {
   },
   draw() {
     const box = this.root?.querySelector('#hbody'); if (!box) return;
+    this.lebar = this.root.clientWidth >= 640;
+    this.root.querySelector('.page.hasil')?.classList.toggle('dua', this.lebar);
     const q = this.f.q.toLowerCase().trim();
     const semua = bahan().filter((k) => k.grup && (!q || `${k.judul} ${k.oleh?.name || ''} ${k.ringkas}`.toLowerCase().includes(q)));
     const urut = (a, b) => (b.waktu || 0) - (a.waktu || 0);
-    if (!semua.length) { box.innerHTML = kosong(q ? 'Belum ada yang cocok' : 'Belum ada pekerjaan', q ? 'Coba kata lain.' : 'Mulai dari Beranda: ceritakan yang kamu butuhkan, Pemandu yang mengatur sisanya.', q ? '' : '<button type="button" class="btn primary" data-ke="dashboard">Mulai pekerjaan</button>'); return; }
+    if (!semua.length) { box.innerHTML = kosong(q ? 'Belum ada yang cocok' : 'Belum ada pekerjaan', q ? 'Coba kata lain.' : 'Mulai dari Obrolan: ceritakan yang kamu butuhkan, aray yang mengatur sisanya.', q ? '' : '<button type="button" class="btn primary" data-ke="dashboard">Mulai pekerjaan</button>'); return; }
     const scrollY = this.root.closest('#view')?.scrollTop;
     box.innerHTML = ['perlu', 'jalan', 'selesai'].map((g) => {
       const l = semua.filter((k) => k.grup === g).sort(urut).slice(0, g === 'selesai' ? 20 : 60);
       if (!l.length && g !== 'perlu') return '';
-      return `<section class="hasil-g g-${g}" aria-labelledby="hg-${g}"><h3 id="hg-${g}">${icon(ikonKelompok[g], 20)} ${STATUS_KARTU[g]} <span class="badge soft">${semua.filter((k) => k.grup === g).length}</span></h3>${l.length ? l.map((k) => kartuHtml(k, this.buka)).join('') : '<p class="muted hasil-nol">Tidak ada yang menunggumu sekarang.</p>'}</section>`;
+      return `<section class="hasil-g g-${g}" aria-labelledby="hg-${g}"><h3 id="hg-${g}">${icon(ikonKelompok[g], 20)} ${STATUS_KARTU[g]} <span class="badge soft">${semua.filter((k) => k.grup === g).length}</span></h3>${l.length ? l.map((k) => kartuHtml(k, this.lebar ? null : this.buka, this.pilih.on ? this.pilih : null)).join('') : '<p class="muted hasil-nol">Tidak ada yang menunggumu sekarang.</p>'}</section>`;
     }).join('');
     if (scrollY != null) this.root.closest('#view').scrollTop = scrollY;
+    this.terlihat = semua.filter((k) => k.tipe === 'tugas').map((k) => k.id);
+    // dua panel: kartu terpilih tampil utuh di kanan (isi hasil, Salin/Unduh/Simpan, aksi)
+    const det = this.root.querySelector('#hdetail');
+    if (det) {
+      if (!this.lebar) det.innerHTML = '';
+      else {
+        const urut2 = [...semua].sort(urut); const sel = semua.find((k) => k.id === this.buka) || urut2[0];
+        if (sel && !semua.some((k) => k.id === this.buka)) this.buka = sel.id;
+        det.innerHTML = sel ? kartuHtml(sel, sel.id, null) : '<p class="muted">Belum ada hasil untuk ditampilkan.</p>';
+        box.querySelectorAll('.hasil-k').forEach((a) => a.classList.toggle('aktif', a.dataset.k === sel?.id));
+      }
+    }
+    this.barMassal();
+  },
+  /** mode Pilih: kotak centang per kartu tugas, bilah aksi kecil (Pilih semua, Simpan ke Catatan, Hapus, Batal) */
+  modePilih(on) {
+    this.pilih.on = !!on; if (!on) this.pilih.ids.clear();
+    const t = this.root?.querySelector('#hpilih'); if (t) { t.setAttribute('aria-pressed', String(!!on)); t.classList.toggle('on', !!on); }
+    this.draw();
+  },
+  barMassal() {
+    const bar = this.root?.querySelector('#hmassal'); if (!bar) return;
+    bar.hidden = !this.pilih.on; const n = this.pilih.ids.size;
+    const hn = bar.querySelector('#hn'); if (hn) hn.textContent = n + ' dipilih';
+    for (const b of bar.querySelectorAll('[data-m="simpan"],[data-m="hapus"]')) b.disabled = !n;
+  },
+  async massal(aksi) {
+    const ids = [...this.pilih.ids];
+    if (aksi === 'batal') return this.modePilih(false);
+    if (aksi === 'semua') { for (const id of this.terlihat || []) this.pilih.ids.add(id); return this.draw(); }
+    if (!ids.length) return;
+    if (aksi === 'simpan') {
+      let n = 0;
+      for (const id of ids) { const t = D().tasks.find((x) => x.id === id); if (!t || t.noteId) continue; try { await api('POST', '/api/notes', { title: t.title, folder: 'Hasil', content: `# ${t.title}\n\n${t.output || t.summary || ''}`, userId: S.me }); n++; } catch { /* api() sudah memberi tahu */ } }
+      toast(n ? `${n} hasil tersimpan di Catatan.` : 'Semua yang dipilih sudah ada di Catatan.', 'ok'); return this.modePilih(false);
+    }
+    if (aksi === 'hapus') {
+      modal(`Hapus ${ids.length} hasil?`, `<p>${ids.length} hasil akan dihapus dan <b>tidak bisa dikembalikan</b>. Yang masih berjalan atau menunggu izinmu otomatis dilewati.</p>`, { actions: [{ label: 'Batal' }, { label: `Hapus ${ids.length}`, kind: 'primary', run: async () => {
+        const r = await api('POST', '/api/tasks/hapus-banyak', { ids });
+        const lewat = (r.dilewati || []).length;
+        toast(`${r.dihapus} hasil dihapus${lewat ? `, ${lewat} dilewati (${[...new Set(r.dilewati.map((x) => x.alasan))].join(', ')})` : ''}.`, lewat ? 'warn' : 'ok');
+        this.modePilih(false);
+      } }] });
+    }
   },
   async klik(e) {
+    const kartu = e.target.closest('#hbody .hasil-k');
+    if (this.lebar && kartu && !e.target.closest('button, a, input, label, select, textarea')) { this.buka = kartu.dataset.k; return this.draw(); }
     const b = e.target.closest('button'); if (!b || !this.root.contains(b)) return;
     const ds = b.dataset;
+    if (ds.m) return this.massal(ds.m);
     if (ds.ke) return navigate(ds.ke);
-    if (ds.lihat) { this.buka = this.buka === ds.lihat ? null : ds.lihat; return this.draw(); }
+    if (ds.lihat) { this.buka = (this.lebar || this.buka !== ds.lihat) ? ds.lihat : null; return this.draw(); }
     if (ds.buka !== undefined && ds.i !== undefined) return this.bukaBerkas(ds.buka, +ds.i, false);
     if (ds.unduh !== undefined && ds.i !== undefined) return this.bukaBerkas(ds.unduh, +ds.i, true);
     try {
@@ -160,5 +216,5 @@ export const HasilView = {
       modal(esc(x.nama), x.jenis === 'md' ? `<div class="md">${md(String(x.isi).slice(0, 60000))}</div>` : `<pre class="pratinjau-berkas" tabindex="0">${esc(String(x.isi).slice(0, 60000))}</pre>`, { wide: true, actions: [{ label: 'Tutup' }, { label: 'Unduh', kind: 'primary', run: () => { unduh(x.nama, x.isi, MIME[x.jenis] || 'text/plain'); return false; } }] });
     } catch { /* api() sudah menampilkan kalimat ramah */ }
   },
-  unmount() { this.root = null; },
+  unmount() { try { this._ro?.disconnect(); } catch { /* ignore */ } this.root = null; },
 };

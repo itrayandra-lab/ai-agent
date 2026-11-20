@@ -118,31 +118,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Photographer — Product & Lifestyle di divisi Content Studio, memakai bahasa awam",
-    "tujuan": "Hitung total biaya sesi foto dari tarif per foto, retouch, properti, dan transport. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "visual dan hidup, tulis adegan pendek, hindari klaim berlebihan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "biaya foto",
+      "tarif fotografer",
+      "retouch",
+      "anggaran foto",
+      "sesi"
+    ],
+    "data": [
+      "jumlah foto",
+      "tarif per foto (rp)",
+      "retouch",
+      "biaya properti (rp)"
+    ],
+    "gaya": "visual dan hidup, adegan pendek, tanpa klaim berlebihan",
     "contoh": {
       "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
-      "buruk": "Buat iklan yang keren."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "biaya foto"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung biaya sesi foto perlu dibaca bersama: biaya foto menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Hak cipta musik dan gambar harus aman."
+    ]
   }
 }

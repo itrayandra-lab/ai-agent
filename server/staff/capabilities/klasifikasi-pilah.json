@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-klasifikasi-pilah",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan pilah dan kelompokkan",
+  "version": 1,
+  "name": "Pilah pesan atau pelanggan",
+  "ringkas": "Pilah pesan, laporan, atau pelanggan ke dalam kelompok menurut kata kunci, hitung tiap kelompok, dan tandai yang mendesak.",
+  "kataKunci": ["pilah", "kategori", "kelompok", "mendesak", "pelanggan", "pesan"],
+  "kemampuan": {
+    "id": "klasifikasi-pilah",
+    "kelompok": "data",
+    "tujuanAwam": "Memilah tumpukan pesan, laporan, atau daftar pelanggan ke kelompok yang jelas supaya yang penting dan mendesak cepat terlihat."
+  },
+  "inputs": [
+    { "key": "nama", "type": "text", "label": "Apa yang dipilah?", "required": true, "contoh": "Pesan masuk minggu ini" },
+    { "key": "mode", "type": "choice", "label": "Cara memilah", "required": true, "default": "pesan", "choices": [{ "v": "pesan", "t": "Pilah pesan atau laporan" }, { "v": "pelanggan", "t": "Kelompokkan pelanggan menurut belanja" }] },
+    { "key": "desak", "type": "choice", "label": "Tandai yang mendesak?", "required": true, "default": "ya", "choices": [{ "v": "ya", "t": "Ya, tandai" }, { "v": "tidak", "t": "Tidak perlu" }] },
+    { "key": "aturan", "type": "longtext", "label": "Kelompok dan kata cirinya (satu baris satu kelompok), contoh: Tagihan: bayar, invoice", "required": false, "contoh": "Tagihan: bayar, invoice, tagihan\nPengiriman: kirim, paket, resi\nKomplain: rusak, kecewa" },
+    { "key": "daftar", "type": "longtext", "label": "Isi yang dipilah (satu per baris; untuk pelanggan tulis: nama | total belanja)", "required": true, "contoh": "Paket saya belum sampai, tolong cek resi segera\nKapan invoice bulan ini dikirim?" }
+  ],
+  "steps": [
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "items": "baris(input.daftar).map((t) => String(t).trim()).filter((t) => t !== '').slice(0, 2000)",
+        "rules": "baris(input.aturan || '').filter((t) => t.indexOf(':') > 0).map((t) => [t.slice(0, t.indexOf(':')).trim(), t.slice(t.indexOf(':') + 1).toLowerCase().split(',').map((x) => x.trim()).filter((x) => x !== '')]).filter((r) => r[0] !== '').slice(0, 20)",
+        "desakKata": "['segera', 'urgent', 'darurat', 'mendesak', 'rusak', 'error', 'komplain', 'marah', 'hari ini', 'secepatnya', 'penting sekali']"
+      }
+    },
+    {
+      "id": "pilah",
+      "use": "hitung",
+      "label": "Pilah tiap isi",
+      "set": {
+        "katPesan": "v.items.map((t) => ((r) => r ? r[0] : 'Lainnya')(v.rules.find((r) => r[1].some((k) => t.toLowerCase().indexOf(k) >= 0))))",
+        "pl": "v.items.map((t) => t.split('|').map((c) => c.trim())).map((p) => [p[0] || '-', Number.isFinite(num(p[1])) ? num(p[1]) : 0])",
+        "totalPl": "v.pl.reduce((s, p) => s + p[1], 0)",
+        "rataPl": "v.pl.length ? v.totalPl / v.pl.length : 0",
+        "katPl": "v.pl.map((p) => p[1] >= v.rataPl * 1.5 && p[1] > 0 ? 'Besar' : p[1] >= v.rataPl * 0.5 && p[1] > 0 ? 'Sedang' : 'Kecil')",
+        "kat": "input.mode === 'pelanggan' ? v.katPl : v.katPesan",
+        "nama": "input.mode === 'pelanggan' ? ['Besar', 'Sedang', 'Kecil'] : v.rules.map((r) => r[0]).concat(['Lainnya'])",
+        "hitung": "v.nama.map((n) => [n, v.kat.filter((k) => k === n).length])",
+        "mendesak": "v.items.map((t) => input.desak === 'ya' && input.mode === 'pesan' && v.desakKata.some((k) => t.toLowerCase().indexOf(k) >= 0))",
+        "jmlDesak": "v.mendesak.filter((m) => m).length",
+        "lainnya": "v.kat.filter((k) => k === 'Lainnya').length",
+        "terbesar": "v.hitung.reduce((m, h) => h[1] > m[1] ? h : m, ['-', 0])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "!v.items.length ? 'Tidak ada isi untuk dipilah, periksa lagi isiannya' : v.items.length + ' isi ' + input.nama + ' dipilah ke ' + v.hitung.filter((h) => h[1] > 0).length + ' kelompok; terbanyak ' + v.terbesar[0] + ' (' + v.terbesar[1] + ')' + (input.mode === 'pesan' ? ', ' + v.jmlDesak + ' mendesak' : ', total belanja ' + rp(v.totalPl))",
+    "teks": "'# Pilahan ' + input.nama + '\\n\\n' + tabel(['Kelompok', 'Jumlah'], v.hitung) + '\\n\\n' + (input.mode === 'pesan' ? '## Yang mendesak\\n\\n' + (v.jmlDesak ? v.items.filter((t, i) => v.mendesak[i]).map((t) => '- ' + cut(t, 120)).join('\\n') : 'Tidak ada yang ditandai mendesak.') + (v.lainnya ? '\\n\\nCatatan: ' + v.lainnya + ' isi belum masuk kelompok mana pun; tambahkan kata ciri di aturan.' : '') : '## Daftar pelanggan\\n\\n' + tabel(['Nama', 'Belanja', 'Kelompok'], v.pl.map((p, i) => [p[0], rp(p[1]), v.kat[i]])))",
+    "berkas": [
+      { "jenis": "csv", "nama": "'pilahan-' + cut(String(input.nama).toLowerCase(), 30)", "isi": "csv([['isi', 'kelompok', 'mendesak']].concat(v.items.map((t, i) => [t, v.kat[i], v.mendesak[i] ? 'ya' : 'tidak'])))" }
+    ],
+    "data": "({ total: v.items.length, kelompok: v.hitung.filter((h) => h[1] > 0).length, mendesak: v.jmlDesak, lainnya: v.lainnya, terbanyak: v.terbesar[0], besar: v.kat.filter((k) => k === 'Besar').length, sedang: v.kat.filter((k) => k === 'Sedang').length, kecil: v.kat.filter((k) => k === 'Kecil').length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "nama": "Pesan masuk", "mode": "pesan", "desak": "ya", "aturan": "Tagihan: bayar, invoice, tagihan\nPengiriman: kirim, paket, resi\nKomplain: rusak, kecewa", "daftar": "Paket saya belum sampai, tolong cek resi segera\nKapan invoice bulan ini dikirim?\nBarang rusak, saya kecewa\nTerima kasih banyak ya" }, "expect": { "berkas": 1, "mengandung": ["4 isi Pesan masuk", "2 mendesak"] } },
+  "otakProfil": {
+    "peran": "petugas pilah yang menjelaskan hasil pengelompokan kepada orang awam",
+    "tujuan": "Terangkan kelompok mana yang paling banyak, apa yang mendesak, dan apa yang harus dikerjakan lebih dulu.",
+    "gaya": "tegas, singkat, urut dari yang paling penting",
+    "pedoman": ["Pakai hanya kelompok dan angka dari hasil hitung.", "Sebut yang mendesak lebih dulu, lalu kelompok terbanyak.", "Bila banyak isi masuk Lainnya, sarankan menambah kata ciri."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar", "prioritas": "pilihan:rendah|sedang|tinggi" },
+    "contoh": { "baik": "Dua pesan mendesak soal barang rusak dan paket tertahan; balas keduanya hari ini.", "buruk": "Banyak pesan masuk." },
+    "batas": { "pembahasan": 600, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["pesan"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Pesan terbagi ke beberapa kelompok dan ada yang mendesak, terutama soal barang rusak dan paket belum sampai. Dahulukan pesan itu sebelum yang lain.\",\"poin\":[\"Ada pesan mendesak\",\"Kelompok terbanyak perlu ditangani rutin\"],\"langkah\":[\"Balas pesan mendesak hari ini\",\"Tambah kata ciri untuk isi yang belum masuk kelompok\"],\"prioritas\":\"tinggi\"}"
+  },
+  "evaluasi": [
+    { "nama": "pilah pesan dengan penanda mendesak", "input": { "nama": "Pesan masuk", "mode": "pesan", "desak": "ya", "aturan": "Tagihan: bayar, invoice, tagihan\nPengiriman: kirim, paket, resi\nKomplain: rusak, kecewa", "daftar": "Paket saya belum sampai, tolong cek resi segera\nKapan invoice bulan ini dikirim?\nBarang rusak, saya kecewa\nTerima kasih banyak ya" }, "ai": "{\"pembahasan\":\"Pesan terbagi rata ke empat kelompok dan dua pesan mendesak, yaitu paket belum sampai dan barang rusak. Tangani dua pesan itu lebih dulu.\",\"poin\":[\"Dua pesan mendesak\"],\"langkah\":[\"Balas pesan mendesak hari ini\"],\"prioritas\":\"tinggi\"}", "kriteria": { "mengandung": ["pesan", "mendesak"], "mengandungAturan": ["Pengiriman", "Komplain", "Lainnya"], "panjangMin": 80, "panjangMaks": 2500, "nilai": [{ "path": "data.total", "min": 4, "max": 4 }, { "path": "data.mendesak", "min": 2, "max": 2 }, { "path": "data.lainnya", "min": 1, "max": 1 }] } },
+    { "nama": "kelompokkan pelanggan menurut belanja", "input": { "nama": "Pelanggan toko", "mode": "pelanggan", "desak": "tidak", "aturan": "", "daftar": "Budi | 1.000.000\nSiti | 200.000\nAni | 50.000\nRudi | abc" }, "ai": "{\"pembahasan\":\"Satu pelanggan belanja jauh lebih besar dari yang lain, jadi pelanggan itu layak dijaga lebih baik. Dua pelanggan kecil bisa diajak belanja lagi dengan promo.\",\"poin\":[\"Satu pelanggan besar\"],\"langkah\":[\"Beri perhatian khusus pada pelanggan besar\"],\"prioritas\":\"sedang\"}", "kriteria": { "mengandung": ["pelanggan", "besar"], "mengandungAturan": ["Besar", "Budi"], "panjangMin": 80, "panjangMaks": 2500, "nilai": [{ "path": "data.besar", "min": 1, "max": 1 }, { "path": "data.sedang", "min": 1, "max": 1 }, { "path": "data.kecil", "min": 2, "max": 2 }] } },
+    { "nama": "aturan kosong dan isi berantakan", "input": { "nama": "Laporan harian", "mode": "pesan", "desak": "ya", "aturan": "bukan format\nUmum:", "daftar": "HELLO\n\n   \nurgent tolong" }, "ai": "{\"pembahasan\":\"Semua laporan belum masuk kelompok karena aturan belum punya kata ciri. Satu laporan terlihat mendesak, jadi periksa dulu.\",\"poin\":[\"Aturan belum lengkap\"],\"langkah\":[\"Tulis kata ciri tiap kelompok\"],\"prioritas\":\"sedang\"}", "kriteria": { "mengandung": ["laporan", "kata ciri"], "mengandungAturan": ["Lainnya", "belum masuk kelompok"], "panjangMin": 60, "panjangMaks": 2500, "nilai": [{ "path": "data.total", "min": 2, "max": 2 }, { "path": "data.lainnya", "min": 2, "max": 2 }, { "path": "data.mendesak", "min": 1, "max": 1 }] } }
+  ]
+}

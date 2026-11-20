@@ -88,31 +88,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Channel Partner Manager — RayFlow Resellers & Integrators di divisi Business Development & Partnerships, memakai bahasa awam",
-    "tujuan": "Tentukan tingkat tiap mitra (perunggu sampai platinum) dari omzet bulanannya dan hitung komisi yang harus dibayar. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha yang dibutuhkan",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "komisi",
+      "tingkat mitra",
+      "reseller",
+      "integrator",
+      "program kemitraan"
+    ],
+    "data": [
+      "omzet mitra bulan ini (satu baris: mitra | omzet)",
+      "program komisi"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
     "contoh": {
-      "baik": "Kerja sama dengan klinik kecantikan lebih cepat balik modal daripada toko modern.",
-      "buruk": "Peluangnya besar."
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "komisi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penghitung komisi dan tingkat mitra perlu dibaca bersama: komisi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
   }
 }

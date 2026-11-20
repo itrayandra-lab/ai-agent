@@ -173,5 +173,31 @@
         "3 tanggung jawab, 2 syarat"
       ]
     }
+  },
+  "kemampuan": [
+    "tulis-konten-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "lowongan",
+      "job description",
+      "rekrutmen",
+      "iklan kerja",
+      "posisi"
+    ],
+    "data": [
+      "nama posisi",
+      "tingkat pengalaman",
+      "cara bekerja",
+      "kota penempatan"
+    ],
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }

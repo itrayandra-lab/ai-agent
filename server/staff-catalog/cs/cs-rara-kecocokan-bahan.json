@@ -123,31 +123,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Beauty Advisor di divisi Customer Success, memakai bahasa awam",
-    "tujuan": "Cek apakah dua bahan aktif boleh dipakai bersamaan dan bagaimana mengatur waktunya agar kulit tidak iritasi. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan, beri langkah pasti",
-    "skema": {
-      "pembahasan": "teks",
-      "poin": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bahan aktif",
+      "retinol",
+      "vitamin c",
+      "dipakai bersamaan",
+      "kecocokan"
+    ],
+    "data": [
+      "bahan pertama",
+      "bahan kedua"
+    ],
+    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan",
     "contoh": {
       "baik": "Mohon maaf atas keterlambatan; kami cek pesanan Anda dan kabari dalam 2 jam.",
-      "buruk": "Itu bukan salah kami."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "bahan aktif"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kecocokan dua bahan aktif perlu dibaca bersama: bahan aktif menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"poin\":[\"Hasil sudah dihitung dengan aturan\",\"Periksa isian yang paling menentukan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menjanjikan ganti rugi tanpa persetujuan."
+    ]
   }
 }

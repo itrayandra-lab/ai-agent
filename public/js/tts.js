@@ -225,7 +225,15 @@ const MALE = /\b(male|man|pria|laki)\b|david|mark|george|ardi|andika|daniel|alex
 /** 'female' | 'male' | '' (unknown) from a voice name; an explicit word like Female/Male wins over a name. */
 export const voiceGenderOf = (name) => { const n = String(name || ''); if (/\bfemale\b|wanita|perempuan/i.test(n)) return 'female'; if (/\bmale\b|\bpria\b|laki/i.test(n)) return 'male'; if (FEM.test(n)) return 'female'; if (MALE.test(n)) return 'male'; return ''; };
 const loadVoices = () => { const s = ss(); if (!s) return; const all = s.getVoices(), idv = all.filter((v) => /^id([-_]|$)/i.test(v.lang) || /indonesia/i.test(v.name)); hasId = idv.length > 0; voices = hasId ? idv : all; voices.sort((a, b) => (b.localService - a.localService) || a.name.localeCompare(b.name)); };
-try { ss()?.addEventListener?.('voiceschanged', loadVoices); loadVoices(); } catch { /* no speech */ }
+const kabarSuara = () => { try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('raiverse:suara-berubah')); } catch { /* ignore */ } };
+const muatSuara = () => { const n = voices.length; loadVoices(); if (voices.length !== n) kabarSuara(); };
+try {
+  ss()?.addEventListener?.('voiceschanged', muatSuara); loadVoices();
+  // getVoices() sering kosong di awal (dimuat tidak serempak, dan sebagian peramban tidak mengirim voiceschanged): coba lagi tiap 0,5 detik sampai ada, paling lama ~10 detik
+  if (!voices.length && typeof setInterval !== 'undefined') { let n = 0; const t = setInterval(() => { muatSuara(); if (voices.length || ++n > 20) { clearInterval(t); kabarSuara(); } }, 500); }
+} catch { /* no speech */ }
+let terblokir = false, gagalT = 0;
+const kabarGagal = (sebab) => { lastErr = sebab; const now = Date.now(); if (now - gagalT < 20000) return; gagalT = now; try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('raiverse:suara-gagal', { detail: { sebab, pesan: kenapaDiam() } })); } catch { /* ignore */ } };
 
 const baseProfile = (id) => { const e = lookup?.(id); return profileFor(id, genderOf(e || { id }), Math.max(1, voices.length)); };
 const SHIFTS = []; for (let dp = -4; dp <= 4; dp++) for (let dr = -2; dr <= 2; dr++) SHIFTS.push([dp, dr]);
@@ -301,10 +309,10 @@ function runBrowser(it, my, done) {
     const B = BAND[p.gender], jp = (Math.random() - 0.5) * 0.024, jr = (Math.random() - 0.5) * 0.03; u.pitch = +clamp(p.pitch + pr.dPitch + jp, B.pitch[0] - 0.12, B.pitch[1] + 0.12).toFixed(3); u.rate = +clamp(p.rate + pr.dRate + jr, 0.7, 1.3).toFixed(3); u.volume = clamp(vol * pr.vol, 0, 1);
     const t0 = performance.now(); let started = false;
     const next = () => { clearTimeout(wd); if (my !== gen) return; to = setTimeout(step, pr.pause); };
-    wd = setTimeout(() => { try { s.cancel(); } catch { /* ignore */ } next(); }, 4000 + sen.length * 140);   /* some engines never fire onend */
-    u.onstart = () => { started = true; if (first) { stats.lastStartMs = Math.round(performance.now() - t0); first = false; } };
-    u.onend = next; u.onerror = (ev) => { if (!started && ev?.error && ev.error !== 'canceled' && ev.error !== 'interrupted') lastErr = ev.error; next(); };
-    try { s.speak(u); stats.spoken++; } catch (e) { lastErr = String(e); next(); }
+    wd = setTimeout(() => { try { s.cancel(); } catch { /* ignore */ } if (!started) kabarGagal(voices.length ? 'tidak-mulai' : 'tanpa-suara'); next(); }, 4000 + sen.length * 140);   /* some engines never fire onend */
+    u.onstart = () => { started = true; stats.started = (stats.started || 0) + 1; if (first) { stats.lastStartMs = Math.round(performance.now() - t0); first = false; } };
+    u.onend = next; u.onerror = (ev) => { if (!started && ev?.error && ev.error !== 'canceled' && ev.error !== 'interrupted') { if (ev.error === 'not-allowed') terblokir = true; kabarGagal(ev.error); } next(); };
+    try { s.speak(u); stats.spoken++; } catch (e) { kabarGagal(String(e)); next(); }
   };
   const lead = prosodyFor(parts[0] || '', it.tag).lead; if (lead) to = setTimeout(step, lead); else step();
 }
@@ -441,6 +449,21 @@ export function hum(agentId, closeness = 1) {
   } catch { return false; }
 }
 
+/** keadaan suara tanpa perlu audio: dipakai Pengaturan dan tes */
+export function diagnosa(x = {}) {
+  const tersedia = x.tersedia ?? !!ss(), jumlah = x.jumlah ?? voices.length;
+  return { tersedia, jumlahSuara: jumlah, adaIndonesia: x.adaIndonesia ?? hasId, on: x.on ?? S.on, autoRead: x.autoRead ?? S.autoRead, engine: x.engine ?? S.engine, terblokir: x.terblokir ?? terblokir, galat: x.galat ?? lastErr, mulai: x.mulai ?? (stats.started || 0), bicara: x.bicara ?? stats.spoken };
+}
+/** kalimat awam: kenapa suara tidak terdengar, dan apa yang bisa dilakukan; '' bila tampak baik-baik saja */
+export function kenapaDiam(d = diagnosa()) {
+  if (!d.tersedia) return 'Peramban ini tidak punya suara bicara. Coba Chrome atau Edge terbaru.';
+  if (d.terblokir) return 'Peramban menahan suara sampai kamu menyentuh halaman. Tekan "Tes suara" sekali.';
+  if (!d.jumlahSuara) return 'Perangkat ini belum punya suara bicara. Pasang suara bahasa Indonesia di pengaturan sistem, atau pilih mesin suara Server.';
+  if (!d.on) return 'Suara bicara masih mati.';
+  if (d.galat === 'tidak-mulai') return 'Suara dikirim tetapi tidak berbunyi. Cek volume perangkat, lalu tekan "Tes suara".';
+  if (!d.adaIndonesia) return 'Belum ada suara bahasa Indonesia; dipakai suara lain yang tersedia.';
+  return '';
+}
 export const tts = {
   hum, ingest, watch, messageSource, whenFree, learnBrands, extractTag, prosodyFor,
   /** the owner is talking (microphone): hold the floor for `ms` */
@@ -455,6 +478,7 @@ export const tts = {
   voices: () => voices.map((v) => ({ name: v.name, lang: v.lang, local: v.localService })),
   state: () => ({ ...S, edge: { ...EG }, available: !!ss(), voiceCount: voices.length, hasIndonesian: hasId, voiceNames: voices.map((v) => v.name), voiceInfo: voiceInfo(), maleSlow: edgeSlow(), maleBrowser: hasMaleIdVoice(), maleViaEdge: maleViaEdge({ gender: 'male' }), speaking: floor.speaking(), pending: floor.pending(), ownerBusy: floor.ownerBusy(), lastErr, ...stats }),
   isOn: () => S.on,
+  diagnosa, kenapaDiam,
   profile: (id, group) => profileOf(id, group),
   set(patch) { if (patch.engine === 'edge') { EG.ok = null; EG.fails = 0; EG.err = ''; }
     if (patch.engine && patch.engine !== 'edge' && patch.engine !== 'browser') delete patch.engine;
@@ -462,3 +486,12 @@ export const tts = {
   /** test voice button: works even with the switch off, so people can hear it before enabling */
   test(agentId = 'owner', text = 'Halo, saya agen RAIVERSE. Hari ini ada dua belas tugas selesai, sembilan puluh lima persen sesuai target.') { stopSpeaking(); return speak(agentId, text, { force: true }); },
 };
+
+// ── jembatan obrolan baru: Obrolan (mesin chat baru) tidak menulis ke S.data.messages, jadi pengamat pesan lama tidak pernah melihat balasannya.
+// Kontrak: window.dispatchEvent(new CustomEvent('raiverse:balasan', { detail: { speakerId, text } })) saat satu balasan SELESAI (bukan tiap potongan streaming).
+if (typeof window !== 'undefined') {
+  window.addEventListener('raiverse:balasan', (e) => { const d = e.detail || {}; if (!S.on || !S.autoRead || !d.text) return; try { speak(d.speakerId || 'aria', String(d.text), { interrupt: false }); } catch { /* ignore */ } });
+  // satu gerakan pengguna pertama membuka kunci suara peramban (autoplay): ucapan kosong, tanpa bunyi
+  const buka = () => { try { const s = ss(); if (s) { s.resume?.(); const u = new SpeechSynthesisUtterance(' '); u.volume = 0; s.speak(u); terblokir = false; } } catch { /* ignore */ } window.removeEventListener('pointerdown', buka, true); window.removeEventListener('keydown', buka, true); };
+  window.addEventListener('pointerdown', buka, true); window.addEventListener('keydown', buka, true);
+}

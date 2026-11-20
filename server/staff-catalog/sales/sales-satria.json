@@ -131,31 +131,30 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Inside Sales — Clinic & Salon B2B di divisi Sales, memakai bahasa awam",
-    "tujuan": "Perkirakan omzet dan kebutuhan produk bulanan sebuah klinik atau salon dari jumlah perawatannya, untuk bahan demo dan penawaran paket awal. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "sopan, fokus kebutuhan calon pelanggan, beri langkah tindak lanjut yang jelas",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "klinik",
+      "salon",
+      "potensi",
+      "paket awal",
+      "professional line"
+    ],
+    "data": [
+      "nama klinik atau salon",
+      "jenis usaha",
+      "jumlah perawatan per hari",
+      "tarif rata-rata per perawatan (rp)"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
     "contoh": {
-      "baik": "Tawarkan demo 15 menit minggu ini karena mereka sedang menambah cabang.",
-      "buruk": "Beli sekarang atau rugi."
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "klinik"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil kalkulator potensi klinik atau salon perlu dibaca bersama: klinik menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
   }
 }

@@ -32,22 +32,35 @@ registerCard('namaKartu', {
 
 Klien menampilkan kartu apa pun dari `cards` sebagai judul + tombol besar. Ketukan dikirim ke `POST /api/pemandu/turn` dengan `choiceId: "card:<type>:<optionId>"`. Aturan: 2 sampai 4 tombol, satu `recommended`, bahasa sehari-hari, tanpa istilah teknis.
 
-## Alur percakapan (revisi arah Owner: satu percakapan, bukan wizard)
+## Alur percakapan (arah Owner 2: obrolan dulu seperti ChatGPT, kerja hanya bila diminta dan dikonfirmasi)
 
-Layar depan hanya: utas percakapan, kolom ketik (dengan mikrofon), dan keadaan awal berisi sapaan serta beberapa saran pembuka. Tidak ada penunjuk langkah, kartu rencana tiga opsi, atau panel terpisah.
+Layar depan: utas percakapan, kolom ketik (dengan mikrofon), dan keadaan awal bersih (sapaan + saran pembuka). Tidak ada penunjuk langkah, kartu rencana, atau menu topik paksa.
 
-- Pengguna menulis bebas. Pemandu bertanya balik **hanya bila perlu**: permintaan yang sudah jelas (9 kata atau lebih), atau yang jawabannya sudah ada di kalimat atau profil, langsung dikerjakan; selain itu **satu** pertanyaan (paling banyak dua) dengan tombol jawaban, "Serahkan ke kamu", dan "Lainnya (ketik)".
-- Rencana dipilih diam-diam (Seimbang, atau Cepat bila jatah menipis). `kind: "plan"` tetap sah di kontrak tetapi tidak lagi dikirim pada alur biasa; "Ubah sedikit" (lebih singkat, santai, resmi, lengkap, atau ketik) mengatur hasilnya lewat `decideApproval` tolak-dengan-catatan.
-- Kemajuan (`kind: "progress"`), hasil (`kind: "result"`, di dalam balasan yang sama), dan penutup (`kind: "done"`) semuanya muncul sebagai balasan di utas. **Tiap balasan diakhiri satu kalimat ajakan dan 2 sampai 4 tombol** (`options`): Pakai ini, Ubah sedikit, Buat versi lain, Simpan; setelah dipakai: langkah lanjut khusus niat, "Jadwalkan", "Cukup dulu". Tombol hanya aktif di balasan terakhir.
-- `kind: "confirm"` kini khusus **aksi berdampak keluar** (sementara: memasang otomasi). Kartu kecil di utas berisi pratinjau dan tiga tombol: Ya, nyalakan (`oto:on`), Ubah (`oto:edit`), Batal (`oto:no`). Aksi berdampak baru apa pun wajib berhenti di kartu seperti ini.
-- Obrolan ringan (sapaan, terima kasih, "kamu bisa apa") dijawab langsung tanpa membuat pekerjaan.
-- Klien membaca parameter `untuk` dan `mulai` dari `navigate('dashboard', {...})`: "Beri pekerjaan" dari Tim Saya memberi awalan "Minta <nama> untuk …" pada pesan pertama, dan `mulai` langsung dikirim sebagai pesan.
+**1. Setiap pesan = obrolan dulu** (`server/pemandu-chat.js`)
+- Sapaan, terima kasih, dan "kamu bisa apa" dijawab aturan murah (tanpa token): satu atau dua kalimat, paling banyak satu baris saran ringan.
+- Selain itu dijawab model: `openai/gpt-oss-20b` untuk obrolan, `openai/gpt-oss-120b` hanya bila pesan panjang atau rumit (`engine.isComplex`). Keluaran JSON ketat: `{ balasan, saran[maks 3], alat: tidak|catatan|web, kueri, kerja, judul }`. Riwayat percakapan (14 pesan terakhir) dan profil pengguna ikut dikirim. Balasan disaring kamus bahasa (`rapikan`): kata teknis diganti padanan awam.
+- Tanpa model (mode simulasi, jatah habis, atau model gagal): jawaban cadangan yang jujur ("otak AI-ku sedang belum tersambung") plus satu tombol "Kerjakan sebagai pekerjaan"; permintaan yang jelas tetap bisa dikerjakan lewat aturan L0.
+- Respons baru `kind: "chat"`: `say` (markdown ringan), `options` = 0 sampai 3 saran (id `say:N`; bila ditekan dikirim sebagai pesan pengguna) dan `tools` = `[{ label: "Memanggil Catatan", detail }]` bila alat dipakai.
+
+**2. Alat lewat satu pintu kecil**: kolom `alat` (`catatan` = cari di Catatan, `web` = pencarian web, hanya bila Groq aktif). Satu alat per giliran; hasilnya dimasukkan sebagai data (bukan perintah) lalu model menjawab; klien menampilkan penanda "Memanggil ..." yang bisa dibuka. Kemampuan staf dan otomasi tidak dipanggil dari obrolan; itu lewat usulan kerja di bawah.
+
+**3. Tidak ada eksekusi spontan** (pagar di kode, bukan hanya prompt)
+- Niat kerja yang jelas ("buatkan ...", "tolong tulis ...", atau `kerja: true` dari model pada pesan yang bukan pertanyaan) hanya menghasilkan **usulan**: paling banyak satu pertanyaan, lalu kartu `kind: "confirm"` berisi satu kalimat "Mau aku kerjakan sekarang?" dengan tombol **Ya, kerjakan** (`start`), **Ubah** (`edit`: ketik perubahan), **Nanti saja** (`later`: kembali ngobrol).
+- `startWork()` melempar galat kecuali `session.confirmed === true`, yang hanya diatur saat pengguna menekan "Ya, kerjakan", atau memilih atau mengetik perbaikan atas hasil yang sudah ada (Ubah sedikit, Buat versi lain, teks perbaikan). Tombol "Ya" yang basi pada sesi tanpa usulan tidak membuat apa pun.
+- Pertanyaan, sapaan, atau basa-basi di tengah usulan membatalkan usulan dan dijawab sebagai obrolan. Pertanyaan soal hasil yang sudah ada juga dijawab sebagai obrolan (bukan revisi).
+- Pemasangan otomasi tetap lewat kartu konfirmasi dengan pratinjau: Ya, nyalakan / Ubah / Batal.
+
+**4. Tombol hanya saran** setelah balasan yang bermakna, 2 sampai 4 pilihan; bukan menu pembuka. Kartu awal lama (`intent:*`) dikirim klien sebagai pesan biasa.
+
+Klien membaca parameter `untuk` dan `mulai` dari `navigate('dashboard', {...})`: "Beri pekerjaan" dari Tim Saya memberi awalan "Minta <nama> untuk …" pada pesan pertama, dan `mulai` dikirim sebagai pesan.
+
+Pengujian model asli (Groq 20b/120b, biaya total sekitar 0,004 USD): sapaan, basa-basi, pertanyaan, diskusi bisnis, "jelaskan otomasi", pertanyaan berjargon, permintaan kerja, dan pencarian web. Tidak ada pekerjaan tercipta tanpa konfirmasi dan tidak ada kata terlarang di layar.
 
 ## Kontrak respons (ringkas)
 
 `{ sessionId, say, kind, options[{id,label,hint?,recommended?}], delegate, freeText, step{now,of}, undo, quota{pct,word}, notes?, learned?, preview?, progress?, result?, saved?, cards? }`
 
-`kind` = `choices | plan | confirm | progress | result | done | error`.
+`kind` = `chat | choices | plan | confirm | progress | result | done | error` (`plan` tidak lagi dikirim pada alur biasa; `tools` hadir pada `chat` bila alat dipakai).
 
 ## Profil pengguna ("Yang aku tahu tentang kamu")
 

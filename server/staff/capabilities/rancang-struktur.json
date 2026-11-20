@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-rancang-struktur",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan merancang struktur",
+  "version": 1,
+  "name": "Rancang struktur dari deskripsi",
+  "ringkas": "Ubah uraian singkat menjadi rancangan bernomor: tabel data, alur layar, peta langkah otomatis, tata letak dashboard, susunan rak, atau papan cerita.",
+  "kataKunci": ["struktur", "rancangan", "tabel data", "alur layar", "dashboard", "papan cerita", "rak"],
+  "kemampuan": {
+    "id": "rancang-struktur",
+    "kelompok": "perencanaan",
+    "tujuanAwam": "Mengubah uraian bebas menjadi rancangan yang tersusun dan bernomor, siap diberikan ke pembuat atau tim."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau merancang apa?", "required": true, "default": "tabel-data", "choices": [{ "v": "tabel-data", "t": "Tabel data" }, { "v": "alur-layar", "t": "Alur layar pengguna" }, { "v": "peta-otomasi", "t": "Langkah otomatis" }, { "v": "tata-dashboard", "t": "Tata letak dashboard" }, { "v": "susunan-rak", "t": "Susunan rak" }, { "v": "papan-cerita", "t": "Papan cerita video" }] },
+    { "key": "nama", "type": "text", "label": "Beri nama rancangan ini", "required": true, "contoh": "Pesanan pelanggan" },
+    { "key": "deskripsi", "type": "longtext", "label": "Sebutkan bagiannya (satu per baris atau pisahkan dengan koma)", "required": true, "contoh": "Nama pelanggan, Tanggal pesan, Jumlah barang, Email pelanggan, Status" },
+    { "key": "rinci", "type": "choice", "label": "Seberapa rinci?", "required": true, "default": "ringkas", "choices": [{ "v": "ringkas", "t": "Ringkas" }, { "v": "lengkap", "t": "Lengkap" }] }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun rancangan",
+      "set": {
+        "bagian": "(() => { const a = baris(input.deskripsi).join(',').replace(/;/g, ',').split(',').map((t) => String(t).trim()).filter((t) => t !== '').filter((t, i, z) => z.findIndex((q) => q.toLowerCase() === t.toLowerCase()) === i).slice(0, 30); return a.length ? a : ['Bagian utama']; })()",
+        "hasil": "(() => { const n = v.bagian.length; const L = input.jenis; const lengkap = input.rinci === 'lengkap'; const cat = []; if (n === 1) { cat.push('Hanya satu bagian yang terbaca, tambahkan bagian lain agar rancangan berguna'); } if (n >= 20) { cat.push('Bagian terlalu banyak, kelompokkan menjadi beberapa rancangan'); } if (L === 'alur-layar') { return { judul: ['No', 'Layar', 'Tombol', 'Menuju'], baris: v.bagian.map((s, i) => [i + 1, s, (i < n - 1 ? 'Lanjut' : 'Selesai') + (lengkap && i > 0 ? ' / Kembali' : ''), i < n - 1 ? v.bagian[i + 1] : 'Layar utama']), catatan: cat, kunci: { layar: n } }; } if (L === 'peta-otomasi') { return { judul: ['No', 'Langkah', 'Peran', 'Bila gagal'], baris: v.bagian.map((s, i) => [i + 1, s, i === 0 ? 'Pemicu' : i === n - 1 && n > 1 ? 'Hasil' : 'Aksi', i === 0 ? '-' : lengkap ? 'Coba lagi 2 kali, lalu beri tahu pemilik' : 'Berhenti dan beri tahu pemilik']), catatan: cat, kunci: { langkah: n } }; } if (L === 'tata-dashboard') { const kpi = n <= 2 ? n : Math.min(4, Math.ceil(n / 2)); const lb = Math.floor(12 / kpi); const baris2 = v.bagian.map((s, i) => i < kpi ? [i + 1, s, 'Kartu angka', 1, i * lb + 1, lb] : [i + 1, s, 'Grafik atau tabel', 2 + Math.floor((i - kpi) / 2), ((i - kpi) % 2) * 6 + 1, 6]); return { judul: ['No', 'Elemen', 'Jenis', 'Baris', 'Kolom mulai (dari 12)', 'Lebar kolom'], baris: baris2, catatan: cat, kunci: { kartu: kpi, baris: baris2.reduce((m, r) => Math.max(m, r[3]), 0) } }; } if (L === 'susunan-rak') { const tk = ['Setinggi mata', 'Setinggi tangan', 'Atas', 'Bawah']; const per = Math.ceil(n / 4); if (n > 12) { cat.push('Rak mungkin terlalu penuh, sisihkan sebagian barang'); } return { judul: ['No', 'Barang', 'Tingkat rak', 'Urutan di tingkat'], baris: v.bagian.map((s, i) => [i + 1, s, tk[Math.floor(i / per)], i % per + 1]), catatan: cat, kunci: { tingkat: Math.min(4, n) } }; } if (L === 'papan-cerita') { const d = lengkap ? 5 : 3; return { judul: ['Adegan', 'Isi', 'Jenis bidikan', 'Lama (detik)'], baris: v.bagian.map((s, i) => [i + 1, s, ['Lebar', 'Sedang', 'Dekat'][i % 3], d]), catatan: cat, kunci: { adegan: n, total: n * d } }; } const ada = v.bagian.some((t) => t.toLowerCase() === 'id'); const kol = ada ? v.bagian : ['id'].concat(v.bagian); const tp = (s) => { const x = s.toLowerCase(); return x.includes('tanggal') || x.includes('waktu') || x.includes('jam') ? 'tanggal' : ['jumlah', 'harga', 'total', 'stok', 'biaya', 'nilai', 'umur', 'berat'].some((w) => x.includes(w)) ? 'angka' : ['email', 'telepon', 'alamat'].some((w) => x.includes(w)) ? 'teks pribadi' : ['status', 'jenis'].some((w) => x.includes(w)) ? 'pilihan' : 'teks'; }; const rows = kol.map((s, i) => [i + 1, s.toLowerCase().split(' ').join('_'), tp(s), i < 2 ? 'ya' : 'tidak', { tanggal: '2026-03-02', angka: '100000', pilihan: 'aktif', 'teks pribadi': 'isi sesuai data asli' }[tp(s)] || 'contoh teks']); const pr = rows.filter((r) => r[2] === 'teks pribadi').length; if (pr) { cat.push(pr + ' kolom berisi data pribadi, simpan dengan hati-hati'); } if (rows.length > 15) { cat.push('Kolom lebih dari 15, pecah menjadi dua tabel'); } return { judul: ['No', 'Nama kolom', 'Jenis isi', 'Wajib diisi', 'Contoh'], baris: rows, catatan: cat, kunci: { kolom: rows.length, pribadi: pr } }; })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rancangan ' + input.jenis + ' \"' + cut(String(input.nama), 50) + '\": ' + v.hasil.baris.length + ' baris' + (v.hasil.catatan.length ? ', ' + v.hasil.catatan.length + ' catatan' : '')",
+    "teks": "'# ' + input.nama + ' (' + input.jenis + ')\\n\\n' + v.hasil.baris.map((r) => r[0] + '. ' + r[1]).join('\\n') + '\\n\\n' + tabel(v.hasil.judul, v.hasil.baris) + (v.hasil.catatan.length ? '\\n\\n## Catatan\\n\\n' + v.hasil.catatan.map((t) => '- ' + t).join('\\n') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'rancangan-' + cut(String(input.jenis).toLowerCase(), 30)", "isi": "csv([v.hasil.judul].concat(v.hasil.baris))" },
+      { "jenis": "md", "nama": "'daftar-' + cut(String(input.jenis).toLowerCase(), 30)", "isi": "'# ' + input.nama + '\\n\\n' + v.hasil.baris.map((r) => r[0] + '. ' + r[1]).join('\\n')" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, bagian: v.bagian.length, catatan: v.hasil.catatan.length }, v.hasil.kunci)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "tabel-data", "nama": "Pesanan pelanggan", "deskripsi": "Nama pelanggan, Tanggal pesan, Jumlah barang, Email pelanggan, Status", "rinci": "ringkas" }, "expect": { "berkas": 2, "mengandung": ["tanggal_pesan", "1 kolom berisi data pribadi"] } },
+  "otakProfil": {
+    "peran": "perancang yang menjelaskan rancangan kepada orang awam dan pembuatnya",
+    "tujuan": "Beri penjelasan singkat atas rancangan yang sudah disusun: apa tujuannya, bagian yang perlu dicek, dan apa yang mungkin terlewat.",
+    "gaya": "runtut, sederhana, memakai contoh sehari-hari",
+    "pedoman": ["Pakai hanya bagian yang ada di rancangan; jangan menambah bagian baru tanpa menyebutnya sebagai saran.", "Sebutkan satu hal yang mungkin terlewat.", "Gunakan kalimat pendek."],
+    "skema": { "pembahasan": "teks", "periksa": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Rancangan ini mencatat siapa memesan apa dan kapan; periksa apakah alamat pengiriman perlu kolom sendiri.", "buruk": "Rancangannya sudah bagus." },
+    "batas": { "pembahasan": 500, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["rancangan"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Rancangan ini mencakup bagian utama dan runtut, tetapi ada satu hal yang mungkin terlewat yaitu data pendukung.\",\"periksa\":[\"Apakah ada bagian yang kurang\"],\"langkah\":[\"Tunjukkan rancangan ini ke calon pengguna\"]}"
+  },
+  "evaluasi": [
+    { "nama": "tabel data pesanan", "input": { "jenis": "tabel-data", "nama": "Pesanan pelanggan", "deskripsi": "Nama pelanggan, Tanggal pesan, Jumlah barang, Email pelanggan, Status", "rinci": "ringkas" }, "ai": "{\"pembahasan\":\"Rancangan ini mencatat siapa memesan apa dan kapan, tetapi perlu dicek apakah alamat pengiriman butuh kolom sendiri.\",\"periksa\":[\"Alamat pengiriman\"],\"langkah\":[\"Tanyakan ke tim gudang\"]}", "kriteria": { "mengandung": ["Rancangan ini", "alamat pengiriman"], "mengandungAturan": ["tanggal_pesan", "1 kolom berisi data pribadi", "pilihan"], "panjangMin": 150, "panjangMaks": 4000, "nilai": [{ "path": "data.kolom", "min": 6, "max": 6 }, { "path": "data.pribadi", "min": 1, "max": 1 }] } },
+    { "nama": "papan cerita lengkap", "input": { "jenis": "papan-cerita", "nama": "Video toko", "deskripsi": "Pembuka toko\nProduk jadi\nPelanggan senang\nAjakan beli", "rinci": "lengkap" }, "ai": "{\"pembahasan\":\"Rancangan video ini bergerak dari pembuka ke ajakan beli dalam dua puluh detik sehingga cocok untuk video pendek.\",\"periksa\":[\"Apakah ada teks di layar\"],\"langkah\":[\"Siapkan gambar tiap adegan\"]}", "kriteria": { "mengandung": ["Rancangan video", "dua puluh detik"], "mengandungAturan": ["Pembuka toko", "Ajakan beli", "Lebar"], "panjangMin": 150, "panjangMaks": 4000, "nilai": [{ "path": "data.adegan", "min": 4, "max": 4 }, { "path": "data.total", "min": 20, "max": 20 }] } },
+    { "nama": "dashboard dengan uraian berantakan", "input": { "jenis": "tata-dashboard", "nama": "Ringkasan toko", "deskripsi": " ,, ; Penjualan ;; penjualan, Stok,Pelanggan,Biaya, Laba, Retur", "rinci": "ringkas" }, "ai": "{\"pembahasan\":\"Rancangan dashboard ini menaruh tiga kartu angka di atas dan tiga grafik di bawahnya sehingga gambaran utama terlihat sekilas.\",\"periksa\":[\"Angka mana yang paling penting\"],\"langkah\":[\"Tentukan urutan kartu angka\"]}", "kriteria": { "mengandung": ["Rancangan dashboard", "tiga kartu"], "mengandungAturan": ["Kartu angka", "Grafik atau tabel"], "panjangMin": 150, "panjangMaks": 4000, "nilai": [{ "path": "data.bagian", "min": 6, "max": 6 }, { "path": "data.kartu", "min": 3, "max": 3 }, { "path": "data.baris", "min": 3, "max": 3 }] } }
+  ]
+}

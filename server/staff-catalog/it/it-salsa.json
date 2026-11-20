@@ -92,31 +92,27 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Security Analyst di divisi IT & Security, memakai bahasa awam",
-    "tujuan": "Baca satu halaman web publik dan periksa hal keamanan dasar yang terlihat di isinya, lalu beri skor dan saran. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "riset-halaman-web"
+  ],
+  "keahlian": {
+    "istilah": [
+      "keamanan web",
+      "https",
+      "csp",
+      "audit halaman",
+      "celah"
+    ],
+    "data": [
+      "alamat halaman yang diperiksa"
+    ],
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar",
     "contoh": {
       "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
-      "buruk": "Sistem mungkin kurang aman."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "keamanan web"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa keamanan isi halaman web perlu dibaca bersama: keamanan web menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan meminta atau menyebut kata sandi asli."
+    ]
   }
 }

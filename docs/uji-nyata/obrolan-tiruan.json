@@ -1,0 +1,69 @@
+{
+  "versi": "tiruan",
+  "model": "tiruan",
+  "jumlah": 2,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0,
+  "detik": 1,
+  "skor": {
+    "ketepatan": 0,
+    "kejujuran": 0,
+    "kejelasan": 1,
+    "alat": null,
+    "konfirmasi": 1,
+    "respons": 0.625
+  },
+  "total": 0.525,
+  "gagal": [
+    {
+      "id": "persona-1",
+      "catatan": [
+        "kata kunci kurang",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ]
+    },
+    {
+      "id": "persona-10",
+      "catatan": [
+        "tidak mengakui keterbatasan",
+        "bukan reno yang menjawab",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 0,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.75,
+      "catatan": [
+        "kata kunci kurang",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ],
+      "jawaban": "Baik, begini penjelasannya.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-10",
+      "kategori": "persona",
+      "ketepatan": null,
+      "kejujuran": 0,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 0.5,
+      "catatan": [
+        "tidak mengakui keterbatasan",
+        "bukan reno yang menjawab",
+        "tidak menjawab dulu (hanya bertanya atau kartu pilihan)"
+      ],
+      "jawaban": "Baik, begini penjelasannya.",
+      "alatDipakai": []
+    }
+  ]
+}

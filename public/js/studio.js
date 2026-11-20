@@ -1,7 +1,5 @@
 // Agent Studio: design AI employees (layered instructions, skills, tools, knowledge), the skill library and the tool catalog.
 import { S, api, esc, emp, div, avatar, toast, modal, navigate, opt, formData } from './core.js';
-import { bindAppearance } from './appearance-ui.js';
-import { resolveAppearance } from './assets3d.js';
 import { genderOf } from './tts.js';
 
 const D = () => S.data;
@@ -161,7 +159,7 @@ export const StudioView = {
   bindMain(el, kbNotes) {
     const e = this.draft;
     const apBox = el.querySelector('#apbox');
-    if (apBox) bindAppearance(apBox, resolveAppearance(e, div(e.divisionId)?.color), (ap) => { e.appearance = ap; });
+    if (apBox) Promise.all([import('./assets3d.js'), import('./appearance-ui.js')]).then(([{ resolveAppearance }, { bindAppearance }]) => { if (apBox.isConnected) bindAppearance(apBox, resolveAppearance(e, div(e.divisionId)?.color), (ap) => { e.appearance = ap; }); });   // perf: Three.js tidak lagi di jalur muat awal
     el.querySelector('#sback').onclick = () => { this.root.querySelector('#studio').classList.remove('has-sel'); };
     el.querySelectorAll('[data-f]').forEach((x) => (x.oninput = x.onchange = () => {
       const k = x.dataset.f; let v = x.value;

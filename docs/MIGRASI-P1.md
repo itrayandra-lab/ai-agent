@@ -1,6 +1,6 @@
 # Migrasi P1 (data dan struktur karyawan)
 
-Fase P1 dari `docs/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md`. Semua perubahan hanya **menambah** atau menyeragamkan; tidak ada id, agen, divisi, catatan, atau tugas yang dihapus. Versi data naik dari 11 ke **12**.
+Fase P1 dari `docs/arsip/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md`. Semua perubahan hanya **menambah** atau menyeragamkan; tidak ada id, agen, divisi, catatan, atau tugas yang dihapus. Versi data naik dari 11 ke **12**.
 
 ## 1. Apa yang berubah
 

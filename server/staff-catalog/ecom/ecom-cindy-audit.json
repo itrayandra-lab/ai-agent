@@ -68,31 +68,27 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Catalog & Content Specialist di divisi E-commerce & Marketplace, memakai bahasa awam",
-    "tujuan": "Beri skor kelengkapan tiap produk (judul, foto, deskripsi, variasi) dan daftar yang harus dibenahi lebih dulu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka penjualan dan biaya",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "audit katalog",
+      "kelengkapan",
+      "sku",
+      "foto produk",
+      "listing"
+    ],
+    "data": [
+      "data produk (satu baris: sku | judul | jumlah foto | jumlah "
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
     "contoh": {
       "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
-      "buruk": "Jualan perlu ditingkatkan."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "audit katalog"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kelengkapan katalog produk perlu dibaca bersama: audit katalog menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
   }
 }

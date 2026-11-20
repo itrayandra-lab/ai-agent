@@ -127,31 +127,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Filling & Packing Line Lead di divisi Manufacturing, memakai bahasa awam",
-    "tujuan": "Ubah angka produksi harian menjadi capaian target, persen reject, kecepatan per jam, dan penilaian. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "laporan-ringkasan-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "laporan harian",
+      "filling",
+      "packing",
+      "output",
+      "reject"
+    ],
+    "data": [
+      "tanggal",
+      "nama jalur",
+      "target hari ini (unit)",
+      "hasil baik (unit)"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
     "contoh": {
-      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
-      "buruk": "Produksi lancar."
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "laporan harian"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil laporan harian jalur filling dan packing perlu dibaca bersama: laporan harian menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
   }
 }

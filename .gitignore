@@ -3,3 +3,6 @@ data/
 .env
 arsip-dummy/
 docs/client_secret_*.json
+
+# berkas rahasia lokal (dipindah dari docs/)
+_rahasia-lokal/

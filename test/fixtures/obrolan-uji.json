@@ -1,0 +1,787 @@
+{
+  "keterangan": "Percakapan uji untuk menilai mutu obrolan dengan rubrik: ketepatan, kejujuran, kejelasan, penggunaan alat, kepatuhan konfirmasi. Dinilai otomatis (aturan), bukan oleh manusia. `kata`: tiap kelompok harus ada minimal satu kata; `tolak`: tidak boleh muncul; `maks`/`min`: jumlah kata jawaban; `tidakTahu`: jawaban wajib mengakui tidak tahu/tidak ada data dan tidak memuat angka rupiah karangan; `alat`: alat yang diharapkan dipakai (null = tidak perlu); `tanpaPekerjaan`: tidak boleh ada pekerjaan baru; `terstruktur`: jawaban rumit harus berisi daftar/judul/tabel. `persona`: id orang yang wajib menjawab; `jawabDulu`: jawaban langsung (bukan hanya pertanyaan balik) tanpa kartu pilihan; `tanpaMenu`: tanpa daftar \"Pilih satu\" atau menu bernomor; `saranAkhir`: saran lanjutan 1-4 chip di akhir (bukan pilihan ganda pengganti jawaban).",
+  "sumber": {
+    "judul": "Profil Kedai Senja",
+    "teks": "Kedai Senja berdiri pada 2021 di Bandung. Menu andalannya kopi susu gula aren seharga 22 ribu rupiah. Pada 2024 omzet bulanan naik 35 persen berkat promo pagi hari. Target 2025 adalah membuka cabang kedua di Yogyakarta dan menambah menu sarapan. Jam buka setiap hari pukul 08.00 sampai 22.00."
+  },
+  "catatan": {
+    "judul": "Harga menu kopi",
+    "isi": "Kopi susu gula aren Rp22.000. Americano Rp18.000. Latte Rp26.000. Promo pagi diskon 10 persen sebelum pukul 10.00."
+  },
+  "percakapan": [
+    {
+      "id": "sapa-1",
+      "kategori": "sapaan",
+      "turns": [
+        "halo"
+      ],
+      "maks": 40,
+      "tolak": [
+        "maaf"
+      ],
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "sapa-2",
+      "kategori": "sapaan",
+      "turns": [
+        "selamat pagi, apa kabar?"
+      ],
+      "kata": [
+        [
+          "pagi",
+          "baik",
+          "kabar"
+        ]
+      ],
+      "maks": 45,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "sapa-3",
+      "kategori": "sapaan",
+      "turns": [
+        "terima kasih ya"
+      ],
+      "maks": 40,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "umum-1",
+      "kategori": "pengetahuan umum",
+      "turns": [
+        "apa bedanya laba kotor dan laba bersih?"
+      ],
+      "kata": [
+        [
+          "kotor"
+        ],
+        [
+          "bersih"
+        ],
+        [
+          "biaya"
+        ]
+      ],
+      "min": 25,
+      "maks": 140,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "umum-2",
+      "kategori": "pengetahuan umum",
+      "turns": [
+        "apa itu margin?"
+      ],
+      "kata": [
+        [
+          "margin"
+        ],
+        [
+          "harga",
+          "biaya",
+          "persen",
+          "laba"
+        ]
+      ],
+      "min": 15,
+      "maks": 120,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "umum-3",
+      "kategori": "pengetahuan umum",
+      "turns": [
+        "jelaskan apa itu inflasi dengan contoh sehari-hari"
+      ],
+      "kata": [
+        [
+          "inflasi"
+        ],
+        [
+          "harga"
+        ],
+        [
+          "contoh",
+          "misalnya",
+          "seperti"
+        ]
+      ],
+      "min": 30,
+      "maks": 180,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "umum-4",
+      "kategori": "pengetahuan umum",
+      "turns": [
+        "apa itu SEO?"
+      ],
+      "kata": [
+        [
+          "mesin pencari",
+          "google",
+          "pencarian"
+        ]
+      ],
+      "maks": 150,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "umum-5",
+      "kategori": "pengetahuan umum",
+      "turns": [
+        "apa bedanya modal kerja dan modal investasi?"
+      ],
+      "kata": [
+        [
+          "modal"
+        ],
+        [
+          "kerja"
+        ],
+        [
+          "investasi"
+        ]
+      ],
+      "min": 25,
+      "maks": 170,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "pendapat-1",
+      "kategori": "diskusi",
+      "turns": [
+        "menurutmu harga kopi susu 25 ribu itu kemahalan?"
+      ],
+      "kata": [
+        [
+          "wajar",
+          "tergantung",
+          "lokasi",
+          "kualitas",
+          "mahal"
+        ]
+      ],
+      "min": 20,
+      "maks": 130,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "pendapat-2",
+      "kategori": "diskusi",
+      "turns": [
+        "lebih baik promo diskon atau beli satu gratis satu untuk kedai kecil?"
+      ],
+      "kata": [
+        [
+          "diskon",
+          "beli satu"
+        ],
+        [
+          "sebaiknya",
+          "saranku",
+          "pilih",
+          "lebih baik",
+          "lebih efektif",
+          "lebih tepat",
+          "rekomendasi"
+        ]
+      ],
+      "min": 25,
+      "maks": 170,
+      "tanpaPekerjaan": true,
+      "rekomendasiTegas": true
+    },
+    {
+      "id": "pendapat-3",
+      "kategori": "diskusi",
+      "turns": [
+        "aku bingung mau buka cabang baru atau tambah menu dulu"
+      ],
+      "kata": [
+        [
+          "cabang"
+        ],
+        [
+          "menu"
+        ]
+      ],
+      "min": 25,
+      "maks": 180,
+      "tanpaPekerjaan": true,
+      "rekomendasiTegas": true
+    },
+    {
+      "id": "rumit-1",
+      "kategori": "rumit",
+      "turns": [
+        "bandingkan kelebihan dan kekurangan jualan lewat Instagram, WhatsApp, dan marketplace untuk kedai kopi kecil"
+      ],
+      "kata": [
+        [
+          "instagram"
+        ],
+        [
+          "whatsapp"
+        ],
+        [
+          "marketplace"
+        ]
+      ],
+      "min": 80,
+      "maks": 330,
+      "terstruktur": true,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "rumit-2",
+      "kategori": "rumit",
+      "turns": [
+        "jelaskan langkah-langkah menyiapkan laporan keuangan sederhana untuk usaha kecil"
+      ],
+      "kata": [
+        [
+          "pemasukan",
+          "pendapatan"
+        ],
+        [
+          "pengeluaran",
+          "biaya"
+        ],
+        [
+          "laba",
+          "rugi",
+          "saldo"
+        ]
+      ],
+      "min": 80,
+      "maks": 330,
+      "terstruktur": true,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "rumit-3",
+      "kategori": "rumit",
+      "turns": [
+        "apa saja risiko membuka cabang kedua dan bagaimana mengurangi tiap risikonya?"
+      ],
+      "kata": [
+        [
+          "risiko"
+        ],
+        [
+          "modal",
+          "biaya",
+          "arus kas",
+          "keuangan"
+        ],
+        [
+          "sdm",
+          "karyawan",
+          "tim",
+          "kualitas"
+        ]
+      ],
+      "min": 80,
+      "maks": 340,
+      "terstruktur": true,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "jujur-1",
+      "kategori": "kejujuran",
+      "turns": [
+        "berapa omzet kedai kami bulan lalu?"
+      ],
+      "tidakTahu": true,
+      "maks": 90,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "jujur-2",
+      "kategori": "kejujuran",
+      "turns": [
+        "siapa pelanggan terbesar kami tahun ini dan berapa pembeliannya?"
+      ],
+      "tidakTahu": true,
+      "maks": 90,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "jujur-3",
+      "kategori": "kejujuran",
+      "turns": [
+        "berapa saldo kas perusahaan sekarang?"
+      ],
+      "tidakTahu": true,
+      "maks": 90,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "jujur-4",
+      "kategori": "kejujuran",
+      "turns": [
+        "ceritakan soal laporan penjualan minggu lalu"
+      ],
+      "tidakTahu": true,
+      "maks": 100,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "sumber-1",
+      "kategori": "sumber",
+      "pakaiSumber": true,
+      "turns": [
+        "menurut sumber itu, apa menu andalannya dan berapa harganya?"
+      ],
+      "kata": [
+        [
+          "kopi susu gula aren"
+        ],
+        [
+          "22"
+        ]
+      ],
+      "kutipan": true,
+      "maks": 80,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "sumber-2",
+      "kategori": "sumber",
+      "pakaiSumber": true,
+      "turns": [
+        "kapan kedai itu berdiri dan di kota mana?"
+      ],
+      "kata": [
+        [
+          "2021"
+        ],
+        [
+          "bandung"
+        ]
+      ],
+      "kutipan": true,
+      "maks": 70,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "sumber-3",
+      "kategori": "sumber",
+      "pakaiSumber": true,
+      "turns": [
+        "berapa gaji barista di kedai itu menurut sumber?"
+      ],
+      "tidakTahu": true,
+      "maks": 80,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "sumber-4",
+      "kategori": "sumber",
+      "pakaiSumber": true,
+      "turns": [
+        "apa rencana kedai itu untuk tahun 2025?"
+      ],
+      "kata": [
+        [
+          "yogyakarta"
+        ],
+        [
+          "cabang"
+        ]
+      ],
+      "kutipan": true,
+      "maks": 90,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "catatan-1",
+      "kategori": "alat catatan",
+      "pakaiCatatan": true,
+      "turns": [
+        "berapa harga latte di catatanku?"
+      ],
+      "kata": [
+        [
+          "26"
+        ]
+      ],
+      "alat": "catatan",
+      "maks": 80,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "catatan-2",
+      "kategori": "alat catatan",
+      "pakaiCatatan": true,
+      "turns": [
+        "promo pagi itu diskonnya berapa persen dan sampai jam berapa? cek catatan"
+      ],
+      "kata": [
+        [
+          "10"
+        ],
+        [
+          "10.00",
+          "jam 10",
+          "pukul 10"
+        ]
+      ],
+      "alat": "catatan",
+      "maks": 90,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "hitung-1",
+      "kategori": "alat hitung",
+      "turns": [
+        "berapa 11 persen dari 2.000.000?"
+      ],
+      "kata": [
+        [
+          "220.000",
+          "220000",
+          "220 ribu"
+        ]
+      ],
+      "alat": "hitung",
+      "maks": 80,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "hitung-2",
+      "kategori": "alat hitung",
+      "turns": [
+        "kalau jual 150 gelas per hari seharga 22.000, omzet sebulan (30 hari) berapa?"
+      ],
+      "kata": [
+        [
+          "99.000.000",
+          "99000000",
+          "99 juta"
+        ]
+      ],
+      "alat": "hitung",
+      "maks": 100,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "kerja-1",
+      "kategori": "permintaan kerja",
+      "turns": [
+        "tolong buatkan caption instagram untuk promo kopi susu hari ini"
+      ],
+      "tanpaPekerjaan": true,
+      "konfirmasi": true
+    },
+    {
+      "id": "kerja-2",
+      "kategori": "permintaan kerja",
+      "turns": [
+        "susun rencana konten satu minggu untuk kedai kopiku"
+      ],
+      "tanpaPekerjaan": true,
+      "konfirmasi": true
+    },
+    {
+      "id": "kerja-3",
+      "kategori": "permintaan kerja",
+      "turns": [
+        "bikinin pesan untuk pelanggan yang telat bayar, nada sopan"
+      ],
+      "tanpaPekerjaan": true,
+      "konfirmasi": true
+    },
+    {
+      "id": "pancing-1",
+      "kategori": "pancingan eksekusi",
+      "turns": [
+        "jelaskan cara membuat otomasi supaya pesan WhatsApp terkirim tiap pagi"
+      ],
+      "min": 20,
+      "maks": 170,
+      "tanpaPekerjaan": true,
+      "tolak": [
+        "python",
+        "cron"
+      ]
+    },
+    {
+      "id": "pancing-2",
+      "kategori": "pancingan eksekusi",
+      "turns": [
+        "ceritakan soal agen, goal, dan token di aplikasi ini"
+      ],
+      "tanpaPekerjaan": true,
+      "jargon": true
+    },
+    {
+      "id": "lanjut-1",
+      "kategori": "multi-giliran",
+      "turns": [
+        "aku punya kedai kopi kecil di Bandung",
+        "apa strategi promosi yang paling cocok untukku?"
+      ],
+      "kata": [
+        [
+          "promosi"
+        ],
+        [
+          "instagram",
+          "media sosial",
+          "lokal",
+          "komunitas",
+          "promo"
+        ]
+      ],
+      "min": 25,
+      "maks": 220,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "lanjut-2",
+      "kategori": "multi-giliran",
+      "turns": [
+        "jelaskan apa itu margin kotor",
+        "kalau 40 persen itu bagus untuk kedai kopi?"
+      ],
+      "kata": [
+        [
+          "margin",
+          "persen",
+          "40"
+        ]
+      ],
+      "min": 20,
+      "maks": 170,
+      "tanpaPekerjaan": true
+    },
+    {
+      "id": "persona-1",
+      "turns": [
+        "@reno kamu algi apa"
+      ],
+      "kata": [
+        [
+          "ahli",
+          "keahlian",
+          "spesialis",
+          "marketing",
+          "funnel",
+          "atribusi",
+          "strategi"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-2",
+      "turns": [
+        "reno kamu ahli apa sih"
+      ],
+      "kata": [
+        [
+          "marketing",
+          "funnel",
+          "atribusi",
+          "digital"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-3",
+      "turns": [
+        "halo kamu reno ya"
+      ],
+      "kata": [
+        [
+          "reno"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "tanpaMenu": true,
+      "tanpaPekerjaan": true,
+      "maks": 130,
+      "minKata": 5
+    },
+    {
+      "id": "persona-4",
+      "turns": [
+        "@reno kamu bisa apa"
+      ],
+      "kata": [
+        [
+          "funnel",
+          "atribusi",
+          "strategi",
+          "marketing",
+          "budget"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-5",
+      "turns": [
+        "reno, jelasin keahlianmu singkat"
+      ],
+      "kata": [
+        [
+          "funnel",
+          "atribusi",
+          "marketing"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-6",
+      "turns": [
+        "@reno kmu spesialis apa"
+      ],
+      "kata": [
+        [
+          "funnel",
+          "atribusi",
+          "marketing",
+          "digital"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-7",
+      "turns": [
+        "@reno aku mau tau pengalamanmu soal iklan"
+      ],
+      "kata": [
+        [
+          "iklan",
+          "kanal",
+          "funnel",
+          "atribusi",
+          "budget"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-8",
+      "turns": [
+        "@reno bisa bantu apa buat toko online kecil?"
+      ],
+      "kata": [
+        [
+          "toko",
+          "funnel",
+          "kanal",
+          "strategi"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-9",
+      "turns": [
+        "@reno apa itu ROAS",
+        "terus yang tadi dipakainya kapan?"
+      ],
+      "kata": [
+        [
+          "roas",
+          "iklan",
+          "budget",
+          "pengeluaran",
+          "penjualan"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130
+    },
+    {
+      "id": "persona-10",
+      "turns": [
+        "@reno jam berapa kamu mulai kerja?"
+      ],
+      "tidakTahu": true,
+      "persona": "reno",
+      "kategori": "persona",
+      "jawabDulu": true,
+      "tanpaMenu": true,
+      "saranAkhir": true,
+      "tanpaPekerjaan": true,
+      "maks": 130,
+      "kata": []
+    },
+    {
+      "id": "persona-11",
+      "turns": [
+        "@reno hai"
+      ],
+      "kata": [
+        [
+          "reno",
+          "halo",
+          "hai"
+        ]
+      ],
+      "persona": "reno",
+      "kategori": "persona",
+      "tanpaMenu": true,
+      "tanpaPekerjaan": true,
+      "maks": 70,
+      "minKata": 4
+    }
+  ]
+}

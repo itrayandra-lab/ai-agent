@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-analisis-kinerja-penjualan",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan analisis kinerja penjualan",
+  "version": 1,
+  "name": "Analisis penjualan dan iklan",
+  "ringkas": "Baca catatan penjualan, iklan, atau calon pembeli, hitung total, perpindahan antar tahap, untung rugi, dan tandai yang macet atau merugi.",
+  "kataKunci": ["penjualan", "iklan", "konversi", "untung rugi", "macet", "roas"],
+  "kemampuan": {
+    "id": "analisis-kinerja-penjualan",
+    "kelompok": "analisis",
+    "tujuanAwam": "Melihat mana penjualan, iklan, atau calon pembeli yang berjalan baik, macet, atau merugi, lengkap dengan angka kuncinya."
+  },
+  "inputs": [
+    { "key": "nama", "type": "text", "label": "Periode atau nama yang dianalisis", "required": true, "contoh": "Penjualan Mei" },
+    { "key": "jenis", "type": "choice", "label": "Data apa yang akan dibaca?", "required": true, "default": "pipeline", "choices": [{ "v": "pipeline", "t": "Calon pembeli: nama | tahap | nilai" }, { "v": "iklan", "t": "Iklan: nama | biaya | tayang | klik | pesanan | pendapatan" }, { "v": "untung", "t": "Untung: nama | pendapatan | biaya" }] },
+    { "key": "ketat", "type": "choice", "label": "Seberapa ketat menandai yang macet?", "required": true, "default": "sedang", "choices": [{ "v": "ketat", "t": "Ketat" }, { "v": "sedang", "t": "Sedang" }, { "v": "longgar", "t": "Longgar" }] },
+    { "key": "data", "type": "longtext", "label": "Data satu per baris, pisahkan kolom dengan garis tegak | (lihat contoh)", "required": true, "contoh": "Andi | Kontak | 1000000\nBudi | Penawaran | 5000000\nDedi | Deal | 8000000" }
+  ],
+  "steps": [
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca data",
+      "set": {
+        "rows": "baris(input.data).map((t) => t.replace(/;/g, '|').split('|').map((c) => c.trim())).filter((r) => r.length >= 2 && r[0] !== '').slice(0, 1000)",
+        "batas": "input.ketat === 'ketat' ? 60 : input.ketat === 'longgar' ? 20 : 40",
+        "n": "v.rows.length"
+      }
+    },
+    {
+      "id": "pipeline",
+      "use": "hitung",
+      "label": "Hitung perpindahan antar tahap",
+      "set": {
+        "tahap": "v.rows.map((r) => r[1]).filter((t, i, a) => a.indexOf(t) === i)",
+        "idx": "v.rows.map((r) => v.tahap.indexOf(r[1]))",
+        "sampai": "v.tahap.map((t, i) => v.idx.filter((x) => x >= i).length)",
+        "konv": "v.sampai.map((s, i) => i === 0 ? 100 : v.sampai[i - 1] ? Math.round(s / v.sampai[i - 1] * 1000) / 10 : 0)",
+        "nilaiTahap": "v.tahap.map((t) => v.rows.filter((r) => r[1] === t).reduce((s, r) => s + (Number.isFinite(num(r[2])) ? num(r[2]) : 0), 0))",
+        "totalPipe": "v.nilaiTahap.reduce((a, b) => a + b, 0)",
+        "macet": "v.tahap.filter((t, i) => i > 0 && v.konv[i] < v.batas)",
+        "konvAkhir": "v.sampai.length && v.sampai[0] ? Math.round(v.sampai[v.sampai.length - 1] / v.sampai[0] * 1000) / 10 : 0"
+      }
+    },
+    {
+      "id": "iklan",
+      "use": "hitung",
+      "label": "Hitung hasil iklan",
+      "set": {
+        "ik": "((g) => v.rows.map((r) => [r[0], g(r[1]), g(r[2]), g(r[3]), g(r[4]), g(r[5])]))((x) => Number.isFinite(num(x)) ? num(x) : 0)",
+        "ikHasil": "v.ik.map((r) => [r[0], r[1], r[2], r[3], r[4], r[5], r[2] ? Math.round(r[3] / r[2] * 10000) / 100 : 0, r[3] ? Math.round(r[4] / r[3] * 10000) / 100 : 0, r[1] ? Math.round(r[5] / r[1] * 100) / 100 : 0])",
+        "ikBiaya": "v.ik.reduce((s, r) => s + r[1], 0)",
+        "ikTayang": "v.ik.reduce((s, r) => s + r[2], 0)",
+        "ikKlik": "v.ik.reduce((s, r) => s + r[3], 0)",
+        "ikPesan": "v.ik.reduce((s, r) => s + r[4], 0)",
+        "ikHasilRp": "v.ik.reduce((s, r) => s + r[5], 0)",
+        "ctr": "v.ikTayang ? Math.round(v.ikKlik / v.ikTayang * 10000) / 100 : 0",
+        "cvr": "v.ikKlik ? Math.round(v.ikPesan / v.ikKlik * 10000) / 100 : 0",
+        "roas": "v.ikBiaya ? Math.round(v.ikHasilRp / v.ikBiaya * 100) / 100 : 0",
+        "ikRugi": "v.ikHasil.filter((r) => r[1] > 0 && r[8] < 1)"
+      }
+    },
+    {
+      "id": "untung",
+      "use": "hitung",
+      "label": "Hitung untung rugi",
+      "set": {
+        "ut": "((g) => v.rows.map((r) => [r[0], g(r[1]), g(r[2])]).map((r) => [r[0], r[1], r[2], r[1] - r[2], r[1] ? Math.round((r[1] - r[2]) / r[1] * 1000) / 10 : 0]))((x) => Number.isFinite(num(x)) ? num(x) : 0)",
+        "utPend": "v.ut.reduce((s, r) => s + r[1], 0)",
+        "utBiaya": "v.ut.reduce((s, r) => s + r[2], 0)",
+        "utLaba": "v.utPend - v.utBiaya",
+        "utMargin": "v.utPend ? Math.round(v.utLaba / v.utPend * 1000) / 10 : 0",
+        "utRugi": "v.ut.filter((r) => r[3] < 0)",
+        "jmlRugi": "input.jenis === 'iklan' ? v.ikRugi.length : input.jenis === 'untung' ? v.utRugi.length : 0",
+        "jmlMacet": "input.jenis === 'pipeline' ? v.macet.length : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "!v.n ? 'Tidak ada baris data yang terbaca, periksa lagi isiannya' : input.jenis === 'pipeline' ? v.n + ' calon pembeli ' + input.nama + ' di ' + v.tahap.length + ' tahap, nilai ' + rp(v.totalPipe) + ', yang sampai tahap akhir ' + v.konvAkhir + ' persen, ' + v.macet.length + ' tahap macet' : input.jenis === 'iklan' ? v.n + ' iklan ' + input.nama + ': biaya ' + rp(v.ikBiaya) + ', pendapatan ' + rp(v.ikHasilRp) + ', ROAS ' + v.roas + ', ' + v.ikRugi.length + ' iklan merugi' : v.n + ' baris ' + input.nama + ': pendapatan ' + rp(v.utPend) + ', biaya ' + rp(v.utBiaya) + ', ' + (v.utLaba >= 0 ? 'untung ' : 'rugi ') + rp(Math.abs(v.utLaba)) + ', ' + v.utRugi.length + ' baris merugi'",
+    "teks": "'# Kinerja ' + input.nama + '\\n\\n' + (!v.n ? 'Tidak ada data yang terbaca.' : input.jenis === 'pipeline' ? tabel(['Tahap', 'Yang sampai', 'Lanjut dari tahap sebelumnya (persen)', 'Nilai di tahap ini'], v.tahap.map((t, i) => [t, v.sampai[i], v.konv[i], rp(v.nilaiTahap[i])])) + '\\n\\nTahap macet (di bawah ' + v.batas + ' persen): ' + (v.macet.length ? v.macet.join(', ') : 'tidak ada') : input.jenis === 'iklan' ? tabel(['Iklan', 'Biaya', 'Tayang', 'Klik', 'Pesanan', 'Pendapatan', 'CTR persen', 'CVR persen', 'ROAS'], v.ikHasil) + '\\n\\nTotal: CTR ' + v.ctr + ' persen, CVR ' + v.cvr + ' persen, ROAS ' + v.roas + '\\n\\nIklan merugi (ROAS di bawah 1): ' + (v.ikRugi.length ? v.ikRugi.map((r) => r[0]).join(', ') : 'tidak ada') : tabel(['Nama', 'Pendapatan', 'Biaya', 'Laba', 'Margin persen'], v.ut) + '\\n\\nMargin total ' + v.utMargin + ' persen. Baris merugi: ' + (v.utRugi.length ? v.utRugi.map((r) => r[0]).join(', ') : 'tidak ada'))",
+    "berkas": [
+      { "jenis": "csv", "nama": "'kinerja-' + cut(String(input.nama).toLowerCase(), 30)", "isi": "input.jenis === 'pipeline' ? csv([['tahap', 'sampai', 'lanjut persen', 'nilai']].concat(v.tahap.map((t, i) => [t, v.sampai[i], v.konv[i], v.nilaiTahap[i]]))) : input.jenis === 'iklan' ? csv([['iklan', 'biaya', 'tayang', 'klik', 'pesanan', 'pendapatan', 'ctr persen', 'cvr persen', 'roas']].concat(v.ikHasil)) : csv([['nama', 'pendapatan', 'biaya', 'laba', 'margin persen']].concat(v.ut))" }
+    ],
+    "data": "({ n: v.n, total: input.jenis === 'pipeline' ? v.totalPipe : input.jenis === 'iklan' ? v.ikHasilRp : v.utPend, biaya: input.jenis === 'iklan' ? v.ikBiaya : input.jenis === 'untung' ? v.utBiaya : 0, laba: input.jenis === 'untung' ? v.utLaba : input.jenis === 'iklan' ? v.ikHasilRp - v.ikBiaya : 0, margin: v.utMargin, roas: v.roas, ctr: v.ctr, cvr: v.cvr, konversiAkhir: v.konvAkhir, rugi: v.jmlRugi, macet: v.jmlMacet })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "nama": "Prospek Mei", "jenis": "pipeline", "ketat": "ketat", "data": "Andi | Kontak | 1000000\nBudi | Penawaran | 5000000\nCitra | Kontak | 2000000\nDedi | Deal | 8000000\nEka | Penawaran | 3000000\nFani | Kontak | 500000\nGita | Deal | 4000000" }, "expect": { "berkas": 1, "mengandung": ["7 calon pembeli Prospek Mei", "2 tahap macet"] } },
+  "otakProfil": {
+    "peran": "analis penjualan yang menjelaskan angka kinerja kepada pemilik usaha awam",
+    "tujuan": "Terangkan di mana penjualan atau iklan berjalan baik, di mana macet atau merugi, dan tindakan terdekat yang masuk akal.",
+    "gaya": "lugas, berbasis angka, tidak menggurui",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Sebut dulu yang merugi atau macet, lalu yang berjalan baik.", "Beri saran yang bisa dicoba minggu ini dan jelaskan bahwa data sedikit belum tentu mewakili."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar", "keadaan": "pilihan:sehat|waspada|bermasalah" },
+    "contoh": { "baik": "Satu iklan mengeluarkan biaya tetapi tidak menghasilkan pesanan; hentikan dulu dan alihkan anggarannya.", "buruk": "Penjualan perlu ditingkatkan." },
+    "batas": { "pembahasan": 700, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["penjualan"], "minPanjang": 40, "maksPanjang": 700 },
+    "contohAI": "{\"pembahasan\":\"Penjualan tertahan di beberapa tahap karena banyak calon pembeli tidak lanjut ke tahap berikutnya. Fokus pada tahap yang paling banyak kehilangan calon.\",\"poin\":[\"Ada tahap yang macet\",\"Yang sampai akhir masih sedikit\"],\"langkah\":[\"Hubungi kembali calon yang tertahan\",\"Periksa penawaran di tahap yang macet\"],\"keadaan\":\"waspada\"}"
+  },
+  "evaluasi": [
+    { "nama": "calon pembeli dengan tahap macet", "input": { "nama": "Prospek Mei", "jenis": "pipeline", "ketat": "ketat", "data": "Andi | Kontak | 1000000\nBudi | Penawaran | 5000000\nCitra | Kontak | 2000000\nDedi | Deal | 8000000\nEka | Penawaran | 3000000\nFani | Kontak | 500000\nGita | Deal | 4000000" }, "ai": "{\"pembahasan\":\"Penjualan tertahan karena dari tujuh calon hanya dua yang sampai tahap akhir. Penawaran dan Deal sama-sama di bawah batas lanjut yang diharapkan.\",\"poin\":[\"Dua tahap macet\"],\"langkah\":[\"Hubungi kembali calon di tahap Penawaran\"],\"keadaan\":\"waspada\"}", "kriteria": { "mengandung": ["penjualan", "tujuh"], "mengandungAturan": ["Penawaran", "Deal", "macet"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.total", "min": 23500000, "max": 23500000 }, { "path": "data.macet", "min": 2, "max": 2 }, { "path": "data.konversiAkhir", "min": 28, "max": 29 }] } },
+    { "nama": "hasil iklan dengan satu yang merugi", "input": { "nama": "Iklan bulan ini", "jenis": "iklan", "ketat": "sedang", "data": "Iklan A | 500000 | 100000 | 2000 | 50 | 1500000\nIklan B | 300000 | 50000 | 500 | 0 | 0\nIklan C | 200000 | 20000 | 400 | 20 | 300000" }, "ai": "{\"pembahasan\":\"Iklan B menghabiskan biaya tanpa pesanan sehingga merugi, sedangkan Iklan A memberi hasil paling baik. Alihkan anggaran dari B ke A.\",\"poin\":[\"Iklan B merugi\",\"Iklan A paling untung\"],\"langkah\":[\"Hentikan Iklan B\"],\"keadaan\":\"waspada\"}", "kriteria": { "mengandung": ["Iklan B", "anggaran"], "mengandungAturan": ["ROAS", "Iklan merugi"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.roas", "min": 1.79, "max": 1.81 }, { "path": "data.ctr", "min": 1.7, "max": 1.72 }, { "path": "data.cvr", "min": 2.4, "max": 2.42 }, { "path": "data.rugi", "min": 1, "max": 1 }, { "path": "data.biaya", "min": 1000000, "max": 1000000 }] } },
+    { "nama": "untung rugi dengan baris rusak dan pemisah titik koma", "input": { "nama": "Toko bulan ini", "jenis": "untung", "ketat": "longgar", "data": "Toko A ; 1.000.000 ; 1.200.000\nToko B | 2.500.000 | 1.000.000\nbaris rusak\n\nToko C | abc | 100" }, "ai": "{\"pembahasan\":\"Secara total masih untung karena Toko B kuat, tetapi Toko A dan Toko C merugi. Periksa biaya Toko A yang lebih besar dari pendapatannya.\",\"poin\":[\"Dua toko merugi\"],\"langkah\":[\"Periksa biaya Toko A\"],\"keadaan\":\"waspada\"}", "kriteria": { "mengandung": ["Toko A", "untung"], "mengandungAturan": ["Toko C", "Margin total"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.n", "min": 3, "max": 3 }, { "path": "data.total", "min": 3500000, "max": 3500000 }, { "path": "data.laba", "min": 1299900, "max": 1299900 }, { "path": "data.rugi", "min": 2, "max": 2 }] } }
+  ]
+}

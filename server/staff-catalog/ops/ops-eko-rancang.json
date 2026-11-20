@@ -148,31 +148,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Automation Specialist di divisi Operations, memakai bahasa awam",
-    "tujuan": "Ubah daftar langkah kerja menjadi peta otomasi lengkap: pemicu, urutan langkah, tingkat kerumitan, dan daftar periksa sebelum dinyalakan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "rancang-struktur"
+  ],
+  "keahlian": {
+    "istilah": [
+      "rancang otomasi",
+      "alur kerja",
+      "pemicu",
+      "langkah",
+      "peta proses"
+    ],
+    "data": [
+      "nama otomasi",
+      "mulai ketika",
+      "langkah-langkahnya (satu per baris)",
+      "hasil akhirnya"
+    ],
+    "gaya": "praktis, fokus tenggat dan penanggung jawab",
     "contoh": {
       "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
-      "buruk": "Operasional perlu rapi."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "rancang otomasi"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil perancang peta otomasi perlu dibaca bersama: rancang otomasi menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan anggaran tetap di manajer."
+    ]
   }
 }

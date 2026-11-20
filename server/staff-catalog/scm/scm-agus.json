@@ -106,31 +106,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Logistics & Fulfillment Coordinator di divisi Supply Chain & Warehouse, memakai bahasa awam",
-    "tujuan": "Bandingkan beberapa kurir dari biaya kirim, lama sampai, dan tingkat keterlambatan sesuai prioritas Anda. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "berbasis angka stok dan waktu kirim, tandai risiko kehabisan atau menumpuk",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kurir",
+      "ongkir",
+      "pengiriman",
+      "ekspedisi",
+      "biaya kirim"
+    ],
+    "data": [
+      "berat tiap paket (kg)",
+      "jumlah paket",
+      "yang paling penting",
+      "kurir (nama | tarif per kg | minimal kg | lama hari | terlam"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
     "contoh": {
       "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
-      "buruk": "Stok sepertinya cukup."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "kurir"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembanding biaya dan mutu kurir perlu dibaca bersama: kurir menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
   }
 }

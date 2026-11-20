@@ -74,31 +74,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "HSE / K3 Officer di divisi Manufacturing, memakai bahasa awam",
-    "tujuan": "Nilai tiap bahaya dengan matriks 5x5 (kemungkinan kali keparahan), tentukan tingkat risiko, dan beri langkah pengendalian. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan, sebut batas yang dilanggar",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "peta-risiko"
+  ],
+  "keahlian": {
+    "istilah": [
+      "k3",
+      "risiko",
+      "bahaya",
+      "keselamatan kerja",
+      "matriks risiko"
+    ],
+    "data": [
+      "area atau kegiatan yang dinilai",
+      "bahaya (satu baris: bahaya | kemungkinan 1-5 | keparahan 1-5"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
     "contoh": {
-      "baik": "Hasil rendemen 88 persen di bawah target 92; cek takaran bahan.",
-      "buruk": "Produksi lancar."
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "k3"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penilaian risiko keselamatan kerja perlu dibaca bersama: k3 menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
   }
 }

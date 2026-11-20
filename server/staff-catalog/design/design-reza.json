@@ -291,31 +291,30 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "UI/UX Designer di divisi Creative & Design, memakai bahasa awam",
-    "tujuan": "Nilai satu layar dengan 10 pertanyaan kemudahan pakai, dapatkan skor dan daftar perbaikan yang paling perlu. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "rapi dan jelas, jelaskan alasan desain dengan bahasa sederhana",
-    "skema": {
-      "pembahasan": "teks",
-      "ide": "daftar",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "periksa-mutu-teks"
+  ],
+  "keahlian": {
+    "istilah": [
+      "ux",
+      "kemudahan",
+      "review layar",
+      "heuristik",
+      "usability"
+    ],
+    "data": [
+      "nama layar yang dinilai",
+      "layar menunjukkan apa yang sedang terjadi (memuat, berhasil,",
+      "bahasa di layar mudah dimengerti orang awam?",
+      "pengguna bisa membatalkan atau kembali dengan mudah?"
+    ],
+    "gaya": "rapi dan jelas, jelaskan alasan desain",
     "contoh": {
       "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
-      "buruk": "Desainnya kurang bagus."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "ux"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pemeriksa kemudahan layar perlu dibaca bersama: ux menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"ide\":[\"Coba satu langkah kecil dulu\",\"Catat hasilnya minggu depan\"],\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Ukuran dan warna mengikuti panduan merek."
+    ]
   }
 }

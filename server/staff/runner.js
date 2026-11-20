@@ -15,6 +15,8 @@ import { normalizeInput, InputError, FILE_KINDS } from './schema.js';
 import { callHook, StaffError } from './hook.js';
 import { saveRun, findRun, runsOf, writeFiles, readFile, cleanFileName, appendRow, filesOf } from './data.js';
 import * as native from './native.js';
+import * as kem from './kemampuan.js';
+import * as kontrak from './kontrak.js';
 
 const db = () => store.get();
 export const LIMITS = { perHour: 40, concurrent: 3, timeoutMs: 60_000, maxFiles: 6, maxFileBytes: 300_000, maxTotalBytes: 600_000, nativePerDay: 2000, otakPerDay: 200 };
@@ -23,7 +25,7 @@ const busy = new Map();   // employeeId → jumlah jalan bersamaan (agar status 
 const emp = (id) => db().employees.find((e) => e.id === id) || null;
 
 const clip = (s, n) => String(s ?? '').slice(0, n);
-const viewRun = (r) => ({ id: r.id, status: r.status, staf: { kunci: r.staf, nama: r.nama }, karyawan: r.employeeId, ringkas: r.ringkas || '', teks: r.teks || '', berkas: r.berkas || [], data: r.data || null, pesan: r.pesan || '', galat: r.galat || '', mesin: r.mesin || 'n8n', catatan: r.catatan || '', pakaiAI: r.pakaiAI ?? null, ms: r.ms || 0, biaya: r.biaya || 0, mulai: r.startedAt, selesai: r.endedAt || null });
+const viewRun = (r) => ({ id: r.id, status: r.status, staf: { kunci: r.staf, nama: r.nama }, karyawan: r.employeeId, ringkas: r.ringkas || '', teks: r.teks || '', berkas: r.berkas || [], data: r.data || null, pesan: r.pesan || '', galat: r.galat || '', mesin: r.mesin || 'n8n', catatan: r.catatan || '', pakaiAI: r.pakaiAI ?? null, bukti: r.bukti || [], jalanKeluar: r.jalanKeluar || [], modelAI: r.modelAI || '', panggilanAI: r.panggilanAI || 0, ms: r.ms || 0, biaya: r.biaya || 0, mulai: r.startedAt, selesai: r.endedAt || null });
 
 function setWorking(e, text) {
   if (!e) return; busy.set(e.id, (busy.get(e.id) || 0) + 1);
@@ -67,16 +69,20 @@ function toBrain(spec, e, run, out) {
 
 function failure(run, spec, e, err) {
   const msg = err instanceof StaffError || err instanceof InputError ? err.message : N.scrub(err?.message || 'Terjadi kendala.');
-  Object.assign(run, { status: err?.kind === 'lama' && !spec?.__twoPhase ? 'menunggu' : 'gagal', galat: msg, endedAt: Date.now(), ms: Date.now() - run.startedAt });
+  // K8: "menunggu" hanya masuk akal untuk alur n8n (hasilnya bisa diambil belakangan). Mesin native yang kehabisan waktu = gagal, bukan macet selamanya.
+  const mgtu = err?.kind === 'lama' && run.mesin === 'n8n' && !spec?.__twoPhase;
+  Object.assign(run, { status: mgtu ? 'menunggu' : 'gagal', galat: msg, endedAt: Date.now(), ms: Date.now() - run.startedAt, jalanKeluar: mgtu ? [] : (err?.jalanKeluar || kontrak.pesanGagal(run.nama, []).jalanKeluar), kontrakMasalah: err?.masalah });
   saveRun(run); setDone(e, false);
   engine.event('staff_failed', e?.id || 'system', `Staf "${run.nama}" gagal: ${msg}`, {});
   return run;
 }
 
 /** Jalankan satu staf. Mengembalikan tampilan jalan; melempar StaffError/InputError hanya untuk penolakan sebelum mulai. */
-export async function run({ key, input, userId = 'owner', taskId = null, confirmed = false, ws = store.current(), employeeId = null } = {}) {
-  const spec = registry.get(key); if (!spec) throw new StaffError('Staf itu tidak ditemukan.', 'tak_ada', 404);
-  if (!registry.ready(spec)) throw new StaffError(`"${spec.title}" belum siap dipakai. Pilih staf lain dulu.`, 'belum_siap', 409);
+export async function run({ key, input, userId = 'owner', taskId = null, confirmed = false, ws = store.current(), employeeId = null, capability = null, person = null } = {}) {
+  // jalur KEMAMPUAN: kemampuan inti dijalankan oleh seorang staf (orang) yang keahliannya dirakit ke dalamnya; karakter staf itulah yang tampil bekerja di 3D
+  const spec = capability ? kem.composeFor(capability, person) : registry.get(key); if (!spec) throw new StaffError('Staf itu tidak ditemukan.', 'tak_ada', 404);
+  if (capability) spec.name = `${capability.name} (oleh ${emp(person?.employeeId)?.name || person?.title || 'staf'})`;
+  if (!capability && !registry.ready(spec)) throw new StaffError(`"${spec.title}" belum siap dipakai. Pilih staf lain dulu.`, 'belum_siap', 409);
   const clean = await normalizeInput(spec, input, { checkUrl: (u) => browser.checkUrl(u, browser.cfg()) });
   const e = emp(spec.employeeId) || emp(employeeId);
   const L = limits(), mine = runsOf(ws), hour = Date.now() - 3600e3;
@@ -140,8 +146,8 @@ function nativeLlmCall(req, e, taskId, rec) {
     } catch { return { text: '', alasan: 'AI sedang tidak bisa dipakai, hasil memakai aturan saja' }; }
   })();
 }
-async function runNative(spec, clean, rec, e) {
-  const hooks = { llm: nativeLlm(e, rec.taskId, rec), saveRow: (row) => appendRow(rec.ws, row) };
+async function runNative(spec, clean, rec, e, { tanpaAI = false } = {}) {
+  const hooks = { ...(tanpaAI ? {} : { llm: nativeLlm(e, rec.taskId, rec) }), saveRow: tanpaAI ? () => {} : (row) => appendRow(rec.ws, row) };
   const res = await Promise.race([native.runSpec(spec, { input: clean, ws: rec.ws, user: rec.by, runId: rec.id, hooks }), new Promise((_, rej) => setTimeout(() => rej(new StaffError('Pekerjaan ini memakan waktu lebih lama dari biasanya.', 'lama', 504)), limits().timeoutMs).unref())]);
   const u = nativeUsage(); u.ms += Date.now() - rec.startedAt; return res;
 }
@@ -168,16 +174,23 @@ async function execute(rec, spec, clean, e) {
     }
     if (res.tahap === 'galat') throw new InputError(clip(res.pesan, 200) || 'Isian belum lengkap.');
     if (res.tahap !== 'selesai') throw new StaffError('Hasil staf tidak lengkap.', 'kosong', 502);
-    const out = sanitize(res);
+    let out = sanitize(res);
+    // KONTRAK EKSEKUSI (kontrak.js): tanpa bukti yang sah tidak ada status "selesai". Bila hasil bermasalah dan AI ikut menulis, coba versi aturan tanpa AI (K5).
+    let kon = kontrak.periksaHasil(spec, out, { pakaiAI: res.pakaiAI });
+    if (!kon.ok && mesin === 'native' && (res.pakaiAI === true || rec.panggilanAI)) {
+      rec.catatan = [rec.catatan, 'Hasil AI tidak lolos pemeriksaan, memakai versi aturan.'].filter(Boolean).join('; ');
+      try { const r2 = await runNative(spec, clean, rec, e, { tanpaAI: true }); if (r2.tahap === 'selesai') { res = r2; out = sanitize(res); kon = kontrak.periksaHasil(spec, out, { pakaiAI: res.pakaiAI }); } } catch { /* tetap pakai pemeriksaan terakhir */ }
+    }
+    if (!kon.ok) { const pg = kontrak.pesanGagal(spec.name, kon.masalah); throw Object.assign(new StaffError(pg.galat, 'kontrak', 502), { jalanKeluar: pg.jalanKeluar, masalah: kon.masalah }); }
     const meta = writeFiles(rec.ws, rec.id, out.files); out.files.forEach((f, i) => { f.bytes = meta[i].bytes; f.nama = meta[i].nama; });
-    Object.assign(rec, { status: 'selesai', ringkas: out.ringkas, teks: out.teks, berkas: meta, data: out.data, endedAt: Date.now(), ms: Date.now() - rec.startedAt, biaya: Math.round((usageCost() - cost0) * 1e6) / 1e6, pakaiAI: res.pakaiAI ?? null });
+    Object.assign(rec, { status: 'selesai', ringkas: out.ringkas, teks: out.teks, berkas: meta, data: out.data, bukti: kon.bukti, jalanKeluar: [], endedAt: Date.now(), ms: Date.now() - rec.startedAt, biaya: Math.round((usageCost() - cost0) * 1e6) / 1e6, pakaiAI: res.pakaiAI ?? null });
     delete rec.inputFull; saveRun(rec);
     toBrain(spec, e, rec, { ...out, files: meta });
     if (e) { e.staff = { ...(e.staff || {}), terakhir: { staf: spec.key, id: rec.id, hasil: 'selesai', waktu: rec.endedAt } }; store.upsert('employees', e); }
     engine.event('staff_done', e?.id || 'system', `Staf "${spec.name}" selesai: ${out.ringkas}`, { taskId: rec.taskId });
     setDone(e, true);
     return viewRun(rec);
-  } catch (err) { return viewRun(failure(rec, spec, e, err)); }
+  } catch (err) { rec.biaya = Math.round((usageCost() - cost0) * 1e6) / 1e6; return viewRun(failure(rec, spec, e, err)); }
 }
 
 /** Persetujuan Owner untuk jalan yang menunggu izin (staf berisiko tinggi). */

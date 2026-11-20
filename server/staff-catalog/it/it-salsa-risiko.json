@@ -89,31 +89,28 @@
     "folder": "Report",
     "simpan": true
   },
-  "otakProfil": {
-    "peran": "Security Analyst di divisi IT & Security, memakai bahasa awam",
-    "tujuan": "Beri skor tiap risiko dari kemungkinan dan dampaknya, hitung sisa risiko setelah pengendalian, dan urutkan. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar, beri langkah yang bisa dicoba",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "peta-risiko"
+  ],
+  "keahlian": {
+    "istilah": [
+      "risiko",
+      "matriks risiko",
+      "keamanan informasi",
+      "penilaian risiko",
+      "pengendalian"
+    ],
+    "data": [
+      "risiko (nama | kemungkinan 1-5 | dampak 1-5 | sudah ada peng",
+      "sisa risiko mulai perlu tindakan di tingkat"
+    ],
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar",
     "contoh": {
       "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
-      "buruk": "Sistem mungkin kurang aman."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "risiko"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil penyusun peta risiko keamanan perlu dibaca bersama: risiko menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Jangan meminta atau menyebut kata sandi asli."
+    ]
   }
 }

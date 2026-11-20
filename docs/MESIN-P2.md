@@ -1,6 +1,6 @@
 # Mesin (Fase P2)
 
-Status: selesai dan teruji, 2026-11-18. Rencana induk: `docs/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md` (temuan 1, 9, 16, 17). Pagar: `docs/PAGAR-SINKRONISASI.md`. Arsitektur staf: `docs/ARSITEKTUR-STAF-N8N.md`.
+Status: selesai dan teruji, 2026-11-18. Rencana induk: `docs/arsip/AUDIT-SINKRONISASI-DAN-RENCANA-MIGRASI.md` (temuan 1, 9, 16, 17). Pagar: `docs/PAGAR-SINKRONISASI.md`. Arsitektur staf: `docs/ARSITEKTUR-STAF-N8N.md`.
 Kode: `server/catalog.js` (peran dan kelompok alat), `server/approvals.js` (baru), `server/governor.js` (kuota), `server/engine.js` (pintu alat, prompt, status). Tes: `test/invariants.test.js` (INV5d, INV6a, INV6b, INV7, INV8, INV10, INV11b).
 
 ## 1. Alat per peran: satu pintu kecil

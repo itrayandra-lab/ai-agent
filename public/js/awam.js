@@ -22,12 +22,12 @@ export function ramah(raw, status) {
   const s = Number(status) || 0;
   if (s === 401) return 'Sesimu sudah berakhir. Silakan masuk lagi.';
   if (s === 403) return 'Bagian ini hanya bisa dibuka oleh pemilik ruang kerja.';
-  if (s === 404) return 'Yang kamu cari belum ketemu. Coba kembali ke Beranda.';
+  if (s === 404) return 'Yang kamu cari belum ketemu. Coba kembali ke Obrolan.';
   if (s === 408 || s === 429) return 'Lagi ramai sebentar. Tunggu sebentar lalu coba lagi.';
   if (s >= 500) return 'Ada yang belum berhasil di pihak kami. Coba lagi sebentar ya.';
   if (!s && /failed to fetch|networkerror|load failed|network request/i.test(msg)) return 'Sambungan internet sepertinya terputus. Periksa sambunganmu lalu coba lagi.';
   if (msg && msg.length <= 180 && !TEKNIS.test(msg) && /\s/.test(msg)) return awam(msg);
-  return 'Ada yang belum berhasil. Coba lagi sebentar, atau minta Pemandu membantu.';
+  return 'Ada yang belum berhasil. Coba lagi sebentar, atau minta aray membantu.';
 }
 
 /** status karyawan dalam kata orang. Tidak ada status mentah. */

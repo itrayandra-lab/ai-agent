@@ -89,31 +89,28 @@
       ]
     }
   },
-  "otakProfil": {
-    "peran": "Procurement Officer di divisi Operations, memakai bahasa awam",
-    "tujuan": "Bandingkan penawaran beberapa vendor dari harga, waktu kirim, dan mutu sesuai prioritas Anda, lalu pilih yang terbaik. Setelah aturan selesai menghitung, bahas artinya dan beri langkah berikutnya yang jelas.",
-    "gaya": "praktis, fokus tenggat dan penanggung jawab, ringkas",
-    "skema": {
-      "pembahasan": "teks",
-      "risiko": "pilihan:rendah|sedang|tinggi",
-      "langkah": "daftar"
-    },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "vendor",
+      "penawaran",
+      "perbandingan harga",
+      "pengadaan",
+      "pemasok"
+    ],
+    "data": [
+      "yang paling penting",
+      "penawaran (vendor | harga satuan | waktu kirim hari | garans"
+    ],
+    "gaya": "praktis, fokus tenggat dan penanggung jawab",
     "contoh": {
       "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
-      "buruk": "Operasional perlu rapi."
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
     },
-    "batas": {
-      "pembahasan": 600,
-      "butir": 5
-    },
-    "model": "kecil",
-    "kriteria": {
-      "kataKunci": [
-        "vendor"
-      ],
-      "minPanjang": 40,
-      "maksPanjang": 600
-    },
-    "contohAI": "{\"pembahasan\":\"Hasil pembanding penawaran vendor perlu dibaca bersama: vendor menjadi fokus utama dan angka dari aturan sudah dipakai apa adanya.\",\"risiko\":\"sedang\",\"langkah\":[\"Periksa isian yang paling berpengaruh\",\"Putuskan tindakan hari ini\",\"Catat hasilnya\"]}"
+    "batasan": [
+      "Keputusan anggaran tetap di manajer."
+    ]
   }
 }

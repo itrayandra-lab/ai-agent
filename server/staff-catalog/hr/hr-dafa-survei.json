@@ -106,5 +106,29 @@
       ]
     },
     "ai": "{\"pembahasan\":\"Karyawan merasa dihargai dan didukung atasan, namun beban kerja masih dirasa berat.\",\"saran\":[\"Tinjau pembagian beban kerja\",\"Adakan obrolan terbuka soal prioritas\"]}"
+  },
+  "kemampuan": [
+    "ringkas-umpan-balik"
+  ],
+  "keahlian": {
+    "istilah": [
+      "survei karyawan",
+      "engagement",
+      "kepuasan kerja",
+      "skor",
+      "umpan balik"
+    ],
+    "data": [
+      "hasil survei (pertanyaan | nilai 1-5 dipisah spasi)",
+      "dianggap perlu perhatian jika rata-rata di bawah"
+    ],
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
   }
 }
