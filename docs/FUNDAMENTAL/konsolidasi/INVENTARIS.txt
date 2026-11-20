@@ -1,0 +1,77 @@
+JS server 107 berkas; JS klien 42; CSS 10; tes 47
+Ukuran: CSS 259666 B; JS klien 1193523 B; JS server 1954362 B
+!important per CSS: public/css/app.css=33, public/css/float-nav.css=6, public/css/glass-global.css=22, public/css/glass.css=1, public/css/hemat.css=7, public/css/identity.css=16, public/css/office-layout.css=56
+
+## serverTanpaPemanggil (0)
+
+
+## klienTanpaPemanggil (0)
+
+
+## cssTidakDipasang (2)
+- public/css/obrolan.css
+- public/css/pesan.css
+
+## ruteYatim (15)
+- GET /api/percakapan
+- GET /api/chat/kabar
+- POST /api/channels
+- GET /api/capabilities
+- GET /api/brain/audit
+- POST /api/drive/setup
+- POST /api/drive/push
+- POST /api/drive/pull
+- POST /api/automations/propose
+- GET /api/automations/:id/data
+- POST /api/pemandu/turn
+- GET /api/pemandu/home
+- GET /api/belajar/catatan/:agentId
+- DELETE /api/belajar/catatan/:agentId/:nomor
+- GET /api/belajar/cari
+
+## pemanggilTanpaRute (10)
+- /api/drive/  <- public/js/pengaturan-view.js, public/js/views.js
+- /api/v1/  <- test/fixtures/mock-n8n.mjs
+- /api/lainnya  <- test/n8n.test.js
+- /api/approvals/ap-x  <- test/security.test.js
+- /api/x  <- test/ui-awam.test.js
+- /api/v1/workflows  <- scripts/lib/n8n-staf.mjs
+- /api/v1/workflows/:x/activate  <- scripts/n8n-staf-aktifkan.mjs
+- /api/v1/workflows/:x/deactivate  <- scripts/n8n-staf-nonaktifkan.mjs
+- /api/v1/data-tables  <- scripts/staff-cleanup.mjs
+- /api/v1/data-tables/:x  <- scripts/staff-cleanup.mjs, scripts/staff-live.mjs
+
+## idGandaHtml (0)
+
+
+## idDibuatDiBanyakBerkas (1)
+- drres: public/js/pengaturan-view.js, public/js/views.js
+
+## selektorGanda (381) — 25 teratas
+- 26x @media (max-width: 820px)  [public/css/app.css, public/css/float-nav.css, public/css/glass-global.css, public/css/glass.css, public/css/identity.css, public/css/knowledge.css, public/css/obrolan.css]
+- 12x :root[data-theme="light"]  [public/css/app.css, public/css/float-nav.css, public/css/glass-global.css, public/css/glass.css, public/css/identity.css]
+- 10x .topbar  [public/css/app.css, public/css/glass.css, public/css/identity.css, public/css/office-layout.css]
+- 10x .card-h  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 9x .sidebar  [public/css/app.css, public/css/glass.css, public/css/identity.css, public/css/office-layout.css]
+- 9x .nav-item  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 9x to  [public/css/app.css, public/css/glass-global.css, public/css/glass.css]
+- 8x .side-foot  [public/css/app.css, public/css/glass.css]
+- 8x .chip  [public/css/app.css, public/css/glass.css]
+- 7x :root  [public/css/app.css, public/css/float-nav.css, public/css/glass-global.css, public/css/glass.css, public/css/identity.css]
+- 7x .pill  [public/css/app.css, public/css/glass.css]
+- 7x .bottomnav  [public/css/app.css, public/css/glass.css, public/css/identity.css, public/css/office-layout.css]
+- 7x .btn  [public/css/app.css, public/css/glass.css, public/css/hemat.css, public/css/identity.css]
+- 7x .col  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 7x .col-h  [public/css/app.css, public/css/identity.css]
+- 7x .drawer  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 7x .modal-card  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 7x .toast  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 7x .bottomnav button  [public/css/app.css, public/css/identity.css]
+- 7x @media (max-width: 900px)  [public/css/app.css, public/css/glass.css, public/css/office-layout.css]
+- 7x @media (min-width: 901px)  [public/css/office-layout.css]
+- 6x body  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 6x .main  [public/css/app.css, public/css/glass.css, public/css/identity.css]
+- 6x .brand small  [public/css/app.css, public/css/identity.css]
+- 6x .search-btn  [public/css/app.css, public/css/glass.css]
+
+marka versi office-layout: 0

@@ -155,3 +155,6 @@ Belum: pengingat jadwal dan persetujuan menunggu oleh aray baru tampak sebagai s
 
 ## 10. Jawab dulu (kasus "@reno kamu algi apa")
 Akar masalah ganda: (1) awalan "@" belum dihitung sebagai isyarat menyapa, sehingga nama pendek seperti "@reno hai" jatuh ke Sora; (2) model menafsirkan "algi" sebagai "algoritma" lalu memberi menu. Perbaikan: router mengenali "@nama", "kmu", salah eja nama pendek yang jelas disapa; pertanyaan tentang diri (`TANYA_DIRI`) mendapat perintah khusus (tafsirkan salah ketik, jawab dari peran dan keahlian di profil, tanpa menu, tanpa mengarang pengalaman, jam kerja, atau angka); prinsip 5 menjadi **JAWAB DULU**; pagar kode: menu kaku (`menuKaku`) ditolak dan dijawab ulang sekali, angka karangan diganti pengakuan "belum ada di profilku". Pilihan hanya sebagai saran lanjutan di akhir.
+
+## Penegasan konsolidasi (2026-11-20)
+Urutan penerima: chip/target eksplisit > nama disebut > fokus 3D > topik/peran > peserta yang sudah diajak > aray (default). aray = kembaran digital Owner, mendelegasikan lalu agen melapor; Sora bukan pembicara/penerima (id agen Sora di data tidak berubah). Bukti: `test/peran-aray.test.js`, `test/penerima-chat.test.js`, `test/konsolidasi.test.js`.

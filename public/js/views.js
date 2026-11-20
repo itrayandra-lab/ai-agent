@@ -392,7 +392,7 @@ export const OfficeView = {
   /** tujuan: tampilkan peserta yang sedang dipilih di komponen Obrolan, atau aray (otomatis) */
   ctlSegar() {
     const ov = this.ov, who = ov?.querySelector('#odwho'); if (!who || this.leftId !== 'dashboard') return;
-    const nm = [...ov.querySelectorAll('#obPeserta .ob-chip, #obPeserta [data-id], #obPeserta [data-peserta]')].map((x) => x.textContent.replace(/[✕×x]\s*$/i, '').trim()).filter(Boolean);
+    const nm = [...ov.querySelectorAll('#obPeserta .ob-keping, #obPeserta .ob-chip, #obPeserta [data-id], #obPeserta [data-peserta]')].map((x) => x.textContent.replace(/[✕×x]\s*$/i, '').trim()).filter(Boolean);
     who.innerHTML = `${icon('user', 12)} ${esc(nm.length ? nm.join(', ') : this.namaPenerima() + ' · otomatis')}`;
   },
   pilihTujuan() {
@@ -1519,7 +1519,7 @@ export const BrainView = {
       };
       return node(top, top, 0);
     }, !!q, open);
-    tree.querySelector('#borg').onclick = async (ev) => { ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`Catatan dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
+    tree.querySelector('#borg').onclick = async (ev) => { if (!window.confirm('Rapikan catatan? Sebagian catatan akan dipindah ke folder lain dan judulnya diperbaiki.')) return; ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`Catatan dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
     tree.querySelectorAll('details').forEach((dt) => (dt.ontoggle = () => (dt.open ? open.add(dt.dataset.f) : open.delete(dt.dataset.f))));
     tree.querySelectorAll('[data-open]').forEach((x) => (x.onclick = () => { this.open(x.dataset.open); this.root.querySelector('#brain').classList.remove('show-tree'); }));
     tree.querySelector('#bgraph').onclick = () => { this.mode = 'graph'; this.renderAll(); this.root.querySelector('#brain').classList.remove('show-tree'); };

@@ -13,7 +13,7 @@ export const PengaturanView = {
   mount(root) {
     this.root = root;
     root.innerHTML = `<div class="page pengaturan">
-      <header class="page-head"><h2>Pengaturan</h2><p class="muted">Cukup empat hal: akunmu, tampilan, ruang kerja, dan sambungan.</p></header>
+      <header class="page-head"><h2>Pengaturan</h2><p class="muted">Akun, tampilan, ruang kerja, dan sambungan: semuanya diatur dari sini.</p></header>
       <nav class="set-nav" aria-label="Bagian pengaturan"><a href="#sTamp" data-sn="sTamp">Tampilan</a><a href="#sAkun" data-sn="sAkun">Akun</a><a href="#sRuang" data-sn="sRuang">Ruang kerja</a><a href="#sChat" data-sn="sChat">Obrolan di ponsel</a><a href="#sMemori" data-sn="sMemori">Memori</a><a href="#sData" data-sn="sData">Data pribadi</a><a href="#sSamb" data-sn="sSamb">Sambungan</a></nav>
       <section class="card set-k" aria-labelledby="sTamp"><div class="card-b"><h3 id="sTamp">Tampilan</h3>
         <p class="muted">Pilih yang paling nyaman di matamu.</p>

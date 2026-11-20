@@ -199,3 +199,9 @@ Spesifikasi lengkap, diagram alur, model laporan, dan contoh percakapan: [PERILA
 - Laporan: `GET /api/chat/laporan`, `POST /api/chat/laporan/:id/baca`; tab Laporan di Pesan > aray.
 - Teks layar: semua "Sora" di layar pengguna diganti "aray" (app, awam, tim-view, pengaturan-view, hasil-view, views).
 - Tes: `test/aray-kembaran.test.js` (7 tes: pintu bawaan aray, delegasi satu kalimat, bicara langsung tanpa menyela, konfirmasi untuk kerja nyata, laporan, tanpa "Sora" sebagai pembicara/kontak/teks layar, data Sora utuh). Tes lama diperbarui: pembicara utama kini `aria`, topik = [aria, orang], label komposer.
+
+## Koreksi konsolidasi (2026-11-20)
+- `/api/orchestrate` BAWAANNYA sudah Chat Engine (bukan "perilaku lama dok Kantor 3D"); jalur lama hanya untuk kanal, `to`, gambar, rapat, `mesin:'lama'`. Pernyataan lama di bagian ini yang bertentangan dianggap basi (T-42).
+- `GET /api/percakapan` tidak punya pemanggil di klien; Kantor 3D memakai `/api/chat/conversations`. Rute dipertahankan sebagai alias kompatibel.
+- Satu pintu: web, Telegram, Discord, dock 3D memanggil `pemandu.turn`, yang diarahkan ke `chat-engine.turn` lewat `pemandu.setFront`. Staf berdampak: `confirmed=true` hanya dari tombol "Ya, jalankan" dan ditolak bila `canAutomate=false` (T-07).
+- Peta alur nyata: `docs/FUNDAMENTAL/konsolidasi/AUDIT.md` §1.

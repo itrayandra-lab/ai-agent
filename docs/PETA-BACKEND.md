@@ -170,3 +170,6 @@ Langkah berikut (opsional): alihkan impor `staff/`, `channels/`, tes, dan skrip 
 - Menambah variabel .env: daftarkan di `config.ENV_KEYS` dulu.
 - Menambah pembuat tugas: lewat `engine.createTask`; jangan `store.upsert('tasks', ...)` baru.
 - Menambah kartu persetujuan: lewat `approvals.create`.
+
+## Pembaruan konsolidasi (2026-11-20)
+12 berkas peneruskan satu baris di akar `server/` (admin, gdrive, librarian, roster, roster-extra, roster-studio, roster-teams, skills-deep, skills-extra, sop, studio, tts-edge) dipindah ke `_arsip-kode/` (DAFTAR.md) karena tak punya pemanggil; modul aslinya tetap di subfolder (bagian 9). Peneruskan lain masih diimpor dan dipertahankan. Inventaris: `node scripts/inventaris.mjs`.

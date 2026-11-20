@@ -90,7 +90,7 @@ export const HasilView = {
   mount(root) {
     this.f = this.f || { q: '' }; this.pilih = { on: false, ids: new Set() }; this.buka = S.params?.buka || null; this.root = root;
     root.innerHTML = `<div class="page hasil">
-      <header class="page-head"><h2>Hasil saya</h2><p class="muted">Semua pekerjaan timmu ada di sini: yang perlu kamu putuskan, yang sedang jalan, dan yang sudah jadi.</p></header>
+      <header class="page-head"><h2>Hasil Saya</h2><p class="muted">Semua pekerjaan timmu ada di sini: yang perlu kamu putuskan, yang sedang jalan, dan yang sudah jadi.</p></header>
       <div class="hasil-bar"><label class="sr-only" for="hq">Cari pekerjaan</label><input id="hq" class="input" type="search" placeholder="Cari pekerjaan…" value="${esc(this.f.q)}" autocomplete="off"><button type="button" class="btn primary" id="hbaru">${icon('plus', 18)} Mulai pekerjaan</button><button type="button" class="btn" id="hpilih" aria-pressed="false">${icon('check', 16)} Pilih</button></div>
       <div class="hasil-massal glass" id="hmassal" role="toolbar" aria-label="Aksi untuk hasil yang dipilih" hidden><b id="hn" aria-live="polite">0 dipilih</b><span style="flex:1"></span><button type="button" class="btn sm" data-m="semua">Pilih semua</button><button type="button" class="btn sm" data-m="simpan">${icon('doc', 14)} Simpan ke Catatan</button><button type="button" class="btn sm" data-m="hapus">${icon('close', 14)} Hapus</button><button type="button" class="btn sm ghost" data-m="batal">Batal</button></div>
       <div id="hbody">${memuat('Menyiapkan daftar hasilmu…')}</div>

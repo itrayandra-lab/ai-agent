@@ -72,6 +72,7 @@ export async function loadState() {
   const pra = window.__state0; window.__state0 = null;   // perf: unduhan pertama sudah dimulai di index.html, sejajar dengan pemuatan modul
   const r = await (pra ? pra.catch(() => fetch('/api/state')) : fetch('/api/state'));
   if (r.status === 401 || r.status === 403) { loginGate({ ...(await r.json().catch(() => ({}))), forbidden: r.status === 403 }); throw Object.assign(new Error('Perlu masuk'), { gate: true }); }
+  if (!r.ok) throw new Error('Server belum bisa dihubungi (' + r.status + ')');   // T-06: jangan jadikan galat 500 sebagai data
   S.data = await r.json();
   (S.data.divisions || []).forEach(softDiv);
   S.me = S.data.me || S.data.settings.currentUserId || 'owner';   // the signed-in person (from the server session)

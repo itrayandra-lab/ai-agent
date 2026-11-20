@@ -688,3 +688,6 @@ Tingkat: **Tinggi** (merusak fungsi, keamanan, atau bertentangan keras), **Sedan
 | T-47 | Rendah | Dugaan | Esc keluar-jalan bisa sekaligus menutup panel kiri; intro sinematik otomatis masuk Mode Karakter dan mungkin menangkap tombol saat mengetik di panel [D] | Uji di layar |
 
 **Belum diverifikasi di layar**: seluruh dokumen ini. Terutama yang berstatus [D] (T-22 sebagian, T-25, T-47), perilaku Esc, bilah bawah HP, dan tampilan panel kiri dan inset di berbagai lebar.
+
+## 15. Status temuan setelah konsolidasi (2026-11-20)
+Penilaian terhadap kode terkini: `docs/FUNDAMENTAL/konsolidasi/NILAI-47-TEMUAN.md`. Diperbaiki: T-06, T-07, T-08, T-09, T-11 (Rapikan), T-22, T-45. Lainnya masih terbuka (T-03/T-04 menyangkut kunci pointer 3D, sengaja tidak disentuh). Bagian 14 tetap sebagai catatan asal.

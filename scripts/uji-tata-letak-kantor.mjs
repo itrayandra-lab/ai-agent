@@ -39,7 +39,7 @@ export function periksa(data) {
 }
 
 /** @param {{ port: number|string, ukuran?: number[][], peramban?: any, out?: string, tag?: string, tema?: string, log?: Function }} o */
-export async function ujiTataLetak({ port, ukuran = UKURAN, peramban, out, tag = 'uji', tema = 'dark', log = () => {} }) {
+export async function ujiTataLetak({ port, ukuran = UKURAN, peramban, out, tag = 'uji', tema = 'dark', log = () => {}, snap = null }) {
   const c = peramban || await bukaChrome(); const hasil = [];
   // Chrome headless tidak menggambar frame bila tidak ada masukan, dan rute aplikasi berjalan di requestAnimationFrame: gerakan mouse kecil memicu frame
   const denyut = () => c.kirim('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5 + (Date.now() % 7), y: 5 }).catch(() => {});
@@ -91,6 +91,7 @@ export async function ujiTataLetak({ port, ukuran = UKURAN, peramban, out, tag =
         await tunggu(async () => { const d0 = JSON.parse(await c.eval(UKUR)); return harus.every((x) => (d0.panel || []).some((p) => p.s === x)); }, 15000, 80);
         const data = JSON.parse(await c.eval(UKUR));
         const masalah = periksa(data);
+        if (snap) await snap(c, w, h, nama);   // pengait opsional (scripts/snapshot-gaya.mjs)
         for (const x of harus) if (!(data.panel || []).some((p) => p.s === x)) masalah.push(`${x} tidak tampil (ukuran nol atau tersembunyi)`);
         const nTerbuka = data.panel ? data.panel.filter((p) => POPUP.includes(p.s)).length : 0;
         const batas = 1;   // aturan Owner: HANYA SATU popup terbuka sekali waktu

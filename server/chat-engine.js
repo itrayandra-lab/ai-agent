@@ -385,6 +385,7 @@ async function stafLanjut(conv, args, m, isian, periksa = false) {
 }
 async function stafJalan(conv, args, m, isian, confirmed) {
   conv.staf = null;
+  if (confirmed && args.canAutomate === false) return soraSays(conv, 'Menjalankan pekerjaan ini perlu izin pemilik atau pengelola ruang kerja.');   // T-07: sama dengan penjaga /api/staff/*
   let r; try { r = await stafMod.jalankan(m, isian, { confirmed, employeeId: db().employees.find((e) => e.isMaster)?.id }); } catch (err) { r = { status: 'gagal', galat: clip(err.message, 160) }; }
   const h = stafMod.ringkasHasil(m, r, isian);
   const who = emp(m.person.employeeId) || pa(args.userId);

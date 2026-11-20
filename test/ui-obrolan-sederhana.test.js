@@ -24,5 +24,5 @@ test('kontrol ganda dihapus dari tampilan: tombol Sumber (ada "+"), "Percakapan 
   const mulai = v.indexOf('<div class="od-foot">'); const foot = v.slice(mulai, v.indexOf('</div>', mulai));
   assert.doesNotMatch(foot, /Baru<\/button>|Latar<\/button>|Riwayat<\/button>/, 'baris kontrol: tombol ikon saja');
   assert.match(v, /nb\.hidden = !need\.count/);
-  assert.match(c, /#pmFoot \{ font-size: 0 !important; \}/, 'teks "Sisa jatah hari ini" disembunyikan, tinggal kata dan bilah');
+  assert.match(c, /#pmFoot \{[^}]*font-size: 0 !important/, 'teks "Sisa jatah hari ini" disembunyikan, tinggal kata dan bilah');
 });

@@ -17,7 +17,7 @@ export function pasangSambungan(box) {
   const gambar = () => {
     if (mati) return;
     box.innerHTML = `<div class="set-k2"><h4>Obrolan: Telegram dan Discord</h4>
-      <p class="muted">Pakai RAIVERSE langsung dari aplikasi obrolan di ponselmu. Percakapanmu terpisah dari orang lain, dan kamu bisa memutuskannya kapan saja. WhatsApp belum tersedia.</p>
+      <p class="muted">Pakai RAIVERSE langsung dari aplikasi obrolan di ponselmu. Percakapanmu terpisah dari orang lain, dan kamu bisa memutuskannya kapan saja. WhatsApp bisa disambungkan lewat aray.</p>
       ${(data?.services || []).map(kartu).join('')}</div>`;
     box.querySelectorAll('[data-hub]').forEach((b) => (b.onclick = () => hubungkan(b.dataset.hub, b)));
     box.querySelectorAll('[data-putus]').forEach((b) => (b.onclick = () => putuskan(b.dataset.putus, b)));

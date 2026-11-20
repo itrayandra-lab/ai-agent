@@ -53,3 +53,6 @@ Saran @ menjadi chip penerima ("Ke: Reno"), Sora = penghubung dan notulensi, ara
 
 ## aray = kembaran digital, Sora bukan pembicara (2026-11-20)
 aray menjadi pintu bawaan Obrolan (menjawab sendiri atau "Saya minta Reno." lalu Reno menjawab), bicara langsung ke agen tidak disela, laporan agen -> aray -> pemilik diturunkan dari pekerjaan selesai (tab Laporan di Pesan), Sora disembunyikan dari chat (data tidak diubah), label "Ke: aray". Spesifikasi dan diagram: docs/PERILAKU-OBROLAN.md bagian 9. Belum: pengingat proaktif, kartu laporan di Kabar 3D, peran sekretaris Sora di data 3D.
+
+## Konsolidasi menyeluruh (2026-11-20)
+Audit berbukti (`scripts/inventaris.mjs`), 12 peneruskan yatim diarsipkan ke `_arsip-kode/`, `office-layout.css` dilebur dari v4..v12 (dibuktikan setara dengan `scripts/snapshot-gaya.mjs`), 7 temuan peta halaman diperbaiki, tes kontrak `test/konsolidasi.test.js`. Rincian dan yang belum: `docs/FUNDAMENTAL/konsolidasi/AUDIT.md`, `UKUR.md`.
