@@ -6,3 +6,6 @@ docs/client_secret_*.json
 
 # berkas rahasia lokal (dipindah dari docs/)
 _rahasia-lokal/
+
+# sumber 3D besar (disimpan di D:/01-raymaizing/99-backup, tidak dilacak git)
+3D karakter/
