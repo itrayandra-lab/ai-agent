@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-gita-pembagi",
+  "division": "kms",
+  "employeeId": "gita",
+  "title": "AI Training Data Engineer",
+  "version": 1,
+  "name": "Pembagi data latih dan data uji",
+  "ringkas": "Bagi daftar contoh menjadi bagian latih dan uji dengan perbandingan pilihan, hasilnya tetap sama bila diulang.",
+  "kataKunci": [
+    "bagi data",
+    "data uji",
+    "train test",
+    "dataset",
+    "pembagian"
+  ],
+  "inputs": [
+    {
+      "key": "contoh",
+      "type": "longtext",
+      "label": "Contoh teks (satu per baris)",
+      "required": true,
+      "contoh": "contoh satu\ncontoh dua\ncontoh tiga\ncontoh empat\ncontoh lima\ncontoh enam\ncontoh tujuh\ncontoh delapan\ncontoh sembilan\ncontoh sepuluh"
+    },
+    {
+      "key": "rasio",
+      "type": "choice",
+      "label": "Perbandingan latih / uji",
+      "required": true,
+      "default": "80",
+      "choices": [
+        {
+          "v": "80",
+          "t": "80% latih, 20% uji"
+        },
+        {
+          "v": "90",
+          "t": "90% latih, 10% uji"
+        },
+        {
+          "v": "70",
+          "t": "70% latih, 30% uji"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Bagi",
+      "set": {
+        "rows": "baris(input.contoh).slice(0, 1000).map((t, i) => ({ no: i + 1, teks: t, bagian: (i % 10) >= num(input.rasio) / 10 ? 'uji' : 'latih' }))",
+        "latih": "v.rows.filter((r) => r.bagian === 'latih').length",
+        "uji": "v.rows.filter((r) => r.bagian === 'uji').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.latih + ' latih, ' + v.uji + ' uji dari ' + v.rows.length + ' contoh'",
+    "teks": "'# Pembagian data\\n\\n' + tabel(['Bagian', 'Jumlah'], [['Latih', v.latih], ['Uji', v.uji]]) + '\\n\\nPembagian berdasarkan urutan, jadi hasilnya selalu sama bila diulang.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pembagian-data'",
+        "isi": "csv([['No', 'Teks', 'Bagian']].concat(v.rows.map((r) => [r.no, cut(r.teks, 100), r.bagian])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Data",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "contoh": "contoh satu\ncontoh dua\ncontoh tiga\ncontoh empat\ncontoh lima\ncontoh enam\ncontoh tujuh\ncontoh delapan\ncontoh sembilan\ncontoh sepuluh",
+      "rasio": "80"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "8 latih, 2 uji"
+      ]
+    }
+  },
+  "kemampuan": [
+    "kelola-pengetahuan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bagi data",
+      "data uji",
+      "train test",
+      "dataset",
+      "pembagian"
+    ],
+    "data": [
+      "contoh teks (satu per baris)",
+      "perbandingan latih / uji"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

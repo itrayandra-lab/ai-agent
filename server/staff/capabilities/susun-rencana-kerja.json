@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-susun-rencana-kerja",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menyusun rencana kerja",
+  "version": 1,
+  "name": "Susun rencana kerja bertahap",
+  "ringkas": "Ubah daftar tugas menjadi rencana bertahap dengan penanggung jawab, tenggat, dan ukuran selesai untuk proyek, pelatihan, atau karyawan baru.",
+  "kataKunci": ["rencana kerja", "proyek", "tenggat", "pelatihan", "karyawan baru", "tahap"],
+  "kemampuan": {
+    "id": "susun-rencana-kerja",
+    "kelompok": "perencanaan",
+    "tujuanAwam": "Membuat rencana kerja bertahap: siapa mengerjakan apa, kapan selesai, dan apa tandanya sudah beres."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Rencana untuk apa?", "required": true, "default": "proyek", "choices": [{ "v": "proyek", "t": "Proyek" }, { "v": "pelatihan", "t": "Pelatihan" }, { "v": "onboarding", "t": "Menyambut karyawan baru" }, { "v": "uji", "t": "Uji coba" }] },
+    { "key": "tujuan", "type": "text", "label": "Apa yang ingin dicapai?", "required": true, "contoh": "Peluncuran toko online" },
+    { "key": "mulai", "type": "date", "label": "Tanggal mulai", "required": true, "contoh": "2026-03-02" },
+    { "key": "durasi", "type": "number", "label": "Berapa hari waktunya? (1 sampai 365)", "required": true, "default": 14, "contoh": "16" },
+    { "key": "tahap", "type": "choice", "label": "Dibagi berapa tahap?", "required": true, "default": "3", "choices": [{ "v": "3", "t": "Tiga tahap" }, { "v": "4", "t": "Empat tahap" }, { "v": "5", "t": "Lima tahap" }] },
+    { "key": "tugas", "type": "longtext", "label": "Tugas per baris: tugas | penanggung jawab | lama | tanda selesai (boleh nama saja)", "required": false, "contoh": "Rancang materi | Dewi | 2 | Materi disetujui\nSiapkan ruang | Budi | 1" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun tahap dan tenggat",
+      "set": {
+        "dur": "Math.min(365, Math.max(1, Math.round(Number(input.durasi)) || 14))",
+        "mulaiOk": "String(input.mulai).slice(4, 5) === '-' && String(input.mulai).slice(7, 8) === '-' && Number.isFinite(Date.parse(String(input.mulai).slice(0, 10)))",
+        "base": "v.mulaiOk ? Date.parse(String(input.mulai).slice(0, 10)) : Math.floor(Date.now() / 86400000) * 86400000",
+        "nt": "Math.min(5, Math.max(2, Math.round(Number(input.tahap)) || 3))",
+        "tugas": "(() => { const a = baris(input.tugas).map((l) => l.split('|').map((t) => String(t).trim())).filter((r) => r[0] !== '').slice(0, 30).map((r) => ({ a: r[0], pj: r[1] || 'Belum ditentukan', b: Math.max(0.5, Math.min(30, num(r[2]) || 1)), u: r[3] || 'Selesai dan sudah diperiksa: ' + cut(r[0], 40) })); return a.length ? a : ['Rumuskan kebutuhan', 'Siapkan bahan dan orang', 'Kerjakan bagian utama', 'Periksa hasil', 'Serahkan dan catat pelajaran'].map((t) => ({ a: t, pj: 'Belum ditentukan', b: 1, u: 'Selesai dan sudah diperiksa: ' + t })); })()",
+        "total": "v.tugas.reduce((s, t) => s + t.b, 0)",
+        "rows": "(() => { let c = 0; return v.tugas.map((t, i) => { const awal = c; c += t.b; const hari = Math.max(1, Math.ceil(c / v.total * v.dur)); const th = Math.min(v.nt, Math.floor(awal / v.total * v.nt) + 1); return [i + 1, 'Tahap ' + th, t.a, t.pj, new Date(v.base + (hari - 1) * 86400000).toISOString().slice(0, 10), t.u]; }); })()",
+        "tanpaPj": "v.tugas.filter((t) => t.pj === 'Belum ditentukan').length",
+        "bebanMax": "Math.round(v.tugas.reduce((m, t) => Math.max(m, v.tugas.filter((q) => q.pj === t.pj).reduce((s, q) => s + q.b, 0)), 0) / v.total * 100)",
+        "mulaiIso": "new Date(v.base).toISOString().slice(0, 10)",
+        "selesai": "v.rows[v.rows.length - 1][4]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rencana ' + input.jenis + ' \"' + cut(String(input.tujuan), 60) + '\": ' + v.tugas.length + ' tugas dalam ' + v.dur + ' hari, selesai ' + v.selesai + (v.tanpaPj ? ', ' + v.tanpaPj + ' tugas belum punya penanggung jawab' : '')",
+    "teks": "'# Rencana ' + input.jenis + ': ' + input.tujuan + '\\n\\nMulai ' + v.mulaiIso + (v.mulaiOk ? '' : ' (tanggal mulai tidak terbaca, dipakai hari ini)') + ', ' + v.dur + ' hari, ' + v.nt + ' tahap, ' + v.tugas.length + ' tugas.\\n\\n' + tabel(['No', 'Tahap', 'Tugas', 'Penanggung jawab', 'Tenggat', 'Ukuran selesai'], v.rows) + '\\n\\n## Pemeriksaan\\n\\n- Tugas tanpa penanggung jawab: ' + v.tanpaPj + '\\n- Beban terbesar pada satu orang: ' + v.bebanMax + ' persen' + (v.bebanMax > 50 && v.tugas.length > 2 ? ' (terlalu menumpuk, bagi ke orang lain)' : '') + (v.tugas.length > v.dur ? '\\n- Tugas lebih banyak daripada jumlah hari, beberapa tenggat jatuh di hari yang sama' : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'rencana-' + cut(String(input.jenis).toLowerCase(), 20)", "isi": "csv([['no', 'tahap', 'tugas', 'penanggung jawab', 'tenggat', 'ukuran selesai']].concat(v.rows))" }
+    ],
+    "data": "({ tugas: v.tugas.length, durasi: v.dur, tahap: v.nt, tanpaPj: v.tanpaPj, bebanMax: v.bebanMax, mulai: v.mulaiIso, selesai: v.selesai })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "proyek", "tujuan": "Peluncuran toko online", "mulai": "2026-03-02", "durasi": 16, "tahap": "3", "tugas": "Rancang materi | Dewi | 2 | Materi disetujui\nSiapkan ruang | Budi | 1\nLatih peserta | Dewi | 3\nUji hasil | Budi | 2" }, "expect": { "berkas": 1, "mengandungAturan": ["4 tugas dalam 16 hari", "2026-03-17"], "mengandung": ["Rancang materi"] } },
+  "otakProfil": {
+    "peran": "pengatur rencana kerja yang menjelaskan rencana kepada orang awam",
+    "tujuan": "Beri penjelasan singkat tentang rencana yang sudah disusun: urutan, bagian yang berisiko, dan apa yang perlu diputuskan lebih dulu.",
+    "gaya": "tegas tapi ramah, konkret, tanpa istilah rumit",
+    "pedoman": ["Pakai hanya tugas, nama, dan tanggal yang ada di rencana.", "Soroti tugas tanpa penanggung jawab dan orang yang bebannya terlalu besar.", "Tutup dengan satu langkah pertama yang bisa dikerjakan hari ini."],
+    "skema": { "pembahasan": "teks", "risiko": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Tahap pertama paling padat; pastikan materi disetujui sebelum tugas berikutnya dimulai.", "buruk": "Rencananya bagus, semangat." },
+    "batas": { "pembahasan": 500, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["rencana"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Rencana ini terbagi tiga tahap dan beban terbesar ada pada satu orang, jadi rencana perlu dibagi lebih merata.\",\"risiko\":[\"Beban menumpuk pada satu penanggung jawab\"],\"langkah\":[\"Putuskan siapa membantu tugas terberat\"]}"
+  },
+  "evaluasi": [
+    { "nama": "rencana lengkap dengan penanggung jawab", "input": { "jenis": "proyek", "tujuan": "Peluncuran toko online", "mulai": "2026-03-02", "durasi": 16, "tahap": "3", "tugas": "Rancang materi | Dewi | 2 | Materi disetujui\nSiapkan ruang | Budi | 1\nLatih peserta | Dewi | 3\nUji hasil | Budi | 2" }, "ai": "{\"pembahasan\":\"Rencana ini terbagi tiga tahap; Dewi memegang lebih dari separuh pekerjaan, jadi rencana perlu dibagi lebih merata.\",\"risiko\":[\"Beban Dewi terlalu besar\"],\"langkah\":[\"Minta Budi membantu melatih peserta\"]}", "kriteria": { "mengandung": ["4 tugas", "Dewi"], "mengandungAturan": ["2026-03-17", "Materi disetujui", "Tahap 3"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.tugas", "min": 4, "max": 4 }, { "path": "data.bebanMax", "min": 62, "max": 64 }, { "path": "data.tanpaPj", "min": 0, "max": 0 }] } },
+    { "nama": "tanpa daftar tugas, pakai kerangka bawaan", "input": { "jenis": "onboarding", "tujuan": "Menyambut staf baru", "mulai": "2026-04-01", "durasi": 10, "tahap": "4", "tugas": "" }, "ai": "{\"pembahasan\":\"Rencana memakai lima tugas bawaan dan belum ada penanggung jawab, jadi langkah pertama adalah menunjuk orangnya.\",\"risiko\":[\"Tidak ada penanggung jawab\"],\"langkah\":[\"Tunjuk satu penanggung jawab\"]}", "kriteria": { "mengandung": ["penanggung jawab", "lima tugas"], "mengandungAturan": ["5 tugas", "Rumuskan kebutuhan", "2026-04-10"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.tugas", "min": 5, "max": 5 }, { "path": "data.tanpaPj", "min": 5, "max": 5 }, { "path": "data.tahap", "min": 4, "max": 4 }] } },
+    { "nama": "isian berantakan dan tenggat menumpuk", "input": { "jenis": "uji", "tujuan": "Uji coba menu baru", "mulai": "15 Maret", "durasi": 2, "tahap": "5", "tugas": "A||x|\nB | Sari | 99\nC" }, "ai": "{\"pembahasan\":\"Waktu hanya dua hari untuk tiga tugas sehingga rencana sangat padat dan hampir semua beban ada pada Sari.\",\"risiko\":[\"Waktu terlalu singkat\"],\"langkah\":[\"Tambah waktu atau kurangi tugas\"]}", "kriteria": { "mengandung": ["dua hari", "Sari"], "mengandungAturan": ["tidak terbaca", "lebih banyak daripada jumlah hari"], "panjangMin": 120, "panjangMaks": 4000, "nilai": [{ "path": "data.tugas", "min": 3, "max": 3 }, { "path": "data.bebanMax", "min": 93, "max": 95 }, { "path": "data.tanpaPj", "min": 2, "max": 2 }] } }
+  ]
+}

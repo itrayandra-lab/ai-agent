@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-lukas",
+  "division": "eng",
+  "employeeId": "lukas",
+  "title": "Backend Engineer",
+  "version": 1,
+  "name": "Perancang tabel basis data",
+  "ringkas": "Ubah daftar kolom menjadi perintah pembuat tabel yang rapi untuk PostgreSQL, MySQL, atau SQLite.",
+  "kataKunci": [
+    "tabel",
+    "sql",
+    "basis data",
+    "database",
+    "migrasi"
+  ],
+  "inputs": [
+    {
+      "key": "tabel",
+      "type": "text",
+      "label": "Nama tabel",
+      "required": true,
+      "contoh": "pesanan"
+    },
+    {
+      "key": "kolom",
+      "type": "longtext",
+      "label": "Daftar kolom (satu baris: nama | jenis teks/angka/uang/tanggal/benarsalah | wajib ya/tidak | unik ya/tidak)",
+      "required": true,
+      "contoh": "total | uang | ya | tidak"
+    },
+    {
+      "key": "mesin",
+      "type": "choice",
+      "label": "Basis data yang dipakai",
+      "required": true,
+      "default": "postgres",
+      "choices": [
+        {
+          "v": "postgres",
+          "t": "PostgreSQL"
+        },
+        {
+          "v": "mysql",
+          "t": "MySQL"
+        },
+        {
+          "v": "sqlite",
+          "t": "SQLite"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun perintah",
+      "set": {
+        "nm": "input.tabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'tabel'",
+        "cols": "baris(input.kolom).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const j = (p[1] || 'teks').toLowerCase(); const i = ['postgres', 'mysql', 'sqlite'].indexOf(input.mesin); const tipe = ({ teks: ['TEXT', 'VARCHAR(255)', 'TEXT'], angka: ['INTEGER', 'INT', 'INTEGER'], uang: ['NUMERIC(14,2)', 'DECIMAL(14,2)', 'REAL'], tanggal: ['TIMESTAMP', 'DATETIME', 'TEXT'], benarsalah: ['BOOLEAN', 'TINYINT(1)', 'INTEGER'] })[j] || ['TEXT', 'VARCHAR(255)', 'TEXT']; return { nama: (p[0] || 'kolom').toLowerCase().replace(/[^a-z0-9]+/g, '_'), jenis: j, tipe: tipe[i], wajib: /^y/i.test(p[2] || ''), unik: /^y/i.test(p[3] || '') }; })",
+        "pk": "({ postgres: 'BIGSERIAL PRIMARY KEY', mysql: 'BIGINT AUTO_INCREMENT PRIMARY KEY', sqlite: 'INTEGER PRIMARY KEY AUTOINCREMENT' })[input.mesin]",
+        "sql": "'CREATE TABLE ' + v.nm + ' (\\n  id ' + v.pk + ',\\n' + v.cols.map((c) => '  ' + c.nama + ' ' + c.tipe + (c.wajib ? ' NOT NULL' : '') + (c.unik ? ' UNIQUE' : '')).join(',\\n') + ',\\n  dibuat_pada ' + ({ postgres: 'TIMESTAMP DEFAULT NOW()', mysql: 'DATETIME DEFAULT CURRENT_TIMESTAMP', sqlite: 'TEXT DEFAULT CURRENT_TIMESTAMP' })[input.mesin] + '\\n);' + v.cols.filter((c) => /_id$/.test(c.nama)).map((c) => '\\nCREATE INDEX idx_' + v.nm + '_' + c.nama + ' ON ' + v.nm + ' (' + c.nama + ');').join('')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Tabel ' + v.nm + ' dengan ' + (v.cols.length + 2) + ' kolom siap untuk ' + input.mesin",
+    "teks": "'# Tabel ' + v.nm + '\\n\\n~~~sql\\n' + v.sql + '\\n~~~\\n\\n' + tabel(['Kolom', 'Jenis', 'Wajib', 'Unik'], v.cols.map((c) => [c.nama, c.tipe, c.wajib ? 'Ya' : 'Tidak', c.unik ? 'Ya' : 'Tidak']))",
+    "berkas": [
+      {
+        "jenis": "txt",
+        "nama": "'buat-tabel-' + v.nm",
+        "isi": "v.sql + '\\n'"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "tabel": "pesanan",
+      "kolom": "pelanggan_id | angka | ya | tidak\ntotal | uang | ya | tidak\ncatatan | teks | tidak | tidak\nkode | teks | ya | ya",
+      "mesin": "postgres"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "BIGSERIAL PRIMARY KEY",
+        "total NUMERIC(14,2) NOT NULL",
+        "kode TEXT NOT NULL UNIQUE",
+        "idx_pesanan_pelanggan_id"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "rancang-struktur"
+  ],
+  "keahlian": {
+    "istilah": [
+      "tabel",
+      "sql",
+      "basis data",
+      "database",
+      "migrasi"
+    ],
+    "data": [
+      "nama tabel",
+      "daftar kolom (satu baris: nama | jenis teks/angka/uang/tangg",
+      "basis data yang dipakai"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
+  }
+}

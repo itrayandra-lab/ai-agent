@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "hr-dafa",
+  "division": "hr",
+  "employeeId": "dafa",
+  "title": "Employer Branding & Culture Specialist",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penyusun kalender kegiatan budaya kerja",
+  "ringkas": "Rancang kegiatan kebersamaan bulanan beserta tanggal dan perkiraan biayanya sesuai jumlah orang dan anggaran.",
+  "kataKunci": [
+    "budaya kerja",
+    "kegiatan karyawan",
+    "engagement",
+    "gathering",
+    "anggaran kegiatan"
+  ],
+  "inputs": [
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "bulan",
+      "type": "choice",
+      "label": "Berapa bulan?",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3 bulan"
+        },
+        {
+          "v": "6",
+          "t": "6 bulan"
+        }
+      ]
+    },
+    {
+      "key": "fokus",
+      "type": "choice",
+      "label": "Mau menekankan apa?",
+      "required": true,
+      "default": "kekeluargaan",
+      "choices": [
+        {
+          "v": "kekeluargaan",
+          "t": "Kebersamaan"
+        },
+        {
+          "v": "belajar",
+          "t": "Belajar bersama"
+        },
+        {
+          "v": "kinerja",
+          "t": "Semangat berprestasi"
+        }
+      ]
+    },
+    {
+      "key": "ukuran",
+      "type": "number",
+      "label": "Jumlah karyawan",
+      "required": true,
+      "contoh": "40"
+    },
+    {
+      "key": "anggaran",
+      "type": "number",
+      "label": "Anggaran per orang per bulan (Rp)",
+      "required": true,
+      "contoh": "50000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "susun",
+      "use": "hitung",
+      "label": "Susun kalender",
+      "set": {
+        "bank": "({ kekeluargaan: [['Makan siang bersama tim', 'Kebersamaan', 1], ['Hari keluarga karyawan', 'Kebersamaan', 2], ['Arisan ulang tahun bulanan', 'Kebersamaan', 0.5], ['Olahraga santai bersama', 'Kesehatan', 1]], belajar: [['Berbagi ilmu antar tim', 'Belajar', 0.5], ['Kelas keterampilan baru', 'Belajar', 2], ['Kunjungan belajar ke mitra', 'Belajar', 2], ['Diskusi buku bulanan', 'Belajar', 0.5]], kinerja: [['Penghargaan karyawan terbaik', 'Apresiasi', 1], ['Lomba antar tim', 'Semangat', 1.5], ['Perayaan target tercapai', 'Apresiasi', 2], ['Sesi umpan balik terbuka', 'Komunikasi', 0.5]] })[input.fokus]",
+        "kal": "[0, 1, 2, 3, 4, 5].slice(0, num(input.bulan)).map((i) => { const b = new Date(input.mulai); const t = new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth() + i, b.getUTCDate())); const k = v.bank[i % v.bank.length]; return { tanggal: t.toISOString().slice(0, 10), kegiatan: k[0], jenis: k[1], biaya: Math.round(num(input.ukuran) * num(input.anggaran) * k[2]) }; })",
+        "total": "v.kal.reduce((a, b) => a + b.biaya, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kal.length + ' kegiatan terjadwal, total perkiraan biaya ' + rp(v.total)",
+    "teks": "'# Kalender kegiatan budaya kerja\\n\\n' + tabel(['Tanggal', 'Kegiatan', 'Jenis', 'Perkiraan biaya'], v.kal.map((k) => [k.tanggal, k.kegiatan, k.jenis, rp(k.biaya)])) + '\\n\\n**Total:** ' + rp(v.total)",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kalender-budaya-kerja'",
+        "isi": "csv([['Tanggal', 'Kegiatan', 'Jenis', 'Perkiraan biaya']].concat(v.kal.map((k) => [k.tanggal, k.kegiatan, k.jenis, k.biaya])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "mulai": "2026-12-01",
+      "bulan": "3",
+      "fokus": "kekeluargaan",
+      "ukuran": "40",
+      "anggaran": "50000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 7.000.000",
+        "3 kegiatan",
+        "2027-01-01",
+        "Hari keluarga karyawan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "budaya kerja",
+      "kegiatan karyawan",
+      "engagement",
+      "gathering",
+      "anggaran kegiatan"
+    ],
+    "data": [
+      "mulai tanggal",
+      "berapa bulan?",
+      "mau menekankan apa?",
+      "jumlah karyawan"
+    ],
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
+  }
+}

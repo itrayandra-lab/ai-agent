@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-ilham",
+  "division": "mfg",
+  "employeeId": "ilham",
+  "title": "Maintenance & Packaging Engineer",
+  "version": 1,
+  "name": "Jadwal perawatan mesin berkala",
+  "ringkas": "Hitung kapan tiap mesin harus dirawat lagi, tandai yang telat atau segera, dan urutkan dari yang paling mendesak.",
+  "kataKunci": [
+    "perawatan mesin",
+    "maintenance",
+    "jadwal perawatan",
+    "preventive",
+    "mesin"
+  ],
+  "inputs": [
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal hari ini",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "mesin",
+      "type": "longtext",
+      "label": "Mesin (satu baris: nama | selang hari | terakhir dirawat YYYY-MM-DD)",
+      "required": true,
+      "contoh": "Filling A | 30 | 2026-10-20"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung jatuh tempo",
+      "set": {
+        "rows": "baris(input.mesin).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const tempo = new Date(Date.parse(p[2]) + num(p[1]) * 864e5); const sisa = Math.round((tempo.getTime() - Date.parse(input.tanggal)) / 864e5); return { mesin: p[0] || '-', selang: num(p[1]), terakhir: p[2], tempo: Number.isNaN(sisa) ? '-' : tempo.toISOString().slice(0, 10), sisa: Number.isNaN(sisa) ? 0 : sisa, status: sisa < 0 ? 'Telat' : sisa <= 7 ? 'Segera' : 'Aman' }; }).sort((x, y) => x.sisa - y.sisa)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.filter((r) => r.status === 'Telat').length + ' mesin telat dirawat, ' + v.rows.filter((r) => r.status === 'Segera').length + ' segera jatuh tempo, dari ' + v.rows.length + ' mesin'",
+    "teks": "'# Jadwal perawatan per ' + tgl(input.tanggal) + '\\n\\n' + tabel(['Mesin', 'Terakhir', 'Jatuh tempo', 'Sisa hari', 'Status'], v.rows.map((r) => [r.mesin, r.terakhir, r.tempo, r.sisa, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-perawatan-' + input.tanggal",
+        "isi": "csv([['Mesin', 'Terakhir dirawat', 'Selang hari', 'Jatuh tempo', 'Sisa hari', 'Status']].concat(v.rows.map((r) => [r.mesin, r.terakhir, r.selang, r.tempo, r.sisa, r.status])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Maintenance",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "tanggal": "2026-12-01",
+      "mesin": "Filling A | 30 | 2026-10-20\nCapping | 90 | 2026-10-01"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 mesin telat",
+        "2026-12-30",
+        "Telat"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "perawatan mesin",
+      "maintenance",
+      "jadwal perawatan",
+      "preventive",
+      "mesin"
+    ],
+    "data": [
+      "tanggal hari ini",
+      "mesin (satu baris: nama | selang hari | terakhir dirawat yyy"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
+    "contoh": {
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-perkiraan-stok-kapasitas",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan perkiraan stok dan kapasitas",
+  "version": 1,
+  "name": "Perkiraan stok, bahan, dan kapasitas",
+  "ringkas": "Hitung kapan harus pesan ulang, kebutuhan bahan dari rencana, perkiraan permintaan mingguan, dan kapan penyimpanan akan penuh.",
+  "kataKunci": ["stok", "pesan ulang", "bahan", "permintaan", "perkiraan", "kapasitas", "disk", "penuh"],
+  "kemampuan": {
+    "id": "perkiraan-stok-kapasitas",
+    "kelompok": "perkiraan",
+    "tujuanAwam": "Memperkirakan kapan stok habis dan perlu dipesan, bahan apa yang kurang untuk sebuah rencana, permintaan minggu depan, dan kapan ruang simpan penuh."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau memperkirakan apa?", "required": true, "default": "stok", "choices": [{ "v": "stok", "t": "Kapan pesan ulang" }, { "v": "bahan", "t": "Kebutuhan bahan" }, { "v": "permintaan", "t": "Permintaan minggu depan" }, { "v": "disk", "t": "Kapan ruang simpan penuh" }] },
+    { "key": "nilai", "type": "number", "label": "Angka pertama: pemakaian rata-rata per hari, rencana jumlah produksi, atau kapasitas total (GB)", "required": false, "contoh": "20" },
+    { "key": "kedua", "type": "number", "label": "Angka kedua: lama pengiriman (hari), cadangan tambahan bahan (%), atau yang sudah terpakai (GB)", "required": false, "contoh": "7" },
+    { "key": "ketiga", "type": "number", "label": "Angka ketiga: pemakaian tertinggi per hari, atau pertambahan data per minggu (GB)", "required": false, "contoh": "30" },
+    { "key": "keempat", "type": "number", "label": "Angka keempat: stok yang ada sekarang", "required": false, "contoh": "200" },
+    { "key": "daftar", "type": "longtext", "label": "Daftar: bahan per baris (nama | jumlah per unit | stok), atau penjualan per minggu dari lama ke baru", "required": false, "contoh": "100 110 120 130 140" }
+  ],
+  "steps": [
+    {
+      "id": "urai",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "a": "num(input.nilai)",
+        "b": "num(input.kedua)",
+        "c": "num(input.ketiga)",
+        "d": "num(input.keempat)",
+        "bar": "baris(String(input.daftar === undefined ? '' : input.daftar)).slice(0, 80)",
+        "x": "v.bar.join(' ').replace(/[;]/g, ' ').split(' ').filter((t) => t !== '' && /[0-9]/.test(t)).map((t) => num(t.endsWith(',') ? t.slice(0, -1) : t)).slice(0, 200)"
+      }
+    },
+    {
+      "id": "hitung1",
+      "use": "hitung",
+      "label": "Hitung stok dan bahan",
+      "set": {
+        "hs": "(() => { const mx = v.c > v.a ? v.c : v.a; const aman = Math.ceil(Math.max(0, (mx - v.a) * v.b)); const rop = Math.ceil(v.a * v.b + aman); const hari = v.a > 0 ? Math.round(v.d / v.a * 10) / 10 : 0; const pesan = v.d <= rop; const tunda = v.a > 0 ? Math.max(0, Math.round((v.d - rop) / v.a * 10) / 10) : 0; return { judul: 'Titik pesan ulang', inti: pesan ? 'pesan sekarang, stok ' + v.d + ' sudah di titik pesan ulang ' + rop : 'stok masih aman, pesan lagi sekitar ' + tunda + ' hari lagi', kepala: ['Hitungan', 'Hasil'], rows: [['Pemakaian rata-rata per hari', v.a], ['Lama pengiriman', v.b + ' hari'], ['Pemakaian tertinggi per hari', mx], ['Stok pengaman', aman], ['Titik pesan ulang', rop], ['Stok sekarang', v.d], ['Stok cukup untuk', hari + ' hari'], ['Keputusan', pesan ? 'Pesan sekarang' : 'Stok masih aman']], data: { pengaman: aman, titikPesan: rop, hariCukup: hari, pesanSekarang: pesan ? 1 : 0, tundaHari: tunda } }; })()",
+        "hbn": "(() => { const it = v.bar.map((l) => { const p = l.split('|'); return { n: p[0].trim(), per: num(p[1]), st: num(p[2]) }; }).filter((o) => o.n !== '' && o.per > 0); const r2 = (x) => Math.round(x * 100) / 100; const f = 1 + Math.max(0, v.b) / 100; const baris2 = it.map((o) => ({ n: o.n, perlu: r2(o.per * v.a * f), st: o.st, kurang: Math.max(0, r2(o.per * v.a * f - o.st)) })); const nk = baris2.filter((o) => o.kurang > 0).length; return { judul: 'Kebutuhan bahan', inti: it.length ? nk + ' dari ' + it.length + ' bahan perlu dibeli untuk rencana ' + v.a + ' unit' : 'belum ada bahan yang terbaca', kepala: ['Bahan', 'Kebutuhan', 'Stok', 'Kurang'], rows: baris2.length ? baris2.map((o) => [o.n, o.perlu, o.st, o.kurang]) : [['belum ada bahan', '-', '-', '-']], data: { bahan: it.length, bahanKurang: nk, rencana: v.a, cadangan: Math.max(0, v.b) } }; })()"
+      }
+    },
+    {
+      "id": "hitung2",
+      "use": "hitung",
+      "label": "Hitung permintaan dan kapasitas",
+      "set": {
+        "hp": "(() => { const n = v.x.length; const r2 = (t) => Math.round(t * 100) / 100; const rata = n ? v.x.reduce((s, t) => s + t, 0) / n : 0; const akhir = v.x.slice(-3); const ma3 = akhir.length ? akhir.reduce((s, t) => s + t, 0) / akhir.length : 0; const si = v.x.reduce((s, t, i) => s + i, 0); const sy = v.x.reduce((s, t) => s + t, 0); const sxy = v.x.reduce((s, t, i) => s + i * t, 0); const sii = v.x.reduce((s, t, i) => s + i * i, 0); const pen = n * sii - si * si; const slope = n > 1 && pen !== 0 ? (n * sxy - si * sy) / pen : 0; const inter = n ? (sy - slope * si) / n : 0; const reg = inter + slope * n; const depan = n >= 4 ? Math.max(0, Math.round((ma3 + reg) / 2)) : Math.max(0, Math.round(ma3)); const tr = n >= 4 ? slope : 0; const mg = (k) => Math.max(0, Math.round(depan + tr * k)); return { judul: 'Perkiraan permintaan mingguan', inti: n >= 2 ? 'perkiraan minggu depan sekitar ' + depan + ', tren ' + r2(slope) + ' per minggu' : 'data belum cukup untuk memperkirakan', kepala: ['Hitungan', 'Hasil'], rows: [['Jumlah minggu data', n], ['Rata-rata semua minggu', r2(rata)], ['Rata-rata 3 minggu terakhir', r2(ma3)], ['Tren per minggu', r2(slope)], ['Perkiraan minggu depan', depan], ['Perkiraan minggu ke-2', mg(1)], ['Perkiraan minggu ke-3', mg(2)], ['Perkiraan minggu ke-4', mg(3)]], data: { minggu: n, rata: r2(rata), ma3: r2(ma3), tren: r2(slope), depan: depan, minggu4: mg(3) } }; })()",
+        "hd": "(() => { const sisa = Math.round((v.a - v.b) * 100) / 100; const pr = v.a > 0 ? Math.round(v.b / v.a * 1000) / 10 : 0; const harian = v.c / 7; const penuh = v.c > 0 ? Math.max(0, Math.round(sisa / harian)) : -1; const h80 = v.c > 0 ? Math.max(0, Math.round((0.8 * v.a - v.b) / harian)) : -1; const status = pr >= 90 ? 'Kritis' : pr >= 80 ? 'Waspada' : (penuh >= 0 && penuh <= 30) ? 'Segera tambah kapasitas' : 'Aman'; return { judul: 'Kapan ruang simpan penuh', inti: v.c > 0 ? 'penuh sekitar ' + penuh + ' hari lagi (' + Math.round(penuh / 30.44 * 10) / 10 + ' bulan), status ' + status : 'tidak bertambah, belum ada perkiraan penuh', kepala: ['Hitungan', 'Hasil'], rows: [['Kapasitas total', v.a + ' GB'], ['Terpakai', v.b + ' GB (' + pr + '%)'], ['Sisa', sisa + ' GB'], ['Pertambahan per minggu', v.c + ' GB'], ['Mencapai 80%', v.c > 0 ? h80 + ' hari lagi' : 'tidak bertambah'], ['Penuh', v.c > 0 ? penuh + ' hari lagi' : 'tidak bertambah'], ['Status', status]], data: { sisa: sisa, persen: pr, hariPenuh: penuh, hari80: h80 } }; })()",
+        "pilih": "({ stok: v.hs, bahan: v.hbn, permintaan: v.hp, disk: v.hd })[input.jenis] || v.hs",
+        "peringatan": "[input.jenis === 'stok' && v.a <= 0 ? 'Isi pemakaian rata-rata per hari agar perkiraan bisa dihitung.' : '', input.jenis === 'stok' && v.c > 0 && v.c < v.a ? 'Pemakaian tertinggi lebih kecil dari rata-rata, stok pengaman dianggap nol.' : '', input.jenis === 'bahan' && v.a <= 0 ? 'Isi rencana jumlah produksi.' : '', input.jenis === 'bahan' && v.hbn.data.bahan === 0 ? 'Tulis bahan satu per baris dengan bentuk nama | jumlah per unit | stok.' : '', input.jenis === 'permintaan' && v.x.length < 3 ? 'Isi minimal tiga minggu data penjualan agar perkiraan lebih berarti.' : '', input.jenis === 'permintaan' && v.x.length >= 3 && v.x.length < 4 ? 'Data kurang dari 4 minggu, perkiraan memakai rata-rata 3 minggu terakhir tanpa tren.' : '', input.jenis === 'disk' && v.a <= 0 ? 'Isi kapasitas total dalam GB.' : '', input.jenis === 'disk' && v.b > v.a && v.a > 0 ? 'Yang terpakai lebih besar dari kapasitas, periksa angkanya.' : ''].filter((t) => t !== '')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.pilih.judul + ': ' + v.pilih.inti",
+    "teks": "'# ' + v.pilih.judul + '\\n\\n' + tabel(v.pilih.kepala, v.pilih.rows) + (v.peringatan.length ? '\\n\\nPerhatian: ' + v.peringatan.join(' ') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'perkiraan-' + input.jenis", "isi": "csv([v.pilih.kepala].concat(v.pilih.rows))" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, peringatan: v.peringatan.length }, v.pilih.data)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "stok", "nilai": "20", "kedua": "7", "ketiga": "30", "keempat": "200" }, "expect": { "berkas": 1, "mengandung": ["Titik pesan ulang", "Pesan sekarang"] } },
+  "otakProfil": {
+    "peran": "pendamping perencanaan stok dan kapasitas yang menjelaskan perkiraan kepada orang awam",
+    "tujuan": "Jelaskan hasil perkiraan: apa yang perlu dilakukan sekarang, apa risikonya bila ditunda, dan seberapa yakin perkiraannya.",
+    "gaya": "tenang, praktis, jujur bahwa perkiraan bukan kepastian",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Katakan perkiraan bisa meleset bila pola pemakaian berubah.", "Utamakan satu tindakan yang paling mendesak."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Stok sudah di titik pesan ulang; bila pengiriman butuh 7 hari, pesan hari ini agar tidak kehabisan.", "buruk": "Stoknya mungkin cukup, lihat nanti saja." },
+    "batas": { "pembahasan": 500, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["perkiraan"], "minPanjang": 40, "maksPanjang": 500 },
+    "contohAI": "{\"pembahasan\":\"Perkiraan ini memakai pola pemakaian yang diisi, jadi bisa meleset bila pola berubah. Tindakan yang paling mendesak ada di baris keputusan hasil hitung.\",\"poin\":[\"Perkiraan bukan kepastian\"],\"langkah\":[\"Ambil tindakan yang paling mendesak\",\"Hitung ulang bila pola berubah\"]}"
+  },
+  "evaluasi": [
+    { "nama": "stok sudah di titik pesan ulang", "input": { "jenis": "stok", "nilai": "20", "kedua": "7", "ketiga": "30", "keempat": "200" }, "ai": "{\"pembahasan\":\"Perkiraan menunjukkan stok sudah menyentuh titik pesan ulang, jadi pesan sekarang agar tidak kehabisan saat barang dikirim.\",\"poin\":[\"Stok pengaman tujuh puluh\"],\"langkah\":[\"Pesan hari ini\"]}", "kriteria": { "mengandung": ["perkiraan", "pesan"], "mengandungAturan": ["Pesan sekarang", "Stok pengaman"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.pengaman", "min": 70, "max": 70 }, { "path": "data.titikPesan", "min": 210, "max": 210 }, { "path": "data.hariCukup", "min": 10, "max": 10 }, { "path": "data.pesanSekarang", "min": 1, "max": 1 }] } },
+    { "nama": "kebutuhan bahan dengan baris campur", "input": { "jenis": "bahan", "nilai": "100", "kedua": "10", "daftar": "Tepung | 0,5 | 40\nGula|0.2|30\nTelur | 3 | 250\nbaris rusak tanpa angka" }, "ai": "{\"pembahasan\":\"Perkiraan kebutuhan sudah memasukkan cadangan sepuluh persen, sehingga tepung dan telur perlu dibeli sedangkan gula masih cukup.\",\"poin\":[\"Dua bahan kurang\"],\"langkah\":[\"Beli tepung dan telur\"]}", "kriteria": { "mengandung": ["perkiraan", "cadangan"], "mengandungAturan": ["Tepung", "Telur", "Kurang"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.bahan", "min": 3, "max": 3 }, { "path": "data.bahanKurang", "min": 2, "max": 2 }] } },
+    { "nama": "perkiraan permintaan dengan pemisah campur", "input": { "jenis": "permintaan", "daftar": "100, 110, 120; 130\n140" }, "ai": "{\"pembahasan\":\"Perkiraan permintaan minggu depan mengikuti tren naik yang stabil, jadi siapkan stok sedikit lebih banyak dari minggu ini.\",\"poin\":[\"Tren naik sepuluh per minggu\"],\"langkah\":[\"Naikkan stok sedikit\"]}", "kriteria": { "mengandung": ["perkiraan", "tren"], "mengandungAturan": ["Perkiraan minggu depan"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.minggu", "min": 5, "max": 5 }, { "path": "data.tren", "min": 9.9, "max": 10.1 }, { "path": "data.depan", "min": 139, "max": 141 }, { "path": "data.minggu4", "min": 169, "max": 171 }] } },
+    { "nama": "kapasitas disk bertambah", "input": { "jenis": "disk", "nilai": "500", "kedua": "350", "ketiga": "14" }, "ai": "{\"pembahasan\":\"Perkiraan menunjukkan ruang simpan akan penuh dalam sekitar dua setengah bulan, dan batas delapan puluh persen tercapai lebih cepat.\",\"poin\":[\"Tambah dua gigabita per hari\"],\"langkah\":[\"Hapus data lama atau tambah kapasitas\"]}", "kriteria": { "mengandung": ["perkiraan", "delapan puluh"], "mengandungAturan": ["Penuh", "75 hari"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.sisa", "min": 150, "max": 150 }, { "path": "data.persen", "min": 70, "max": 70 }, { "path": "data.hariPenuh", "min": 75, "max": 75 }, { "path": "data.hari80", "min": 25, "max": 25 }] } },
+    { "nama": "disk tidak bertambah dan stok tanpa pemakaian", "input": { "jenis": "disk", "nilai": "1.000", "kedua": "200" }, "ai": "{\"pembahasan\":\"Perkiraan penuh belum bisa dibuat karena data tidak bertambah, jadi cukup pantau tiap bulan.\",\"poin\":[\"Tidak ada pertambahan\"],\"langkah\":[\"Pantau tiap bulan\"]}", "kriteria": { "mengandung": ["perkiraan", "pantau"], "mengandungAturan": ["tidak bertambah"], "panjangMin": 100, "panjangMaks": 2500, "nilai": [{ "path": "data.hariPenuh", "min": -1, "max": -1 }, { "path": "data.sisa", "min": 800, "max": 800 }] } }
+  ]
+}

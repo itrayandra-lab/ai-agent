@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-bunga",
+  "division": "qa",
+  "employeeId": "bunga",
+  "title": "QC Laboratory Analyst",
+  "version": 1,
+  "name": "Pemeriksa hasil uji terhadap spesifikasi",
+  "ringkas": "Bandingkan hasil uji dengan batas spesifikasi, tandai yang di luar batas (OOS) atau mendekati batas, dan beri langkah lanjut.",
+  "kataKunci": [
+    "hasil uji",
+    "spesifikasi",
+    "oos",
+    "qc",
+    "batas mutu"
+  ],
+  "inputs": [
+    {
+      "key": "batch",
+      "type": "text",
+      "label": "Nama bahan atau nomor batch",
+      "required": true,
+      "contoh": "Ruahan Serum B-2611"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis sampel",
+      "required": true,
+      "default": "ruahan",
+      "choices": [
+        {
+          "v": "bahan",
+          "t": "Bahan baku"
+        },
+        {
+          "v": "ruahan",
+          "t": "Ruahan"
+        },
+        {
+          "v": "jadi",
+          "t": "Produk jadi"
+        }
+      ]
+    },
+    {
+      "key": "hasil",
+      "type": "longtext",
+      "label": "Hasil uji (parameter | batas bawah | batas atas | hasil | satuan; isi - bila tanpa batas)",
+      "required": true,
+      "contoh": "pH | 5.0 | 6.0 | 5.4 | -"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Bandingkan dengan batas",
+      "set": {
+        "rows": "baris(input.hasil).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const lo = p[1] === '-' || p[1] === '' ? null : num(p[1]); const hi = p[2] === '-' || p[2] === '' ? null : num(p[2]); const r = num(p[3]); const rendah = lo !== null && r < lo; const tinggi = hi !== null && r > hi; const lebar = lo !== null && hi !== null ? hi - lo : 0; const dekat = !rendah && !tinggi && lebar > 0 && Math.min(r - lo, hi - r) / lebar <= 0.05; return { param: p[0] || '-', lo: lo === null ? '-' : lo, hi: hi === null ? '-' : hi, hasil: r, sat: p[4] && p[4] !== '-' ? p[4] : '', status: rendah ? 'OOS (di bawah batas)' : tinggi ? 'OOS (di atas batas)' : dekat ? 'Dekat batas' : 'Lulus' }; })",
+        "oos": "v.rows.filter((r) => /^OOS/.test(r.status)).length",
+        "dekat": "v.rows.filter((r) => r.status === 'Dekat batas').length",
+        "putusan": "v.oos ? 'TAHAN: ada hasil di luar spesifikasi, mulai investigasi' : v.dekat ? 'Boleh lanjut dengan pemantauan: ada hasil dekat batas' : 'Memenuhi spesifikasi'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.oos + ' dari ' + v.rows.length + ' parameter di luar spesifikasi (OOS); ' + v.putusan",
+    "teks": "'# Hasil uji ' + input.batch + '\\n\\n' + tabel(['Parameter', 'Batas bawah', 'Batas atas', 'Hasil', 'Satuan', 'Status'], v.rows.map((r) => [r.param, r.lo, r.hi, r.hasil, r.sat, r.status])) + '\\n\\n**Keputusan:** ' + v.putusan + (v.oos ? '\\n\\nLangkah berikut: amankan sampel dan sisa, jangan mengulang uji sebelum investigasi laboratorium dimulai, catat sebagai hasil OOS, dan beri tahu penanggung jawab mutu.' : '')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-uji-' + input.batch",
+        "isi": "csv([['Parameter', 'Batas bawah', 'Batas atas', 'Hasil', 'Satuan', 'Status']].concat(v.rows.map((r) => [r.param, r.lo, r.hi, r.hasil, r.sat, r.status])).concat([['Keputusan', v.putusan, '', '', '', '']]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "batch": "Ruahan Serum B-2611",
+      "jenis": "ruahan",
+      "hasil": "pH | 5.0 | 6.0 | 5.4 | -\nViskositas | 8000 | 12000 | 12500 | cP\nBobot jenis | 0.98 | 1.02 | 1.00 | g/mL\nKadar niacinamide | 1.8 | 2.2 | 1.81 | %"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 dari 4 parameter di luar spesifikasi (OOS)",
+        "OOS (di atas batas)",
+        "Dekat batas"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-hasil-uji"
+  ],
+  "keahlian": {
+    "istilah": [
+      "hasil uji",
+      "spesifikasi",
+      "oos",
+      "qc",
+      "batas mutu"
+    ],
+    "data": [
+      "nama bahan atau nomor batch",
+      "jenis sampel",
+      "hasil uji (parameter | batas bawah | batas atas | hasil | sa"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

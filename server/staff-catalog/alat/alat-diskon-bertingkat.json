@@ -1,0 +1,114 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-diskon-bertingkat",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penghitung diskon bertingkat",
+  "ringkas": "Hitung harga akhir setelah satu sampai tiga diskon berurutan, beserta jumlah yang dihemat.",
+  "kataKunci": [
+    "diskon",
+    "potongan",
+    "harga akhir",
+    "promo",
+    "hemat"
+  ],
+  "inputs": [
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga awal (Rp)",
+      "required": true,
+      "contoh": "1000000"
+    },
+    {
+      "key": "d1",
+      "type": "number",
+      "label": "Diskon pertama (%)",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "d2",
+      "type": "number",
+      "label": "Diskon kedua (%)",
+      "required": false,
+      "default": "0"
+    },
+    {
+      "key": "d3",
+      "type": "number",
+      "label": "Diskon ketiga (%)",
+      "required": false,
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "akhir": "Math.round(input.harga * (1 - input.d1 / 100) * (1 - num(input.d2) / 100) * (1 - num(input.d3) / 100))",
+        "hemat": "Math.round(input.harga) - v.akhir",
+        "persen": "input.harga ? Math.round(v.hemat / input.harga * 1000) / 10 : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Harga akhir ' + rp(v.akhir) + ', hemat ' + rp(v.hemat) + ' (' + v.persen + '%)'",
+    "teks": "tabel(['Rincian', 'Nilai'], [['Harga awal', rp(input.harga)], ['Harga akhir', rp(v.akhir)], ['Hemat', rp(v.hemat)], ['Setara diskon', v.persen + '%']])"
+  },
+  "sample": {
+    "input": {
+      "harga": "1000000",
+      "d1": "10",
+      "d2": "5",
+      "d3": "0"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Rp 855.000",
+        "Rp 145.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "diskon",
+      "potongan",
+      "harga akhir",
+      "promo",
+      "hemat"
+    ],
+    "data": [
+      "harga awal (rp)",
+      "diskon pertama (%)",
+      "diskon kedua (%)",
+      "diskon ketiga (%)"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

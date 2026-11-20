@@ -1,0 +1,11 @@
+play0: {"txt":"PLAY","aria":"Masuk mode Play","playImg":true,"stop":false,"playing":false}
+1 klik PADA GAMBAR -> on: {"txt":"PLAY","aria":"Masuk mode Play","playImg":true,"stop":false,"playing":false}
+2 exit by button: {"txt":"PLAY","aria":"Masuk mode Play","playImg":true,"stop":false,"playing":false}
+3 play again: {"txt":"PLAY","aria":"Masuk mode Play","playImg":true,"stop":false,"playing":false}
+4 exit by Esc (CDP key): {"txt":"EXIT","aria":"Keluar dari mode Play","playImg":false,"stop":true,"playing":true}
+5 play 3rd: {"txt":"PLAY","aria":"Masuk mode Play","playImg":true,"stop":false,"playing":false}
+6 exit by Esc (synthetic): {"txt":"PLAY","aria":"Masuk mode Play","playImg":true,"stop":false,"playing":false}
+fullscreen: {"entered":false,"exited":true}
+setelah navigasi: {"n":11,"active":"browser","cur":"page"}
+FOKUS keyboard: solid 2px
+ERRORS: ["NETFAIL https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;500;600&family=Inter:wght@400;500;600;700&display=swap net::ERR_BLOCKED_BY_ORB","EXC Uncaught (in promise) TypeError: Permissions check failed","EXC Uncaught (in promise) TypeError: Permissions check failed"]

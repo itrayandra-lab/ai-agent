@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-gunawan-kebutuhan",
+  "division": "scm",
+  "employeeId": "gunawan",
+  "title": "Raw Material & Packaging Buyer",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Plan",
+    "simpan": true
+  },
+  "name": "Penghitung kebutuhan bahan dari rencana produksi",
+  "ringkas": "Dari rencana produksi dan resep bahan, hitung kebutuhan tiap bahan dan berapa yang masih kurang dari stok.",
+  "kataKunci": [
+    "kebutuhan bahan",
+    "bom",
+    "resep",
+    "rencana produksi",
+    "kekurangan stok"
+  ],
+  "inputs": [
+    {
+      "key": "produksi",
+      "type": "longtext",
+      "label": "Rencana produksi (produk | jumlah)",
+      "required": true,
+      "contoh": "Serum | 500"
+    },
+    {
+      "key": "resep",
+      "type": "longtext",
+      "label": "Resep (produk | bahan | pemakaian per unit)",
+      "required": true,
+      "contoh": "Serum | Botol | 1"
+    },
+    {
+      "key": "stok",
+      "type": "longtext",
+      "label": "Stok bahan (bahan | stok)",
+      "required": true,
+      "contoh": "Botol | 600"
+    },
+    {
+      "key": "susut",
+      "type": "choice",
+      "label": "Tambahan untuk susut",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tidak ada"
+        },
+        {
+          "v": "3",
+          "t": "3%"
+        },
+        {
+          "v": "5",
+          "t": "5%"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung kebutuhan",
+      "set": {
+        "prod": "baris(input.produksi).map((l) => l.split('|').map((s) => s.trim()))",
+        "resep": "baris(input.resep).map((l) => l.split('|').map((s) => s.trim()))",
+        "stokM": "baris(input.stok).map((l) => l.split('|').map((s) => s.trim()))",
+        "rows": "[...new Set(v.resep.map((r) => r[1]))].map((b) => { const need = Math.round(v.resep.filter((r) => r[1] === b).reduce((a, r) => { const pr = v.prod.find((p) => p[0].toLowerCase() === String(r[0]).toLowerCase()); return a + (pr ? num(pr[1]) * num(r[2]) : 0); }, 0) * (1 + num(input.susut) / 100) * 1000) / 1000; const st = v.stokM.find((s) => s[0].toLowerCase() === String(b).toLowerCase()); const stok = st ? num(st[1]) : 0; return { bahan: b, need: need, stok: stok, kurang: Math.ceil(Math.max(0, need - stok) * 10) / 10 }; })",
+        "nKurang": "v.rows.filter((r) => r.kurang > 0).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' bahan dihitung, ' + v.nKurang + ' bahan kurang dari stok'",
+    "teks": "'# Kebutuhan bahan (susut ' + input.susut + '%)\\n\\n' + tabel(['Bahan', 'Kebutuhan', 'Stok', 'Kurang'], v.rows.map((r) => [r.bahan, r.need, r.stok, r.kurang])) + '\\n\\n' + (v.nKurang ? '**Perlu dibeli:** ' + v.rows.filter((r) => r.kurang > 0).map((r) => r.bahan + ' ' + r.kurang).join(', ') : 'Stok cukup untuk semua bahan.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kebutuhan-bahan'",
+        "isi": "csv([['Bahan', 'Kebutuhan', 'Stok', 'Kurang']].concat(v.rows.map((r) => [r.bahan, r.need, r.stok, r.kurang])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "produksi": "Serum | 500\nToner | 300",
+      "resep": "Serum | Niacinamide | 0.02\nSerum | Botol | 1\nToner | Botol | 1\nToner | Air | 0.1",
+      "stok": "Niacinamide | 5\nBotol | 600\nAir | 100",
+      "susut": "5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 bahan dihitung, 2 bahan kurang",
+        "Botol 240",
+        "Niacinamide 5.5"
+      ]
+    }
+  },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kebutuhan bahan",
+      "bom",
+      "resep",
+      "rencana produksi",
+      "kekurangan stok"
+    ],
+    "data": [
+      "rencana produksi (produk | jumlah)",
+      "resep (produk | bahan | pemakaian per unit)",
+      "stok bahan (bahan | stok)",
+      "tambahan untuk susut"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-rizky-stabilitas",
+  "division": "rnd",
+  "employeeId": "rizky",
+  "title": "Formulation Scientist",
+  "version": 1,
+  "name": "Jadwal uji stabilitas produk",
+  "ringkas": "Buat jadwal titik pengujian stabilitas (dipercepat, suhu ruang, atau siklus panas-dingin) lengkap dengan daftar yang diperiksa tiap titik.",
+  "kataKunci": [
+    "stabilitas",
+    "uji stabilitas",
+    "shelf life",
+    "masa simpan",
+    "jadwal uji"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Niacinamide 5%"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai uji tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "kondisi",
+      "type": "choice",
+      "label": "Kondisi penyimpanan",
+      "required": true,
+      "default": "cepat",
+      "choices": [
+        {
+          "v": "cepat",
+          "t": "Dipercepat (suhu 40 derajat)"
+        },
+        {
+          "v": "ruang",
+          "t": "Suhu ruang"
+        },
+        {
+          "v": "siklus",
+          "t": "Siklus panas-dingin"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "titik": "input.kondisi === 'cepat' ? [['Minggu 0', 0], ['Minggu 2', 14], ['Minggu 4', 28], ['Minggu 8', 56], ['Minggu 12', 84]] : input.kondisi === 'ruang' ? [['Bulan 0', 0], ['Bulan 1', 30], ['Bulan 3', 90], ['Bulan 6', 180], ['Bulan 12', 360], ['Bulan 24', 720]] : [['Siklus 0', 0], ['Siklus 1', 2], ['Siklus 2', 4], ['Siklus 3', 6], ['Siklus 4', 8], ['Siklus 5', 10]]",
+        "jadwal": "v.titik.map((t) => ({ titik: t[0], tanggal: new Date(Date.parse(input.mulai) + t[1] * 864e5).toISOString().slice(0, 10) }))",
+        "periksa": "['Tampilan, warna, dan aroma', 'Tingkat keasaman (pH)', 'Kekentalan', 'Pemisahan atau endapan', 'Kebocoran atau perubahan kemasan', 'Uji kuman (hanya titik terakhir)']"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.jadwal.length + ' titik uji stabilitas ' + input.produk + ', titik terakhir ' + v.jadwal[v.jadwal.length - 1].tanggal",
+    "teks": "'# Jadwal uji stabilitas: ' + input.produk + '\\n\\n' + tabel(['Titik uji', 'Tanggal'], v.jadwal.map((j) => [j.titik, j.tanggal])) + '\\n\\n## Yang diperiksa tiap titik\\n' + v.periksa.map((p) => '- [ ] ' + p).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-stabilitas-' + input.produk",
+        "isi": "csv([['Titik uji', 'Tanggal'].concat(v.periksa)].concat(v.jadwal.map((j) => [j.titik, j.tanggal].concat(v.periksa.map(() => '')))))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Formulation",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Niacinamide 5%",
+      "mulai": "2026-12-01",
+      "kondisi": "cepat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 titik uji",
+        "2027-02-23"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "stabilitas",
+      "uji stabilitas",
+      "shelf life",
+      "masa simpan",
+      "jadwal uji"
+    ],
+    "data": [
+      "nama produk",
+      "mulai uji tanggal",
+      "kondisi penyimpanan"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
+  }
+}

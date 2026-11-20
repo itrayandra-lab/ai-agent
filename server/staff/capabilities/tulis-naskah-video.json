@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-tulis-naskah-video",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menulis naskah video",
+  "version": 1,
+  "name": "Tulis naskah video",
+  "ringkas": "Susun naskah video pendek atau iklan per adegan dengan pembuka, isi, dan ajakan, lalu hitung durasi dari jumlah kata.",
+  "kataKunci": ["naskah", "video", "iklan", "adegan", "durasi", "reels"],
+  "kemampuan": {
+    "id": "tulis-naskah-video",
+    "kelompok": "menulis",
+    "tujuanAwam": "Membuat naskah video per adegan yang pas dengan durasi yang diinginkan, lengkap dengan pembuka yang menahan penonton dan ajakan di akhir."
+  },
+  "inputs": [
+    { "key": "format", "type": "choice", "label": "Berapa lama videonya?", "required": true, "default": "s30", "choices": [{ "v": "s15", "t": "15 detik" }, { "v": "s30", "t": "30 detik" }, { "v": "s60", "t": "1 menit" }, { "v": "s120", "t": "2 menit" }, { "v": "s180", "t": "3 menit" }] },
+    { "key": "gaya", "type": "choice", "label": "Bagaimana suasana videonya?", "required": true, "default": "santai", "choices": [{ "v": "santai", "t": "Santai" }, { "v": "energik", "t": "Bersemangat" }, { "v": "tenang", "t": "Tenang" }, { "v": "resmi", "t": "Resmi" }] },
+    { "key": "topik", "type": "text", "label": "Video ini tentang apa?", "required": true, "contoh": "Cara menyimpan sayur agar awet seminggu" },
+    { "key": "poin", "type": "longtext", "label": "Hal yang harus disampaikan (satu per baris)", "required": true, "contoh": "Cuci lalu keringkan\nSimpan di wadah tertutup\nTaruh di rak bawah kulkas" },
+    { "key": "ajakan", "type": "text", "label": "Ajakan di akhir video", "required": false, "contoh": "Ikuti akun kami untuk tips lainnya" },
+    { "key": "naskah", "type": "longtext", "label": "Naskah yang sudah ada (kosongkan bila belum ada)", "required": false, "contoh": "Sayur cepat layu? Coba cara ini." }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Bagi durasi dan periksa naskah",
+      "set": {
+        "detik": "({ s15: 15, s30: 30, s60: 60, s120: 120, s180: 180 })[input.format] || 30",
+        "kecepatan": "2.5",
+        "kataTarget": "Math.round(v.detik * v.kecepatan)",
+        "poin": "baris(input.poin || '').map((t) => t.replace(/^[-*0-9. ]+/, '')).filter((t) => t !== '').slice(0, 10)",
+        "n": "Math.max(2, Math.min(8, Math.ceil(v.detik / 8)))",
+        "ajakan": "String(input.ajakan || '').trim() || 'Ajak penonton mencoba atau mengikuti akun'",
+        "adegan": "[0, 1, 2, 3, 4, 5, 6, 7].slice(0, v.n).map((i) => ({ no: i + 1, mulai: Math.round(i * v.detik / v.n), selesai: Math.round((i + 1) * v.detik / v.n), bagian: i === 0 ? 'Pembuka' : i === v.n - 1 ? 'Ajakan' : 'Isi', isi: i === 0 ? 'Kalimat pembuka yang menahan penonton tentang: ' + input.topik : i === v.n - 1 ? v.ajakan : (v.poin[(i - 1) % Math.max(v.poin.length, 1)] || 'Tunjukkan manfaat utama') }))",
+        "adeganKata": "v.adegan.map((a) => Math.round((a.selesai - a.mulai) * v.kecepatan))"
+      }
+    },
+    {
+      "id": "periksa",
+      "use": "hitung",
+      "label": "Periksa naskah yang ada",
+      "set": {
+        "kataAda": "baris(input.naskah || '').join(' ').split(' ').filter((t) => t !== '').length",
+        "durasiAda": "Math.round(v.kataAda / v.kecepatan)",
+        "selisih": "v.kataAda ? v.durasiAda - v.detik : 0",
+        "terlarang": "['terbaik sedunia', 'menyembuhkan', '100% aman', 'dijamin untung', 'pasti berhasil'].filter((w) => (String(input.naskah || '') + ' ' + String(input.poin || '')).toLowerCase().indexOf(w) >= 0)",
+        "catatan": "[].concat(!v.kataAda ? ['Belum ada naskah; target ' + v.kataTarget + ' kata untuk ' + v.detik + ' detik.'] : v.selisih > 3 ? ['Naskah terlalu panjang sekitar ' + v.selisih + ' detik; potong ' + Math.round(v.selisih * v.kecepatan) + ' kata.'] : v.selisih < -3 ? ['Naskah kurang sekitar ' + (-v.selisih) + ' detik; tambah ' + Math.round(-v.selisih * v.kecepatan) + ' kata.'] : ['Panjang naskah pas dengan durasi.'], v.poin.length < v.n - 2 ? ['Poin ' + v.poin.length + ' kurang untuk ' + v.n + ' adegan; sebagian adegan memakai isi umum.'] : [], v.terlarang.length ? ['Ada klaim berlebihan: ' + v.terlarang.join(', ')] : [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Naskah ' + v.detik + ' detik, ' + v.n + ' adegan, target ' + v.kataTarget + ' kata' + (v.kataAda ? ', naskah ada ' + v.kataAda + ' kata (sekitar ' + v.durasiAda + ' detik)' : '')",
+    "teks": "'# Naskah video: ' + input.topik + '\\n\\n' + tabel(['Ukuran', 'Nilai'], [['Durasi tujuan (detik)', v.detik], ['Jumlah adegan', v.n], ['Target kata (sekitar 150 kata per menit)', v.kataTarget], ['Kata pada naskah yang ada', v.kataAda], ['Perkiraan durasi naskah (detik)', v.durasiAda], ['Suasana', input.gaya]]) + '\\n\\n## Pembagian adegan\\n\\n' + tabel(['Adegan', 'Waktu (detik)', 'Bagian', 'Isi', 'Kata'], v.adegan.map((a, i) => [a.no, a.mulai + '-' + a.selesai, a.bagian, a.isi, v.adeganKata[i]])) + '\\n\\n## Catatan\\n\\n' + v.catatan.map((c) => '- ' + c).join('\\n')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'adegan-' + cut(String(input.topik).toLowerCase(), 30)", "isi": "csv([['adegan', 'mulai', 'selesai', 'bagian', 'isi', 'kata']].concat(v.adegan.map((a, i) => [a.no, a.mulai, a.selesai, a.bagian, a.isi, v.adeganKata[i]])))" },
+      { "jenis": "md", "nama": "'naskah-' + cut(String(input.topik).toLowerCase(), 30)", "isi": "'# ' + input.topik + ' (' + v.detik + ' detik)\\n\\n' + v.adegan.map((a, i) => '## Adegan ' + a.no + ' - ' + a.bagian + ' (' + a.mulai + '-' + a.selesai + ' detik, sekitar ' + v.adeganKata[i] + ' kata)\\n' + a.isi).join('\\n\\n')" }
+    ],
+    "data": "({ detik: v.detik, adegan: v.n, kataTarget: v.kataTarget, kataAda: v.kataAda, durasiAda: v.durasiAda, selisih: v.selisih })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "format": "s30", "gaya": "santai", "topik": "Menyimpan sayur", "poin": "Cuci lalu keringkan\nSimpan di wadah tertutup", "ajakan": "Ikuti akun kami" }, "expect": { "berkas": 2, "mengandung": ["30 detik", "4 adegan", "75 kata"] } },
+  "otakProfil": {
+    "peran": "penulis naskah video pendek dan iklan",
+    "tujuan": "Tulis ucapan dan gambaran visual tiap adegan sesuai pembagian waktu, dengan pembuka yang menahan penonton dan satu ajakan di akhir.",
+    "gaya": "lisan, pendek, mudah diucapkan dalam satu tarikan napas",
+    "pedoman": ["Ikuti jumlah kata tiap adegan agar durasi pas.", "Tiga detik pertama harus langsung ke inti atau pertanyaan yang dekat dengan penonton.", "Pakai hanya fakta dari poin pengguna dan hindari klaim berlebihan."],
+    "skema": { "pembahasan": "teks", "adegan": "daftar", "saran": "daftar" },
+    "contoh": { "baik": "Sayur cepat layu? Cuci, keringkan, simpan tertutup. Awet seminggu.", "buruk": "Halo semuanya, pada video kali ini kami akan membahas banyak hal penting." },
+    "batas": { "pembahasan": 500, "butir": 8 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["sayur"], "minPanjang": 30, "maksPanjang": 800 },
+    "contohAI": "{\"pembahasan\":\"Pembuka berupa pertanyaan tentang sayur yang cepat layu, lalu dua langkah sederhana dan ajakan mengikuti akun.\",\"adegan\":[\"Sayur cepat layu? Coba cara ini.\",\"Cuci lalu keringkan sampai benar-benar kering.\",\"Simpan di wadah tertutup.\",\"Ikuti akun kami untuk tips lainnya.\"],\"saran\":[\"Tambahkan teks di layar\",\"Tampilkan sayur sebelum dan sesudah\"]}"
+  },
+  "evaluasi": [
+    { "nama": "video 30 detik tanpa naskah", "input": { "format": "s30", "gaya": "santai", "topik": "Menyimpan sayur", "poin": "Cuci lalu keringkan\nSimpan di wadah tertutup", "ajakan": "Ikuti akun kami" }, "ai": "{\"pembahasan\":\"Pembuka berupa pertanyaan tentang sayur yang cepat layu, lalu dua langkah sederhana dan ajakan mengikuti akun.\",\"adegan\":[\"Sayur cepat layu? Coba cara ini.\",\"Cuci lalu keringkan.\",\"Simpan di wadah tertutup.\",\"Ikuti akun kami.\"],\"saran\":[\"Tambahkan teks di layar\"]}", "kriteria": { "mengandung": ["sayur", "30 detik"], "mengandungAturan": ["Pembuka", "Ajakan", "Belum ada naskah"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.detik", "min": 30, "max": 30 }, { "path": "data.adegan", "min": 4, "max": 4 }, { "path": "data.kataTarget", "min": 75, "max": 75 }] } },
+    { "nama": "naskah ada tapi terlalu panjang", "input": { "format": "s15", "gaya": "energik", "topik": "Promo kopi", "poin": "Diskon 20 persen", "naskah": "Halo semuanya selamat datang di toko kopi kami hari ini ada promo besar besaran untuk semua minuman pilihan dengan diskon dua puluh persen jadi jangan sampai terlewat ya datang sekarang juga ke toko kami dan nikmati kopi susu favorit Anda bersama teman keluarga atau rekan kerja di toko kami", "ajakan": "Datang hari ini" }, "ai": "{\"pembahasan\":\"Naskah perlu dipotong menjadi satu kalimat pembuka, satu kalimat promo, dan satu ajakan untuk kopi.\",\"adegan\":[\"Kopi diskon 20 persen!\",\"Hari ini saja.\"],\"saran\":[\"Potong sapaan\"]}", "kriteria": { "mengandung": ["kopi", "15 detik"], "mengandungAturan": ["terlalu panjang", "potong"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.detik", "min": 15, "max": 15 }, { "path": "data.adegan", "min": 2, "max": 2 }, { "path": "data.kataAda", "min": 45, "max": 60 }, { "path": "data.selisih", "min": 4, "max": 20 }] } },
+    { "nama": "format tidak dikenal dan poin berantakan", "input": { "format": "lainnya", "gaya": "tenang", "topik": "Tips tidur", "poin": "  \n- matikan layar\n\n2. kamar gelap\n", "ajakan": "" }, "ai": "{\"pembahasan\":\"Video tenang tentang tidur dengan dua langkah: matikan layar dan gelapkan kamar, ditutup ajakan lembut.\",\"adegan\":[\"Sulit tidur?\",\"Matikan layar satu jam sebelum tidur.\",\"Gelapkan kamar.\",\"Coba malam ini.\"],\"saran\":[\"Pakai musik pelan\"]}", "kriteria": { "mengandung": ["tidur", "adegan"], "mengandungAturan": ["Ajak penonton", "30 detik"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.detik", "min": 30, "max": 30 }, { "path": "data.kataAda", "min": 0, "max": 0 }] } }
+  ]
+}

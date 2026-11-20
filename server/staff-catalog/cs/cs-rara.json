@@ -1,0 +1,193 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "cs-rara",
+  "division": "cs",
+  "employeeId": "rara",
+  "title": "Beauty Advisor",
+  "version": 1,
+  "name": "Penyusun rutinitas perawatan kulit",
+  "ringkas": "Susun rutinitas pagi dan malam yang cocok dengan jenis kulit dan masalah utama, dengan mempertimbangkan kehamilan.",
+  "kataKunci": [
+    "rutinitas skincare",
+    "jenis kulit",
+    "rekomendasi",
+    "perawatan kulit",
+    "urutan pakai"
+  ],
+  "inputs": [
+    {
+      "key": "kulit",
+      "type": "choice",
+      "label": "Jenis kulitmu",
+      "required": true,
+      "default": "berminyak",
+      "choices": [
+        {
+          "v": "normal",
+          "t": "Normal"
+        },
+        {
+          "v": "kering",
+          "t": "Kering"
+        },
+        {
+          "v": "berminyak",
+          "t": "Berminyak"
+        },
+        {
+          "v": "kombinasi",
+          "t": "Kombinasi"
+        },
+        {
+          "v": "sensitif",
+          "t": "Sensitif"
+        }
+      ]
+    },
+    {
+      "key": "masalah",
+      "type": "choice",
+      "label": "Masalah utama",
+      "required": true,
+      "default": "jerawat",
+      "choices": [
+        {
+          "v": "jerawat",
+          "t": "Jerawat"
+        },
+        {
+          "v": "kusam",
+          "t": "Kusam"
+        },
+        {
+          "v": "penuaan",
+          "t": "Garis halus"
+        },
+        {
+          "v": "kering",
+          "t": "Kulit kering dan kasar"
+        },
+        {
+          "v": "pori",
+          "t": "Pori besar"
+        }
+      ]
+    },
+    {
+      "key": "hamil",
+      "type": "choice",
+      "label": "Sedang hamil atau menyusui?",
+      "required": true,
+      "default": "tidak",
+      "choices": [
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        },
+        {
+          "v": "ya",
+          "t": "Ya"
+        }
+      ]
+    },
+    {
+      "key": "waktu",
+      "type": "choice",
+      "label": "Rutinitas untuk",
+      "required": true,
+      "default": "dua",
+      "choices": [
+        {
+          "v": "dua",
+          "t": "Pagi dan malam"
+        },
+        {
+          "v": "pagi",
+          "t": "Pagi saja"
+        },
+        {
+          "v": "malam",
+          "t": "Malam saja"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun rutinitas",
+      "set": {
+        "pelembap": "({ normal: 'Pelembap lotion ringan', kering: 'Pelembap krim yang kaya', berminyak: 'Pelembap gel ringan bebas minyak', kombinasi: 'Pelembap lotion ringan', sensitif: 'Pelembap tanpa pewangi dan tanpa alkohol' })[input.kulit]",
+        "pagiAktif": "({ jerawat: input.hamil === 'ya' ? 'Serum niacinamide' : 'Serum niacinamide atau salicylic acid (BHA)', kusam: 'Serum vitamin C', penuaan: 'Serum vitamin C atau peptida', kering: 'Serum hyaluronic acid', pori: 'Serum niacinamide' })[input.masalah]",
+        "malamAktif": "({ jerawat: input.hamil === 'ya' ? 'Serum azelaic acid (tanya dokter dulu)' : 'Salicylic acid 2-3 malam seminggu', kusam: 'Serum niacinamide', penuaan: input.hamil === 'ya' ? 'Serum peptida' : 'Retinol dosis rendah, mulai 2 malam seminggu', kering: 'Serum hyaluronic acid atau ceramide', pori: 'Serum niacinamide atau AHA lembut seminggu sekali' })[input.masalah]",
+        "pagi": "['Pembersih wajah lembut', v.pagiAktif, v.pelembap, 'Tabir surya SPF 30 ke atas (wajib)']",
+        "malam": "['Pembersih wajah lembut (bersihkan tabir surya atau riasan lebih dulu bila ada)', v.malamAktif, v.pelembap]",
+        "langkah": "(input.waktu === 'malam' ? [] : v.pagi.map((s, i) => ['Pagi', i + 1, s])).concat(input.waktu === 'pagi' ? [] : v.malam.map((s, i) => ['Malam', i + 1, s]))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rutinitas ' + input.kulit + ' untuk ' + input.masalah + ': ' + v.langkah.length + ' langkah' + (input.hamil === 'ya' ? ' (aman untuk ibu hamil: tanpa retinol)' : '')",
+    "teks": "'# Rutinitas perawatan kulit\\n\\nKulit ' + input.kulit + ', masalah utama ' + input.masalah + '\\n\\n' + tabel(['Waktu', 'Langkah', 'Pakai'], v.langkah) + '\\n\\n## Catatan\\n- Perkenalkan satu produk baru setiap 2 minggu.\\n- Uji tempel dulu di belakang telinga selama 24 jam.\\n- Hentikan bila perih, merah, atau gatal berlebih.\\n' + (input.hamil === 'ya' ? '- Hindari retinol dan salicylic acid dosis tinggi selama hamil atau menyusui; tanyakan ke dokter.\\n' : '') + '\\n_Ini saran umum, bukan pengganti dokter kulit._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rutinitas-kulit-' + input.kulit",
+        "isi": "csv([['Waktu', 'Langkah', 'Pakai']].concat(v.langkah))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Advice",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "kulit": "berminyak",
+      "masalah": "jerawat",
+      "hamil": "tidak",
+      "waktu": "dua"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "7 langkah",
+        "salicylic acid (BHA)",
+        "Tabir surya SPF 30"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "rutinitas skincare",
+      "jenis kulit",
+      "rekomendasi",
+      "perawatan kulit",
+      "urutan pakai"
+    ],
+    "data": [
+      "jenis kulitmu",
+      "masalah utama",
+      "sedang hamil atau menyusui?",
+      "rutinitas untuk"
+    ],
+    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan",
+    "contoh": {
+      "baik": "Mohon maaf atas keterlambatan; kami cek pesanan Anda dan kabari dalam 2 jam.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menjanjikan ganti rugi tanpa persetujuan."
+    ]
+  }
+}

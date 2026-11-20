@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "retail-nirmala",
+  "division": "retail",
+  "employeeId": "nirmala",
+  "title": "Visual Merchandiser",
+  "version": 1,
+  "name": "Perancang susunan rak (planogram) sederhana",
+  "ringkas": "Tentukan produk mana di rak setinggi mata, setinggi tangan, atau bawah dan berapa jumlah barisnya, berdasarkan penjualan dan untungnya.",
+  "kataKunci": [
+    "planogram",
+    "rak",
+    "display",
+    "susunan produk",
+    "visual merchandising"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Produk (satu baris: nama | penjualan per bulan (satuan) | untung %)",
+      "required": true,
+      "contoh": "Serum | 120 | 55\nToner | 90 | 45\nKrim | 60 | 60\nMasker | 40 | 35\nSabun | 150 | 20"
+    },
+    {
+      "key": "tingkat",
+      "type": "choice",
+      "label": "Jumlah tingkat rak",
+      "required": true,
+      "default": "4",
+      "choices": [
+        {
+          "v": "4",
+          "t": "4 tingkat"
+        },
+        {
+          "v": "5",
+          "t": "5 tingkat"
+        }
+      ]
+    },
+    {
+      "key": "baris",
+      "type": "choice",
+      "label": "Total ruang baris produk di rak",
+      "required": true,
+      "default": "36",
+      "choices": [
+        {
+          "v": "24",
+          "t": "24 baris"
+        },
+        {
+          "v": "36",
+          "t": "36 baris"
+        },
+        {
+          "v": "48",
+          "t": "48 baris"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun rak",
+      "set": {
+        "namaTingkat": "input.tingkat === '5' ? ['Paling bawah', 'Setinggi pinggang', 'Setinggi mata', 'Setinggi bahu', 'Paling atas'] : ['Paling bawah', 'Setinggi pinggang', 'Setinggi mata', 'Paling atas']",
+        "urutan": "input.tingkat === '5' ? [2, 3, 1, 4, 0] : [2, 1, 3, 0]",
+        "rows": "baris(input.data).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: p[0] || '-', skor: num(p[1]) * num(p[2]) }; }).sort((a, b) => b.skor - a.skor)",
+        "jumlahSkor": "Math.max(1, v.rows.reduce((a, b) => a + b.skor, 0))",
+        "rak": "v.rows.map((r, i) => ({ nama: r.nama, tingkat: v.namaTingkat[v.urutan[Math.floor(i * num(input.tingkat) / v.rows.length)]], baris: Math.max(1, Math.round(r.skor / v.jumlahSkor * num(input.baris))) }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Susunan rak ' + v.rak.length + ' produk; paling depan di tingkat mata: ' + v.rak[0].nama",
+    "teks": "'# Susunan rak\\n\\n' + tabel(['Peringkat', 'Produk', 'Tingkat rak', 'Jumlah baris'], v.rak.map((r, i) => [i + 1, r.nama, r.tingkat, r.baris])) + '\\n\\nAturan: skor = penjualan x untung %. Produk dengan skor tertinggi diberi tempat dan jumlah baris terbanyak setinggi mata.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'susunan-rak'",
+        "isi": "csv([['Peringkat', 'Produk', 'Tingkat rak', 'Jumlah baris']].concat(v.rak.map((r, i) => [i + 1, r.nama, r.tingkat, r.baris])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Serum | 120 | 55\nToner | 90 | 45\nKrim | 60 | 60\nMasker | 40 | 35\nSabun | 150 | 20",
+      "tingkat": "4",
+      "baris": "36"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 produk; paling depan di tingkat mata: Serum",
+        "Setinggi mata",
+        "Paling bawah"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "rancang-struktur"
+  ],
+  "keahlian": {
+    "istilah": [
+      "planogram",
+      "rak",
+      "display",
+      "susunan produk",
+      "visual merchandising"
+    ],
+    "data": [
+      "produk (satu baris: nama | penjualan per bulan (satuan) | un",
+      "jumlah tingkat rak",
+      "total ruang baris produk di rak"
+    ],
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
+  }
+}

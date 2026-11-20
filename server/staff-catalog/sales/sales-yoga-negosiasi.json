@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-yoga-negosiasi",
+  "division": "sales",
+  "employeeId": "yoga",
+  "title": "Account Executive",
+  "version": 1,
+  "name": "Penghitung batas diskon saat negosiasi",
+  "ringkas": "Tentukan harga terendah yang masih aman dan siapkan tiga langkah konsesi bertahap untuk menghadapi tawar-menawar.",
+  "kataKunci": [
+    "negosiasi",
+    "batas diskon",
+    "harga terendah",
+    "konsesi",
+    "closing"
+  ],
+  "inputs": [
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga penawaran awal (Rp)",
+      "required": true,
+      "contoh": "10000000"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Biaya pokok (Rp)",
+      "required": true,
+      "contoh": "6500000"
+    },
+    {
+      "key": "untung",
+      "type": "choice",
+      "label": "Untung minimal yang harus dijaga",
+      "required": true,
+      "default": "15",
+      "choices": [
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "15",
+          "t": "15%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "25",
+          "t": "25%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung batas",
+      "set": {
+        "lantai": "Math.ceil(num(input.hpp) / (1 - num(input.untung) / 100) / 1000) * 1000",
+        "ruang": "num(input.harga) - v.lantai",
+        "ruangPct": "num(input.harga) ? Math.round(v.ruang / num(input.harga) * 1000) / 10 : 0",
+        "langkah": "v.ruang <= 0 ? [] : [0.3, 0.6, 1].map((f, i) => ({ langkah: i + 1, harga: Math.round((num(input.harga) - v.ruang * f) / 1000) * 1000, saran: ['Beri diskon kecil bila deal hari ini', 'Beri diskon sedang bila bayar di muka atau pesan lebih banyak', 'Harga terendah: hanya bila ada imbalan jelas, mis. kontrak lebih panjang'][i] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ruang > 0 ? 'Harga terendah aman ' + rp(v.lantai) + '; ruang negosiasi ' + rp(v.ruang) + ' (' + v.ruangPct + '%)' : 'Harga awal sudah di bawah batas aman ' + rp(v.lantai) + '; naikkan harga atau kurangi biaya'",
+    "teks": "'# Batas negosiasi\\n\\n- Harga awal: ' + rp(input.harga) + '\\n- Biaya pokok: ' + rp(input.hpp) + '\\n- Harga terendah (untung ' + input.untung + '%): **' + rp(v.lantai) + '**\\n\\n' + (v.langkah.length ? tabel(['Langkah', 'Harga', 'Saran'], v.langkah.map((l) => [l.langkah, rp(l.harga), l.saran])) : 'Tidak ada ruang untuk memberi diskon.')",
+    "data": "({ lantai: v.lantai, ruang: v.ruang })"
+  },
+  "sample": {
+    "input": {
+      "harga": "10000000",
+      "hpp": "6500000",
+      "untung": "15"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Rp 7.648.000",
+        "ruang negosiasi Rp 2.352.000",
+        "Rp 9.294.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "negosiasi",
+      "batas diskon",
+      "harga terendah",
+      "konsesi",
+      "closing"
+    ],
+    "data": [
+      "harga penawaran awal (rp)",
+      "biaya pokok (rp)",
+      "untung minimal yang harus dijaga"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

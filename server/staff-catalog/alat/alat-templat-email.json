@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-templat-email",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penyusun email rapi",
+  "ringkas": "Susun email siap kirim dari beberapa poin: tindak lanjut, penagihan sopan, terima kasih, permohonan maaf, atau penawaran.",
+  "kataKunci": [
+    "email",
+    "surat",
+    "tindak lanjut",
+    "penagihan",
+    "penawaran"
+  ],
+  "inputs": [
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis email",
+      "required": true,
+      "default": "tindak",
+      "choices": [
+        {
+          "v": "tindak",
+          "t": "Tindak lanjut"
+        },
+        {
+          "v": "tagih",
+          "t": "Pengingat pembayaran"
+        },
+        {
+          "v": "terima",
+          "t": "Ucapan terima kasih"
+        },
+        {
+          "v": "maaf",
+          "t": "Permohonan maaf"
+        },
+        {
+          "v": "tawar",
+          "t": "Penawaran"
+        }
+      ]
+    },
+    {
+      "key": "penerima",
+      "type": "text",
+      "label": "Nama penerima (mis. Bu Rina)",
+      "required": true,
+      "contoh": "Bu Rina"
+    },
+    {
+      "key": "pengirim",
+      "type": "text",
+      "label": "Nama pengirim",
+      "required": true,
+      "contoh": "Dewi"
+    },
+    {
+      "key": "poin",
+      "type": "longtext",
+      "label": "Poin yang ingin disampaikan (satu baris satu poin)",
+      "required": true,
+      "contoh": "Pertemuan kemarin"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Susun",
+      "set": {
+        "subjek": "({ tindak: 'Tindak lanjut pembicaraan kita', tagih: 'Pengingat pembayaran', terima: 'Terima kasih', maaf: 'Mohon maaf atas ketidaknyamanannya', tawar: 'Penawaran untuk Anda' })[input.jenis]",
+        "pembuka": "({ tindak: 'Terima kasih atas waktunya. Berikut tindak lanjut dari pembicaraan kita:', tagih: 'Semoga Anda dalam keadaan baik. Kami ingin mengingatkan dengan sopan mengenai hal berikut:', terima: 'Kami ingin menyampaikan terima kasih yang tulus atas hal berikut:', maaf: 'Kami mohon maaf atas kendala yang terjadi. Berikut penjelasan dan langkah kami:', tawar: 'Berikut penawaran yang kami siapkan khusus untuk Anda:' })[input.jenis]",
+        "penutup": "({ tindak: 'Mohon kabari bila ada yang perlu kami sesuaikan.', tagih: 'Bila pembayaran sudah dilakukan, mohon abaikan pesan ini dan terima kasih.', terima: 'Kami berharap dapat terus bekerja sama.', maaf: 'Terima kasih atas pengertian dan kesabarannya.', tawar: 'Kami siap berdiskusi kapan pun Anda berkenan.' })[input.jenis]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Email \"' + v.subjek + '\" untuk ' + input.penerima + ' siap'",
+    "teks": "'**Subjek:** ' + v.subjek + '\\n\\nYth. ' + input.penerima + ',\\n\\n' + v.pembuka + '\\n' + baris(input.poin).map((p) => '- ' + p).join('\\n') + '\\n\\n' + v.penutup + '\\n\\nHormat kami,\\n' + input.pengirim",
+    "berkas": [
+      {
+        "jenis": "txt",
+        "nama": "'email-' + input.jenis",
+        "isi": "'Subjek: ' + v.subjek + '\\n\\nYth. ' + input.penerima + ',\\n\\n' + v.pembuka + '\\n' + baris(input.poin).map((p) => '- ' + p).join('\\n') + '\\n\\n' + v.penutup + '\\n\\nHormat kami,\\n' + input.pengirim"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "jenis": "tindak",
+      "penerima": "Bu Rina",
+      "pengirim": "Dewi",
+      "poin": "Pertemuan kemarin\nKirim proposal Jumat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Yth. Bu Rina",
+        "Kirim proposal Jumat",
+        "Hormat kami"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "email",
+      "surat",
+      "tindak lanjut",
+      "penagihan",
+      "penawaran"
+    ],
+    "data": [
+      "jenis email",
+      "nama penerima (mis. bu rina)",
+      "nama pengirim",
+      "poin yang ingin disampaikan (satu baris satu poin)"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

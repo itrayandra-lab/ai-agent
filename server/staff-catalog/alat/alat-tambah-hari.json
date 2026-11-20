@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-tambah-hari",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penghitung tanggal tenggat",
+  "ringkas": "Tambahkan sejumlah hari ke sebuah tanggal untuk mengetahui tanggal jatuh tempo atau tenggat beserta nama harinya.",
+  "kataKunci": [
+    "tenggat",
+    "jatuh tempo",
+    "tanggal",
+    "tambah hari",
+    "deadline"
+  ],
+  "inputs": [
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Mulai dari tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "hari",
+      "type": "number",
+      "label": "Tambah berapa hari",
+      "required": true,
+      "contoh": "45"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "hasil": "new Date(Date.parse(input.tanggal) + Math.round(input.hari) * 864e5)",
+        "iso": "v.hasil.toISOString().slice(0, 10)",
+        "nama": "['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][v.hasil.getUTCDay()]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.tanggal + ' ditambah ' + input.hari + ' hari = ' + v.iso + ' (' + v.nama + ')'",
+    "teks": "'Tanggal hasil: **' + v.iso + '** (' + v.nama + ')'"
+  },
+  "sample": {
+    "input": {
+      "tanggal": "2026-11-18",
+      "hari": "45"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "2027-01-02",
+        "Sabtu"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "hitung-teknis"
+  ],
+  "keahlian": {
+    "istilah": [
+      "tenggat",
+      "jatuh tempo",
+      "tanggal",
+      "tambah hari",
+      "deadline"
+    ],
+    "data": [
+      "mulai dari tanggal",
+      "tambah berapa hari"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

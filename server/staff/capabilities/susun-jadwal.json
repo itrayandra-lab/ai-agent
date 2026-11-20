@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-susun-jadwal",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menyusun jadwal",
+  "version": 1,
+  "name": "Susun jadwal kegiatan",
+  "ringkas": "Susun jadwal atau kalender dari tanggal mulai, jumlah periode, dan daftar kegiatan, lengkap dengan hari dan tabel tanggal.",
+  "kataKunci": ["jadwal", "kalender", "shift", "konten", "perawatan", "tindak lanjut"],
+  "kemampuan": {
+    "id": "susun-jadwal",
+    "kelompok": "perencanaan",
+    "tujuanAwam": "Mengubah daftar kegiatan menjadi jadwal bertanggal yang rapi, untuk konten, produksi, giliran kerja, perawatan, atau tindak lanjut."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Jadwal untuk apa?", "required": true, "default": "konten", "choices": [{ "v": "konten", "t": "Konten" }, { "v": "produksi", "t": "Produksi" }, { "v": "shift", "t": "Giliran kerja" }, { "v": "perawatan", "t": "Perawatan" }, { "v": "tindak lanjut", "t": "Tindak lanjut" }] },
+    { "key": "mulai", "type": "date", "label": "Tanggal mulai", "required": true, "contoh": "2026-03-02" },
+    { "key": "periode", "type": "choice", "label": "Satu periode berapa lama?", "required": true, "default": "mingguan", "choices": [{ "v": "harian", "t": "Satu hari" }, { "v": "mingguan", "t": "Satu minggu" }, { "v": "bulanan", "t": "Satu bulan" }] },
+    { "key": "jumlah", "type": "number", "label": "Berapa periode? (1 sampai 60)", "required": true, "default": 4, "contoh": "4" },
+    { "key": "frekuensi", "type": "choice", "label": "Bagaimana kegiatan diatur?", "required": true, "default": "giliran", "choices": [{ "v": "giliran", "t": "Bergantian, satu per periode" }, { "v": "berulang", "t": "Semua diulang tiap periode" }, { "v": "sekali", "t": "Sekali saja, dibagi rata" }] },
+    { "key": "kegiatan", "type": "longtext", "label": "Daftar kegiatan (satu per baris)", "required": true, "contoh": "Video pendek\nFoto produk\nTulisan blog" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun tanggal",
+      "set": {
+        "unit": "input.periode === 'harian' ? 1 : input.periode === 'mingguan' ? 7 : 30",
+        "n": "Math.min(60, Math.max(1, Math.round(Number(input.jumlah)) || 4))",
+        "mulaiOk": "String(input.mulai).slice(4, 5) === '-' && String(input.mulai).slice(7, 8) === '-' && Number.isFinite(Date.parse(String(input.mulai).slice(0, 10)))",
+        "base": "v.mulaiOk ? Date.parse(String(input.mulai).slice(0, 10)) : Math.floor(Date.now() / 86400000) * 86400000",
+        "acts": "(() => { const a = baris(input.kegiatan).map((s) => String(s).trim()).filter((s) => s !== '').slice(0, 40); return a.length ? a : ['Kegiatan utama']; })()",
+        "rows": "(() => { const rng = (m) => ' '.padEnd(m).split('').map((_, i) => i); const k = v.acts.length; const r = input.frekuensi === 'berulang' ? rng(v.n).flatMap((p) => rng(k).map((i) => ({ o: p * v.unit + Math.floor(i * v.unit / k), a: v.acts[i] }))) : input.frekuensi === 'sekali' ? rng(k).map((i) => ({ o: Math.floor(i * v.n * v.unit / k), a: v.acts[i] })) : rng(v.n).map((p) => ({ o: p * v.unit, a: v.acts[p % k] })); return r.slice(0, 300).sort((x, y) => x.o - y.o); })()",
+        "daftar": "v.rows.map((r, i) => { const d = new Date(v.base + r.o * 86400000); return [i + 1, d.toISOString().slice(0, 10), ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][d.getUTCDay()], r.a]; })",
+        "mulaiIso": "new Date(v.base).toISOString().slice(0, 10)",
+        "selesai": "v.daftar.length ? v.daftar[v.daftar.length - 1][1] : v.mulaiIso",
+        "akhirPekan": "v.daftar.filter((r) => r[2] === 'Sabtu' || r[2] === 'Minggu').length",
+        "padat": "v.daftar.reduce((m, r) => Math.max(m, v.daftar.filter((q) => q[1] === r[1]).length), 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Jadwal ' + input.jenis + ': ' + v.daftar.length + ' kegiatan dari ' + v.mulaiIso + ' sampai ' + v.selesai + (v.mulaiOk ? '' : ' (tanggal mulai tidak terbaca, dipakai hari ini)')",
+    "teks": "'# Jadwal ' + input.jenis + '\\n\\nMulai ' + v.mulaiIso + ', ' + v.n + ' periode ' + input.periode + ', ' + v.daftar.length + ' kegiatan.' + (v.mulaiOk ? '' : ' Tanggal mulai tidak terbaca, jadi dipakai tanggal hari ini.') + '\\n\\n' + tabel(['No', 'Tanggal', 'Hari', 'Kegiatan'], v.daftar) + (v.akhirPekan ? '\\n\\nCatatan: ' + v.akhirPekan + ' kegiatan jatuh pada Sabtu atau Minggu.' : '') + (v.padat > 2 ? '\\n\\nCatatan: ada hari dengan ' + v.padat + ' kegiatan sekaligus, pertimbangkan digeser.' : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'jadwal-' + cut(String(input.jenis).toLowerCase().split(' ').join('-'), 30)", "isi": "csv([['no', 'tanggal', 'hari', 'kegiatan']].concat(v.daftar))" }
+    ],
+    "data": "({ n: v.daftar.length, periode: v.n, kegiatan: v.acts.length, akhirPekan: v.akhirPekan, padat: v.padat, mulai: v.mulaiIso, selesai: v.selesai })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "konten", "mulai": "2026-03-02", "periode": "mingguan", "jumlah": 4, "frekuensi": "giliran", "kegiatan": "Video pendek\nFoto produk\nTulisan blog" }, "expect": { "berkas": 1, "mengandung": ["4 kegiatan", "2026-03-23"] } },
+  "otakProfil": {
+    "peran": "penyusun jadwal yang menjelaskan jadwal kepada orang awam",
+    "tujuan": "Beri catatan singkat tentang jadwal yang sudah disusun: apa yang perlu dijaga, hari yang padat, dan langkah menjalankannya.",
+    "gaya": "ramah, ringkas, praktis, sebut tanggal apa adanya",
+    "pedoman": ["Pakai hanya tanggal dan kegiatan yang ada di jadwal; jangan menambah kegiatan baru.", "Soroti hari yang padat atau jatuh di akhir pekan.", "Beri satu atau dua saran agar jadwal mudah dijalankan."],
+    "skema": { "pembahasan": "teks", "catatan": "daftar", "saran": "daftar" },
+    "contoh": { "baik": "Jadwal empat minggu ini terbagi rata, hanya satu kegiatan tiap minggu sehingga ringan dijalankan.", "buruk": "Jadwalnya oke." },
+    "batas": { "pembahasan": 500, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["jadwal"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Jadwal ini terbagi rata sehingga beban tiap periode ringan dan mudah diikuti.\",\"catatan\":[\"Tidak ada hari yang terlalu padat\"],\"saran\":[\"Pasang pengingat sehari sebelum tiap kegiatan\"]}"
+  },
+  "evaluasi": [
+    { "nama": "konten bergiliran mingguan", "input": { "jenis": "konten", "mulai": "2026-03-02", "periode": "mingguan", "jumlah": 4, "frekuensi": "giliran", "kegiatan": "Video pendek\nFoto produk\nTulisan blog" }, "ai": "{\"pembahasan\":\"Jadwal empat minggu ini bergantian tiga jenis konten sehingga ritmenya terjaga dan ringan dijalankan.\",\"catatan\":[\"Video pendek muncul dua kali\"],\"saran\":[\"Siapkan bahan sehari sebelumnya\"]}", "kriteria": { "mengandung": ["4 kegiatan", "ritmenya"], "mengandungAturan": ["2026-03-23", "Foto produk"], "panjangMin": 80, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 4, "max": 4 }, { "path": "data.akhirPekan", "min": 0, "max": 0 }] } },
+    { "nama": "giliran kerja harian berulang", "input": { "jenis": "shift", "mulai": "2026-03-02", "periode": "harian", "jumlah": 7, "frekuensi": "berulang", "kegiatan": "Pagi\nSore" }, "ai": "{\"pembahasan\":\"Setiap hari ada dua giliran, pagi dan sore, sehingga perlu dua orang tersedia tiap hari termasuk akhir pekan.\",\"catatan\":[\"Sabtu dan Minggu tetap berjalan\"],\"saran\":[\"Atur pengganti untuk akhir pekan\"]}", "kriteria": { "mengandung": ["14 kegiatan", "dua giliran"], "mengandungAturan": ["Sabtu atau Minggu", "Sore"], "panjangMin": 80, "panjangMaks": 3500, "nilai": [{ "path": "data.n", "min": 14, "max": 14 }, { "path": "data.akhirPekan", "min": 4, "max": 4 }, { "path": "data.padat", "min": 2, "max": 2 }] } },
+    { "nama": "tanggal dan jumlah tidak terbaca", "input": { "jenis": "perawatan", "mulai": "besok pagi", "periode": "bulanan", "jumlah": "abc", "frekuensi": "sekali", "kegiatan": "  \n\n Cek mesin \n" }, "ai": "{\"pembahasan\":\"Hanya satu kegiatan, yaitu cek mesin, dan tanggal mulai diganti tanggal hari ini sehingga sebaiknya jadwal dicek ulang.\",\"catatan\":[\"Tanggal mulai tidak terbaca\"],\"saran\":[\"Isi tanggal mulai dengan benar\"]}", "kriteria": { "mengandung": ["1 kegiatan", "dicek ulang"], "mengandungAturan": ["tidak terbaca", "Cek mesin"], "panjangMin": 80, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 1, "max": 1 }, { "path": "data.periode", "min": 4, "max": 4 }] } }
+  ]
+}

@@ -1,56 +1,99 @@
 // HTTP server: REST API, Server-Sent Events stream, static frontend. No framework.
+import * as config from './config.js';
+import * as edgeTts from './integrasi/tts-edge.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import * as store from './store.js';
+import * as store from './penyimpanan/store.js';
 import * as engine from './engine.js';
-import * as brain from './brain.js';
-import * as llm from './llm.js';
-import { slug } from './seed.js';
-import * as studio from './studio.js';
-import { CAPABILITIES, ensureEmployeeConfig, autoActivate, skillTools, grantUniversalSkills } from './catalog.js';
-import * as lib from './librarian.js';
-import { personalAssistant } from './roster.js';
+import * as brain from './pengetahuan/brain.js';
+import * as llm from './otak/llm.js';
+import { slug } from './organisasi/seed.js';
+import * as studio from './organisasi/studio.js';
+import { CAPABILITIES, ensureEmployeeConfig, autoActivate, skillTools, grantUniversalSkills } from './otak/catalog.js';
+import * as lib from './pengetahuan/librarian.js';
+import { personalAssistant } from './organisasi/roster.js';
 import * as collab from './collab.js';
-import * as org from './org.js';
+import * as org from './organisasi/org.js';
 import os from 'node:os';
+import * as auth from './keamanan/auth.js';
+import * as gdrive from './integrasi/gdrive.js';
+import * as browser from './integrasi/browser.js';
+import * as otomasi from './integrasi/n8n.js';
+import * as staffApi from './staff/index.js';
+import * as learn from './pengetahuan/skills-learn.js';
+import * as power from './pengetahuan/skills-power.js';
+import * as pemandu from './pemandu.js';
+import * as chatKontak from './chat-kontak.js';   // Pesan: kontak (orang, divisi, grup) dan utas per kontak
+import * as chatEngine from './chat-engine.js';   // Chat Engine: satu mesin obrolan (mendaftar sebagai pintu depan pemandu.turn)
+import * as gov from './governor.js';
+import { hapusBanyak } from './hapus-banyak.js';
+import { starterDb } from './organisasi/workspace.js';
+import * as limits from './keamanan/limits.js';   // P3: batas laju + kuota (dipasang lewat limits.edge dan limits.user di bawah)
+import * as gate from './keamanan/gate.js';
+import * as secure from './keamanan/secure.js';
+import * as privacy from './keamanan/privacy.js';
+import * as channels from './channels/index.js';   // saluran chat Telegram dan Discord (docs/SALURAN-CHAT.md)
+import * as admin from './admin/admin.js';        // konsol pengelola (/api/admin/*), lihat docs/KONSOL-ADMIN.md
+import * as platform from './admin/platform.js';
+import { kirimJson, kirimBerkas } from './http-perf.js';   // perf: kompresi, ETag/304, cache statis di memori
 
 // Local secrets (GROQ_API_KEY / ANTHROPIC_API_KEY) live in .env, never in the repo.
 try { process.loadEnvFile(path.resolve('.env')); } catch { /* no .env */ }
+for (const p of config.validate()) console.warn(`  Konfigurasi: ${p}`);   // hanya memperingatkan; tidak mengubah perilaku (server/config.js)
 
-const PORT = Number(process.env.PORT || 4317);
-const HOST = process.env.HOST || '127.0.0.1';
+const PORT = config.port();
+const HOST = config.host();
 const ROOT = path.resolve('public');
 const VENDOR = { '/vendor/three/': path.resolve('node_modules/three/') };
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.wasm': 'application/wasm', '.mjs': 'text/javascript; charset=utf-8', '.onnx': 'application/octet-stream', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 
+admin.applyPendingRestore();   // pemulihan data yang dijadwalkan dari konsol pengelola diterapkan sebelum data dimuat
+privacy.purgeAtBoot();   // P3: ruang kerja yang dihapus pemiliknya dipindah ke data/trash sebelum dimuat
 if (process.argv.includes('--reset-only')) { store.load({ reset: true }); console.log('Data direset.'); process.exit(0); }
 store.load();
+store.loadWorkspaces();
+const bootInstall = () => { staffApi.registry.linkEmployees(); const r = staffApi.skills.install(store.get()); if (r.skills || r.refs || r.dihapus) { store.saveNow(); console.log(`  Skill staf [${store.current()}]: ${r.skills} skill dipasang/diperbarui, ${r.refs} pemasangan ke agen, ${r.dihapus} dicabut`); } };   // setiap staf lengkap = satu skill yang menjalankan alur nyata
+const bootPower = () => { const d = store.get(); if (d.powerRev !== power.REV) { const r = power.install(d); d.powerRev = power.REV; store.saveNow(); console.log(`  Paket skill super [${store.current()}]: ${r.skills} skill baru, ${r.refs} pemasangan ke agen`); } };
+// pemuatan malas (P7): ruang kerja lain belum dibaca saat boot, jadi pemasangan jalan saat masing-masing dimuat; kalau tidak, semua dibaca sekarang seperti dulu
+if (store.isLazy()) { store.run('main', bootInstall); store.run('main', bootPower); store.onLoad(bootInstall); store.onLoad(bootPower); }
+else for (const ws of store.ids()) store.run(ws, () => { bootInstall(); bootPower(); });
+auth.load();
+privacy.afterAuthLoad(); auth.announceClaim(); otomasi.migrateHooks(); privacy.startRetention();
+if (process.env.RAIVERSE_SEAL_ON_BOOT === '1') console.log('  Rahasia dibungkus ulang:', JSON.stringify(privacy.migrateSecrets({ apply: true })));
 if (store.get().needsOrganize) { const r = lib.autoOrganize('arsa'); delete store.get().needsOrganize; store.save(); console.log(`Brain dirapikan: ${r.moved} dipindah, ${r.renamed} diganti nama`); }
 engine.start();
+channels.start();   // penghubung Telegram/Discord menyala hanya bila token bot sudah dipasang
 
-const clients = new Set();
+const clients = new Map();   // SSE response -> workspace id
 const BOOT = Date.now();
 let lastCpu = os.cpus().map((c) => c.times);
+let lastProc = process.cpuUsage(), lastProcT = Date.now();
 function hostStats() {
   const now = os.cpus().map((c) => c.times);
   let idle = 0, total = 0;
   now.forEach((t, i) => { const p = lastCpu[i] || t; const d = (k) => t[k] - p[k]; const tot = d('user') + d('nice') + d('sys') + d('idle') + d('irq'); idle += d('idle'); total += tot; });
   lastCpu = now;
+  const pu = process.cpuUsage(lastProc), pdt = Math.max(1, Date.now() - lastProcT); lastProc = process.cpuUsage(); lastProcT = Date.now();
+  const procCpu = Math.round(((pu.user + pu.system) / 1000 / pdt) * 100);   // % of ONE core used by this server process
   let disk = null;
   try { const st = fs.statfsSync(process.cwd()); disk = Math.round((1 - st.bavail / st.blocks) * 100); } catch { /* unsupported fs */ }
   return {
     cpu: total ? Math.round((1 - idle / total) * 100) : 0, mem: Math.round((1 - os.freemem() / os.totalmem()) * 100), disk,
-    rss: Math.round(process.memoryUsage().rss / 1048576), uptime: Math.round((Date.now() - BOOT) / 1000), platform: `${os.platform()} ${os.arch()}`,
+    rss: Math.round(process.memoryUsage().rss / 1048576), procCpu, uptime: Math.round((Date.now() - BOOT) / 1000), platform: `${os.platform()} ${os.arch()}`,
     node: process.version, sessions: engine.running().length, llm: llm.health(),
   };
 }
-setInterval(() => store.broadcast({ kind: 'root', key: 'host', value: hostStats() }), 5000);
-store.subscribe((msg) => { const line = `data: ${JSON.stringify(msg)}\n\n`; for (const res of clients) res.write(line); });
-setInterval(() => { for (const res of clients) res.write(': ping\n\n'); }, 20000);
+setInterval(() => store.broadcast({ kind: 'root', key: 'host', value: hostStats(), all: true }), 5000);
+store.subscribe((msg) => {   // a workspace's changes reach only that workspace
+  const line = `data: ${JSON.stringify(msg)}\n\n`;
+  const lineUser = msg.kind === 'root' && msg.key === 'settings' ? `data: ${JSON.stringify({ ...msg, value: admin.stripSettings(msg.value || {}) })}\n\n` : line;   // pengguna biasa tidak menerima bagian teknis pengaturan
+  for (const [res, ws] of clients) if ((msg.all || msg.ws === ws) && !(msg.key === 'host' && !res.isAdmin)) { if (msg.coll === 'notes' && msg.kind === 'upsert' && !store.run(ws, () => brain.canRead(msg.item, { employeeId: res.employeeId }))) res.write(`data: ${JSON.stringify({ kind: 'remove', coll: 'notes', id: msg.item.id })}\n\n`); else res.write(res.isAdmin ? line : lineUser); }
+});
+setInterval(() => { for (const res of clients.keys()) res.write(': ping\n\n'); }, 20000);
 
 const db = () => store.get();
-const json = (res, code, data) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
+const json = (res, code, data) => kirimJson(res.req, res, code, data);   // perf: brotli/gzip + ETag/304 (server/http-perf.js)
 const bad = (msg, code = 400) => Object.assign(new Error(msg), { code });
 const need = (v, msg) => { if (v === undefined || v === null || v === '') throw bad(msg); return v; };
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
@@ -62,11 +105,20 @@ async function body(req) {
 }
 
 const routes = [];
+/** (P3) rute berdampak: anggota biasa butuh izin eksplisit dari Owner (auth.PERMS); Owner dan Admin selalu boleh */
+const routePerm = (m, p) => ((m === 'POST' && (p === '/api/employees' || p === '/api/divisions')) || (['PATCH', 'DELETE'].includes(m) && /^\/api\/(employees|divisions)\/[^/]+$/.test(p)) ? 'hire'
+  : (m === 'DELETE' && /^\/api\/tasks\/[^/]+$/.test(p)) || (m === 'POST' && p === '/api/tasks/hapus-banyak') ? 'taskDelete'
+  : m === 'POST' && /^\/api\/approvals\/[^/]+$/.test(p) ? 'approve'
+  : ['POST', 'PATCH', 'DELETE'].includes(m) && /^\/api\/routines(\/|$)/.test(p) ? 'routine' : null);
 const on = (method, pattern, fn) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn });
 
-on('GET', '/api/state', () => ({ ...store.snapshot(), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: hostStats() }));
+on('GET', '/api/state', async (b, p, url, me, member) => {
+  if (llm.hasGroq()) try { await llm.refreshGroqModels(); } catch (err) { console.warn(`Daftar model Groq memakai cache: ${err.message}`); }
+  const snap = store.snapshot(); if (!admin.uiFlag(me)) snap.settings = admin.stripSettings(snap.settings);   // pengguna biasa tidak menerima bagian teknis pengaturan (kunci, MCP, konektor)
+  return { ...snap, notes: db().notes.filter(n => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId })), running: engine.running(), live: llm.isLive(), provider: llm.provider(), models: llm.MODELS, groqModels: llm.GROQ_MODELS, claudeModels: llm.CLAUDE_MODELS, capabilities: CAPABILITIES, host: auth.isPlatformAdmin(me) ? hostStats() : {}, me: member?.employeeId || db().settings.currentUserId, account: auth.publicUser(me), workspace: me ? wsInfo(me) : null, ...(admin.uiFlag(me) ? { platformAdmin: true } : {}) };
+});
 
-on('POST', '/api/goals', (b) => engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }));
+on('POST', '/api/goals', (b) => { if (/^\s*(\/\w+|saya selesai)\s*$/i.test(String(b.title || ''))) throw new Error('Itu perintah chat rapat, bukan goal. Ketik di chat rapatnya.'); return engine.submitGoal({ title: need(b.title, 'Judul goal wajib'), description: b.description || '', userId: b.userId || db().settings.currentUserId, priority: b.priority || 'high' }); });
 
 on('POST', '/api/tasks', (b) => engine.createTask({ ...pick(b, ['title', 'description', 'assigneeId', 'priority', 'dueAt', 'parentId']), title: need(b.title, 'Judul wajib'), createdBy: b.userId || db().settings.currentUserId }));
 on('PATCH', '/api/tasks/:id', (b, p) => {
@@ -86,6 +138,12 @@ on('DELETE', '/api/tasks/:id', (b, p) => {
   for (const a of db().approvals.filter((a) => ids.has(a.taskId))) store.remove('approvals', a.id);
   return { removed: ids.size };
 });
+/** hapus banyak (mode Pilih di Hasil Saya): per item, dalam ruang kerja ini saja; yang berjalan atau menunggu persetujuan dilewati */
+on('POST', '/api/tasks/hapus-banyak', (b, p, url, me, member) => {
+  const aktor = member?.employeeId || db().settings.currentUserId;
+  const r = hapusBanyak(b.ids, { aktor, bolehSemua: !auth.enforced() || ['owner', 'admin'].includes(member?.role) });
+  return { dihapus: r.dihapus.length, ids: r.dihapus, dilewati: r.dilewati };
+});
 on('POST', '/api/tasks/:id/comment', (b, p) => {
   const t = db().tasks.find((x) => x.id === p.id) || (() => { throw bad('Tugas tidak ada', 404); })();
   t.log.push({ t: Date.now(), actorId: b.userId || 'owner', type: 'comment', text: need(b.text, 'Komentar kosong') });
@@ -97,8 +155,19 @@ on('POST', '/api/approvals/:id', (b, p) => engine.decideApproval(p.id, { decisio
 
 on('POST', '/api/messages', (b) => {
   const m = engine.postMessage(need(b.channelId, 'channelId wajib'), b.userId || db().settings.currentUserId, need(b.text, 'Pesan kosong').slice(0, 8000));
-  engine.onHumanMessage(m);
+  engine.onHumanMessage(m).catch((err) => console.error('[onHumanMessage]', err));
   return m;
+});
+// /api/orchestrate: BAWAANNYA kini Chat Engine (riwayat, routing otomatis, konfirmasi di kode). Jalur lama tetap untuk pemanggil yang memang butuh kanal/rapat/thread:
+// ada channelId (thread pekerjaan, rapat), ada `to` (penerima tertentu), gambar, `mode` bukan auto, rapat langsung yang sedang berjalan, atau `mesin: 'lama'`.
+on('POST', '/api/orchestrate', async (b, p, url, me, member) => {
+  const userId = b.userId || db().settings.currentUserId;
+  const lama = b.mesin === 'lama' || !!b.channelId || (b.to || []).length > 0 || !!b.images?.length || (b.mode && b.mode !== 'auto') || !!engine.activeLiveMeeting(userId);
+  if (!lama) {
+    const respons = await chatEngine.turn({ userId, sessionId: b.percakapan, input: need(b.text, 'Pesan kosong'), choiceId: b.pilihan, canAutomate: !auth.enforced() || ['owner', 'admin'].includes(member?.role), source: b.sumber || '3d', fokus: b.fokus || undefined });   // dock 3D: orang yang sedang diikuti menjadi penerima bila pesan tidak menyebut nama lain
+    return { action: 'chat', mesin: 'chat', convId: respons.convId, channelId: null, members: respons.dilibatkan || [], orchestrator: respons.speaker?.id || null, respons };
+  }
+  return engine.orchestrate({ images: b.images || [], text: b.images?.length ? b.text || '' : need(b.text, 'Pesan kosong'), userId, to: b.to || [], mode: b.mode || 'auto', channelId: b.channelId || null });
 });
 on('POST', '/api/dm', (b) => ({ id: engine.ensureDM(b.userId || db().settings.currentUserId, need(b.with, 'with wajib')) }));
 on('POST', '/api/channels', (b) => store.upsert('channels', { id: slug(need(b.name, 'Nama wajib')), name: slug(b.name), kind: 'channel', divisionId: b.divisionId || null, topic: b.topic || '' }));
@@ -106,23 +175,28 @@ on('POST', '/api/channels', (b) => store.upsert('channels', { id: slug(need(b.na
 on('POST', '/api/notes', (b) => brain.writeNote({ title: need(b.title, 'Judul wajib'), content: b.content || `# ${b.title}\n`, folder: b.folder || 'Notes', tags: b.tags || [], authorId: b.userId || db().settings.currentUserId }));
 on('PUT', '/api/notes/:id', (b, p) => {
   const n = db().notes.find((x) => x.id === p.id) || (() => { throw bad('Catatan tidak ada', 404); })();
-  Object.assign(n, pick(b, ['title', 'content', 'folder', 'tags', 'pinned']), { updatedAt: Date.now(), lastEditorId: b.userId || db().settings.currentUserId });
+  const editor = db().employees.find((e) => e.id === (b.userId || db().settings.currentUserId));
+  Object.assign(n, pick(b, ['title', 'content', 'folder', 'tags', 'pinned', 'visibility']), { updatedAt: Date.now(), lastEditorId: editor?.id || 'owner' });
+  // a human who edits a note vouches for it: it becomes a verified fact, and an archived demo note comes back from the archive
+  if (editor?.type === 'human' && b.content !== undefined) { n.kb = 'owner'; if (n.archived) { n.archived = false; if (!b.folder) n.folder = n.origFolder || 'Notes'; } }
   return store.upsert('notes', n);
 });
 on('DELETE', '/api/notes/:id', (b, p) => ({ ok: store.remove('notes', p.id) }));
 
 const EMP_FIELDS = ['name', 'type', 'divisionId', 'title', 'persona', 'skills', 'isLead', 'reportsTo', 'avatar', 'autonomy', 'model', 'status',
-  'about', 'taskAndFunction', 'instructions', 'escalation', 'outputFormat', 'effort', 'skillRefs', 'tools', 'knowledgeIds', 'starters', 'reasoning', 'team', 'appearance'];
-on('POST', '/api/employees', (b) => org.hire(pick(b, EMP_FIELDS), b.userId || 'owner'));
+  'about', 'taskAndFunction', 'instructions', 'escalation', 'outputFormat', 'effort', 'skillRefs', 'tools', 'knowledgeIds', 'starters', 'reasoning', 'team', 'appearance', 'voiceGender', 'role'];
+const cleanVoiceGender = (o) => { if ('voiceGender' in o && o.voiceGender !== 'female' && o.voiceGender !== 'male') delete o.voiceGender; return o; };   // the voice follows this field; anything else is ignored
+on('POST', '/api/employees', (b) => org.hire(cleanVoiceGender(pick(b, EMP_FIELDS)), b.userId || 'owner'));
 on('PATCH', '/api/employees/:id', (b, p) => {
   const e = db().employees.find((x) => x.id === p.id) || (() => { throw bad('Karyawan tidak ada', 404); })();
-  const ch = pick(b, EMP_FIELDS);
+  const ch = cleanVoiceGender(pick(b, EMP_FIELDS));
   if (typeof ch.skills === 'string') ch.skills = ch.skills.split(',').map((s) => s.trim()).filter(Boolean);
   if (ch.status === 'offline') ch.statusText = 'Offline';
   if (ch.status === 'idle') ch.statusText = 'Siap bekerja';
+  org.checkRoleChange(e, ch);   // peran/jabatan yang melanggar aturan ditolak sebelum ada yang berubah
   Object.assign(e, ch);
   if (ch.skillRefs && db().settings.autoActivate !== false) autoActivate(e, db().skills);
-  if (ch.isLead) { const d = db().divisions.find((x) => x.id === e.divisionId); d.leadId = e.id; store.upsert('divisions', d); }
+  org.settleLead(e, ch);        // satu manajer per divisi: isLead menurunkan manajer lama
   return store.upsert('employees', e);
 });
 on('DELETE', '/api/employees/:id', (b, p) => {
@@ -150,7 +224,8 @@ on('POST', '/api/meetings', (b) => {
   }
   const chairId = b.chairId || ids[0] || 'aria';
   // run in background; progress streams over SSE (meetings collection + meeting channel)
-  collab.runMeeting({ topic: need(b.topic, 'Topik wajib'), agenda: b.agenda || '', participantIds: ids, representedParticipantIds: representedIds, chairId, rounds: Number(b.rounds) || 2, ownerLed: b.ownerLed !== false, ownerId: b.userId || db().settings.currentUserId }).catch((err) => console.warn('[meeting]', err.message));
+  const meetUser = b.userId || db().settings.currentUserId, meetPA = db().employees.find((e) => e.isPA && e.ownerId === meetUser);
+  collab.runMeeting({ topic: need(b.topic, 'Topik wajib'), agenda: b.agenda || '', participantIds: ids, representedParticipantIds: representedIds, chairId, rounds: Number(b.rounds) || 2, ownerLed: b.ownerLed !== false, ownerId: meetUser, mode: b.mode, mirrorChannelId: meetPA ? engine.ensureDM(meetUser, meetPA.id) : null }).catch((err) => console.warn('[meeting]', err.message));
   return { ok: true, represented: representedIds.length, activeParticipants: [...new Set([chairId, ...ids])].length, ownerLed: b.ownerLed !== false };
 });
 on('POST', '/api/mcp/test', async (b) => {
@@ -168,6 +243,55 @@ on('GET', '/api/training/:id', (b, p) => {
 });
 on('GET', '/api/capabilities', () => CAPABILITIES.map((c) => ({ ...c, users: db().employees.filter((e) => (e.tools || []).includes(c.id)).length, skills: db().skills.filter((s) => skillTools(s).includes(c.id)).map((s) => s.id) })));
 on('GET', '/api/brain/audit', () => lib.audit(40));
+// ───── Knowledge spaces: per-division knowledge coverage, library assignments, learning overview
+on('GET', '/api/knowledge/spaces', () => {
+  const notes = db().notes, emps = db().employees.filter((e) => e.type === 'ai');
+  const lib2 = notes.filter((n) => n.folder?.startsWith('Knowledge Library/'));
+  const areas = {};
+  for (const n of lib2) { const a = n.folder.split('/')[1]; areas[a] = (areas[a] || 0) + 1; }
+  const divisions = db().divisions.map((d) => {
+    const mem = emps.filter((e) => e.divisionId === d.id);
+    const withKb = mem.filter((e) => (e.knowledgeIds || []).some((k) => lib2.some((n) => n.id === k))).length;
+    const ownNotes = notes.filter((n) => n.folder?.split('/')[0] === d.name).length;
+    const avgSkill = mem.length ? mem.reduce((a, e) => a + (e.skillRefs || []).reduce((x, r) => x + r.proficiency, 0) / Math.max(1, (e.skillRefs || []).length), 0) / mem.length : 0;
+    return { id: d.id, name: d.name, icon: d.icon, color: d.color, agents: mem.length, covered: withKb, coverage: mem.length ? Math.round((withKb / mem.length) * 100) : 0, ownNotes, avgSkill: Math.round(avgSkill * 10) / 10, teams: (d.teams || []).length };
+  });
+  return { library: lib2.length, areas, divisions, totalNotes: notes.length, agents: emps.length };
+});
+on('GET', '/api/knowledge/library', () => db().notes.filter(n => brain.canRead(n)).filter((n) => n.folder?.startsWith('Knowledge Library/')).map((n) => ({ id: n.id, title: n.title, folder: n.folder, tags: n.tags, words: n.content.split(/\s+/).length, attached: db().employees.filter((e) => e.type === 'ai' && (e.knowledgeIds || []).includes(n.id)).length })));
+on('POST', '/api/knowledge/assign', (b) => {
+  const n = db().notes.find((x) => x.id === b.noteId); if (!n) throw bad('Catatan tidak ditemukan', 404);
+  const ids = b.divisionId ? db().employees.filter((e) => e.type === 'ai' && e.divisionId === b.divisionId).map((e) => e.id) : (b.employeeIds || []);
+  let n2 = 0;
+  for (const id of ids) {
+    const e = db().employees.find((x) => x.id === id); if (!e || e.type !== 'ai') continue;
+    const has = (e.knowledgeIds || []).includes(n.id);
+    if (b.mode === 'remove' && has) { e.knowledgeIds = e.knowledgeIds.filter((k) => k !== n.id); n2++; }
+    if ((b.mode || 'add') === 'add' && !has) { e.knowledgeIds = [...(e.knowledgeIds || []), n.id]; n2++; }
+    store.upsert('employees', e);
+  }
+  engine.event('learned', b.userId || 'owner', `${n.title} dibagikan ke ${n2} agen`, { targetId: ids[0] });
+  return { changed: n2 };
+});
+on('GET', '/api/learning', () => db().employees.filter((e) => e.type === 'ai').map((e) => ({
+  id: e.id, name: e.name, divisionId: e.divisionId, team: e.team || null, title: e.title, status: e.status,
+  quality: e.stats?.qualityN ? Math.round((e.stats.qualitySum / e.stats.qualityN) * 10) / 10 : null,
+  tasks: e.stats?.tasksDone || 0, examples: e.stats?.trainingExamples || 0, mood: e.mind?.mood || null, confidence: e.mind?.confidence ?? null,
+  skills: (e.skillRefs || []).slice().sort((a, b2) => b2.proficiency - a.proficiency).slice(0, 4).map((r) => ({ id: r.id, name: db().skills.find((s) => s.id === r.id)?.name || r.id, proficiency: r.proficiency })),
+  lessons: (e.lessons || []).slice(-3).map((l) => ({ t: l.t, lesson: l.lesson, quality: l.quality })),
+})));
+on('POST', '/api/learning/train', (b) => {
+  const e = db().employees.find((x) => x.id === b.employeeId && x.type === 'ai'); if (!e) throw bad('Agen tidak ditemukan', 404);
+  const sk = db().skills.find((s) => s.id === b.skillId); if (!sk) throw bad('Skill tidak ditemukan', 404);
+  const lesson = String(b.lesson || '').trim().slice(0, 300); if (!lesson) throw bad('Isi pelajaran wajib');
+  const ref = (e.skillRefs ||= []).find((r) => r.id === sk.id);
+  if (ref) ref.proficiency = Math.min(10, Math.round((ref.proficiency + 0.5) * 10) / 10); else e.skillRefs.push({ id: sk.id, proficiency: 5 });
+  e.lessons = [...(e.lessons || []), { t: Date.now(), taskId: null, lesson, quality: 8, by: b.userId || 'owner' }].slice(-25);
+  brain.remember(e, `Dilatih ${sk.name}: ${lesson}`);
+  store.upsert('employees', e);
+  engine.event('learned', e.id, `${e.name} belajar: ${sk.name} — ${lesson.slice(0, 120)}`, { targetId: e.id });
+  return { ok: true, proficiency: (e.skillRefs.find((r) => r.id === sk.id) || {}).proficiency };
+});
 // Calendar: expand cron/interval routines into concrete occurrences for a date range (max 62 days, 800 items)
 on('GET', '/api/calendar', (b, p, url) => {
   const from = Number(url.searchParams.get('from')) || Date.now();
@@ -217,13 +341,23 @@ on('PATCH', '/api/routines/:id', (b, p) => store.patch('routines', p.id, pick(b,
 on('DELETE', '/api/routines/:id', (b, p) => ({ ok: store.remove('routines', p.id) }));
 on('POST', '/api/routines/:id/run', (b, p) => engine.runRoutine(db().routines.find((x) => x.id === p.id), { priority: 'medium' }));
 
-on('PATCH', '/api/settings', (b) => {
+on('PATCH', '/api/settings', async (b, p, url, me, member) => {
+  ownerOnly(me, member);
+  if (!admin.uiFlag(me) && Object.keys(b).some((k) => admin.TECH_PATCH_KEYS.includes(k))) throw bad('Pengaturan itu diatur oleh pengelola platform.', 403);   // kunci, model, MCP, jatah: hanya konsol pengelola
   const s = db().settings;
-  const ch = pick(b, ['mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'massDispatchSize']);
-  if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = b.apiKey.trim();
-  if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = b.groqApiKey.trim();
+  const ch = pick(b, ['uiKeys', 'mcpServers', 'googleAppsScript', 'learning', 'collectTraining', 'model', 'workerModel', 'groqModel', 'groqWorkerModel', 'provider', 'effort', 'autonomy', 'tickMs', 'maxConcurrent', 'dailyBudgetUSD', 'mode', 'currentUserId', 'autoActivate', 'autoOrganize', 'autoApprove', 'permission', 'massDispatchSize', 'staffModel', 'quota', 'staffEngine']);
+  if ('permission' in ch) {   // tiga pilihan izin: ask (Tanya dulu) | auto (Lanjut sendiri, bawaan) | full (Serahkan penuh, hanya Owner/Admin)
+    if (!['ask', 'auto', 'full'].includes(ch.permission)) throw bad('Pilihan izin tidak dikenal.', 400);
+    ch.autoApprove = ch.permission !== 'ask';
+  }
+  if ('staffModel' in ch) ch.staffModel = ch.staffModel === true;
+  if ('staffEngine' in ch) ch.staffEngine = ch.staffEngine === 'n8n' ? 'n8n' : 'native';   // mesin staf: native (bawaan) atau n8n (docs/STAF-NATIVE.md)
+  if ('quota' in ch) { const q = ch.quota && typeof ch.quota === 'object' ? ch.quota : {}; const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 100000 && v !== '' && v !== null ? Math.floor(Number(v)) : d); ch.quota = { tasksPerDay: n(q.tasksPerDay, gov.QUOTA_DEFAULTS.tasksPerDay), n8nRunsPerDay: n(q.n8nRunsPerDay, gov.QUOTA_DEFAULTS.n8nRunsPerDay) }; }   // jatah harian per ruang kerja (jumlah, bukan uang); 0 = tanpa batas
+  if (typeof b.apiKey === 'string' && !b.apiKey.startsWith('••••')) ch.apiKey = secure.seal(b.apiKey.trim(), 'ws-secret');   // P3: amplop terenkripsi berversi, bukan teks biasa
+  if (typeof b.groqApiKey === 'string' && !b.groqApiKey.startsWith('••••')) ch.groqApiKey = secure.seal(b.groqApiKey.trim(), 'ws-secret');
   for (const k of ['tickMs', 'maxConcurrent', 'dailyBudgetUSD']) if (k in ch) ch[k] = Number(ch[k]);
-  if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); collab.resetMcp(); }
+  if ('uiKeys' in ch) { const u = ch.uiKeys || {}, clean = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}).slice(0, 60).filter(([a, v]) => typeof v === 'string' && v.length < 24).map(([a, v]) => [String(a).slice(0, 32), v])); ch.uiKeys = { free: clean(u.free), play: clean(u.play), invert: !!u.invert }; }
+  if (ch.mcpServers) { ch.mcpServers = ch.mcpServers.map(m => { const old = (s.mcpServers || []).find(x => x.id === m.id); return old && m.configured && !m.url ? { ...m, url: old.url, headers: old.headers } : m; }); ch.mcpServers = ch.mcpServers.filter((m) => /^https?:\/\//.test(m.url || '')).map((m, i) => ({ id: slug(m.name || m.id || `mcp${i}`).replace(/-/g, '').slice(0, 16) || `mcp${i}`, name: String(m.name || 'MCP').slice(0, 40), url: m.url, headers: m.headers && typeof m.headers === 'object' ? m.headers : {}, enabled: m.enabled !== false })); for (const m of ch.mcpServers) await collab.assertMcpUrl(m.url, store.current()).catch((e) => { throw bad(e.message); }); collab.resetMcp(); }
   if (ch.googleAppsScript) {
     const prev = s.googleAppsScript || {};
     const next = ch.googleAppsScript || {};
@@ -236,20 +370,34 @@ on('PATCH', '/api/settings', (b) => {
   if (ch.autoApprove === true) engine.autoApprovePending();
   store.broadcast({ kind: 'root', key: 'live', value: llm.isLive() });
   store.broadcast({ kind: 'root', key: 'provider', value: llm.provider() });
+  if (llm.hasGroq() && ('groqApiKey' in ch || ch.provider === 'groq' || ch.provider === 'auto')) {
+    try {
+      await llm.refreshGroqModels({ force: 'groqApiKey' in ch });
+      store.broadcast({ kind: 'root', key: 'groqModels', value: llm.GROQ_MODELS });
+      store.broadcast({ kind: 'root', key: 'models', value: llm.MODELS });
+    } catch (err) { console.warn(`Daftar model Groq tidak diperbarui: ${err.message}`); }
+  }
   return store.publicSettings();
+});
+on('POST', '/api/groq-models/refresh', async () => {
+  if (!llm.hasGroq()) throw bad('Groq API key belum terpasang');
+  const result = await llm.verifyGroqModels();
+  store.broadcast({ kind: 'root', key: 'groqModels', value: result.models });
+  store.broadcast({ kind: 'root', key: 'models', value: llm.MODELS });
+  return result;
 });
 on('PATCH', '/api/company', (b) => { const c = Object.assign(db().company, pick(b, ['name', 'tagline', 'language'])); store.setRoot('company', c); return c; });
 on('POST', '/api/test-key', async () => {
   if (!llm.isLive()) throw bad('Belum ada API key / mode simulasi aktif');
-  const res = await llm.call({ system: 'Balas satu kata.', messages: [{ role: 'user', content: 'ping' }], maxTokens: 2000 });
+  const res = await llm.call({ system: 'Balas satu kata.', messages: [{ role: 'user', content: 'ping' }], maxTokens: 32 });
   return { ok: true, provider: llm.provider(), model: res.usedModel, reply: llm.textOf(res), usage: res.usage };
 });
-on('GET', '/api/export', () => ({ ...db(), settings: { ...db().settings, apiKey: '' } }));
+on('GET', '/api/export', (b, p, url, me, member) => { ownerOnly(me, member); return { ...db(), settings: store.exportSettings(), notes: db().notes.filter(n => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId })) }; });
 on('POST', '/api/import', (b) => {
   if (!Array.isArray(b.employees) || !Array.isArray(b.notes)) throw bad('Format file tidak valid');
-  const key = db().settings.apiKey;
+  const key = db().settings.apiKey, savedSettings = structuredClone(db().settings);
   const fresh = store.load({ reset: true });
-  Object.assign(fresh, b, { settings: { ...fresh.settings, ...b.settings, apiKey: key } });
+  Object.assign(fresh, b, { settings: { ...fresh.settings, ...b.settings, apiKey: key, groqApiKey: savedSettings.groqApiKey, googleAppsScript: savedSettings.googleAppsScript, mcpServers: savedSettings.mcpServers } });
   store.saveNow();
   store.broadcast({ kind: 'reload' });
   return { ok: true };
@@ -262,49 +410,162 @@ on('POST', '/api/reset', () => {
   return { ok: true };
 });
 
+// ───────────────────────── accounts & Google Drive ─────────────────────────
+/** Workspaces like Discord servers: the first person claims the original office ("main"); everyone else gets a fresh personal workspace
+ *  with a small core team; invited people join someone's workspace as a human employee with their own PA. */
+const AUTH_HOOKS = {
+  mainName: () => store.run('main', () => db().company?.name || 'Kantor utama'),
+  linkOwner: (u) => store.run('main', () => { const e = db().employees.find((x) => x.id === 'owner'); if (e) { e.email = u.email; store.upsert('employees', e); } return 'owner'; }),
+  createWorkspace: (id, u) => {
+    const budget = store.run('main', () => db().settings.workspaceBudgetUSD ?? 0.5);   // daily AI quota per workspace, set by the platform owner
+    const data = starterDb({ ownerName: u.name || u.email.split('@')[0], budgetUSD: budget });
+    data.employees.find((e) => e.id === 'owner').email = u.email;
+    store.createWorkspace(id, data);
+    return { name: data.company.name, employeeId: 'owner' };
+  },
+  joinWorkspace: (wsId, u) => store.run(wsId, () => {
+    const have = db().employees.find((x) => x.type === 'human' && x.email === u.email);
+    if (have) return have.id;
+    return org.hire({ type: 'human', name: u.name || u.email.split('@')[0], title: 'Anggota tim', divisionId: db().divisions.find((d) => d.id === 'exec')?.id || db().divisions[0].id, email: u.email, avatar: 'human' }, 'owner').id;
+  }),
+};
+/** owners and admins of the CURRENT workspace manage it (before anyone has signed in, the local single user does) */
+const ownerOnly = (me, member) => { if (auth.enforced() && !['owner', 'admin'].includes(member?.role)) throw bad('Hanya Owner/Admin ruang kerja ini yang boleh melakukan ini', 403); };
+const signedIn = (me) => { if (!me) throw bad('Login dengan Google dulu', 401); return me; };
+/** Drive belongs to a person, so it may only feed a workspace that person OWNS (never someone else's shared workspace) */
+const driveOwner = (me, member) => { signedIn(me); if (member?.role !== 'owner') throw bad('Google Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri', 403); return me; };
+const wsInfo = (me) => { const id = auth.activeWs(me), w = auth.wsById(id); return { id, name: w?.name || db().company?.name || 'Kantor', role: auth.memberOf(me, id)?.role || (auth.enforced() ? null : 'owner') }; };
+// Browser agen (Chrome DevTools MCP): hanya Owner/Admin yang boleh melihat dan mengendalikan
+for (const [m, p, fn] of otomasi.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url, me, member); });
+for (const [m, p, fn] of staffApi.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url, me, member); });   // staf: daftar, jalankan, hasil (docs/ARSITEKTUR-STAF-N8N.md)
+for (const [m, p, fn] of browser.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });
+for (const [m, p, fn] of learn.routes) on(m, p, (b, params, url, me, member) => { ownerOnly(me, member); return fn(b, params, url); });   // kartu "aku belajar sesuatu": hanya Owner/Admin yang memutuskan
+for (const [m, p, fn] of channels.routes) on(m, p, (b, params, url, me, member) => fn(b, params, url, me, member));   // sambungan Telegram/Discord: tiap orang mengikat akunnya sendiri; rute /admin hanya pemilik platform
+for (const [m, p, fn] of [...pemandu.routes, ...chatEngine.routes, ...chatKontak.routes]) on(m, p, (b, params, url, me, member) => { b.canAutomate = !auth.enforced() || ['owner', 'admin'].includes(member?.role); return fn(b, params, url, me, member); });   // Pemandu: antarmuka depan yang dipandu pilihan tombol
+on('GET', '/api/auth/me', (b, p, url, me, member) => ({ configured: auth.configured(), enforced: auth.enforced(), user: auth.publicUser(me), employeeId: member?.employeeId || db().settings.currentUserId, workspace: me ? wsInfo(me) : null, workspaces: me ? auth.myWorkspaces(me) : [], scopes: auth.SCOPES }));
+on('POST', '/api/ws/switch', (b, p, url, me) => ({ id: auth.switchWs(signedIn(me), need(b.id, 'id wajib')) }));
+on('GET', '/api/ws/members', (b, p, url, me) => { signedIn(me); return { members: auth.wsMembers(auth.activeWs(me)) }; });
+on('POST', '/api/ws/invite', (b, p, url, me) => { const r = auth.createInvite(signedIn(me), auth.activeWs(me), b.role, { maxUses: Number(b.maxUses) || undefined, days: Number(b.days) || undefined }); return { ...r, path: '/join/' + r.code }; });
+on('GET', '/api/ws/invites', (b, p, url, me) => ({ invites: auth.listInvites(signedIn(me), auth.activeWs(me)) }));
+on('POST', '/api/ws/invite/revoke', (b, p, url, me) => auth.revokeInvite(signedIn(me), auth.activeWs(me), need(b.id, 'id wajib')));
+on('POST', '/api/ws/member-perms', (b, p, url, me) => ({ perms: auth.setMemberPerms(signedIn(me), auth.activeWs(me), need(b.accountId, 'accountId wajib'), b.perms) }));
+// privasi: ekspor data pribadi, hapus akun (docs/KEAMANAN-P3.md)
+on('GET', '/api/me/export', (b, p, url, me, member) => privacy.exportMine(signedIn(me), member));
+on('POST', '/api/me/delete', (b, p, url, me) => privacy.deleteMine(signedIn(me), b));
+on('POST', '/api/me/sessions/revoke', (b, p, url, me) => ({ ditutup: auth.revokeSessions(signedIn(me)) }));
+on('POST', '/api/ws/member', (b, p, url, me) => auth.setMemberRole(signedIn(me), auth.activeWs(me), need(b.accountId, 'accountId wajib'), need(b.role, 'role wajib')));
+on('POST', '/api/ws/rename', (b, p, url, me) => { const name = auth.renameWs(signedIn(me), auth.activeWs(me), b.name); store.setRoot('company', { ...db().company, name }); return { name }; });
+on('GET', '/api/drive/config', (b, p, url, me) => ({ clientId: process.env.GOOGLE_CLIENT_ID || '', pickerKey: process.env.GOOGLE_PICKER_API_KEY || '', appId: String(process.env.GOOGLE_CLIENT_ID || '').split('-')[0], connected: !!me && auth.publicUser(me).drive, folders: auth.driveOf(me?.id)?.folders || null, root: auth.driveOf(me?.id)?.root || null }));
+on('GET', '/api/drive/token', async (b, p, url, me) => ({ token: await auth.accessToken(signedIn(me).id) }));   // short-lived, for the Picker in THIS user's browser only
+on('POST', '/api/drive/setup', (b, p, url, me, member) => gdrive.ensureFolders(driveOwner(me, member).id));
+on('POST', '/api/drive/push', (b, p, url, me, member) => gdrive.push(driveOwner(me, member).id));
+on('POST', '/api/drive/pull', (b, p, url, me, member) => gdrive.startPull(driveOwner(me, member).id));   // runs in the background (hundreds of files)
+on('GET', '/api/drive/pull-status', (b, p, url, me, member) => gdrive.pullStatus(driveOwner(me, member).id) || { running: false });
+on('POST', '/api/drive/picked', (b, p, url, me, member) => gdrive.addPicked(driveOwner(me, member).id, b.ids || []));
+
+on('GET', '/api/tts/status', () => edgeTts.status());
+on('POST', '/api/tts', async (b) => { const r = await edgeTts.synthesize(b.text, { voice: b.voice, rate: b.rate, pitch: b.pitch }); return { mime: r.mime, audio: r.audio.toString('base64'), cached: !!r.cached }; });   // opt-in Microsoft voice; the line of text leaves the server
+
 function serveStatic(req, res, urlPath) {
   let base = ROOT; let rel = urlPath;
   for (const [prefix, dir] of Object.entries(VENDOR)) if (urlPath.startsWith(prefix)) { base = dir; rel = urlPath.slice(prefix.length - 1); }
   if (rel === '/') rel = '/index.html';
   const file = path.join(base, path.normalize(decodeURIComponent(rel)).replace(/^([/\\])+/, ''));
   if (!file.startsWith(base)) { res.writeHead(403); return res.end(); }
-  fs.stat(file, (err, st) => {
-    if (err || !st.isFile()) {
-      if (base === ROOT && !path.extname(rel)) return serveStatic(req, res, '/index.html'); // SPA fallback
-      res.writeHead(404); return res.end('Not found');
-    }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': base === ROOT ? 'no-cache' : 'public, max-age=86400' });
-    fs.createReadStream(file).pipe(res);
+  // perf: kode aplikasi selalu divalidasi (ETag → 304, edit langsung terlihat); aset berversi (?v=) abadi; aset lain 10 menit; vendor 1 hari
+  const berversi = /[?&]v=/.test(req.url || '');
+  const kebijakan = (ext) => (berversi ? 'public, max-age=31536000, immutable' : base !== ROOT ? 'public, max-age=86400' : ['.html', '.js', '.mjs', '.css', '.json', '.webmanifest'].includes(ext) ? 'no-cache' : 'public, max-age=600');
+  kirimBerkas(req, res, file, MIME[path.extname(file)] || 'application/octet-stream', { kebijakan }).then((ada) => {
+    if (ada) return;
+    if (base === ROOT && !path.extname(rel)) return serveStatic(req, res, '/index.html'); // SPA fallback
+    res.writeHead(404); res.end('Not found');
   });
 }
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (limits.edge(req, res, url)) return;   // P3: batas laju per alamat IP (429)
+  if (url.pathname === '/api/admin' || url.pathname.startsWith('/api/admin/')) return admin.handle(req, res, url, { me: auth.sessionUser(req), body });   // konsol pengelola: bukan pengelola = 403 seragam, sebelum gerbang sesi
+  // ── sign-in with Google
+  if (url.pathname === '/auth/google') return auth.startLogin(req, res);
+  if (url.pathname === '/auth/google/callback') return auth.callback(req, res, url, AUTH_HOOKS);
+  if (url.pathname === '/auth/logout') return auth.logout(req, res);
+  if (url.pathname.startsWith('/join/')) return auth.joinLink(req, res, url.pathname.slice(6), AUTH_HOOKS);
+  if (url.pathname.startsWith('/api/automations/hook/') && await otomasi.handleHook(req, res, url, body)) return;   // panggilan balik dari mesin otomasi lokal: token + hanya dari komputer ini, tanpa sesi login
+  if (url.pathname.startsWith('/api/saluran/hook/') && await channels.handleHook(req, res, url, body)) return;   // webhook Telegram: rahasia di header, tanpa sesi login
+  if (url.pathname === '/api/llm-gate' && await gate.handle(req, res, url, body)) return;   // P3: gerbang LLM bertoken per eksekusi (kredensialnya token itu sendiri)
+  // ── gate: once anyone has signed in, every API call needs a session (the page itself loads and shows the sign-in card)
+  const me = auth.sessionUser(req);
+  if (url.pathname.startsWith('/api/') && auth.enforced() && url.pathname !== '/api/auth/me' && !me) return json(res, 401, { error: 'Silakan login dengan Google', login: '/auth/google' });
+  // ── which workspace this request belongs to: the person's active one (membership checked); before any sign-in, the original office
+  const ws = me && auth.enforced() ? auth.activeWs(me) : 'main';
+  const member = me ? auth.memberOf(me, ws) : null;
+  if (!store.exists(ws)) return json(res, 500, { error: `Ruang kerja ${ws} tidak ditemukan di server` });
+  if (me && auth.enforced() && !member && url.pathname.startsWith('/api/') && !/^\/api\/(auth\/me|ws\/|me\/)/.test(url.pathname)) return json(res, 403, { error: 'Kamu belum menjadi anggota ruang kerja mana pun.' });   // P3: tidak pernah jatuh ke data kantor utama
+  if (limits.user(req, res, url, { me, admin: auth.isPlatformAdmin(me) })) return;   // P3: batas per akun + kuota harian + anggaran global
   if (url.pathname === '/api/stream') {
+    const release = limits.acquireStream(me?.id || limits.clientIp(req));
+    if (!release) return json(res, 429, { error: 'Terlalu banyak sambungan langsung dari akun ini. Tutup tab lain dulu.' });
+    res.isAdmin = admin.isAdmin(me, req);
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.write('retry: 2000\n\n');
-    clients.add(res);
-    req.on('close', () => clients.delete(res));
+    res.employeeId = member?.employeeId || store.run(ws, () => db().settings.currentUserId);
+    clients.set(res, ws);
+    req.on('close', () => { clients.delete(res); release(); });
     return;
   }
   if (!url.pathname.startsWith('/api/')) return serveStatic(req, res, url.pathname);
+  if (req.method === 'GET' && url.pathname.startsWith('/api/files/')) {   // chat pictures: only inside the workspace they belong to (the gate above already checked the session)
+    const f = store.run(ws, () => engine.readUpload(decodeURIComponent(url.pathname.slice(11))));
+    if (!f) { res.writeHead(404); return res.end(); }
+    res.writeHead(200, { 'Content-Type': f.mime, 'Cache-Control': 'private, max-age=86400' }); return res.end(f.data);
+  }
   for (const r of routes) {
     if (r.method !== req.method) continue;
     const m = url.pathname.match(r.re);
     if (!m) continue;
-    try { return json(res, 200, await r.fn(await body(req), m.groups || {}, url)); }
+    try {
+      const b = await body(req);
+      const perm = routePerm(req.method, url.pathname);
+      if (perm && !auth.can(member, perm)) throw bad(`Kamu belum diberi izin untuk ${auth.PERMS[perm]}. Minta Owner ruang kerja ini memberikannya.`, 403);
+      const sensitive = /^\/api\/(?:import|reset|training|mcp|google-workspace|groq-models|test-key)(?:\/|$)/.test(url.pathname);
+      if (sensitive) ownerOnly(me, member);
+      if (/^\/api\/(?:mcp|google-workspace|groq-models|test-key)(?:\/|$)/.test(url.pathname) && !admin.isAdmin(me, req)) throw bad('Bagian itu diatur oleh pengelola platform.', 403);
+      if (/^\/api\/(import|reset)$/.test(url.pathname) && store.run(ws, () => engine.running().length || db().meetings.some(m => collab.liveLoops.has(m.id)))) throw bad('Tunggu pekerjaan dan rapat aktif selesai sebelum mengganti data', 409);
+      if (/^\/api\/notes\//.test(url.pathname)) {
+        const n = store.run(ws, () => db().notes.find(n => n.id === m.groups?.id));
+        if (n && !store.run(ws, () => brain.canRead(n, { employeeId: member?.employeeId || db().settings.currentUserId }))) throw bad('Catatan tidak tersedia', 404);
+      }
+      if (member?.employeeId) b.userId = member.employeeId;   // who is acting comes from the session + workspace, never from what the browser claims
+      const out = await store.run(ws, () => r.fn(b, m.groups || {}, url, me, member));   // everything inside runs on THIS workspace's data
+      if (out && typeof out.__sse === 'function') {   // balasan bertahap (Chat Engine): peristiwa SSE, tetap di ruang kerja yang sama
+        res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+        const emit = (ev) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(ev)}\n\n`); };
+        await store.run(ws, () => out.__sse(emit));
+        return res.end();
+      }
+      return json(res, 200, out);
+    }
     catch (err) {
       const code = err.code && Number.isInteger(err.code) ? err.code : (err.status || 500);
       if (code >= 500) console.error(err);
+      if (code === 403) platform.denied({ code, ip: limits.clientIp(req), path: url.pathname, alasan: 'ditolak' });
       return json(res, code, { error: err.message || String(err) });
     }
   }
   json(res, 404, { error: 'Endpoint tidak ada' });
 });
 
+// a rejected promise anywhere in a background chat/meeting/job must not take the whole office down
+process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
+// meetings are in-memory loops: after a restart any meeting still marked running/waiting_owner is dead and would block its participants from new meetings
+for (const m of store.get().meetings || []) if (m.status === 'running' || m.status === 'waiting_owner') { m.status = 'failed'; m.error = 'Terputus karena server dimulai ulang'; store.upsert('meetings', m); }
+
+server.keepAliveTimeout = 65000; server.headersTimeout = 66000;   // perf: sambungan dipakai ulang (tanpa jabat tangan baru per berkas)
 server.listen(PORT, HOST, () => {
-  console.log(`\n  🏢 Ray Agent Office berjalan di http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  console.log(`\n  🏢 RAIVERSE AGENT berjalan di http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
   console.log(`  Mesin AI: ${{ groq: 'LIVE · Groq', claude: 'LIVE · Claude', sim: 'SIMULASI (isi GROQ_API_KEY atau ANTHROPIC_API_KEY di .env / Pengaturan)' }[llm.provider()]}`);
   if (HOST === '127.0.0.1') console.log('  Akses dari HP di jaringan yang sama: jalankan dengan HOST=0.0.0.0\n');
 });
-process.on('SIGINT', () => { store.saveNow(); process.exit(0); });
+process.on('SIGINT', () => { store.saveAll(); auth.saveNow(); limits.flush(); process.exit(0); });

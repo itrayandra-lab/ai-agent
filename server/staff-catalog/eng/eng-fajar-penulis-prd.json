@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-fajar-penulis-prd",
+  "division": "eng",
+  "employeeId": "fajar",
+  "title": "Product Manager",
+  "version": 1,
+  "name": "Penyusun dokumen kebutuhan produk",
+  "ringkas": "Susun dokumen kebutuhan fitur lengkap dengan tujuan terukur, cerita pengguna, dan syarat diterima.",
+  "kataKunci": [
+    "prd",
+    "kebutuhan produk",
+    "cerita pengguna",
+    "user story",
+    "syarat diterima"
+  ],
+  "inputs": [
+    {
+      "key": "fitur",
+      "type": "text",
+      "label": "Nama fitur",
+      "required": true,
+      "contoh": "Bayar dengan QRIS"
+    },
+    {
+      "key": "masalah",
+      "type": "longtext",
+      "label": "Masalah yang mau diselesaikan",
+      "required": true,
+      "contoh": "Pelanggan sering gagal bayar karena transfer manual"
+    },
+    {
+      "key": "pengguna",
+      "type": "text",
+      "label": "Siapa penggunanya?",
+      "required": true,
+      "contoh": "Pembeli di aplikasi"
+    },
+    {
+      "key": "tujuan",
+      "type": "longtext",
+      "label": "Tujuan terukur (satu per baris)",
+      "required": true,
+      "contoh": "Naikkan keberhasilan bayar dari 70% ke 90%"
+    },
+    {
+      "key": "cerita",
+      "type": "longtext",
+      "label": "Cerita pengguna (satu baris: siapa | ingin apa | supaya apa)",
+      "required": true,
+      "contoh": "Pembeli | membayar dengan QRIS | supaya cepat selesai"
+    },
+    {
+      "key": "ukuran",
+      "type": "choice",
+      "label": "Seberapa besar fitur ini?",
+      "required": true,
+      "default": "sedang",
+      "choices": [
+        {
+          "v": "kecil",
+          "t": "Kecil (1-2 minggu)"
+        },
+        {
+          "v": "sedang",
+          "t": "Sedang (sebulan)"
+        },
+        {
+          "v": "besar",
+          "t": "Besar (lebih dari sebulan)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun dokumen",
+      "set": {
+        "cerita": "baris(input.cerita).slice(0, 15).map((l, i) => { const p = l.split('|').map((s) => s.trim()); return { id: 'US-' + (i + 1), siapa: p[0] || 'Pengguna', ingin: p[1] || '-', supaya: p[2] || '-' }; })",
+        "tujuan": "baris(input.tujuan).slice(0, 8)",
+        "dok": "'# Kebutuhan produk: ' + input.fitur + '\\n\\n## Latar belakang\\n' + input.masalah + '\\n\\nPengguna: ' + input.pengguna + '\\n\\n## Tujuan terukur\\n' + v.tujuan.map((t) => '- ' + t).join('\\n') + '\\n\\n## Cerita pengguna dan syarat diterima\\n' + v.cerita.map((c) => '### ' + c.id + '. Sebagai ' + c.siapa + ', saya ingin ' + c.ingin + ', supaya ' + c.supaya + '\\n- Diberikan ' + c.siapa + ' sudah siap memakai fitur, ketika ' + c.ingin + ', maka hasilnya tampil dengan benar dan jelas.\\n- Diberikan terjadi kesalahan, ketika ' + c.siapa + ' mencoba lagi, maka pesan yang ramah muncul dan data tidak hilang.').join('\\n\\n') + '\\n\\n## Di luar cakupan\\n- (isi hal yang sengaja tidak dikerjakan sekarang)\\n' + (input.ukuran === 'kecil' ? '' : '\\n## Risiko dan ketergantungan\\n- (isi risiko, tim lain yang terlibat)\\n') + (input.ukuran === 'besar' ? '\\n## Peluncuran bertahap\\n- Tahap 1: tim internal\\n- Tahap 2: 10% pengguna\\n- Tahap 3: semua pengguna\\n\\n## Ukuran keberhasilan setelah rilis\\n- (isi angka yang dipantau 30 hari)\\n' : '')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Dokumen kebutuhan \"' + input.fitur + '\" siap: ' + v.cerita.length + ' cerita pengguna dan ' + v.tujuan.length + ' tujuan terukur'",
+    "teks": "v.dok",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'kebutuhan-' + input.fitur",
+        "isi": "v.dok"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "fitur": "Bayar dengan QRIS",
+      "masalah": "Pelanggan sering gagal bayar karena transfer manual",
+      "pengguna": "Pembeli di aplikasi",
+      "tujuan": "Naikkan keberhasilan bayar dari 70% ke 90%\nTurunkan keluhan pembayaran 30%",
+      "cerita": "Pembeli | membayar dengan QRIS | supaya cepat selesai\nAdmin | melihat status pembayaran | supaya tidak cek manual",
+      "ukuran": "sedang"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 cerita pengguna dan 2 tujuan",
+        "US-2",
+        "Diberikan Admin"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "prd",
+      "kebutuhan produk",
+      "cerita pengguna",
+      "user story",
+      "syarat diterima"
+    ],
+    "data": [
+      "nama fitur",
+      "masalah yang mau diselesaikan",
+      "siapa penggunanya?",
+      "tujuan terukur (satu per baris)"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-nabila",
+  "division": "ecom",
+  "employeeId": "nabila",
+  "title": "TikTok Affiliate Manager",
+  "version": 1,
+  "name": "Penghitung hasil kerja sama kreator affiliate",
+  "ringkas": "Perkirakan pesanan, omzet, komisi, dan balik modal dari tiap kreator berdasarkan jumlah penonton dan sampel yang dikirim.",
+  "kataKunci": [
+    "affiliate",
+    "kreator",
+    "komisi",
+    "sampel",
+    "tiktok shop"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Kreator (satu baris: nama | rata-rata penonton per video | komisi %)",
+      "required": true,
+      "contoh": "Kreator A | 20000 | 10"
+    },
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga produk (Rp)",
+      "required": true,
+      "contoh": "120000"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Harga pokok produk (Rp)",
+      "required": true,
+      "contoh": "45000"
+    },
+    {
+      "key": "klik",
+      "type": "choice",
+      "label": "Penonton yang membuka produk",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1% (biasa)"
+        },
+        {
+          "v": "2",
+          "t": "2% (bagus)"
+        },
+        {
+          "v": "3",
+          "t": "3% (sangat bagus)"
+        }
+      ]
+    },
+    {
+      "key": "beli",
+      "type": "choice",
+      "label": "Pembuka yang jadi membeli",
+      "required": true,
+      "default": "4",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2%"
+        },
+        {
+          "v": "4",
+          "t": "4%"
+        },
+        {
+          "v": "6",
+          "t": "6%"
+        }
+      ]
+    },
+    {
+      "key": "video",
+      "type": "choice",
+      "label": "Jumlah video per kreator",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 video"
+        },
+        {
+          "v": "3",
+          "t": "3 video"
+        },
+        {
+          "v": "5",
+          "t": "5 video"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung perkiraan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const tonton = num(p[1]) * num(input.video); const pesan = Math.round(tonton * num(input.klik) / 100 * num(input.beli) / 100); const omzet = pesan * num(input.harga); const komisi = Math.round(omzet * num(p[2]) / 100); const sampel = num(input.hpp); const laba = omzet - pesan * num(input.hpp) - komisi - sampel; return { nama: p[0] || '-', tonton: tonton, pesan: pesan, omzet: omzet, komisi: komisi, laba: laba, saran: laba > 0 ? 'Layak dikirimi sampel' : 'Belum menguntungkan, tawar komisi atau cari kreator lain' }; }).sort((a, b) => b.laba - a.laba)",
+        "totalLaba": "v.rows.reduce((a, b) => a + b.laba, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' kreator; perkiraan laba setelah komisi dan sampel ' + rp(v.totalLaba)",
+    "teks": "'# Perkiraan kerja sama kreator\\n\\n' + tabel(['Kreator', 'Penonton', 'Pesanan', 'Omzet', 'Komisi', 'Laba', 'Saran'], v.rows.map((r) => [r.nama, r.tonton, r.pesan, rp(r.omzet), rp(r.komisi), rp(r.laba), r.saran])) + '\\n\\nIni perkiraan dari angka yang Anda pilih, bukan hasil pasti.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-kreator'",
+        "isi": "csv([['Kreator', 'Penonton', 'Pesanan', 'Omzet', 'Komisi', 'Laba', 'Saran']].concat(v.rows.map((r) => [r.nama, r.tonton, r.pesan, r.omzet, r.komisi, r.laba, r.saran])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Kreator A | 20000 | 10\nKreator B | 500 | 30",
+      "harga": "120000",
+      "hpp": "45000",
+      "klik": "2",
+      "beli": "4",
+      "video": "3"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Kreator A",
+        "48",
+        "Rp 5.760.000",
+        "Belum menguntungkan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "affiliate",
+      "kreator",
+      "komisi",
+      "sampel",
+      "tiktok shop"
+    ],
+    "data": [
+      "kreator (satu baris: nama | rata-rata penonton per video | k",
+      "harga produk (rp)",
+      "harga pokok produk (rp)",
+      "penonton yang membuka produk"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}

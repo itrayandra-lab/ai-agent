@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "legal-tiara-audit",
+  "division": "legal",
+  "employeeId": "tiara",
+  "title": "Compliance Officer",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penghitung skor audit kepatuhan",
+  "ringkas": "Ubah jawaban ya, sebagian, atau tidak menjadi skor kepatuhan, daftar kekurangan, dan tenggat perbaikan.",
+  "kataKunci": [
+    "audit kepatuhan",
+    "skor kepatuhan",
+    "kekurangan",
+    "perbaikan",
+    "temuan"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Tanggal audit",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "tenggat",
+      "type": "choice",
+      "label": "Waktu perbaikan",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "14",
+          "t": "14 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        },
+        {
+          "v": "60",
+          "t": "60 hari"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Hasil periksa (butir | ya / sebagian / tidak)",
+      "required": true,
+      "contoh": "Kebijakan privasi ada | ya"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai kepatuhan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const j = String(p[1] || '').toLowerCase(); const nilai = j.indexOf('sebagian') >= 0 ? 0.5 : j.indexOf('ya') === 0 ? 1 : 0; return { butir: p[0] || '-', jawab: nilai === 1 ? 'Ya' : nilai === 0.5 ? 'Sebagian' : 'Tidak', nilai: nilai }; })",
+        "skor": "v.rows.length ? Math.round(v.rows.reduce((a, b) => a + b.nilai, 0) / v.rows.length * 1000) / 10 : 0",
+        "level": "v.skor >= 85 ? 'Baik' : v.skor >= 60 ? 'Cukup' : 'Kurang'",
+        "kurang": "v.rows.filter((r) => r.nilai < 1).sort((x, y) => x.nilai - y.nilai)",
+        "batas": "new Date(Date.parse(input.acuan) + num(input.tenggat) * 864e5).toISOString().slice(0, 10)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Skor kepatuhan ' + v.skor + '% (' + v.level + '), ' + v.kurang.length + ' butir perlu diperbaiki sebelum ' + v.batas",
+    "teks": "'# Hasil audit kepatuhan\\n\\n_' + \"Daftar ini alat bantu awal, bukan nasihat hukum. Konfirmasikan dengan penasihat hukum sebelum dipakai sebagai dasar keputusan.\" + '_\\n\\n- Skor: **' + v.skor + '%** (' + v.level + ')\\n- Perbaikan paling lambat: ' + v.batas + '\\n\\n## Butir yang perlu diperbaiki\\n' + (v.kurang.length ? v.kurang.map((k) => '- ' + k.butir + ' (' + k.jawab + ')').join('\\n') : 'Tidak ada.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'audit-kepatuhan-' + input.acuan",
+        "isi": "csv([['Butir', 'Jawaban', 'Perlu diperbaiki sebelum']].concat(v.rows.map((r) => [r.butir, r.jawab, r.nilai < 1 ? v.batas : ''])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "tenggat": "30",
+      "data": "Kebijakan privasi ada | ya\nCatatan persetujuan | sebagian\nProsedur kebocoran data | tidak\nPelatihan karyawan | ya"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "62.5%",
+        "Prosedur kebocoran data",
+        "2026-12-18",
+        "Cukup"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "audit kepatuhan",
+      "skor kepatuhan",
+      "kekurangan",
+      "perbaikan",
+      "temuan"
+    ],
+    "data": [
+      "tanggal audit",
+      "waktu perbaikan",
+      "hasil periksa (butir | ya / sebagian / tidak)"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
+    "contoh": {
+      "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
+  }
+}

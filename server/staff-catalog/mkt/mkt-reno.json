@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-reno",
+  "division": "mkt",
+  "employeeId": "reno",
+  "title": "Digital Marketing Strategist",
+  "version": 1,
+  "name": "Perencana target iklan dan corong penjualan",
+  "ringkas": "Hitung perkiraan klik, pesanan, dan pendapatan dari anggaran iklan, plus saran pembagian anggaran sesuai tujuan.",
+  "kataKunci": [
+    "corong penjualan",
+    "funnel",
+    "anggaran iklan",
+    "target penjualan",
+    "strategi digital"
+  ],
+  "inputs": [
+    {
+      "key": "anggaran",
+      "type": "number",
+      "label": "Anggaran iklan (Rp)",
+      "required": true,
+      "contoh": "10000000"
+    },
+    {
+      "key": "cpc",
+      "type": "number",
+      "label": "Biaya per klik (Rp)",
+      "required": true,
+      "contoh": "1500"
+    },
+    {
+      "key": "cvr",
+      "type": "number",
+      "label": "Dari 100 pengunjung, berapa yang membeli?",
+      "required": true,
+      "contoh": "2"
+    },
+    {
+      "key": "aov",
+      "type": "number",
+      "label": "Rata-rata nilai satu pesanan (Rp)",
+      "required": true,
+      "contoh": "150000"
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Tujuan utama",
+      "required": true,
+      "default": "jual",
+      "choices": [
+        {
+          "v": "jual",
+          "t": "Menjual sekarang"
+        },
+        {
+          "v": "kenal",
+          "t": "Memperkenalkan brand"
+        },
+        {
+          "v": "ulang",
+          "t": "Membuat pelanggan membeli lagi"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung corong",
+      "set": {
+        "klik": "Math.floor(Number(input.anggaran) / Math.max(1, Number(input.cpc)))",
+        "pesanan": "Math.floor(v.klik * Number(input.cvr) / 100)",
+        "pendapatan": "v.pesanan * Number(input.aov)",
+        "roas": "Math.round(v.pendapatan / Math.max(1, Number(input.anggaran)) * 100) / 100",
+        "biayaPesanan": "v.pesanan ? Math.round(Number(input.anggaran) / v.pesanan) : 0",
+        "bagi": "({ jual: [['Iklan berbayar', 60], ['Konten organik', 15], ['Email dan WhatsApp', 15], ['Afiliasi', 10]], kenal: [['Iklan berbayar', 40], ['Kerja sama kreator', 40], ['Pencarian (SEO)', 10], ['Acara', 10]], ulang: [['Email dan WhatsApp', 50], ['Komunitas', 25], ['Iklan ke pelanggan lama', 25]] })[input.tujuan].map((b) => [b[0], b[1], Math.round(Number(input.anggaran) * b[1] / 100)])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Dengan ' + rp(input.anggaran) + ' diperkirakan ' + v.klik + ' klik, ' + v.pesanan + ' pesanan, pendapatan ' + rp(v.pendapatan) + ' (balik modal ' + v.roas + 'x)'",
+    "teks": "'# Corong iklan\\n\\n' + tabel(['Tahap', 'Angka'], [['Anggaran', rp(input.anggaran)], ['Klik', v.klik], ['Pesanan', v.pesanan], ['Pendapatan', rp(v.pendapatan)], ['Biaya per pesanan', rp(v.biayaPesanan)], ['Balik modal (x)', v.roas]]) + '\\n\\n## Saran pembagian anggaran (' + input.tujuan + ')\\n' + tabel(['Saluran', 'Persen', 'Anggaran'], v.bagi.map((b) => [b[0], b[1] + '%', rp(b[2])])) + '\\n\\n_Perkiraan memakai angka yang kamu masukkan; hasil nyata bisa berbeda._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'corong-iklan'",
+        "isi": "csv([['Tahap', 'Nilai'], ['Anggaran', input.anggaran], ['Klik', v.klik], ['Pesanan', v.pesanan], ['Pendapatan', v.pendapatan], ['Balik modal', v.roas]].concat([['Saluran', 'Persen', 'Anggaran']]).concat(v.bagi))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Strategy",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "anggaran": 10000000,
+      "cpc": 1500,
+      "cvr": 2,
+      "aov": 150000,
+      "tujuan": "jual"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "6666 klik, 133 pesanan",
+        "Rp 19.950.000"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "corong penjualan",
+      "funnel",
+      "anggaran iklan",
+      "target penjualan",
+      "strategi digital"
+    ],
+    "data": [
+      "anggaran iklan (rp)",
+      "biaya per klik (rp)",
+      "dari 100 pengunjung, berapa yang membeli?",
+      "rata-rata nilai satu pesanan (rp)"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

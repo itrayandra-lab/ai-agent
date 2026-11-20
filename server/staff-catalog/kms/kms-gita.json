@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-gita",
+  "division": "kms",
+  "employeeId": "gita",
+  "title": "AI Training Data Engineer",
+  "version": 1,
+  "name": "Penyaring data latih dan penyamar data pribadi",
+  "ringkas": "Samarkan email, nomor telepon, NIK, dan tautan dari contoh teks, lalu buang yang terlalu pendek.",
+  "kataKunci": [
+    "data latih",
+    "data pribadi",
+    "sensor",
+    "dataset",
+    "anonim"
+  ],
+  "inputs": [
+    {
+      "key": "contoh",
+      "type": "longtext",
+      "label": "Contoh teks (satu per baris)",
+      "required": true,
+      "contoh": "Halo, hubungi saya di budi@mail.com untuk pesanan nomor 123 segera ya\nok\nTelepon 081234567890 jika paket belum sampai ke alamat rumah saya"
+    },
+    {
+      "key": "min",
+      "type": "choice",
+      "label": "Panjang minimal contoh",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "20",
+          "t": "20 huruf"
+        },
+        {
+          "v": "40",
+          "t": "40 huruf"
+        },
+        {
+          "v": "80",
+          "t": "80 huruf"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Samarkan",
+      "set": {
+        "rows": "baris(input.contoh).slice(0, 500).map((s) => { const r = s.replace(/[\\w.+-]+@[\\w-]+\\.[\\w.]+/g, '[EMAIL]').replace(/(\\+?62|0)8[\\d\\s-]{8,12}\\d/g, '[TELEPON]').replace(/\\b\\d{16}\\b/g, '[NIK]').replace(/https?:\\/\\/\\S+/g, '[LINK]'); return { teks: r, diubah: r !== s, layak: r.length >= num(input.min) }; })",
+        "layak": "v.rows.filter((r) => r.layak)",
+        "diubah": "v.rows.filter((r) => r.diubah).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.layak.length + ' dari ' + v.rows.length + ' contoh layak, ' + v.diubah + ' memuat data pribadi yang disamarkan'",
+    "teks": "'# Hasil penyaringan\\n\\n' + tabel(['Contoh (sudah aman)', 'Disamarkan', 'Layak'], v.rows.map((r) => [cut(r.teks, 80), r.diubah ? 'Ya' : 'Tidak', r.layak ? 'Ya' : 'Terlalu pendek']))",
+    "berkas": [
+      {
+        "jenis": "json",
+        "nama": "'data-latih-bersih'",
+        "isi": "JSON.stringify(v.layak.map((r) => ({ teks: r.teks })), null, 2)"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Data",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "contoh": "Halo, hubungi saya di budi@mail.com untuk pesanan nomor 123 segera ya\nok\nTelepon 081234567890 jika paket belum sampai ke alamat rumah saya",
+      "min": "20"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 dari 3 contoh layak",
+        "[EMAIL]",
+        "[TELEPON]"
+      ]
+    }
+  },
+  "kemampuan": [
+    "kelola-pengetahuan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "data latih",
+      "data pribadi",
+      "sensor",
+      "dataset",
+      "anonim"
+    ],
+    "data": [
+      "contoh teks (satu per baris)",
+      "panjang minimal contoh"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "bizdev-laksmi-cobranding",
+  "division": "bizdev",
+  "employeeId": "laksmi",
+  "title": "Partnership Manager — Clinics, Salons & Co-branding",
+  "version": 1,
+  "name": "Perencana kampanye bersama brand lain",
+  "ringkas": "Susun jadwal mingguan dan pembagian anggaran untuk kampanye bersama brand atau komunitas yang selaras, lengkap dengan target hasilnya.",
+  "kataKunci": [
+    "co-branding",
+    "kampanye bersama",
+    "kolaborasi",
+    "anggaran kampanye",
+    "rencana kerja"
+  ],
+  "inputs": [
+    {
+      "key": "mitra",
+      "type": "text",
+      "label": "Nama brand atau komunitas mitra",
+      "required": true,
+      "contoh": "Komunitas Yoga Pagi"
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Tujuan utama",
+      "required": true,
+      "default": "jual",
+      "choices": [
+        {
+          "v": "kenal",
+          "t": "Dikenal lebih luas"
+        },
+        {
+          "v": "jual",
+          "t": "Menambah penjualan"
+        },
+        {
+          "v": "daftar",
+          "t": "Mengumpulkan calon pelanggan"
+        }
+      ]
+    },
+    {
+      "key": "minggu",
+      "type": "choice",
+      "label": "Lama kampanye",
+      "required": true,
+      "default": "6",
+      "choices": [
+        {
+          "v": "4",
+          "t": "4 minggu"
+        },
+        {
+          "v": "6",
+          "t": "6 minggu"
+        },
+        {
+          "v": "8",
+          "t": "8 minggu"
+        }
+      ]
+    },
+    {
+      "key": "anggaran",
+      "type": "number",
+      "label": "Anggaran bersama (Rp)",
+      "required": true,
+      "contoh": "20000000"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun rencana",
+      "set": {
+        "bagi": "({ kenal: [30, 55, 15], jual: [35, 45, 20], daftar: [25, 50, 25] })[input.tujuan]",
+        "anggaranRows": "['Pembuatan materi', 'Iklan dan penyebaran', 'Acara atau hadiah'].map((n, i) => ({ pos: n, persen: v.bagi[i], rp: Math.round(num(input.anggaran) * v.bagi[i] / 100) }))",
+        "fase": "[[0, 'Siapkan: sepakati pesan, materi, dan pembagian tugas'], [1, 'Mulai: tayangkan pengumuman bersama'], [Math.max(2, Math.round(num(input.minggu) / 2)), 'Puncak: acara atau penawaran khusus'], [num(input.minggu) - 1, 'Akhir: ingatkan batas waktu dan kumpulkan hasil'], [num(input.minggu), 'Evaluasi: bahas hasil bersama dan rencana lanjutan']].map((f) => ({ minggu: f[0], tanggal: new Date(Date.parse(input.mulai) + f[0] * 7 * 864e5).toISOString().slice(0, 10), kegiatan: f[1] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rencana ' + input.minggu + ' minggu bersama ' + input.mitra + ' dengan anggaran ' + rp(input.anggaran) + ' (fokus: ' + ({ kenal: 'dikenal', jual: 'penjualan', daftar: 'calon pelanggan' })[input.tujuan] + ')'",
+    "teks": "'# Kampanye bersama ' + input.mitra + '\\n\\n## Anggaran\\n' + tabel(['Pos', '%', 'Nilai'], v.anggaranRows.map((a) => [a.pos, a.persen + '%', rp(a.rp)])) + '\\n\\n## Jadwal\\n' + v.fase.map((f) => '- Minggu ' + f.minggu + ' (' + f.tanggal + '): ' + f.kegiatan).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kampanye-bersama-' + input.mitra",
+        "isi": "csv([['Minggu', 'Tanggal', 'Kegiatan']].concat(v.fase.map((f) => [f.minggu, f.tanggal, f.kegiatan])).concat([[''], ['Pos anggaran', 'Persen', 'Nilai']]).concat(v.anggaranRows.map((a) => [a.pos, a.persen, a.rp])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "mitra": "Komunitas Yoga Pagi",
+      "tujuan": "jual",
+      "minggu": "6",
+      "anggaran": "20000000",
+      "mulai": "2026-12-01"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 9.000.000",
+        "Minggu 3",
+        "Evaluasi"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "co-branding",
+      "kampanye bersama",
+      "kolaborasi",
+      "anggaran kampanye",
+      "rencana kerja"
+    ],
+    "data": [
+      "nama brand atau komunitas mitra",
+      "tujuan utama",
+      "lama kampanye",
+      "anggaran bersama (rp)"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
+    "contoh": {
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
+  }
+}

@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-yoga",
+  "division": "sales",
+  "employeeId": "yoga",
+  "title": "Account Executive",
+  "version": 1,
+  "name": "Penyusun surat penawaran harga",
+  "ringkas": "Susun penawaran harga resmi dari daftar barang, lengkap dengan diskon, PPN, masa berlaku, dan syarat pembayaran.",
+  "kataKunci": [
+    "penawaran",
+    "quotation",
+    "proposal harga",
+    "diskon",
+    "syarat pembayaran"
+  ],
+  "inputs": [
+    {
+      "key": "klien",
+      "type": "text",
+      "label": "Nama calon pembeli",
+      "required": true,
+      "contoh": "PT Maju Jaya"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal penawaran",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "items",
+      "type": "longtext",
+      "label": "Daftar barang (satu baris: nama | jumlah | harga satuan)",
+      "required": true,
+      "contoh": "Paket RayFlow Pro | 3 | 299000"
+    },
+    {
+      "key": "diskon",
+      "type": "choice",
+      "label": "Diskon",
+      "required": true,
+      "default": "0",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa diskon"
+        },
+        {
+          "v": "5",
+          "t": "5%"
+        },
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "15",
+          "t": "15%"
+        }
+      ]
+    },
+    {
+      "key": "berlaku",
+      "type": "choice",
+      "label": "Penawaran berlaku",
+      "required": true,
+      "default": "14",
+      "choices": [
+        {
+          "v": "7",
+          "t": "7 hari"
+        },
+        {
+          "v": "14",
+          "t": "14 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        }
+      ]
+    },
+    {
+      "key": "ppn",
+      "type": "choice",
+      "label": "Kena PPN?",
+      "required": true,
+      "default": "11",
+      "choices": [
+        {
+          "v": "11",
+          "t": "Ya, 11%"
+        },
+        {
+          "v": "0",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "bayar",
+      "type": "choice",
+      "label": "Syarat pembayaran",
+      "required": true,
+      "default": "Bayar 7 hari setelah faktur",
+      "choices": [
+        {
+          "v": "Bayar di muka",
+          "t": "Bayar di muka"
+        },
+        {
+          "v": "Bayar 7 hari setelah faktur",
+          "t": "7 hari setelah faktur"
+        },
+        {
+          "v": "Bayar 30 hari setelah faktur",
+          "t": "30 hari setelah faktur"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung penawaran",
+      "set": {
+        "baris": "baris(input.items).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const q = num(p[1] || 1); const h = num(p[2]); return { nama: p[0] || '-', qty: q, harga: h, jumlah: Math.round(q * h) }; })",
+        "subtotal": "v.baris.reduce((a, b) => a + b.jumlah, 0)",
+        "potong": "Math.round(v.subtotal * num(input.diskon) / 100)",
+        "dpp": "v.subtotal - v.potong",
+        "pajak": "Math.round(v.dpp * num(input.ppn) / 100)",
+        "total": "v.dpp + v.pajak",
+        "sampai": "new Date(Date.parse(input.tanggal) + num(input.berlaku) * 864e5).toISOString().slice(0, 10)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Penawaran untuk ' + input.klien + ' senilai ' + rp(v.total) + ', berlaku sampai ' + tgl(v.sampai)",
+    "teks": "'# Surat penawaran\\n\\nKepada: ' + input.klien + '  \\nTanggal: ' + tgl(input.tanggal) + '  \\nBerlaku sampai: ' + tgl(v.sampai) + '\\n\\n' + tabel(['Barang', 'Jumlah', 'Harga', 'Subtotal'], v.baris.map((b) => [b.nama, b.qty, rp(b.harga), rp(b.jumlah)])) + '\\n\\n- Subtotal: ' + rp(v.subtotal) + '\\n- Diskon ' + input.diskon + '%: -' + rp(v.potong) + '\\n- PPN ' + input.ppn + '%: ' + rp(v.pajak) + '\\n- **Total: ' + rp(v.total) + '**\\n\\nSyarat: ' + input.bayar + '.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'penawaran-' + input.klien",
+        "isi": "csv([['Barang', 'Jumlah', 'Harga', 'Subtotal']].concat(v.baris.map((b) => [b.nama, b.qty, b.harga, b.jumlah])).concat([['', '', 'Subtotal', v.subtotal], ['', '', 'Diskon', -v.potong], ['', '', 'PPN', v.pajak], ['', '', 'Total', v.total]]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "klien": "PT Maju Jaya",
+      "tanggal": "2026-11-18",
+      "items": "Paket RayFlow Pro | 3 | 299000\nPelatihan | 1 | 1.500.000",
+      "diskon": "10",
+      "berlaku": "14",
+      "ppn": "11",
+      "bayar": "Bayar 7 hari setelah faktur"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 2.397.000",
+        "Rp 2.394.603",
+        "2 Desember 2026"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "penawaran",
+      "quotation",
+      "proposal harga",
+      "diskon",
+      "syarat pembayaran"
+    ],
+    "data": [
+      "nama calon pembeli",
+      "tanggal penawaran",
+      "daftar barang (satu baris: nama | jumlah | harga satuan)",
+      "diskon"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

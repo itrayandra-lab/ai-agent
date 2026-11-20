@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "fin-wening",
+  "division": "fin",
+  "employeeId": "wening",
+  "title": "Tax & Cost Accountant",
+  "version": 1,
+  "name": "Penghitung harga pokok produk",
+  "ringkas": "Hitung biaya pokok per satuan dari bahan, tenaga, dan biaya tambahan, lalu sarankan harga jual sesuai target untung.",
+  "kataKunci": [
+    "hpp",
+    "harga pokok",
+    "margin",
+    "harga jual",
+    "biaya produksi"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "bahan",
+      "type": "longtext",
+      "label": "Bahan (satu baris: bahan | jumlah | harga satuan)",
+      "required": true,
+      "contoh": "Botol | 100 | 3500"
+    },
+    {
+      "key": "jumlah_produksi",
+      "type": "number",
+      "label": "Berapa satuan yang dibuat sekali produksi?",
+      "required": true,
+      "contoh": "100"
+    },
+    {
+      "key": "tenaga",
+      "type": "number",
+      "label": "Total biaya tenaga kerja sekali produksi (Rp)",
+      "required": true,
+      "contoh": "500000"
+    },
+    {
+      "key": "overhead",
+      "type": "number",
+      "label": "Biaya tambahan lain, seperti listrik (Rp)",
+      "required": false,
+      "default": "0"
+    },
+    {
+      "key": "margin",
+      "type": "choice",
+      "label": "Target untung",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "20",
+          "t": "Untung 20%"
+        },
+        {
+          "v": "30",
+          "t": "Untung 30%"
+        },
+        {
+          "v": "40",
+          "t": "Untung 40%"
+        },
+        {
+          "v": "50",
+          "t": "Untung 50%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung harga pokok",
+      "set": {
+        "bahanRows": "baris(input.bahan).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const q = num(p[1]); const h = num(p[2]); return { nama: p[0] || '-', q: q, h: h, total: Math.round(q * h) }; })",
+        "totalBahan": "v.bahanRows.reduce((a, b) => a + b.total, 0)",
+        "totalBiaya": "v.totalBahan + num(input.tenaga) + num(input.overhead)",
+        "hpp": "Math.round(v.totalBiaya / Math.max(1, num(input.jumlah_produksi)))",
+        "hargaSaran": "Math.round(v.hpp / (1 - num(input.margin) / 100) / 100) * 100",
+        "untung": "v.hargaSaran - v.hpp"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Harga pokok ' + input.produk + ' ' + rp(v.hpp) + ' per satuan; saran harga jual ' + rp(v.hargaSaran) + ' (untung ' + input.margin + '%)'",
+    "teks": "'# Harga pokok ' + input.produk + '\\n\\n' + tabel(['Bahan', 'Jumlah', 'Harga', 'Total'], v.bahanRows.map((b) => [b.nama, b.q, rp(b.h), rp(b.total)])) + '\\n\\n- Total bahan: ' + rp(v.totalBahan) + '\\n- Tenaga kerja: ' + rp(num(input.tenaga)) + '\\n- Biaya tambahan: ' + rp(num(input.overhead)) + '\\n- **Total biaya:** ' + rp(v.totalBiaya) + '\\n- **Harga pokok per satuan:** ' + rp(v.hpp) + '\\n- **Saran harga jual (untung ' + input.margin + '%):** ' + rp(v.hargaSaran) + ' (untung ' + rp(v.untung) + ' per satuan)'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'harga-pokok-' + input.produk",
+        "isi": "csv([['Bahan', 'Jumlah', 'Harga', 'Total']].concat(v.bahanRows.map((b) => [b.nama, b.q, b.h, b.total])).concat([['', '', 'Total biaya', v.totalBiaya], ['', '', 'Harga pokok per satuan', v.hpp], ['', '', 'Saran harga jual', v.hargaSaran]]))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "bahan": "Niacinamide | 2 | 450000\nBotol | 100 | 3500",
+      "jumlah_produksi": "100",
+      "tenaga": "500000",
+      "overhead": "150000",
+      "margin": "30"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "19.000",
+        "27.100"
+      ]
+    }
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "hpp",
+      "harga pokok",
+      "margin",
+      "harga jual",
+      "biaya produksi"
+    ],
+    "data": [
+      "nama produk",
+      "bahan (satu baris: bahan | jumlah | harga satuan)",
+      "berapa satuan yang dibuat sekali produksi?",
+      "total biaya tenaga kerja sekali produksi (rp)"
+    ],
+    "gaya": "teliti dan netral, sebut angka seperti apa adanya, tandai risiko uang dengan jelas",
+    "contoh": {
+      "baik": "Piutang lewat 60 hari bernilai Rp 12 juta; hubungi dua klien terbesar minggu ini.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Bukan nasihat pajak atau akuntan resmi."
+    ]
+  }
+}

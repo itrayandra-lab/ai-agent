@@ -1,0 +1,18 @@
+{
+  "id": "cs",
+  "nama": "Customer Success",
+  "misi": "Membuat pelanggan sukses, puas, dan bertahan.",
+  "manajer": {
+    "id": "putri",
+    "nama": "Putri",
+    "jabatan": "Head of Customer Success"
+  },
+  "staf": [
+    "cs-wulan",
+    "cs-dika",
+    "cs-rara",
+    "cs-faisal",
+    "cs-ayu"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-puspa",
+  "division": "studio",
+  "employeeId": "puspa",
+  "title": "Live Host (Live Commerce Presenter)",
+  "version": 1,
+  "name": "Penyusun rundown siaran jualan langsung",
+  "ringkas": "Susun rundown siaran jualan langsung per menit dengan jatah waktu tiap produk dan target jumlah pesanan.",
+  "kataKunci": [
+    "live",
+    "rundown",
+    "live commerce",
+    "tiktok shop",
+    "target penjualan"
+  ],
+  "inputs": [
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Siaran di mana?",
+      "required": true,
+      "default": "tiktok",
+      "choices": [
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "shopee",
+          "t": "Shopee"
+        }
+      ]
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama siaran",
+      "required": true,
+      "default": "60",
+      "choices": [
+        {
+          "v": "30",
+          "t": "30 menit"
+        },
+        {
+          "v": "60",
+          "t": "60 menit"
+        },
+        {
+          "v": "90",
+          "t": "90 menit"
+        }
+      ]
+    },
+    {
+      "key": "produk",
+      "type": "longtext",
+      "label": "Produk (satu per baris: nama | harga | stok)",
+      "required": true,
+      "contoh": "Serum Cerah | 150000 | 50\nMasker Wajah | 50000 | 100"
+    },
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Target penjualan (Rp)",
+      "required": true,
+      "contoh": "3000000"
+    },
+    {
+      "key": "jam",
+      "type": "text",
+      "label": "Jam mulai (contoh 19:00)",
+      "required": true,
+      "contoh": "19:00"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun rundown",
+      "set": {
+        "produk": "baris(input.produk).slice(0, 8).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: p[0], harga: num(p[1]), stok: num(p[2]) }; })",
+        "rata": "Math.round(v.produk.reduce((a, b) => a + b.harga, 0) / Math.max(1, v.produk.length))",
+        "pesanan": "v.rata ? Math.ceil(num(input.target) / v.rata) : 0"
+      }
+    },
+    {
+      "id": "waktu",
+      "use": "hitung",
+      "label": "Atur waktu",
+      "set": {
+        "rundown": "(() => { const m = String(input.jam).match(/^(\\d{1,2})[:.](\\d{2})$/); let t = m ? Number(m[1]) * 60 + Number(m[2]) : 19 * 60; const fmt = (x) => String(Math.floor(x / 60) % 24).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); const slot = Math.max(3, Math.floor((num(input.durasi) - 10) / Math.max(1, v.produk.length))); const out = []; out.push({ mulai: fmt(t), selesai: fmt(t + 5), acara: 'Pembukaan: sapa, jelaskan promo' }); t += 5; v.produk.forEach((p) => { out.push({ mulai: fmt(t), selesai: fmt(t + slot), acara: 'Demo dan tawarkan ' + p.nama + ' (' + rp(p.harga) + ', stok ' + p.stok + ')' }); t += slot; }); out.push({ mulai: fmt(t), selesai: fmt(t + 5), acara: 'Penutup: ulang promo, ajak ikuti akun' }); return out; })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rundown ' + input.durasi + ' menit untuk ' + v.produk.length + ' produk; butuh sekitar ' + v.pesanan + ' pesanan untuk target ' + rp(num(input.target))",
+    "teks": "'# Rundown siaran\\n\\n' + tabel(['Mulai', 'Selesai', 'Acara'], v.rundown.map((r) => [r.mulai, r.selesai, r.acara])) + '\\n\\nRata-rata harga ' + rp(v.rata) + ', butuh ' + v.pesanan + ' pesanan. Siapkan stok sesuai target.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rundown-live'",
+        "isi": "csv([['Mulai', 'Selesai', 'Acara']].concat(v.rundown.map((r) => [r.mulai, r.selesai, r.acara])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "platform": "tiktok",
+      "durasi": "60",
+      "produk": "Serum Cerah | 150000 | 50\nMasker Wajah | 50000 | 100",
+      "target": "3000000",
+      "jam": "19:00"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "30 pesanan",
+        "19:30"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "live",
+      "rundown",
+      "live commerce",
+      "tiktok shop",
+      "target penjualan"
+    ],
+    "data": [
+      "siaran di mana?",
+      "lama siaran",
+      "produk (satu per baris: nama | harga | stok)",
+      "target penjualan (rp)"
+    ],
+    "gaya": "visual dan hidup, adegan pendek, tanpa klaim berlebihan",
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hak cipta musik dan gambar harus aman."
+    ]
+  }
+}

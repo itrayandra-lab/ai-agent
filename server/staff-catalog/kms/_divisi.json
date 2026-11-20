@@ -1,0 +1,19 @@
+{
+  "id": "kms",
+  "nama": "Knowledge & AI Ops",
+  "misi": "Membuat Brain perusahaan rapi dan terstruktur, menciptakan knowledge baru, melatih dan mengevaluasi agen AI, serta mengotomasi pekerjaan rutin.",
+  "manajer": {
+    "id": "pustaka",
+    "nama": "Pustaka",
+    "jabatan": "Head of Knowledge & AI Ops"
+  },
+  "staf": [
+    "kms-arsa",
+    "kms-widya",
+    "kms-gita",
+    "kms-hafiz",
+    "kms-sekar",
+    "kms-aksa"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

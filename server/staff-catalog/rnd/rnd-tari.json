@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-tari",
+  "division": "rnd",
+  "employeeId": "tari",
+  "title": "Raw Material Scientist",
+  "version": 1,
+  "name": "Pemeriksa kelengkapan dokumen bahan baku",
+  "ringkas": "Cek dokumen apa saja yang masih kurang untuk satu bahan baku sesuai jenisnya sebelum disetujui pemakaiannya.",
+  "kataKunci": [
+    "bahan baku",
+    "dokumen bahan",
+    "coa",
+    "msds",
+    "kelengkapan"
+  ],
+  "inputs": [
+    {
+      "key": "bahan",
+      "type": "text",
+      "label": "Nama bahan",
+      "required": true,
+      "contoh": "Niacinamide"
+    },
+    {
+      "key": "kelas",
+      "type": "choice",
+      "label": "Jenis bahan",
+      "required": true,
+      "default": "aktif",
+      "choices": [
+        {
+          "v": "aktif",
+          "t": "Bahan aktif"
+        },
+        {
+          "v": "emolien",
+          "t": "Pelembut atau minyak"
+        },
+        {
+          "v": "pengawet",
+          "t": "Pengawet"
+        },
+        {
+          "v": "pewangi",
+          "t": "Pewangi"
+        },
+        {
+          "v": "pewarna",
+          "t": "Pewarna"
+        }
+      ]
+    },
+    {
+      "key": "dimiliki",
+      "type": "longtext",
+      "label": "Dokumen yang sudah dimiliki (pisahkan dengan koma)",
+      "required": true,
+      "contoh": "COA, MSDS"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Periksa dokumen",
+      "set": {
+        "wajib": "[['COA (hasil uji pemasok)', /coa|certificate of analysis/], ['MSDS (lembar data keselamatan)', /msds|sds/], ['TDS (lembar data teknis)', /tds|technical data/]].concat(input.kelas === 'aktif' ? [['Sertifikat halal', /halal/], ['Data keamanan kulit', /dermato|keamanan|safety/]] : input.kelas === 'pengawet' || input.kelas === 'pewarna' ? [['Bukti diizinkan dalam daftar bahan BPOM', /bpom|izin|daftar/]] : input.kelas === 'pewangi' ? [['Sertifikat IFRA', /ifra/], ['Daftar alergen', /alergen|allergen/]] : [['Sertifikat halal', /halal/]])",
+        "punya": "String(input.dimiliki).toLowerCase()",
+        "rows": "v.wajib.map((w) => ({ dokumen: w[0], ada: w[1].test(v.punya) }))",
+        "kurang": "v.rows.filter((r) => !r.ada).map((r) => r.dokumen)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.bahan + ': ' + (v.kurang.length ? v.kurang.length + ' dokumen belum ada (' + v.kurang.join(', ') + ')' : 'dokumen lengkap')",
+    "teks": "'# Kelengkapan dokumen: ' + input.bahan + '\\n\\n' + tabel(['Dokumen', 'Status'], v.rows.map((r) => [r.dokumen, r.ada ? 'Ada' : 'Belum ada'])) + '\\n\\nStatus: **' + (v.kurang.length ? 'Belum lengkap' : 'Lengkap') + '**' + (v.kurang.length ? '\\n\\nMinta ke pemasok: ' + v.kurang.join(', ') : '')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'dokumen-bahan-' + input.bahan",
+        "isi": "csv([['Dokumen', 'Status']].concat(v.rows.map((r) => [r.dokumen, r.ada ? 'Ada' : 'Belum ada'])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Raw Material",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "bahan": "Niacinamide",
+      "kelas": "aktif",
+      "dimiliki": "COA, MSDS"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 dokumen belum ada",
+        "TDS (lembar data teknis)",
+        "Belum lengkap"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bahan baku",
+      "dokumen bahan",
+      "coa",
+      "msds",
+      "kelengkapan"
+    ],
+    "data": [
+      "nama bahan",
+      "jenis bahan",
+      "dokumen yang sudah dimiliki (pisahkan dengan koma)"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
+  }
+}

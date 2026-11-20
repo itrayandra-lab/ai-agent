@@ -1,0 +1,8 @@
+{"waktu":"2026-11-19","cakupan":"rintisan awal (uji coba harness, beberapa jalan kecil; angka perkiraan dari keluaran terminal)","model":"openai/gpt-oss-20b","biaya":0.065,"panggilan":120,"token":600000}
+{"waktu":"2026-11-18T18:26:24.612Z","cakupan":"kemampuan","model":"openai/gpt-oss-20b","biaya":0.005846,"panggilan":48,"token":40467}
+{"waktu":"2026-11-18T18:30:47.308Z","cakupan":"kemampuan","model":"openai/gpt-oss-20b","biaya":0.014101,"panggilan":128,"token":104602}
+{"waktu":"2026-11-18T18:33:56.260Z","cakupan":"kemampuan","model":"openai/gpt-oss-20b","biaya":0.008382,"panggilan":77,"token":58383}
+{"waktu":"2026-11-18T18:41:29.246Z","cakupan":"kemampuan","model":"openai/gpt-oss-20b","biaya":0.013362,"panggilan":127,"token":92427}
+{"waktu":"2026-11-18T19:09:40.538Z","cakupan":"skenario","model":"openai/gpt-oss-20b","biaya":0.168903,"panggilan":359,"token":1461243}
+{"waktu":"2026-11-18T19:19:53.487Z","cakupan":"skenario:fin-laba,sales-diskon,hr-gaji,data-janggal,mkt-caption,cs-balasan,konfirmasi-otomasi,saluran-wa,rnd-satuan,eng-tanggal,qa-sampel,hr-onboarding,kms-panduan,eng-struktur","model":"openai/gpt-oss-20b","biaya":0.078864,"panggilan":184,"token":761560}
+{"waktu":"2026-11-18T19:21:41.273Z","cakupan":"kemampuan","model":"openai/gpt-oss-20b","biaya":0.013958,"panggilan":130,"token":102615}

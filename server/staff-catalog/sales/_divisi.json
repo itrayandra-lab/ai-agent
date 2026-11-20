@@ -1,0 +1,19 @@
+{
+  "id": "sales",
+  "nama": "Sales",
+  "misi": "Mengubah prospek menjadi pelanggan dan menumbuhkan revenue yang dapat diprediksi.",
+  "manajer": {
+    "id": "bima",
+    "nama": "Bima",
+    "jabatan": "Head of Sales"
+  },
+  "staf": [
+    "sales-laras",
+    "sales-yoga",
+    "sales-rafi",
+    "sales-dian",
+    "sales-hana",
+    "sales-satria"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

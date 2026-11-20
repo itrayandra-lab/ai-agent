@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-hitung-hemat-otomasi",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan hitung hemat dan balik modal otomatisasi",
+  "version": 1,
+  "name": "Hemat waktu dan biaya otomatisasi",
+  "ringkas": "Hitung waktu yang dihemat dan kapan balik modal bila pekerjaan diotomatisasi, atau biaya layanan komputasi per bulan, plus saran hemat.",
+  "kataKunci": ["hemat", "otomasi", "balik modal", "biaya", "cloud", "langganan", "waktu"],
+  "kemampuan": {
+    "id": "hitung-hemat-otomasi",
+    "kelompok": "hitungan",
+    "tujuanAwam": "Menjawab apakah otomatisasi sebuah pekerjaan layak: berapa jam dihemat, kapan balik modal, dan berapa biaya layanan per bulan."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau menghitung apa?", "required": true, "default": "hemat", "choices": [{ "v": "hemat", "t": "Hemat waktu dan balik modal" }, { "v": "biaya", "t": "Biaya layanan per bulan" }] },
+    { "key": "kali", "type": "number", "label": "Berapa kali pekerjaan dilakukan per bulan (atau jumlah permintaan per bulan untuk hitungan biaya)", "required": true, "contoh": "200" },
+    { "key": "menit", "type": "number", "label": "Menit tiap kali dikerjakan dengan tangan (khusus hemat waktu)", "required": false, "contoh": "15" },
+    { "key": "tarif", "type": "number", "label": "Nilai waktu per jam dalam rupiah (hemat waktu), atau biaya per 1.000 permintaan (biaya layanan)", "required": false, "contoh": "50000" },
+    { "key": "modal", "type": "number", "label": "Biaya membuat otomatisasi sekali bayar (hemat waktu), atau biaya tetap per bulan (biaya layanan)", "required": false, "contoh": "3000000" },
+    { "key": "langganan", "type": "number", "label": "Biaya langganan alat per bulan dalam rupiah", "required": false, "contoh": "200000" }
+  ],
+  "steps": [
+    {
+      "id": "urai",
+      "use": "hitung",
+      "label": "Baca isian",
+      "set": {
+        "kali": "num(input.kali)",
+        "menit": "num(input.menit)",
+        "tarif": "num(input.tarif)",
+        "modal": "num(input.modal)",
+        "langganan": "num(input.langganan)"
+      }
+    },
+    {
+      "id": "hitung1",
+      "use": "hitung",
+      "label": "Hitung hemat waktu dan biaya",
+      "set": {
+        "hh": "(() => { const r1 = (x) => Math.round(x * 10) / 10; const jm = v.kali * v.menit / 60; const js = jm * 0.1; const jh = jm - js; const nh = jh * v.tarif; const bersih = Math.round(nh - v.langganan); const balik = bersih > 0 ? (v.modal > 0 ? v.modal / bersih : 0) : -1; const setahun = Math.round(bersih * 12 - v.modal); return { judul: 'Hemat waktu dan balik modal', inti: 'hemat ' + r1(jh) + ' jam per bulan, untung bersih ' + rp(bersih) + ' per bulan, ' + (balik >= 0 ? 'balik modal ' + r1(balik) + ' bulan' : 'belum balik modal'), kepala: ['Hitungan', 'Hasil'], rows: [['Waktu kerja tangan per bulan', r1(jm) + ' jam'], ['Waktu tersisa setelah otomatis (diasumsikan 10% untuk memeriksa)', r1(js) + ' jam'], ['Waktu dihemat per bulan', r1(jh) + ' jam'], ['Nilai waktu yang dihemat per bulan', rp(nh)], ['Biaya langganan per bulan', rp(v.langganan)], ['Untung bersih per bulan', rp(bersih)], ['Balik modal', balik >= 0 ? r1(balik) + ' bulan' : 'tidak balik modal'], ['Untung bersih tahun pertama setelah modal', rp(setahun)]], data: { jamHemat: r1(jh), nilaiHemat: Math.round(nh), bersih: bersih, balikBulan: balik >= 0 ? r1(balik) : -1, setahun: setahun } }; })()",
+        "hb": "(() => { const var1 = Math.round(v.kali / 1000 * v.tarif); const total = var1 + v.modal + v.langganan; const per = v.kali > 0 ? Math.round(total / v.kali * 100) / 100 : 0; const naik = Math.round(var1 * 1.5 + v.modal + v.langganan); const porsi = total > 0 ? Math.round(var1 / total * 100) : 0; return { judul: 'Biaya layanan per bulan', inti: 'total ' + rp(total) + ' per bulan, ' + porsi + '% ikut jumlah pemakaian', kepala: ['Hitungan', 'Hasil'], rows: [['Jumlah permintaan per bulan', v.kali], ['Biaya yang ikut pemakaian', rp(var1)], ['Biaya tetap per bulan', rp(v.modal)], ['Langganan alat per bulan', rp(v.langganan)], ['Total per bulan', rp(total)], ['Biaya tiap permintaan', 'Rp ' + per], ['Bila pemakaian naik 50%, total menjadi', rp(naik)], ['Bagian biaya yang ikut pemakaian', porsi + '%']], data: { variabel: var1, total: total, perPermintaan: per, naik50: naik, porsiVariabel: porsi } }; })()"
+      }
+    },
+    {
+      "id": "hitung2",
+      "use": "hitung",
+      "label": "Pilih hasil, susun saran, dan periksa isian",
+      "set": {
+        "pilih": "input.jenis === 'biaya' ? v.hb : v.hh",
+        "saran": "(() => { const h = v.hh.data, b = v.hb.data; const s = input.jenis === 'biaya' ? [b.total <= 0 ? 'Isi jumlah pemakaian dan harga dulu agar saran bisa dibuat.' : '', b.porsiVariabel >= 70 ? 'Biaya terbesar ikut jumlah pemakaian: simpan hasil yang sering sama dan pakai pilihan lebih murah untuk pekerjaan ringan.' : '', b.porsiVariabel < 30 && b.total > 0 ? 'Biaya tetap yang paling besar: cek layanan yang jarang dipakai dan matikan yang tidak perlu.' : '', b.naik50 > b.total * 1.3 ? 'Bila pemakaian naik, biaya ikut naik tajam; pasang batas pemakaian bulanan.' : ''] : [h.balikBulan < 0 ? 'Otomatisasi ini belum menutup biayanya; kerjakan bagian yang paling sering diulang saja atau cari alat yang lebih murah.' : '', h.balikBulan > 12 ? 'Balik modal lebih dari 12 bulan; pastikan pekerjaannya masih ada selama itu.' : '', h.jamHemat < 5 ? 'Waktu yang dihemat masih kecil; gabungkan dengan pekerjaan lain sebelum diotomatisasi.' : '', v.langganan > 0 && v.langganan > h.nilaiHemat * 0.5 ? 'Langganan memakan lebih dari separuh nilai yang dihemat; cek paket yang lebih murah.' : '', h.balikBulan >= 0 && h.balikBulan <= 3 ? 'Balik modal cepat; layak dikerjakan lebih dulu.' : '']; const r = s.filter((t) => t !== ''); return r.length ? r : ['Angkanya wajar; pantau tiap bulan dan hitung ulang bila pemakaian berubah.']; })()",
+        "peringatan": "[v.kali <= 0 ? 'Isi berapa kali dikerjakan (atau jumlah permintaan) per bulan.' : '', input.jenis === 'hemat' && v.menit <= 0 ? 'Isi menit tiap pekerjaan agar waktu yang dihemat bisa dihitung.' : '', v.tarif <= 0 ? 'Nilai waktu per jam atau biaya per 1.000 permintaan belum diisi.' : ''].filter((t) => t !== '')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kali > 0 ? v.pilih.judul + ': ' + v.pilih.inti : 'Isi dulu berapa kali pekerjaan dilakukan per bulan'",
+    "teks": "'# ' + v.pilih.judul + '\\n\\n' + tabel(v.pilih.kepala, v.pilih.rows) + '\\n\\nSaran hemat:\\n' + v.saran.map((t) => '- ' + t).join('\\n') + (v.peringatan.length ? '\\n\\nPerhatian: ' + v.peringatan.join(' ') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'hemat-' + input.jenis", "isi": "csv([v.pilih.kepala].concat(v.pilih.rows))" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, saran: v.saran.length, peringatan: v.peringatan.length }, v.pilih.data)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "hemat", "kali": "200", "menit": "15", "tarif": "50000", "modal": "3000000", "langganan": "200000" }, "expect": { "berkas": 1, "mengandung": ["Untung bersih per bulan", "Rp 2.050.000"] } },
+  "otakProfil": {
+    "peran": "penasihat penghematan yang menilai apakah otomatisasi layak, dijelaskan untuk orang awam",
+    "tujuan": "Jelaskan apakah otomatisasi atau layanan ini layak, di mana pemborosan terbesar, dan langkah hemat yang paling mudah dicoba lebih dulu.",
+    "gaya": "praktis, jujur soal asumsi, tidak menjanjikan hasil pasti",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Sebutkan asumsi (misalnya sisa 10% waktu untuk memeriksa) bila memengaruhi kesimpulan.", "Beri satu atau dua langkah hemat paling mudah, bukan daftar panjang."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Balik modal sekitar satu setengah bulan karena pekerjaan ini sering diulang; layak dikerjakan lebih dulu.", "buruk": "Otomatisasi selalu hemat." },
+    "batas": { "pembahasan": 600, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["hemat"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Angka menunjukkan penghematan yang jelas bila pekerjaan tetap sering dilakukan. Perhitungan memakai asumsi sebagian waktu masih dipakai untuk memeriksa hasil.\",\"poin\":[\"Balik modal tergantung seberapa sering pekerjaan diulang\"],\"langkah\":[\"Mulai dari pekerjaan yang paling sering\",\"Hitung ulang tiap tiga bulan\"]}"
+  },
+  "evaluasi": [
+    { "nama": "otomatisasi cepat balik modal", "input": { "jenis": "hemat", "kali": "200", "menit": "15", "tarif": "50000", "modal": "3000000", "langganan": "200000" }, "ai": "{\"pembahasan\":\"Penghematan jelas karena pekerjaan sering diulang, dengan asumsi sebagian kecil waktu masih dipakai untuk memeriksa hasil.\",\"poin\":[\"Balik modal sekitar satu setengah bulan\"],\"langkah\":[\"Kerjakan lebih dulu\"]}", "kriteria": { "mengandung": ["penghematan", "asumsi"], "mengandungAturan": ["Balik modal", "Saran hemat", "layak dikerjakan lebih dulu"], "panjangMin": 200, "panjangMaks": 3000, "nilai": [{ "path": "data.jamHemat", "min": 45, "max": 45 }, { "path": "data.bersih", "min": 2050000, "max": 2050000 }, { "path": "data.balikBulan", "min": 1.4, "max": 1.6 }, { "path": "data.setahun", "min": 21600000, "max": 21600000 }] } },
+    { "nama": "otomatisasi tidak menutup biaya", "input": { "jenis": "hemat", "kali": "10", "menit": "5", "tarif": "20.000", "modal": "1.000.000", "langganan": "500.000" }, "ai": "{\"pembahasan\":\"Penghematan waktu terlalu kecil dibanding biaya langganan, jadi otomatisasi ini belum layak untuk saat ini.\",\"poin\":[\"Untung bersih bulanan minus\"],\"langkah\":[\"Cari alat yang lebih murah\"]}", "kriteria": { "mengandung": ["belum layak", "langganan"], "mengandungAturan": ["tidak balik modal", "belum menutup biayanya"], "panjangMin": 200, "panjangMaks": 3000, "nilai": [{ "path": "data.bersih", "min": -485000, "max": -485000 }, { "path": "data.balikBulan", "min": -1, "max": -1 }] } },
+    { "nama": "biaya layanan per bulan", "input": { "jenis": "biaya", "kali": "50.000", "tarif": "4000", "modal": "500000", "langganan": "300000" }, "ai": "{\"pembahasan\":\"Biaya total per bulan dipengaruhi pemakaian dan biaya tetap; sebagian kecil saja yang ikut naik bila pemakaian bertambah, jadi hemat paling mudah ada di biaya tetap.\",\"poin\":[\"Biaya tetap dominan\"],\"langkah\":[\"Matikan layanan yang jarang dipakai\"]}", "kriteria": { "mengandung": ["hemat", "biaya tetap"], "mengandungAturan": ["Total per bulan", "Biaya tetap yang paling besar"], "panjangMin": 200, "panjangMaks": 3000, "nilai": [{ "path": "data.variabel", "min": 200000, "max": 200000 }, { "path": "data.total", "min": 1000000, "max": 1000000 }, { "path": "data.perPermintaan", "min": 20, "max": 20 }, { "path": "data.naik50", "min": 1100000, "max": 1100000 }] } },
+    { "nama": "biaya kebanyakan ikut pemakaian dan isian kurang", "input": { "jenis": "biaya", "kali": "1.000.000", "tarif": "5000" }, "ai": "{\"pembahasan\":\"Hampir seluruh biaya ikut jumlah pemakaian, jadi cara hemat terbaik adalah mengurangi permintaan yang tidak perlu.\",\"poin\":[\"Biaya mengikuti pemakaian\"],\"langkah\":[\"Pasang batas bulanan\"]}", "kriteria": { "mengandung": ["hemat", "pemakaian"], "mengandungAturan": ["ikut jumlah pemakaian", "Pasang batas pemakaian"], "panjangMin": 200, "panjangMaks": 3000, "nilai": [{ "path": "data.total", "min": 5000000, "max": 5000000 }, { "path": "data.porsiVariabel", "min": 100, "max": 100 }] } }
+  ]
+}

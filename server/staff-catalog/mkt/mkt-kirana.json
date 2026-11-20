@@ -1,0 +1,163 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-kirana",
+  "division": "mkt",
+  "employeeId": "kirana",
+  "title": "Brand Strategist",
+  "version": 1,
+  "name": "Penyusun kerangka posisi brand",
+  "ringkas": "Rumuskan pernyataan posisi brand, tiga pesan utama, dan panduan gaya bahasa dari target, masalah, dan pembeda.",
+  "kataKunci": [
+    "positioning",
+    "posisi brand",
+    "brand brief",
+    "pesan utama",
+    "nada brand"
+  ],
+  "inputs": [
+    {
+      "key": "brand",
+      "type": "text",
+      "label": "Nama brand",
+      "required": true,
+      "contoh": "Ray Beauty"
+    },
+    {
+      "key": "kategori",
+      "type": "text",
+      "label": "Jenis produk",
+      "required": true,
+      "contoh": "serum wajah"
+    },
+    {
+      "key": "target",
+      "type": "text",
+      "label": "Untuk siapa?",
+      "required": true,
+      "contoh": "ibu muda yang sibuk"
+    },
+    {
+      "key": "masalah",
+      "type": "text",
+      "label": "Masalah yang dialami",
+      "required": true,
+      "contoh": "kulitnya kusam karena kurang tidur"
+    },
+    {
+      "key": "pembeda",
+      "type": "text",
+      "label": "Keunggulan utama",
+      "required": true,
+      "contoh": "mencerahkan dalam 14 hari dengan bahan lembut"
+    },
+    {
+      "key": "bukti",
+      "type": "text",
+      "label": "Bukti pendukung (boleh kosong)",
+      "required": false,
+      "contoh": "sudah diuji pada 50 pengguna"
+    },
+    {
+      "key": "nada",
+      "type": "choice",
+      "label": "Gaya bahasa brand",
+      "required": true,
+      "default": "hangat",
+      "choices": [
+        {
+          "v": "hangat",
+          "t": "Hangat dan akrab"
+        },
+        {
+          "v": "premium",
+          "t": "Premium dan tenang"
+        },
+        {
+          "v": "ceria",
+          "t": "Ceria dan berani"
+        },
+        {
+          "v": "ilmiah",
+          "t": "Ilmiah dan terpercaya"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun posisi",
+      "set": {
+        "posisi": "'Untuk ' + input.target + ' yang ' + input.masalah + ', ' + input.brand + ' adalah ' + input.kategori + ' yang ' + input.pembeda + (input.bukti ? ', karena ' + input.bukti : '') + '.'",
+        "gaya": "({ hangat: { kata: ['akrab', 'peduli', 'sederhana'], hindari: ['istilah rumit', 'nada menggurui'], contoh: 'Kamu pantas merasa nyaman dengan kulitmu.' }, premium: { kata: ['tenang', 'terpilih', 'berkelas'], hindari: ['seruan berlebihan', 'diskon besar-besaran'], contoh: 'Ritual sederhana, hasil yang terasa.' }, ceria: { kata: ['berani', 'seru', 'bebas'], hindari: ['kalimat panjang', 'nada kaku'], contoh: 'Kulit cerah, hari ikut cerah!' }, ilmiah: { kata: ['teruji', 'terukur', 'jelas'], hindari: ['klaim berlebihan', 'janji instan'], contoh: 'Bahan aktif yang jelas, hasil yang terukur.' } })[input.nada]",
+        "pesan": "['Masalah: ' + input.target + ' sering ' + input.masalah, 'Solusi: ' + input.brand + ' ' + input.pembeda, 'Alasan percaya: ' + (input.bukti || 'tambahkan bukti nyata seperti hasil uji atau ulasan pelanggan')]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Kerangka posisi ' + input.brand + ' dengan gaya ' + input.nada + ' siap, berikut pernyataan posisi dan tiga pesan utama'",
+    "teks": "'# Kerangka posisi brand: ' + input.brand + '\\n\\n## Pernyataan posisi\\n' + v.posisi + '\\n\\n## Tiga pesan utama\\n' + v.pesan.map((p, i) => (i + 1) + '. ' + p).join('\\n') + '\\n\\n## Gaya bahasa (' + input.nada + ')\\n- Kata kunci: ' + v.gaya.kata.join(', ') + '\\n- Hindari: ' + v.gaya.hindari.join(', ') + '\\n- Contoh kalimat: ' + v.gaya.contoh",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'posisi-brand-' + input.brand",
+        "isi": "'# ' + input.brand + '\\n\\n' + v.posisi + '\\n\\n' + v.pesan.join('\\n') + '\\n\\nKata kunci: ' + v.gaya.kata.join(', ') + '\\nHindari: ' + v.gaya.hindari.join(', ') + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Brand",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "brand": "Ray Beauty",
+      "kategori": "serum wajah",
+      "target": "ibu muda yang sibuk",
+      "masalah": "kulitnya kusam karena kurang tidur",
+      "pembeda": "mencerahkan dalam 14 hari dengan bahan lembut",
+      "bukti": "sudah diuji pada 50 pengguna",
+      "nada": "hangat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Untuk ibu muda yang sibuk yang kulitnya kusam",
+        "Kata kunci: akrab, peduli, sederhana"
+      ]
+    }
+  },
+  "kemampuan": [
+    "tulis-konten-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "positioning",
+      "posisi brand",
+      "brand brief",
+      "pesan utama",
+      "nada brand"
+    ],
+    "data": [
+      "nama brand",
+      "jenis produk",
+      "untuk siapa?",
+      "masalah yang dialami"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

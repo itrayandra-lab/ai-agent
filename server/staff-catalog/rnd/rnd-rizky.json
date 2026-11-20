@@ -1,0 +1,114 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-rizky",
+  "division": "rnd",
+  "employeeId": "rizky",
+  "title": "Formulation Scientist",
+  "version": 1,
+  "name": "Pembagi formula (persen ke gram)",
+  "ringkas": "Ubah formula dalam persen menjadi berat per bahan untuk ukuran batch tertentu, dan periksa apakah totalnya tepat 100%.",
+  "kataKunci": [
+    "formula",
+    "formulasi",
+    "persen ke gram",
+    "batch lab",
+    "komposisi"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Niacinamide 5%"
+    },
+    {
+      "key": "batch",
+      "type": "number",
+      "label": "Ukuran batch (gram)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "formula",
+      "type": "longtext",
+      "label": "Formula (satu baris: bahan | persen)",
+      "required": true,
+      "contoh": "Air | 70"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung berat",
+      "set": {
+        "rows": "baris(input.formula).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const pct = num(p[1]); return { bahan: p[0] || '-', pct: pct, gram: Math.round(pct * Number(input.batch)) / 100 }; })",
+        "total": "Math.round(v.rows.reduce((a, b) => a + b.pct, 0) * 100) / 100",
+        "pas": "Math.abs(v.total - 100) < 0.01",
+        "totalGram": "Math.round(v.rows.reduce((a, b) => a + b.gram, 0) * 100) / 100"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' bahan untuk batch ' + input.batch + ' g; ' + (v.pas ? 'total persen tepat 100' : 'PERHATIAN: total persen ' + v.total + ', bukan 100')",
+    "teks": "'# Lembar timbang: ' + input.produk + '\\n\\nBatch ' + input.batch + ' g\\n\\n' + tabel(['Bahan', 'Persen', 'Berat (g)'], v.rows.map((r) => [r.bahan, r.pct, r.gram])) + '\\n\\nTotal persen: ' + v.total + (v.pas ? '' : ' (tidak 100, periksa formula)') + '  \\nTotal berat: ' + v.totalGram + ' g'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'lembar-timbang-' + input.produk",
+        "isi": "csv([['Bahan', 'Persen', 'Berat gram']].concat(v.rows.map((r) => [r.bahan, r.pct, r.gram])).concat([['Total', v.total, v.totalGram]]))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Formulation",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Niacinamide 5%",
+      "batch": 1000,
+      "formula": "Air | 70\nGliserin | 5\nNiacinamide | 5\nPengemulsi | 4\nPengawet | 1\nPelembut | 15"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "6 bahan untuk batch 1000 g",
+        "Total persen: 100",
+        "| 700 |"
+      ]
+    }
+  },
+  "kemampuan": [
+    "hitung-teknis"
+  ],
+  "keahlian": {
+    "istilah": [
+      "formula",
+      "formulasi",
+      "persen ke gram",
+      "batch lab",
+      "komposisi"
+    ],
+    "data": [
+      "nama produk",
+      "ukuran batch (gram)",
+      "formula (satu baris: bahan | persen)"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
+  }
+}

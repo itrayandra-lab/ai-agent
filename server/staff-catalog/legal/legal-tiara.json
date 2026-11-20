@@ -1,0 +1,159 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "legal-tiara",
+  "division": "legal",
+  "employeeId": "tiara",
+  "title": "Compliance Officer",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Penyusun daftar periksa kepatuhan proses",
+  "ringkas": "Buat daftar periksa kepatuhan untuk satu proses kerja, lengkap dengan penanggung jawab dan tenggat tiap butir.",
+  "kataKunci": [
+    "kepatuhan",
+    "compliance",
+    "daftar periksa",
+    "kebijakan",
+    "audit proses"
+  ],
+  "inputs": [
+    {
+      "key": "proses",
+      "type": "choice",
+      "label": "Proses yang diperiksa",
+      "required": true,
+      "default": "data",
+      "choices": [
+        {
+          "v": "rekrutmen",
+          "t": "Rekrutmen karyawan"
+        },
+        {
+          "v": "keuangan",
+          "t": "Keuangan dan pajak"
+        },
+        {
+          "v": "pemasaran",
+          "t": "Pemasaran dan iklan"
+        },
+        {
+          "v": "data",
+          "t": "Data pelanggan"
+        },
+        {
+          "v": "produksi",
+          "t": "Produksi dan mutu"
+        }
+      ]
+    },
+    {
+      "key": "skala",
+      "type": "choice",
+      "label": "Ukuran perusahaan",
+      "required": true,
+      "default": "menengah",
+      "choices": [
+        {
+          "v": "kecil",
+          "t": "Kecil"
+        },
+        {
+          "v": "menengah",
+          "t": "Menengah"
+        },
+        {
+          "v": "besar",
+          "t": "Besar"
+        }
+      ]
+    },
+    {
+      "key": "pemilik",
+      "type": "text",
+      "label": "Penanggung jawab",
+      "required": true,
+      "contoh": "Bu Tiara"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    }
+  ],
+  "steps": [
+    {
+      "id": "susun",
+      "use": "hitung",
+      "label": "Susun daftar",
+      "set": {
+        "bank": "({ rekrutmen: ['Iklan lowongan tidak diskriminatif', 'Persetujuan kandidat untuk menyimpan data dicatat', 'Kontrak kerja tertulis diberikan sebelum mulai kerja', 'Upah sesuai ketentuan minimal yang berlaku', 'Data pelamar yang tidak diterima dihapus sesuai kebijakan', 'Pemeriksaan latar belakang dengan izin kandidat'], keuangan: ['Faktur dan bukti transaksi tersimpan rapi', 'Pajak dihitung dan dilaporkan tepat waktu', 'Pemisahan tugas antara pencatat dan pembayar', 'Persetujuan pengeluaran besar tercatat', 'Rekonsiliasi bank dilakukan tiap bulan', 'Dokumen disimpan sesuai masa simpan yang ditentukan'], pemasaran: ['Klaim iklan punya bukti pendukung', 'Testimoni asli dan seizin pemberi', 'Promo menyebut syarat dan masa berlaku jelas', 'Konten kerja sama ditandai jelas sebagai iklan', 'Musik dan gambar yang dipakai berizin', 'Persetujuan penerima sebelum kirim pesan promosi'], data: ['Pemberitahuan privasi tersedia dan mudah dibaca', 'Persetujuan pelanggan dicatat', 'Data hanya dikumpulkan seperlunya', 'Akses data dibatasi per peran', 'Prosedur menjawab permintaan akses atau hapus data', 'Prosedur bila terjadi kebocoran data'], produksi: ['Izin usaha dan izin edar produk berlaku', 'Catatan batch dan bahan tersimpan', 'Prosedur penarikan produk bermasalah tersedia', 'Pelatihan higiene karyawan tercatat', 'Kalibrasi alat dijadwalkan', 'Keluhan mutu dicatat dan ditindaklanjuti'] })[input.proses]",
+        "extra": "input.skala === 'besar' ? ['Audit internal tahunan dilakukan', 'Laporan kepatuhan berkala kepada pimpinan'] : input.skala === 'menengah' ? ['Tinjauan kepatuhan tiap semester'] : []",
+        "daftar": "v.bank.concat(v.extra).map((b, i) => ({ no: i + 1, butir: b, pj: input.pemilik, tenggat: new Date(Date.parse(input.mulai) + (i + 1) * 7 * 864e5).toISOString().slice(0, 10), status: 'Belum' }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Daftar periksa ' + input.proses + ': ' + v.daftar.length + ' butir untuk ' + input.pemilik",
+    "teks": "'# Daftar periksa kepatuhan: ' + input.proses + '\\n\\n_' + \"Daftar ini alat bantu awal, bukan nasihat hukum. Konfirmasikan dengan penasihat hukum sebelum dipakai sebagai dasar keputusan.\" + '_\\n\\n' + tabel(['No', 'Butir', 'Penanggung jawab', 'Tenggat', 'Status'], v.daftar.map((d) => [d.no, d.butir, d.pj, d.tenggat, d.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kepatuhan-' + input.proses",
+        "isi": "csv([['No', 'Butir', 'Penanggung jawab', 'Tenggat', 'Status', 'Bukti']].concat(v.daftar.map((d) => [d.no, d.butir, d.pj, d.tenggat, d.status, ''])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "proses": "data",
+      "skala": "menengah",
+      "pemilik": "Bu Tiara",
+      "mulai": "2026-12-01"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Persetujuan pelanggan dicatat",
+        "bukan nasihat hukum",
+        "7 butir",
+        "Tinjauan kepatuhan tiap semester"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kepatuhan",
+      "compliance",
+      "daftar periksa",
+      "kebijakan",
+      "audit proses"
+    ],
+    "data": [
+      "proses yang diperiksa",
+      "ukuran perusahaan",
+      "penanggung jawab",
+      "mulai tanggal"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
+    "contoh": {
+      "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
+  }
+}

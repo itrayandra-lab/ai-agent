@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-kirana-uji-slogan",
+  "division": "mkt",
+  "employeeId": "kirana",
+  "title": "Brand Strategist",
+  "version": 1,
+  "name": "Penilai calon slogan",
+  "ringkas": "Beri nilai beberapa calon slogan berdasarkan panjang, manfaat yang jelas, dan klaim berlebihan, lalu urutkan dari terbaik.",
+  "kataKunci": [
+    "slogan",
+    "tagline",
+    "penilaian slogan",
+    "copy brand",
+    "calon slogan"
+  ],
+  "inputs": [
+    {
+      "key": "kandidat",
+      "type": "longtext",
+      "label": "Calon slogan (satu baris satu slogan)",
+      "required": true,
+      "contoh": "Kulit sehat, hari cerah"
+    },
+    {
+      "key": "fokus",
+      "type": "choice",
+      "label": "Paling ingin ditonjolkan",
+      "required": true,
+      "default": "manfaat",
+      "choices": [
+        {
+          "v": "manfaat",
+          "t": "Manfaat untuk kulit"
+        },
+        {
+          "v": "rasa",
+          "t": "Perasaan pemakai"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Nilai slogan",
+      "set": {
+        "rows": "baris(input.kandidat).slice(0, 20).map((t) => { const kata = t.split(/\\s+/).length; const low = t.toLowerCase(); const manfaat = input.fokus === 'rasa' ? /percaya diri|bahagia|tenang|nyaman|bebas|senyum/.test(low) : /kulit|cerah|lembap|sehat|segar|glow|halus/.test(low); const risiko = /terbaik|nomor 1|dijamin|ajaib|100%|instan|sembuh/.test(low); const skor = (kata <= 6 ? 2 : kata <= 10 ? 1 : 0) + (manfaat ? 2 : 0) + (risiko ? -2 : 1); return { teks: t, kata: kata, manfaat: manfaat, risiko: risiko, skor: skor, catatan: (kata > 10 ? 'Terlalu panjang. ' : '') + (manfaat ? '' : 'Manfaat belum jelas. ') + (risiko ? 'Mengandung klaim berlebihan. ' : '') }; }).sort((x, y) => y.skor - x.skor)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Terbaik: ' + v.rows[0].teks + ' (skor ' + v.rows[0].skor + ' dari 5)'",
+    "teks": "'# Penilaian slogan\\n\\n' + tabel(['Peringkat', 'Slogan', 'Kata', 'Skor', 'Catatan'], v.rows.map((r, i) => [i + 1, r.teks, r.kata, r.skor, r.catatan || (r.skor >= 4 ? 'Layak dipakai' : 'Perlu direvisi')])) + '\\n\\nSkor maksimal 5: pendek (maks 2), manfaat jelas (2), tanpa klaim berlebihan (1).'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'penilaian-slogan'",
+        "isi": "csv([['Peringkat', 'Slogan', 'Jumlah kata', 'Skor', 'Catatan']].concat(v.rows.map((r, i) => [i + 1, r.teks, r.kata, r.skor, r.catatan])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Brand",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "kandidat": "Kulit sehat, hari cerah\nProduk skincare terbaik nomor 1 dijamin ajaib 100%",
+      "fokus": "manfaat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Terbaik: Kulit sehat, hari cerah (skor 5",
+        "Mengandung klaim berlebihan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-mutu-teks"
+  ],
+  "keahlian": {
+    "istilah": [
+      "slogan",
+      "tagline",
+      "penilaian slogan",
+      "copy brand",
+      "calon slogan"
+    ],
+    "data": [
+      "calon slogan (satu baris satu slogan)",
+      "paling ingin ditonjolkan"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

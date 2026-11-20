@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-sigit",
+  "division": "mfg",
+  "employeeId": "sigit",
+  "title": "Production Supervisor",
+  "version": 1,
+  "name": "Catatan batch dan hasil produksi",
+  "ringkas": "Susun catatan batch lengkap: hasil baik, reject, persen hasil terhadap target, status, dan daftar periksa proses.",
+  "kataKunci": [
+    "batch",
+    "produksi",
+    "yield",
+    "reject",
+    "catatan batch"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "batch",
+      "type": "text",
+      "label": "Nomor batch",
+      "required": true,
+      "contoh": "B-2026-118"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal produksi",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "shift",
+      "type": "choice",
+      "label": "Shift",
+      "required": true,
+      "default": "pagi",
+      "choices": [
+        {
+          "v": "pagi",
+          "t": "Pagi"
+        },
+        {
+          "v": "siang",
+          "t": "Siang"
+        },
+        {
+          "v": "malam",
+          "t": "Malam"
+        }
+      ]
+    },
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Target jumlah (unit)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "baik",
+      "type": "number",
+      "label": "Jumlah hasil baik (unit)",
+      "required": true,
+      "contoh": "940"
+    },
+    {
+      "key": "reject",
+      "type": "number",
+      "label": "Jumlah reject (unit)",
+      "required": true,
+      "contoh": "40"
+    },
+    {
+      "key": "catatan",
+      "type": "longtext",
+      "label": "Catatan penyimpangan (boleh kosong)",
+      "required": false,
+      "contoh": "Mesin berhenti 15 menit"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung hasil",
+      "set": {
+        "hasilPct": "Math.round(Number(input.baik) / Math.max(1, Number(input.target)) * 1000) / 10",
+        "rejectPct": "Math.round(Number(input.reject) / Math.max(1, Number(input.baik) + Number(input.reject)) * 1000) / 10",
+        "selisih": "Number(input.target) - Number(input.baik)",
+        "status": "v.hasilPct >= 95 ? 'Sesuai target' : v.hasilPct >= 90 ? 'Perlu catatan penyimpangan' : 'Wajib diselidiki'",
+        "shiftNama": "({ pagi: 'Pagi', siang: 'Siang', malam: 'Malam' })[input.shift]",
+        "cek": "['Pembersihan jalur sebelum mulai sudah dilakukan', 'Timbangan sudah dicek', 'Bahan baku sesuai kode dan sudah lolos pemeriksaan mutu', 'Suhu dan waktu proses sesuai instruksi', 'Sampel pengawasan proses diambil', 'Alat dibersihkan setelah batch'].map((t) => '- [ ] ' + t).join('\\n')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Batch ' + input.batch + ': hasil baik ' + v.hasilPct + '% dari target, reject ' + v.rejectPct + '%. ' + v.status",
+    "teks": "'# Catatan batch ' + input.batch + '\\n\\n- Produk: ' + input.produk + '\\n- Tanggal: ' + tgl(input.tanggal) + ' (shift ' + v.shiftNama + ')\\n- Target: ' + input.target + ' unit\\n- Hasil baik: ' + input.baik + ' unit (' + v.hasilPct + '%)\\n- Reject: ' + input.reject + ' unit (' + v.rejectPct + '%)\\n- Kekurangan terhadap target: ' + v.selisih + ' unit\\n- Status: **' + v.status + '**\\n\\n## Daftar periksa\\n' + v.cek + '\\n\\n## Catatan penyimpangan\\n' + (input.catatan || 'Tidak ada.')",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'batch-' + input.batch",
+        "isi": "'# Catatan batch ' + input.batch + '\\n\\nProduk: ' + input.produk + '\\nTanggal: ' + input.tanggal + '\\nHasil baik: ' + input.baik + ' / target ' + input.target + ' (' + v.hasilPct + '%)\\nReject: ' + input.reject + ' (' + v.rejectPct + '%)\\nStatus: ' + v.status + '\\n\\n' + v.cek + '\\n\\nCatatan: ' + (input.catatan || '-') + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "batch": "B-2026-118",
+      "tanggal": "2026-11-18",
+      "shift": "pagi",
+      "target": 1000,
+      "baik": 940,
+      "reject": 40,
+      "catatan": "Mesin berhenti 15 menit"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "94%",
+        "4.1%",
+        "Perlu catatan penyimpangan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "catat-produksi-mutu"
+  ],
+  "keahlian": {
+    "istilah": [
+      "batch",
+      "produksi",
+      "yield",
+      "reject",
+      "catatan batch"
+    ],
+    "data": [
+      "nama produk",
+      "nomor batch",
+      "tanggal produksi",
+      "shift"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
+    "contoh": {
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
+  }
+}

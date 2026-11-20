@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-satria",
+  "division": "sales",
+  "employeeId": "satria",
+  "title": "Inside Sales — Clinic & Salon B2B",
+  "version": 1,
+  "name": "Kalkulator potensi klinik atau salon",
+  "ringkas": "Perkirakan omzet dan kebutuhan produk bulanan sebuah klinik atau salon dari jumlah perawatannya, untuk bahan demo dan penawaran paket awal.",
+  "kataKunci": [
+    "klinik",
+    "salon",
+    "potensi",
+    "paket awal",
+    "professional line"
+  ],
+  "inputs": [
+    {
+      "key": "usaha",
+      "type": "text",
+      "label": "Nama klinik atau salon",
+      "required": true,
+      "contoh": "Klinik Cantik Rina"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis usaha",
+      "required": true,
+      "default": "klinik",
+      "choices": [
+        {
+          "v": "klinik",
+          "t": "Klinik kecantikan"
+        },
+        {
+          "v": "salon",
+          "t": "Salon"
+        }
+      ]
+    },
+    {
+      "key": "perawatan",
+      "type": "number",
+      "label": "Jumlah perawatan per hari",
+      "required": true,
+      "contoh": "8"
+    },
+    {
+      "key": "tarif",
+      "type": "number",
+      "label": "Tarif rata-rata per perawatan (Rp)",
+      "required": true,
+      "contoh": "350000"
+    },
+    {
+      "key": "biaya_produk",
+      "type": "number",
+      "label": "Biaya produk per perawatan saat ini (Rp)",
+      "required": true,
+      "contoh": "70000"
+    },
+    {
+      "key": "hari",
+      "type": "choice",
+      "label": "Hari buka dalam sebulan",
+      "required": true,
+      "default": "26",
+      "choices": [
+        {
+          "v": "22",
+          "t": "22 hari"
+        },
+        {
+          "v": "26",
+          "t": "26 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung potensi",
+      "set": {
+        "jumlah": "num(input.perawatan) * num(input.hari)",
+        "omzet": "v.jumlah * num(input.tarif)",
+        "biaya": "v.jumlah * num(input.biaya_produk)",
+        "hemat": "Math.round(v.biaya * (input.jenis === 'klinik' ? 0.12 : 0.08))",
+        "labaProduk": "v.omzet - v.biaya",
+        "paket": "v.jumlah <= 100 ? 'Paket awal kecil' : v.jumlah <= 200 ? 'Paket awal menengah' : 'Paket awal besar'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.usaha + ': sekitar ' + v.jumlah + ' perawatan, omzet ' + rp(v.omzet) + ' per bulan; disarankan ' + v.paket",
+    "teks": "'# Potensi ' + input.usaha + '\\n\\n- Perawatan per bulan: ' + v.jumlah + '\\n- Omzet: ' + rp(v.omzet) + '\\n- Biaya produk sekarang: ' + rp(v.biaya) + ' (' + Math.round(v.biaya / Math.max(1, v.omzet) * 1000) / 10 + '% dari omzet)\\n- Perkiraan penghematan dengan produk kita: ' + rp(v.hemat) + ' per bulan\\n- Saran: **' + v.paket + '**\\n\\n## Bahan demo\\n- Tunjukkan perbandingan biaya per perawatan\\n- Tawarkan uji coba satu bulan'",
+    "data": "({ omzet: v.omzet, jumlah: v.jumlah })"
+  },
+  "sample": {
+    "input": {
+      "usaha": "Klinik Cantik Rina",
+      "jenis": "klinik",
+      "perawatan": "8",
+      "tarif": "350000",
+      "biaya_produk": "70000",
+      "hari": "26"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "208 perawatan",
+        "Rp 72.800.000",
+        "Paket awal besar",
+        "Rp 1.747.200"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "klinik",
+      "salon",
+      "potensi",
+      "paket awal",
+      "professional line"
+    ],
+    "data": [
+      "nama klinik atau salon",
+      "jenis usaha",
+      "jumlah perawatan per hari",
+      "tarif rata-rata per perawatan (rp)"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

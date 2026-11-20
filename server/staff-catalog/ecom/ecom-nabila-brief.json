@@ -1,0 +1,157 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-nabila-brief",
+  "division": "ecom",
+  "employeeId": "nabila",
+  "title": "TikTok Affiliate Manager",
+  "version": 1,
+  "name": "Penyusun brief untuk kreator",
+  "ringkas": "Buat brief video singkat untuk kreator: poin wajib, urutan adegan berdasarkan durasi, hal yang tidak boleh, dan cara menyebut produk.",
+  "kataKunci": [
+    "brief kreator",
+    "video",
+    "naskah",
+    "affiliate",
+    "konten"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah Niacinamide"
+    },
+    {
+      "key": "keunggulan",
+      "type": "longtext",
+      "label": "Keunggulan yang wajib disebut (satu per baris)",
+      "required": true,
+      "contoh": "Cepat meresap\nTidak lengket\nAda uji tempel"
+    },
+    {
+      "key": "gaya",
+      "type": "choice",
+      "label": "Gaya video",
+      "required": true,
+      "default": "review",
+      "choices": [
+        {
+          "v": "review",
+          "t": "Ulasan jujur"
+        },
+        {
+          "v": "tutorial",
+          "t": "Cara pakai"
+        },
+        {
+          "v": "cerita",
+          "t": "Cerita pengalaman"
+        }
+      ]
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Panjang video",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "15",
+          "t": "15 detik"
+        },
+        {
+          "v": "30",
+          "t": "30 detik"
+        },
+        {
+          "v": "45",
+          "t": "45 detik"
+        }
+      ]
+    },
+    {
+      "key": "ajakan",
+      "type": "text",
+      "label": "Ajakan di akhir video",
+      "required": true,
+      "contoh": "Klik keranjang kuning sebelum promo berakhir"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun brief",
+      "set": {
+        "unggul": "baris(input.keunggulan).slice(0, 5)",
+        "adegan": "(({ review: ['Pembuka: tunjukkan produk dan katakan alasan mencobanya', 'Tunjukkan cara memakai', 'Ceritakan hasil yang dirasakan', 'Tutup dengan ajakan'], tutorial: ['Pembuka: masalah yang sering dialami', 'Langkah 1 dan 2 pemakaian', 'Hasil akhir', 'Tutup dengan ajakan'], cerita: ['Pembuka: cerita singkat sebelum memakai', 'Momen mencoba produk', 'Perubahan yang dirasakan', 'Tutup dengan ajakan'] })[input.gaya]).map((a, i, arr) => ({ detik: Math.round(num(input.durasi) / arr.length * i), isi: a }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Brief video ' + input.durasi + ' detik untuk ' + input.produk + ' siap dikirim ke kreator'",
+    "teks": "'# Brief kreator: ' + input.produk + '\\n\\n- Gaya: ' + input.gaya + ', ' + input.durasi + ' detik\\n\\n## Wajib disebut\\n' + v.unggul.map((u) => '- ' + u).join('\\n') + '\\n\\n## Urutan adegan\\n' + v.adegan.map((a) => '- Detik ' + a.detik + ': ' + a.isi).join('\\n') + '\\n\\n## Ajakan akhir\\n' + input.ajakan + '\\n\\n## Jangan\\n- Menjanjikan hasil pasti atau menyebut produk sebagai obat\\n- Membandingkan langsung dengan merek lain\\n- Memakai musik atau gambar tanpa izin'",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'brief-' + input.produk",
+        "isi": "'# Brief kreator: ' + input.produk + '\\n\\nWajib disebut:\\n' + v.unggul.map((u) => '- ' + u).join('\\n') + '\\n\\nAdegan:\\n' + v.adegan.map((a) => '- Detik ' + a.detik + ': ' + a.isi).join('\\n') + '\\n\\nAjakan: ' + input.ajakan + '\\n'"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah Niacinamide",
+      "keunggulan": "Cepat meresap\nTidak lengket\nAda uji tempel",
+      "gaya": "review",
+      "durasi": "30",
+      "ajakan": "Klik keranjang kuning sebelum promo berakhir"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Brief video 30 detik",
+        "Detik 15:",
+        "- Tidak lengket"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "brief kreator",
+      "video",
+      "naskah",
+      "affiliate",
+      "konten"
+    ],
+    "data": [
+      "nama produk",
+      "keunggulan yang wajib disebut (satu per baris)",
+      "gaya video",
+      "panjang video"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}

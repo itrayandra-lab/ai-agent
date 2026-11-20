@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "reg-kevin-label",
+  "division": "reg",
+  "employeeId": "kevin",
+  "title": "Claims & Labeling Specialist",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Pemeriksa kelengkapan label kemasan",
+  "ringkas": "Cocokkan isi label kemasan Anda dengan daftar unsur wajib dan lihat mana yang belum ada.",
+  "kataKunci": [
+    "label",
+    "kemasan",
+    "komposisi",
+    "netto",
+    "kelengkapan"
+  ],
+  "inputs": [
+    {
+      "key": "halal",
+      "type": "choice",
+      "label": "Produk berlabel halal?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "impor",
+      "type": "choice",
+      "label": "Produk atau bahan diimpor?",
+      "required": true,
+      "default": "tidak",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "sudah",
+      "type": "longtext",
+      "label": "Tulis yang sudah ada di label (satu per baris)",
+      "required": true,
+      "contoh": "Nama produk"
+    }
+  ],
+  "steps": [
+    {
+      "id": "cek",
+      "use": "hitung",
+      "label": "Cocokkan label",
+      "set": {
+        "wajib": "[['Nama produk', /nama produk/], ['Komposisi atau bahan', /komposisi|bahan/], ['Isi bersih (netto)', /netto|isi bersih|berat bersih/], ['Nama dan alamat produsen', /produsen|alamat/], ['Nomor izin edar atau notifikasi', /izin|notifikasi|bpom/], ['Kode produksi atau nomor batch', /batch|kode produksi|lot/], ['Tanggal kedaluwarsa', /kedaluwarsa|expired|exp\\b/], ['Cara penggunaan', /cara|penggunaan|pakai/], ['Peringatan atau perhatian', /peringatan|perhatian/]].concat(input.halal === 'ya' ? [['Logo halal dan nomor sertifikat', /halal/]] : []).concat(input.impor === 'ya' ? [['Nama dan alamat importir', /importir/], ['Negara asal', /negara|asal/]] : [])",
+        "rows": "v.wajib.map((w) => ({ butir: w[0], ada: baris(input.sudah).some((l) => w[1].test(l.toLowerCase())) }))",
+        "ada": "v.rows.filter((r) => r.ada).length",
+        "belum": "v.rows.filter((r) => !r.ada)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ada + ' dari ' + v.rows.length + ' unsur label sudah ada, ' + v.belum.length + ' butir belum ada'",
+    "teks": "'# Kelengkapan label\\n\\n_' + \"Ini alat bantu pemeriksaan awal, bukan keputusan resmi atau nasihat hukum. Tetap konfirmasikan dengan penanggung jawab regulasi dan aturan terbaru.\" + '_\\n\\n' + tabel(['Unsur wajib', 'Status'], v.rows.map((r) => [r.butir, r.ada ? 'Sudah ada' : 'Belum ada'])) + '\\n\\n## Yang perlu dilengkapi\\n' + (v.belum.length ? v.belum.map((b) => '- ' + b.butir).join('\\n') : 'Semua unsur dari daftar sudah ada.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kelengkapan-label'",
+        "isi": "csv([['Unsur wajib', 'Status']].concat(v.rows.map((r) => [r.butir, r.ada ? 'Sudah ada' : 'Belum ada'])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "halal": "ya",
+      "impor": "tidak",
+      "sudah": "Nama produk\nKomposisi\nNetto 30 ml\nCara pakai"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "4 dari 10 unsur label",
+        "6 butir belum ada",
+        "Logo halal dan nomor sertifikat"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "label",
+      "kemasan",
+      "komposisi",
+      "netto",
+      "kelengkapan"
+    ],
+    "data": [
+      "produk berlabel halal?",
+      "produk atau bahan diimpor?",
+      "tulis yang sudah ada di label (satu per baris)"
+    ],
+    "gaya": "patuh aturan, tunjuk bagian yang belum memenuhi syarat",
+    "contoh": {
+      "baik": "Dua dokumen belum lengkap; lengkapi sebelum diajukan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menjanjikan persetujuan lembaga."
+    ]
+  }
+}

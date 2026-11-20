@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-notulen-rapat",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penyusun notulen rapat",
+  "ringkas": "Ubah catatan rapat mentah menjadi notulen rapi dengan keputusan dan tabel tindakan (siapa, apa, kapan).",
+  "kataKunci": [
+    "notulen",
+    "rapat",
+    "tindakan",
+    "keputusan",
+    "catatan"
+  ],
+  "inputs": [
+    {
+      "key": "judul",
+      "type": "text",
+      "label": "Judul rapat",
+      "required": true,
+      "contoh": "Rapat mingguan"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal rapat",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "catatan",
+      "type": "longtext",
+      "label": "Catatan: tulis biasa; awali baris dengan \"+\" untuk keputusan dan \"!\" untuk tindakan (!tugas | siapa | tanggal)",
+      "required": true,
+      "contoh": "+Anggaran disetujui"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Pilah catatan",
+      "set": {
+        "b": "baris(input.catatan)",
+        "keputusan": "v.b.filter((l) => l.startsWith('+')).map((l) => l.slice(1).trim())",
+        "tindakan": "v.b.filter((l) => l.startsWith('!')).map((l) => l.slice(1).split('|').map((s) => s.trim())).map((p) => ({ tugas: p[0], siapa: p[1] || '-', kapan: p[2] || '-' }))",
+        "bahas": "v.b.filter((l) => !l.startsWith('+') && !l.startsWith('!'))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Notulen \"' + input.judul + '\": ' + v.keputusan.length + ' keputusan, ' + v.tindakan.length + ' tindakan'",
+    "teks": "'# ' + input.judul + '\\n_' + tgl(input.tanggal) + '_\\n\\n## Pembahasan\\n' + (v.bahas.map((x) => '- ' + x).join('\\n') || '-') + '\\n\\n## Keputusan\\n' + (v.keputusan.map((x) => '- ' + x).join('\\n') || '-') + '\\n\\n## Tindakan\\n' + (v.tindakan.length ? tabel(['Tugas', 'Penanggung jawab', 'Tenggat'], v.tindakan.map((t) => [t.tugas, t.siapa, t.kapan])) : '-')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tindakan-rapat'",
+        "isi": "csv([['Tugas', 'Penanggung jawab', 'Tenggat']].concat(v.tindakan.map((t) => [t.tugas, t.siapa, t.kapan])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "judul": "Rapat mingguan",
+      "tanggal": "2026-11-18",
+      "catatan": "Penjualan naik 8%\n+Anggaran iklan disetujui\n!Siapkan laporan | Budi | 2026-11-25"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 keputusan, 1 tindakan",
+        "Siapkan laporan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "notulen",
+      "rapat",
+      "tindakan",
+      "keputusan",
+      "catatan"
+    ],
+    "data": [
+      "judul rapat",
+      "tanggal rapat",
+      "catatan: tulis biasa; awali baris dengan \"+\" untuk keputusan"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

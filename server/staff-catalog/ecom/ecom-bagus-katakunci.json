@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-bagus-katakunci",
+  "division": "ecom",
+  "employeeId": "bagus",
+  "title": "Marketplace Ads Specialist",
+  "version": 1,
+  "name": "Penyaring kata kunci iklan",
+  "ringkas": "Pilah kata kunci iklan menjadi pertahankan, uji lagi, atau jeda berdasarkan klik, pesanan, dan biayanya.",
+  "kataKunci": [
+    "kata kunci",
+    "keyword",
+    "iklan",
+    "jeda",
+    "optimasi"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Kata kunci (satu baris: kata | klik | pesanan | biaya)",
+      "required": true,
+      "contoh": "serum wajah | 300 | 18 | 150000"
+    },
+    {
+      "key": "biaya_maks",
+      "type": "number",
+      "label": "Biaya paling tinggi per pesanan yang masih wajar (Rp)",
+      "required": true,
+      "contoh": "12000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai kata kunci",
+      "set": {
+        "rows": "baris(input.data).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const k = num(p[1]); const n = num(p[2]); const b = num(p[3]); const cpo = n ? Math.round(b / n) : 0; return { kata: p[0] || '-', klik: k, pesanan: n, biaya: b, cpo: cpo, aksi: n === 0 && k >= 30 ? 'Jeda: banyak klik tanpa pesanan' : n === 0 ? 'Uji lagi: klik masih sedikit' : cpo <= num(input.biaya_maks) ? 'Pertahankan' : 'Turunkan tawaran' }; })",
+        "jeda": "v.rows.filter((r) => r.aksi.startsWith('Jeda')).reduce((a, b) => a + b.biaya, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.filter((r) => r.aksi.startsWith('Jeda')).length + ' kata kunci disarankan dijeda; biaya terbuang ' + rp(v.jeda)",
+    "teks": "'# Saringan kata kunci\\n\\n' + tabel(['Kata', 'Klik', 'Pesanan', 'Biaya', 'Biaya per pesanan', 'Aksi'], v.rows.map((r) => [r.kata, r.klik, r.pesanan, rp(r.biaya), r.pesanan ? rp(r.cpo) : '-', r.aksi]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kata-kunci'",
+        "isi": "csv([['Kata', 'Klik', 'Pesanan', 'Biaya', 'Biaya per pesanan', 'Aksi']].concat(v.rows.map((r) => [r.kata, r.klik, r.pesanan, r.biaya, r.cpo, r.aksi])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "serum wajah | 300 | 18 | 150000\nobat jerawat | 120 | 0 | 90000\nmasker | 20 | 0 | 8000\nkrim malam | 200 | 5 | 160000",
+      "biaya_maks": "12000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 kata kunci disarankan dijeda",
+        "Rp 90.000",
+        "Uji lagi",
+        "Turunkan tawaran"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "klasifikasi-pilah"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kata kunci",
+      "keyword",
+      "iklan",
+      "jeda",
+      "optimasi"
+    ],
+    "data": [
+      "kata kunci (satu baris: kata | klik | pesanan | biaya)",
+      "biaya paling tinggi per pesanan yang masih wajar (rp)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}

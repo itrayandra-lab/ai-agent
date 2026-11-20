@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-rini",
+  "division": "scm",
+  "employeeId": "rini",
+  "title": "Warehouse & Inventory Specialist",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Penghitung titik pesan ulang dan stok pengaman",
+  "ringkas": "Hitung stok pengaman dan batas stok untuk memesan ulang tiap barang, lalu tandai yang harus dipesan sekarang.",
+  "kataKunci": [
+    "stok",
+    "reorder point",
+    "stok pengaman",
+    "pesan ulang",
+    "gudang"
+  ],
+  "inputs": [
+    {
+      "key": "cadangan",
+      "type": "choice",
+      "label": "Tambahan cadangan",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa tambahan"
+        },
+        {
+          "v": "3",
+          "t": "3 hari pemakaian"
+        },
+        {
+          "v": "7",
+          "t": "7 hari pemakaian"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Barang (nama | pemakaian rata-rata per hari | waktu datang hari | pemakaian tertinggi per hari | stok sekarang)",
+      "required": true,
+      "contoh": "Botol 30ml | 50 | 7 | 70 | 400"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung batas pesan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 300).map((l) => { const p = l.split('|').map((s) => s.trim()); const avg = num(p[1]); const lt = num(p[2]); const mx = Math.max(num(p[3]), avg); const stok = num(p[4]); const ss = Math.ceil((mx - avg) * lt + avg * num(input.cadangan)); const rop = Math.ceil(avg * lt + ss); return { nama: p[0] || '-', avg: avg, lt: lt, ss: ss, rop: rop, stok: stok, tahan: avg ? Math.round(stok / avg * 10) / 10 : 0, status: stok <= rop ? 'Pesan sekarang' : stok <= rop * 1.25 ? 'Segera siapkan' : 'Aman' }; })",
+        "perlu": "v.rows.filter((r) => r.status === 'Pesan sekarang').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.perlu + ' dari ' + v.rows.length + ' barang perlu dipesan sekarang'",
+    "teks": "'# Titik pesan ulang\\n\\n' + tabel(['Barang', 'Stok sekarang', 'Cukup untuk (hari)', 'Stok pengaman', 'Pesan ulang saat stok', 'Status'], v.rows.map((r) => [r.nama, r.stok, r.tahan, r.ss, r.rop, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'titik-pesan-ulang'",
+        "isi": "csv([['Barang', 'Stok sekarang', 'Cukup untuk hari', 'Stok pengaman', 'Titik pesan ulang', 'Status']].concat(v.rows.map((r) => [r.nama, r.stok, r.tahan, r.ss, r.rop, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "cadangan": "3",
+      "data": "Botol 30ml | 50 | 7 | 70 | 400\nKardus | 20 | 5 | 25 | 900"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 dari 2 barang perlu dipesan sekarang",
+        "Pesan sekarang",
+        "640"
+      ]
+    }
+  },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "stok",
+      "reorder point",
+      "stok pengaman",
+      "pesan ulang",
+      "gudang"
+    ],
+    "data": [
+      "tambahan cadangan",
+      "barang (nama | pemakaian rata-rata per hari | waktu datang h"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

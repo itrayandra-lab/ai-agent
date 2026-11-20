@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-gilang-sla-downtime",
+  "division": "eng",
+  "employeeId": "gilang",
+  "title": "DevOps Engineer",
+  "version": 1,
+  "name": "Penghitung anggaran gangguan layanan",
+  "ringkas": "Hitung berapa menit layanan boleh mati agar target ketersediaan tercapai dan berapa yang sudah terpakai.",
+  "kataKunci": [
+    "uptime",
+    "sla",
+    "downtime",
+    "error budget",
+    "ketersediaan"
+  ],
+  "inputs": [
+    {
+      "key": "target",
+      "type": "choice",
+      "label": "Target ketersediaan",
+      "required": true,
+      "default": "99.9",
+      "choices": [
+        {
+          "v": "99",
+          "t": "99%"
+        },
+        {
+          "v": "99.5",
+          "t": "99,5%"
+        },
+        {
+          "v": "99.9",
+          "t": "99,9%"
+        },
+        {
+          "v": "99.95",
+          "t": "99,95%"
+        },
+        {
+          "v": "99.99",
+          "t": "99,99%"
+        }
+      ]
+    },
+    {
+      "key": "periode",
+      "type": "choice",
+      "label": "Periode yang dihitung",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "30",
+          "t": "Sebulan (30 hari)"
+        },
+        {
+          "v": "90",
+          "t": "Sekuartal (90 hari)"
+        },
+        {
+          "v": "365",
+          "t": "Setahun"
+        }
+      ]
+    },
+    {
+      "key": "gangguan",
+      "type": "longtext",
+      "label": "Gangguan yang terjadi (satu baris: tanggal | menit mati | penyebab)",
+      "required": false,
+      "contoh": "2026-11-03 | 12 | basis data penuh"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung anggaran",
+      "set": {
+        "boleh": "Math.round(num(input.periode) * 1440 * (1 - num(input.target) / 100) * 10) / 10",
+        "rows": "baris(input.gangguan || '').map((l) => { const p = l.split('|').map((s) => s.trim()); return { tgl: p[0] || '-', menit: num(p[1]), sebab: p[2] || '-' }; })",
+        "pakai": "v.rows.reduce((a, r) => a + r.menit, 0)",
+        "sisa": "Math.round((v.boleh - v.pakai) * 10) / 10",
+        "persen": "v.boleh ? Math.round(v.pakai / v.boleh * 1000) / 10 : 0",
+        "status": "v.persen > 100 ? 'Anggaran gangguan habis' : v.persen > 50 ? 'Waspada' : 'Aman'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.status + ': terpakai ' + v.pakai + ' dari ' + v.boleh + ' menit (' + v.persen + '%)'",
+    "teks": "'# Anggaran gangguan\\n\\n- Target: ' + input.target + '% selama ' + input.periode + ' hari\\n- Boleh mati: ' + v.boleh + ' menit\\n- Sudah terpakai: ' + v.pakai + ' menit (' + v.persen + '%)\\n- Sisa: ' + v.sisa + ' menit\\n- Status: **' + v.status + '**\\n\\n' + (v.rows.length ? tabel(['Tanggal', 'Menit mati', 'Penyebab'], v.rows.map((r) => [r.tgl, r.menit, r.sebab])) : 'Belum ada gangguan tercatat.') + (v.status !== 'Aman' ? '\\n\\nSaran: tunda rilis berisiko dan fokus ke perbaikan penyebab terbesar.' : '')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'anggaran-gangguan'",
+        "isi": "csv([['Tanggal', 'Menit mati', 'Penyebab']].concat(v.rows.map((r) => [r.tgl, r.menit, r.sebab])).concat([['Boleh mati (menit)', v.boleh, ''], ['Terpakai (menit)', v.pakai, ''], ['Status', v.status, '']]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "target": "99.9",
+      "periode": "30",
+      "gangguan": "2026-11-03 | 12 | basis data penuh\n2026-11-15 | 20 | rilis gagal"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Waspada: terpakai 32 dari 43.2 menit (74.1%)"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "uptime",
+      "sla",
+      "downtime",
+      "error budget",
+      "ketersediaan"
+    ],
+    "data": [
+      "target ketersediaan",
+      "periode yang dihitung",
+      "gangguan yang terjadi (satu baris: tanggal | menit mati | pe"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
+  }
+}

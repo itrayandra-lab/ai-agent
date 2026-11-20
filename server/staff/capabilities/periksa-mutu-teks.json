@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-periksa-mutu-teks",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan periksa mutu teks",
+  "version": 1,
+  "name": "Nilai mutu teks pendek",
+  "ringkas": "Nilai teks pendek (slogan, klaim, arahan, tulisan di layar) dengan rubrik berskor 100 dan beri saran perbaikan yang jelas.",
+  "kataKunci": ["teks", "slogan", "klaim", "arahan", "rubrik", "perbaikan"],
+  "kemampuan": {
+    "id": "periksa-mutu-teks",
+    "kelompok": "pemeriksaan",
+    "tujuanAwam": "Menilai apakah sebuah teks pendek sudah jelas, singkat, dan tepat sasaran, lalu menyarankan perbaikan yang konkret."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Teks apa ini?", "required": true, "default": "umum", "choices": [{ "v": "slogan", "t": "Slogan" }, { "v": "klaim", "t": "Klaim atau janji" }, { "v": "arahan", "t": "Arahan untuk asisten pintar" }, { "v": "layar", "t": "Tulisan di layar atau tombol" }, { "v": "umum", "t": "Teks umum" }] },
+    { "key": "teks", "type": "longtext", "label": "Tempel teks yang mau dinilai", "required": true, "contoh": "Belanja mudah, hemat untuk kita semua" },
+    { "key": "pembaca", "type": "text", "label": "Siapa yang akan membaca? (boleh kosong)", "required": false, "contoh": "Ibu rumah tangga" },
+    { "key": "wajib", "type": "text", "label": "Kata penting yang harus ada, pisahkan dengan koma (boleh kosong)", "required": false, "contoh": "hemat, mudah" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai teks dengan rubrik",
+      "set": {
+        "s": "baris(input.teks).join(' ').toLowerCase()",
+        "w": "v.s.split(' ').filter((x) => x !== '')",
+        "n": "v.w.length",
+        "kal": "Math.max(1, v.s.replace(/[!?]/g, '.').split('.').filter((x) => x.trim() !== '').length)",
+        "rentang": "({ slogan: [2, 10], klaim: [5, 30], arahan: [15, 150], layar: [3, 40], umum: [5, 120] })[input.jenis] || [5, 120]",
+        "hedge": "['mungkin', 'sepertinya', 'kira-kira', 'sekitar', 'agak', 'semacam', 'barangkali', 'entah'].filter((x) => v.s.includes(x))",
+        "cocok": "(() => { const wajib = String(input.wajib || '').replace(/;/g, ',').split(',').map((x) => x.trim().toLowerCase()).filter((x) => x !== '').slice(0, 10); const pen = ({ slogan: ['kamu', 'anda', 'kita', 'kami', 'untuk'], klaim: ['hasil', 'uji', 'data', 'persen', '%', 'sertifikat', 'terbukti', 'survei'], arahan: ['jangan', 'harus', 'format', 'contoh', 'maksimal', 'tulis', 'buat'], layar: ['klik', 'tekan', 'pilih', 'ketuk', 'isi', 'lanjut'], umum: [] })[input.jenis] || []; const daftar = wajib.length ? wajib : pen; return { dari: wajib.length ? 'wajib' : 'penanda', total: daftar.length, ada: daftar.filter((x) => v.s.includes(x)).length }; })()",
+        "rubrik": "(() => { const a = v.rentang[0]; const b = v.rentang[1]; const p = v.n < a ? Math.round(20 * v.n / a) : v.n > b ? Math.max(0, 20 - Math.round((v.n - b) / b * 20)) : 20; const avg = v.n ? v.w.reduce((x, y) => x + y.length, 0) / v.n : 0; const k = Math.max(0, Math.min(20, Math.round(20 - Math.max(0, avg - 7) * 5))); const apk = v.n / v.kal; const q = Math.max(0, Math.min(20, Math.round(20 - Math.max(0, apk - 15) * 2))); const t = Math.max(0, 20 - 5 * v.hedge.length); const c = v.cocok; const e = c.total === 0 ? 20 : c.dari === 'wajib' ? Math.round(20 * c.ada / c.total) : c.ada >= 2 ? 20 : c.ada === 1 ? 16 : 4; return [{ nama: 'Panjang pas', nilai: p, saran: v.n < a ? 'Tambahkan isi; idealnya minimal ' + a + ' kata.' : 'Pangkas teks; idealnya paling banyak ' + b + ' kata.' }, { nama: 'Kata sederhana', nilai: k, saran: 'Ganti kata yang panjang dengan kata sehari-hari.' }, { nama: 'Kalimat pendek', nilai: q, saran: 'Pecah kalimat panjang menjadi dua atau tiga kalimat.' }, { nama: 'Tegas dan jelas', nilai: t, saran: 'Hapus kata ragu seperti ' + v.hedge.join(', ') + '.' }, { nama: 'Isi tepat sasaran', nilai: e, saran: c.dari === 'wajib' ? 'Masukkan kata penting yang belum ada.' : 'Tambahkan unsur yang lazim untuk jenis teks ini.' }]; })()",
+        "skor": "v.n ? v.rubrik.reduce((a, r) => a + r.nilai, 0) : 0",
+        "tingkat": "!v.n ? 'Belum bisa dinilai' : v.skor >= 80 ? 'Baik' : v.skor >= 60 ? 'Cukup' : 'Perlu ditulis ulang'",
+        "perbaikan": "v.n ? v.rubrik.filter((r) => r.nilai < 14).map((r) => r.nama + ': ' + r.saran) : []"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? 'Mutu teks ' + input.jenis + ': skor ' + v.skor + ' dari 100 (' + v.tingkat + '), ' + v.n + ' kata, ' + v.perbaikan.length + ' hal perlu diperbaiki' : 'Tidak ada teks yang bisa dinilai, isi teksnya dulu'",
+    "teks": "'# Penilaian teks ' + input.jenis + '\\n\\n' + (v.n ? 'Skor: **' + v.skor + ' dari 100** (' + v.tingkat + ')' + (input.pembaca ? ' untuk pembaca: ' + cut(String(input.pembaca), 60) : '') + '\\n\\n' + tabel(['Aspek', 'Nilai (maks 20)'], v.rubrik.map((r) => [r.nama, r.nilai])) + '\\n\\nPerbaikan:\\n' + (v.perbaikan.length ? v.perbaikan.map((x) => '- ' + x).join('\\n') : '- Tidak ada, teks sudah baik.') : 'Belum ada teks yang bisa dinilai.')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'mutu-teks-' + input.jenis", "isi": "csv([['aspek', 'nilai', 'saran']].concat(v.rubrik.map((r) => [r.nama, r.nilai, r.nilai < 14 ? r.saran : 'sudah baik'])))" }
+    ],
+    "data": "({ skor: v.skor, kata: v.n, kalimat: v.kal, tingkat: v.tingkat, perbaikan: v.perbaikan.length, ragu: v.hedge.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "slogan", "teks": "Belanja mudah, hemat untuk kita semua", "wajib": "hemat, mudah" }, "expect": { "berkas": 1, "mengandung": ["skor 100 dari 100", "6 kata"] } },
+  "otakProfil": {
+    "peran": "penyunting yang membantu orang awam menulis teks pendek yang jelas",
+    "tujuan": "Terangkan kekuatan dan kelemahan teks, lalu tawarkan satu kalimat perbaikan yang lebih baik.",
+    "gaya": "ramah, jujur, memberi contoh, tidak menggurui",
+    "pedoman": ["Pertahankan maksud asli penulis; jangan mengubah makna.", "Sebut satu kekuatan lebih dulu, baru kelemahan.", "Beri satu contoh kalimat perbaikan yang pendek."],
+    "skema": { "pembahasan": "teks", "kekuatan": "daftar", "perbaikan": "daftar", "contoh_baru": "teks" },
+    "contoh": { "baik": "Kalimatnya singkat dan jelas; ganti kata ragu dengan janji yang bisa dibuktikan.", "buruk": "Tulis ulang saja." },
+    "batas": { "pembahasan": 500, "butir": 4, "contoh_baru": 200 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["teks"], "minPanjang": 40, "maksPanjang": 500 },
+    "contohAI": "{\"pembahasan\":\"Teks ini singkat dan mudah dipahami; kekuatannya ada pada kata yang sederhana, tetapi bisa lebih tegas.\",\"kekuatan\":[\"Kata sederhana\"],\"perbaikan\":[\"Hapus kata yang ragu\"],\"contoh_baru\":\"Belanja mudah, hemat untuk semua.\"}"
+  },
+  "evaluasi": [
+    {
+      "nama": "slogan baik",
+      "input": { "jenis": "slogan", "teks": "Belanja mudah, hemat untuk kita semua", "wajib": "hemat, mudah" },
+      "ai": "{\"pembahasan\":\"Teks ini singkat dan mudah dipahami; kata kuncinya hemat dan mudah sudah ada sehingga pesannya jelas.\",\"kekuatan\":[\"Singkat\"],\"perbaikan\":[\"Tambahkan ajakan bertindak\"],\"contoh_baru\":\"Belanja mudah, hemat untuk kita semua. Coba sekarang.\"}",
+      "kriteria": { "mengandung": ["skor", "teks"], "mengandungAturan": ["Panjang pas", "Baik"], "panjangMin": 100, "panjangMaks": 2500, "nilai": [{ "path": "data.skor", "min": 100, "max": 100 }, { "path": "data.kata", "min": 6, "max": 6 }, { "path": "data.perbaikan", "min": 0, "max": 0 }] }
+    },
+    {
+      "nama": "klaim ragu dan panjang",
+      "input": { "jenis": "klaim", "teks": "Mungkin produk kami sepertinya agak lebih baik daripada yang lain, dan sekitar semua orang barangkali akan menyukainya karena kualitasnya semacam istimewa", "pembaca": "Pembeli baru" },
+      "ai": "{\"pembahasan\":\"Teks ini penuh kata ragu sehingga klaimnya lemah; sebut bukti nyata supaya lebih meyakinkan.\",\"kekuatan\":[\"Niatnya jelas\"],\"perbaikan\":[\"Hapus kata ragu\",\"Tambahkan bukti\"],\"contoh_baru\":\"Dipilih 9 dari 10 pembeli dalam survei kami.\"}",
+      "kriteria": { "mengandung": ["ragu", "bukti"], "mengandungAturan": ["Tegas dan jelas", "Perlu ditulis ulang"], "panjangMin": 100, "panjangMaks": 2500, "nilai": [{ "path": "data.ragu", "min": 6, "max": 6 }, { "path": "data.skor", "min": 40, "max": 59 }, { "path": "data.kalimat", "min": 1, "max": 1 }] }
+    },
+    {
+      "nama": "arahan panjang dengan baris berantakan",
+      "input": { "jenis": "arahan", "teks": "Tulis ringkasan berita ini maksimal 100 kata.\n\n   Jangan menambah fakta baru!   Gunakan format poin\ndan beri contoh judul." },
+      "ai": "{\"pembahasan\":\"Arahan ini jelas karena memuat batas, larangan, dan format; tambahkan siapa pembacanya agar hasilnya lebih tepat.\",\"kekuatan\":[\"Ada batas dan larangan\"],\"perbaikan\":[\"Sebut pembaca\"],\"contoh_baru\":\"Tulis ringkasan berita maksimal 100 kata untuk pembaca awam.\"}",
+      "kriteria": { "mengandung": ["arahan", "pembaca"], "mengandungAturan": ["Isi tepat sasaran", "Skor"], "panjangMin": 100, "panjangMaks": 2500, "nilai": [{ "path": "data.kalimat", "min": 3, "max": 3 }, { "path": "data.skor", "min": 70, "max": 100 }] }
+    },
+    {
+      "nama": "teks tombol layar terlalu pendek",
+      "input": { "jenis": "layar", "teks": "OK" },
+      "ai": "{\"pembahasan\":\"Teks tombol ini terlalu singkat dan tidak menyebut tindakan; ganti dengan kata kerja yang jelas.\",\"kekuatan\":[\"Sangat singkat\"],\"perbaikan\":[\"Pakai kata kerja\"],\"contoh_baru\":\"Pilih dan lanjut\"}",
+      "kriteria": { "mengandung": ["tombol"], "mengandungAturan": ["Panjang pas", "Tambahkan isi"], "panjangMin": 80, "panjangMaks": 2500, "nilai": [{ "path": "data.kata", "min": 1, "max": 1 }, { "path": "data.skor", "min": 30, "max": 80 }] }
+    }
+  ]
+}

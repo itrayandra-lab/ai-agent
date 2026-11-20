@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-ardi-gate-rilis",
+  "division": "eng",
+  "employeeId": "ardi",
+  "title": "QA Automation Engineer",
+  "version": 1,
+  "name": "Pemeriksa kelayakan rilis",
+  "ringkas": "Putuskan rilis boleh jalan atau ditahan berdasarkan hasil uji, bug terbuka, dan cakupan uji.",
+  "kataKunci": [
+    "gate rilis",
+    "kelayakan rilis",
+    "bug kritis",
+    "cakupan uji",
+    "go no go"
+  ],
+  "inputs": [
+    {
+      "key": "lulus",
+      "type": "number",
+      "label": "Jumlah uji yang lulus",
+      "required": true,
+      "contoh": "480"
+    },
+    {
+      "key": "gagal",
+      "type": "number",
+      "label": "Jumlah uji yang gagal",
+      "required": true,
+      "contoh": "6"
+    },
+    {
+      "key": "kritis",
+      "type": "number",
+      "label": "Bug kritis yang masih terbuka",
+      "required": true,
+      "contoh": "0"
+    },
+    {
+      "key": "tinggi",
+      "type": "number",
+      "label": "Bug tingkat tinggi yang masih terbuka",
+      "required": true,
+      "contoh": "2"
+    },
+    {
+      "key": "cakupan",
+      "type": "number",
+      "label": "Cakupan uji (persen)",
+      "required": true,
+      "contoh": "78"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis rilis",
+      "required": true,
+      "default": "reguler",
+      "choices": [
+        {
+          "v": "reguler",
+          "t": "Rilis biasa"
+        },
+        {
+          "v": "darurat",
+          "t": "Perbaikan darurat"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa syarat",
+      "set": {
+        "total": "num(input.lulus) + num(input.gagal)",
+        "lolos": "v.total ? Math.round(num(input.lulus) / v.total * 1000) / 10 : 0",
+        "syarat": "[['Tidak ada bug kritis terbuka', num(input.kritis) === 0, num(input.kritis) + ' terbuka'], ['Bug tinggi paling banyak ' + (input.jenis === 'darurat' ? 3 : 1), num(input.tinggi) <= (input.jenis === 'darurat' ? 3 : 1), num(input.tinggi) + ' terbuka'], ['Uji lulus minimal ' + (input.jenis === 'darurat' ? 95 : 98) + '%', v.lolos >= (input.jenis === 'darurat' ? 95 : 98), v.lolos + '%'], ['Cakupan uji minimal ' + (input.jenis === 'darurat' ? 60 : 75) + '%', num(input.cakupan) >= (input.jenis === 'darurat' ? 60 : 75), num(input.cakupan) + '%']].map((s) => ({ nama: s[0], ok: !!s[1], nilai: s[2] }))",
+        "keputusan": "v.syarat.every((s) => s.ok) ? 'LANJUT RILIS' : 'TAHAN RILIS'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.keputusan + ': ' + v.syarat.filter((s) => s.ok).length + ' dari ' + v.syarat.length + ' syarat terpenuhi'",
+    "teks": "'# Keputusan rilis: ' + v.keputusan + '\\n\\n' + tabel(['Syarat', 'Terpenuhi?', 'Nilai'], v.syarat.map((s) => [s.nama, s.ok ? 'Ya' : 'Belum', s.nilai])) + (v.keputusan === 'TAHAN RILIS' ? '\\n\\nPerbaiki syarat yang belum terpenuhi, lalu periksa ulang.' : '\\n\\nSemua syarat terpenuhi.')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'keputusan-rilis'",
+        "isi": "csv([['Syarat', 'Terpenuhi', 'Nilai']].concat(v.syarat.map((s) => [s.nama, s.ok ? 'Ya' : 'Belum', s.nilai])).concat([['Keputusan', v.keputusan, '']]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "lulus": "480",
+      "gagal": "6",
+      "kritis": "0",
+      "tinggi": "2",
+      "cakupan": "78",
+      "jenis": "reguler"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "TAHAN RILIS",
+        "3 dari 4 syarat"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "prioritas-keputusan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "gate rilis",
+      "kelayakan rilis",
+      "bug kritis",
+      "cakupan uji",
+      "go no go"
+    ],
+    "data": [
+      "jumlah uji yang lulus",
+      "jumlah uji yang gagal",
+      "bug kritis yang masih terbuka",
+      "bug tingkat tinggi yang masih terbuka"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
+  }
+}

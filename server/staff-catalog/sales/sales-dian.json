@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-dian",
+  "division": "sales",
+  "employeeId": "dian",
+  "title": "Distributor & Reseller Manager",
+  "version": 1,
+  "name": "Penghitung harga bertingkat mitra",
+  "ringkas": "Hitung harga jual untuk distributor, perantara, reseller, dan dropshipper lengkap dengan untung kita dan peringatan bila untung tipis.",
+  "kataKunci": [
+    "harga bertingkat",
+    "distributor",
+    "reseller",
+    "agen",
+    "diskon mitra"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "harga_eceran",
+      "type": "number",
+      "label": "Harga eceran (Rp)",
+      "required": true,
+      "contoh": "100000"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Harga pokok per satuan (Rp)",
+      "required": true,
+      "contoh": "45000"
+    },
+    {
+      "key": "skema",
+      "type": "choice",
+      "label": "Seberapa besar diskon untuk mitra?",
+      "required": true,
+      "default": "standar",
+      "choices": [
+        {
+          "v": "standar",
+          "t": "Standar"
+        },
+        {
+          "v": "agresif",
+          "t": "Besar (untuk merebut pasar)"
+        },
+        {
+          "v": "hemat",
+          "t": "Hemat (menjaga untung)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung tiap tingkat",
+      "set": {
+        "diskon": "({ standar: [35, 28, 20, 12], agresif: [40, 32, 25, 15], hemat: [30, 22, 15, 8] })[input.skema]",
+        "tier": "['Distributor', 'Agen', 'Reseller', 'Dropshipper'].map((n, i) => { const d = v.diskon[i]; const h = Math.round(num(input.harga_eceran) * (100 - d) / 100); const u = h - num(input.hpp); const pct = h ? Math.round(u / h * 1000) / 10 : 0; return { nama: n, diskon: d, harga: h, untung: u, persen: pct, minOrder: [100, 50, 20, 5][i], catatan: u <= 0 ? 'Rugi, naikkan harga' : pct < 15 ? 'Tipis, hati-hati' : 'Sehat' }; })"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Harga ' + input.produk + ' untuk 4 tingkat mitra; ' + v.tier.filter((t) => t.catatan !== 'Sehat').length + ' tingkat untungnya tipis atau rugi'",
+    "teks": "'# Harga bertingkat ' + input.produk + '\\n\\nHarga eceran ' + rp(input.harga_eceran) + ', harga pokok ' + rp(input.hpp) + '.\\n\\n' + tabel(['Tingkat', 'Diskon', 'Harga mitra', 'Untung kita', 'Untung %', 'Pesanan minimal', 'Catatan'], v.tier.map((t) => [t.nama, t.diskon + '%', rp(t.harga), rp(t.untung), t.persen + '%', t.minOrder, t.catatan]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'harga-bertingkat-' + input.produk",
+        "isi": "csv([['Tingkat', 'Diskon %', 'Harga mitra', 'Untung kita', 'Untung %', 'Pesanan minimal', 'Catatan']].concat(v.tier.map((t) => [t.nama, t.diskon, t.harga, t.untung, t.persen, t.minOrder, t.catatan])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "harga_eceran": "100000",
+      "hpp": "45000",
+      "skema": "standar"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 65.000",
+        "30.8%",
+        "Dropshipper"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "harga bertingkat",
+      "distributor",
+      "reseller",
+      "agen",
+      "diskon mitra"
+    ],
+    "data": [
+      "nama produk",
+      "harga eceran (rp)",
+      "harga pokok per satuan (rp)",
+      "seberapa besar diskon untuk mitra?"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

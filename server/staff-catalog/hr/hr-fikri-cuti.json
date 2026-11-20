@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "hr-fikri-cuti",
+  "division": "hr",
+  "employeeId": "fikri",
+  "title": "HR Operations & Payroll",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penghitung sisa cuti karyawan",
+  "ringkas": "Hitung hak, pemakaian, dan sisa cuti tiap karyawan sesuai lama bekerja, lalu tandai yang hampir habis atau berlebih.",
+  "kataKunci": [
+    "cuti",
+    "sisa cuti",
+    "masa kerja",
+    "jatah cuti",
+    "karyawan"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "jatah",
+      "type": "choice",
+      "label": "Jatah cuti per tahun",
+      "required": true,
+      "default": "12",
+      "choices": [
+        {
+          "v": "12",
+          "t": "12 hari"
+        },
+        {
+          "v": "14",
+          "t": "14 hari"
+        },
+        {
+          "v": "15",
+          "t": "15 hari"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data karyawan (nama | tanggal masuk YYYY-MM-DD | cuti terpakai)",
+      "required": true,
+      "contoh": "Andi | 2024-01-10 | 10"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung cuti",
+      "set": {
+        "rows": "baris(input.data).slice(0, 200).map((l) => { const p = l.split('|').map((s) => s.trim()); const bulan = Math.max(0, Math.floor((Date.parse(input.acuan) - Date.parse(p[1])) / (864e5 * 30.4375))); const hak = bulan >= 12 ? num(input.jatah) : 0; const pakai = num(p[2]); const sisa = hak - pakai; return { nama: p[0] || '-', bulan: bulan, hak: hak, pakai: pakai, sisa: sisa, status: bulan < 12 ? 'Belum berhak' : sisa < 0 ? 'Melebihi jatah' : sisa <= 2 ? 'Hampir habis' : 'Aman' }; })"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.filter((r) => r.status === 'Melebihi jatah').length + ' orang melebihi jatah, ' + v.rows.filter((r) => r.status === 'Hampir habis').length + ' hampir habis, dari ' + v.rows.length + ' karyawan'",
+    "teks": "'# Sisa cuti per ' + tgl(input.acuan) + '\\n\\n' + tabel(['Nama', 'Masa kerja (bulan)', 'Hak', 'Terpakai', 'Sisa', 'Status'], v.rows.map((r) => [r.nama, r.bulan, r.hak, r.pakai, r.sisa, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'sisa-cuti-' + input.acuan",
+        "isi": "csv([['Nama', 'Masa kerja (bulan)', 'Hak', 'Terpakai', 'Sisa', 'Status']].concat(v.rows.map((r) => [r.nama, r.bulan, r.hak, r.pakai, r.sisa, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "jatah": "12",
+      "data": "Andi | 2024-01-10 | 10\nSari | 2026-06-01 | 0\nBudi | 2023-03-01 | 14"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Hampir habis",
+        "Belum berhak",
+        "Melebihi jatah",
+        "1 orang melebihi jatah"
+      ]
+    }
+  },
+  "kemampuan": [
+    "hitung-sdm"
+  ],
+  "keahlian": {
+    "istilah": [
+      "cuti",
+      "sisa cuti",
+      "masa kerja",
+      "jatah cuti",
+      "karyawan"
+    ],
+    "data": [
+      "hitung per tanggal",
+      "jatah cuti per tahun",
+      "data karyawan (nama | tanggal masuk yyyy-mm-dd | cuti terpak"
+    ],
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
+  }
+}

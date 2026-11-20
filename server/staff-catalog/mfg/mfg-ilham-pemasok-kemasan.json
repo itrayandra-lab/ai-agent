@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-ilham-pemasok-kemasan",
+  "division": "mfg",
+  "employeeId": "ilham",
+  "title": "Maintenance & Packaging Engineer",
+  "version": 1,
+  "name": "Pembanding pemasok kemasan",
+  "ringkas": "Bandingkan beberapa pemasok kemasan menurut harga sebenarnya (termasuk cacat), jumlah minimum, dan lama kirim sesuai prioritasmu.",
+  "kataKunci": [
+    "pemasok kemasan",
+    "botol",
+    "moq",
+    "harga kemasan",
+    "perbandingan pemasok"
+  ],
+  "inputs": [
+    {
+      "key": "komponen",
+      "type": "text",
+      "label": "Kemasan yang dicari",
+      "required": true,
+      "contoh": "Botol 30ml"
+    },
+    {
+      "key": "kebutuhan",
+      "type": "number",
+      "label": "Kebutuhan (unit)",
+      "required": true,
+      "contoh": "6000"
+    },
+    {
+      "key": "prioritas",
+      "type": "choice",
+      "label": "Paling penting bagimu",
+      "required": true,
+      "default": "harga",
+      "choices": [
+        {
+          "v": "harga",
+          "t": "Harga paling murah"
+        },
+        {
+          "v": "cepat",
+          "t": "Pengiriman paling cepat"
+        },
+        {
+          "v": "kualitas",
+          "t": "Cacat paling sedikit"
+        }
+      ]
+    },
+    {
+      "key": "pemasok",
+      "type": "longtext",
+      "label": "Pemasok (satu baris: nama | harga satuan | jumlah minimum | lama kirim hari | cacat persen)",
+      "required": true,
+      "contoh": "Pemasok A | 3500 | 5000 | 14 | 2"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Urutkan pemasok",
+      "set": {
+        "rows": "baris(input.pemasok).slice(0, 15).map((l) => { const p = l.split('|').map((s) => s.trim()); const harga = num(p[1]); const cacat = num(p[4]); return { nama: p[0] || '-', harga: harga, moq: num(p[2]), lead: num(p[3]), cacat: cacat, efektif: Math.round(harga * (100 + cacat)) / 100, layak: num(p[2]) <= Number(input.kebutuhan) }; }).sort((x, y) => (Number(y.layak) - Number(x.layak)) || (input.prioritas === 'cepat' ? x.lead - y.lead : input.prioritas === 'kualitas' ? x.cacat - y.cacat : x.efektif - y.efektif))",
+        "total": "Math.round(v.rows[0].efektif * Number(input.kebutuhan))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Pilihan terbaik untuk ' + input.komponen + ': ' + v.rows[0].nama + ', perkiraan biaya ' + rp(v.total)",
+    "teks": "'# Pembanding pemasok: ' + input.komponen + '\\n\\nKebutuhan ' + input.kebutuhan + ' unit, prioritas: ' + input.prioritas + '\\n\\n' + tabel(['Peringkat', 'Pemasok', 'Harga', 'Harga + cacat', 'Minimum', 'Kirim (hari)', 'Cacat %', 'Catatan'], v.rows.map((r, i) => [i + 1, r.nama, rp(r.harga), rp(r.efektif), r.moq, r.lead, r.cacat, r.layak ? 'Sesuai kebutuhan' : 'Minimum di atas kebutuhan'])) + '\\n\\nPerkiraan biaya pemasok terbaik: **' + rp(v.total) + '**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pembanding-pemasok-' + input.komponen",
+        "isi": "csv([['Peringkat', 'Pemasok', 'Harga', 'Harga efektif', 'Minimum', 'Lama kirim', 'Cacat persen']].concat(v.rows.map((r, i) => [i + 1, r.nama, r.harga, r.efektif, r.moq, r.lead, r.cacat])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Procurement",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "komponen": "Botol 30ml",
+      "kebutuhan": 6000,
+      "prioritas": "harga",
+      "pemasok": "Pemasok A | 3500 | 5000 | 14 | 2\nPemasok B | 3200 | 10000 | 21 | 5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Pemasok A",
+        "Rp 21.420.000",
+        "Minimum di atas kebutuhan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pemasok kemasan",
+      "botol",
+      "moq",
+      "harga kemasan",
+      "perbandingan pemasok"
+    ],
+    "data": [
+      "kemasan yang dicari",
+      "kebutuhan (unit)",
+      "paling penting bagimu",
+      "pemasok (satu baris: nama | harga satuan | jumlah minimum | "
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
+    "contoh": {
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
+  }
+}

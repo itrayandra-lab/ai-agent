@@ -1,0 +1,17 @@
+{
+  "id": "retail",
+  "nama": "Retail & Beauty Stores",
+  "misi": "Mengelola toko dan counter offline Ray Beauty agar memberi pengalaman belanja terbaik, penjualan per toko tumbuh, dan stok selalu tepat.",
+  "manajer": {
+    "id": "ratih",
+    "nama": "Ratih",
+    "jabatan": "Head of Retail"
+  },
+  "staf": [
+    "retail-danu",
+    "retail-nirmala",
+    "retail-ayunda",
+    "retail-pandu"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

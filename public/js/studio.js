@@ -1,5 +1,6 @@
 // Agent Studio: design AI employees (layered instructions, skills, tools, knowledge), the skill library and the tool catalog.
 import { S, api, esc, emp, div, avatar, toast, modal, navigate, opt, formData } from './core.js';
+import { genderOf } from './tts.js';
 
 const D = () => S.data;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -49,7 +50,7 @@ export const StudioView = {
         D().divisions.map((d) => {
           const list = D().employees.filter((e) => e.divisionId === d.id && (!q || `${e.name} ${e.title}`.toLowerCase().includes(q)));
           if (!list.length) return '';
-          return `<div class="eyebrow" style="margin:10px 4px 4px">${esc(d.name)}</div>${list.map((e) => `<div class="member ${this.sel === e.id ? 'active' : ''}" data-sel="${e.id}" style="${this.sel === e.id ? 'background:var(--panel2)' : ''}">${avatar(e)}<div style="min-width:0;flex:1"><div class="nm">${esc(e.name)} ${e.isLead ? '👑' : ''}</div><div class="rl">${esc(e.title)}${e.type === 'ai' ? ` · ${(e.skillRefs || []).length} skill` : ' · manusia'}</div></div></div>`).join('')}`;
+          return `<details class="chg" data-sg="${d.id}" ${(this.sopen ||= new Set()).has(d.id) || q || list.some((e) => e.id === this.sel) ? 'open' : ''}><summary>${d.icon} ${esc(d.name)}<em>${list.length}</em></summary>${list.map((e) => `<div class="member ${this.sel === e.id ? 'active' : ''}" data-sel="${e.id}" style="${this.sel === e.id ? 'background:var(--panel2)' : ''}">${avatar(e)}<div style="min-width:0;flex:1"><div class="nm">${esc(e.name)} ${e.isLead ? '👑' : ''}</div><div class="rl">${esc(e.title)}${e.type === 'ai' ? ` · ${(e.skillRefs || []).length} skill` : ' · manusia'}</div></div></div>`).join('')}</details>`;
         }).join('');
     } else if (this.tab === 'skills') {
       const sk = (D().skills || []).filter((s) => !q || `${s.name} ${s.category} ${s.description}`.toLowerCase().includes(q));
@@ -62,6 +63,7 @@ export const StudioView = {
     el.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { this.tab = b.dataset.tab; this.renderList(); this.renderMain(); }));
     const sq = el.querySelector('#sq');
     sq.oninput = () => { this.q = sq.value; const pos = sq.selectionStart; this.renderList(); const n = this.root.querySelector('#sq'); n.focus(); n.setSelectionRange(pos, pos); };
+    el.querySelectorAll('details[data-sg]').forEach((x) => (x.ontoggle = () => { x.open ? this.sopen.add(x.dataset.sg) : this.sopen.delete(x.dataset.sg); }));
     el.querySelectorAll('[data-sel]').forEach((x) => (x.onclick = () => this.select(x.dataset.sel)));
     el.querySelectorAll('[data-skill]').forEach((x) => (x.onclick = () => { this.skillSel = x.dataset.skill; this.root.querySelector('#studio').classList.add('has-sel'); this.renderList(); this.renderMain(); }));
     el.querySelector('#snew')?.addEventListener('click', () => this.select('new'));
@@ -109,7 +111,9 @@ export const StudioView = {
             <label class="f">Jenis<select class="input" data-f="type">${opt('ai', 'Karyawan AI', e.type)}${opt('human', 'Manusia', e.type)}</select></label></div>
           <div class="grid2"><label class="f">Head divisi<select class="input" data-f="isLead">${opt('false', 'Tidak', String(e.isLead))}${opt('true', 'Ya', String(e.isLead))}</select></label>
             <label class="f">Avatar 3D<select class="input" data-f="avatar">${Object.entries(AVATARS).map(([k, v]) => opt(k, v, e.avatar)).join('')}</select></label></div>
-          ${ai ? `<div class="grid2"><label class="f">Otonomi<select class="input" data-f="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta persetujuan', e.autonomy)}</select></label>
+          ${ai ? `<div class="grid2"><label class="f">Suara (cewek atau cowok)<select class="input" data-f="voiceGender">${opt('female', 'Cewek (suara wanita)', genderOf(e))}${opt('male', 'Cowok (suara pria)', genderOf(e))}</select></label>
+            <div class="small muted" style="align-self:end;padding-bottom:8px">Suara bicara agen ini mengikuti pilihan ini, tidak mengubah tampilan 3D. Awalnya ditebak dari nama.</div></div>
+          <div class="grid2"><label class="f">Otonomi<select class="input" data-f="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta persetujuan', e.autonomy)}</select></label>
             <label class="f">Format output<select class="input" data-f="outputFormat">${['markdown', 'json', 'html', 'csv', 'text'].map((x) => opt(x, x.toUpperCase(), e.outputFormat)).join('')}</select></label></div>
           <div class="grid2"><label class="f">Model<select class="input" data-f="model">${opt('', 'Default (Pengaturan)', e.model)}${(D().models || []).map((m) => opt(m, m, e.model)).join('')}</select></label>
             <label class="f">Effort penalaran<select class="input" data-f="effort">${EFFORTS.map(([v, l]) => opt(v, l, e.effort)).join('')}</select></label></div>` : ''}
@@ -117,6 +121,7 @@ export const StudioView = {
           <label class="f">Keahlian (tag, pisahkan koma)<input class="input" data-f="skills" value="${esc((e.skills || []).join(', '))}"></label>
         </div></div>
         ${ai ? `
+        <div class="card"><div class="card-h">penampilan 3D <span class="small muted" style="text-transform:none;letter-spacing:0">Sims-style · gender, rambut, kulit, baju, aksesori</span></div><div class="card-b" id="apbox"></div></div>
         <div class="card"><div class="card-h">instruksi berlapis</div><div class="card-b" style="display:grid;gap:12px">
           <label class="f">About — siapa dia & kapan tugas diberikan kepadanya (dipakai untuk routing)<textarea class="input" data-f="about" rows="3">${esc(e.about)}</textarea></label>
           <label class="f">Tugas & fungsi<textarea class="input" data-f="taskAndFunction" rows="3">${esc(e.taskAndFunction)}</textarea></label>
@@ -153,6 +158,8 @@ export const StudioView = {
 
   bindMain(el, kbNotes) {
     const e = this.draft;
+    const apBox = el.querySelector('#apbox');
+    if (apBox) Promise.all([import('./assets3d.js'), import('./appearance-ui.js')]).then(([{ resolveAppearance }, { bindAppearance }]) => { if (apBox.isConnected) bindAppearance(apBox, resolveAppearance(e, div(e.divisionId)?.color), (ap) => { e.appearance = ap; }); });   // perf: Three.js tidak lagi di jalur muat awal
     el.querySelector('#sback').onclick = () => { this.root.querySelector('#studio').classList.remove('has-sel'); };
     el.querySelectorAll('[data-f]').forEach((x) => (x.oninput = x.onchange = () => {
       const k = x.dataset.f; let v = x.value;

@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-hana-promo",
+  "division": "sales",
+  "employeeId": "hana",
+  "title": "Key Account Manager — Modern Trade",
+  "version": 1,
+  "name": "Penghitung untung rugi promo toko",
+  "ringkas": "Cek apakah promo diskon di toko modern menguntungkan: bandingkan laba sebelum dan sesudah promo dengan perkiraan kenaikan penjualan.",
+  "kataKunci": [
+    "promo",
+    "diskon",
+    "untung rugi",
+    "kenaikan penjualan",
+    "toko modern"
+  ],
+  "inputs": [
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga normal per satuan (Rp)",
+      "required": true,
+      "contoh": "50000"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Harga pokok per satuan (Rp)",
+      "required": true,
+      "contoh": "20000"
+    },
+    {
+      "key": "volume",
+      "type": "number",
+      "label": "Penjualan biasa per bulan (satuan)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "diskon",
+      "type": "choice",
+      "label": "Besar diskon promo",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        }
+      ]
+    },
+    {
+      "key": "naik",
+      "type": "choice",
+      "label": "Perkiraan kenaikan penjualan",
+      "required": true,
+      "default": "50",
+      "choices": [
+        {
+          "v": "20",
+          "t": "Naik 20%"
+        },
+        {
+          "v": "50",
+          "t": "Naik 50%"
+        },
+        {
+          "v": "100",
+          "t": "Naik 2 kali lipat"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Bandingkan laba",
+      "set": {
+        "labaNormal": "(num(input.harga) - num(input.hpp)) * num(input.volume)",
+        "hargaPromo": "Math.round(num(input.harga) * (100 - num(input.diskon)) / 100)",
+        "volPromo": "Math.round(num(input.volume) * (100 + num(input.naik)) / 100)",
+        "labaPromo": "(v.hargaPromo - num(input.hpp)) * v.volPromo",
+        "selisih": "v.labaPromo - v.labaNormal",
+        "balikModal": "v.hargaPromo > num(input.hpp) ? Math.ceil(v.labaNormal / (v.hargaPromo - num(input.hpp))) : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Promo ' + input.diskon + '% ' + (v.selisih >= 0 ? 'menambah' : 'mengurangi') + ' laba ' + rp(Math.abs(v.selisih)) + ' per bulan'",
+    "teks": "'# Promo ' + input.diskon + '%\\n\\n' + tabel(['', 'Tanpa promo', 'Dengan promo'], [['Harga', rp(input.harga), rp(v.hargaPromo)], ['Terjual', num(input.volume), v.volPromo], ['Laba', rp(v.labaNormal), rp(v.labaPromo)]]) + '\\n\\n**' + (v.selisih >= 0 ? 'Layak dijalankan' : 'Belum layak') + '.** Agar laba sama seperti biasa, promo harus menjual minimal ' + v.balikModal + ' satuan.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hitung-promo'",
+        "isi": "csv([['', 'Tanpa promo', 'Dengan promo'], ['Harga', num(input.harga), v.hargaPromo], ['Terjual', num(input.volume), v.volPromo], ['Laba', v.labaNormal, v.labaPromo], ['Selisih laba', '', v.selisih]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "harga": "50000",
+      "hpp": "20000",
+      "volume": "1000",
+      "diskon": "20",
+      "naik": "20"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "mengurangi",
+        "Rp 6.000.000",
+        "minimal 1500 satuan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "promo",
+      "diskon",
+      "untung rugi",
+      "kenaikan penjualan",
+      "toko modern"
+    ],
+    "data": [
+      "harga normal per satuan (rp)",
+      "harga pokok per satuan (rp)",
+      "penjualan biasa per bulan (satuan)",
+      "besar diskon promo"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

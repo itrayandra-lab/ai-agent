@@ -1,0 +1,16 @@
+{
+  "id": "reg",
+  "nama": "Regulatory Affairs",
+  "misi": "Memastikan produk lolos notifikasi BPOM, halal, dan klaim yang patuh.",
+  "manajer": {
+    "id": "melati",
+    "nama": "Melati",
+    "jabatan": "Regulatory Affairs Manager"
+  },
+  "staf": [
+    "reg-zahra",
+    "reg-kevin",
+    "reg-raisa"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

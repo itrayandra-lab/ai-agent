@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "cs-ayu",
+  "division": "cs",
+  "employeeId": "ayu",
+  "title": "Customer Insights & Retention Analyst",
+  "version": 1,
+  "name": "Penghitung skor kepuasan pelanggan",
+  "ringkas": "Ubah daftar skor survei menjadi nilai kepuasan atau rekomendasi, sebaran jawaban, dan penilaian singkat.",
+  "kataKunci": [
+    "csat",
+    "nps",
+    "kepuasan",
+    "survei",
+    "skor"
+  ],
+  "inputs": [
+    {
+      "key": "skor",
+      "type": "longtext",
+      "label": "Daftar skor (pisahkan dengan spasi, koma, atau baris baru)",
+      "required": true,
+      "contoh": "5 4 4 3 5 2 5"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis survei",
+      "required": true,
+      "default": "csat",
+      "choices": [
+        {
+          "v": "csat",
+          "t": "Kepuasan, skala 1 sampai 5"
+        },
+        {
+          "v": "nps",
+          "t": "Mau merekomendasikan, skala 0 sampai 10"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skor",
+      "set": {
+        "angka": "String(input.skor).split(/[\\s,;]+/).filter((x) => x !== '').map((x) => Number(x)).filter((x) => Number.isFinite(x) && x >= (input.jenis === 'nps' ? 0 : 1) && x <= (input.jenis === 'nps' ? 10 : 5)).slice(0, 5000)",
+        "n": "v.angka.length",
+        "rata": "v.n ? Math.round(v.angka.reduce((a, b) => a + b, 0) / v.n * 100) / 100 : 0",
+        "puas": "v.n ? Math.round(v.angka.filter((x) => x >= 4).length / v.n * 1000) / 10 : 0",
+        "promotor": "v.n ? v.angka.filter((x) => x >= 9).length / v.n * 100 : 0",
+        "kritik": "v.n ? v.angka.filter((x) => x <= 6).length / v.n * 100 : 0",
+        "nilai": "input.jenis === 'nps' ? Math.round(v.promotor - v.kritik) : v.puas",
+        "sebaran": "(input.jenis === 'nps' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : [1, 2, 3, 4, 5]).map((k) => ({ skor: k, jumlah: v.angka.filter((x) => x === k).length }))",
+        "penilaian": "input.jenis === 'nps' ? (v.nilai >= 50 ? 'Sangat baik' : v.nilai >= 0 ? 'Cukup baik' : 'Perlu perbaikan') : (v.nilai >= 85 ? 'Sangat baik' : v.nilai >= 70 ? 'Cukup baik' : 'Perlu perbaikan')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.n ? (input.jenis === 'nps' ? 'Skor rekomendasi ' + v.nilai : 'Kepuasan ' + v.nilai + '% (rata-rata ' + v.rata + ' dari 5)') + ' dari ' + v.n + ' jawaban: ' + v.penilaian : 'Tidak ada skor yang valid, periksa lagi isiannya'",
+    "teks": "'# Hasil survei (' + v.n + ' jawaban)\\n\\n- Rata-rata: ' + v.rata + '\\n- ' + (input.jenis === 'nps' ? 'Skor rekomendasi: ' + v.nilai : 'Yang puas (skor 4 ke atas): ' + v.puas + '%') + '\\n- Penilaian: ' + v.penilaian + '\\n\\n' + tabel(['Skor', 'Jumlah'], v.sebaran.map((s) => [s.skor, s.jumlah]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'sebaran-skor'",
+        "isi": "csv([['Skor', 'Jumlah']].concat(v.sebaran.map((s) => [s.skor, s.jumlah])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": true,
+    "cron": "0 8 * * 1",
+    "keterangan": "Tiap Senin pagi (belum diaktifkan: jadwal menyusul di tahap berikutnya)"
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "skor": "5 4 4 3 5 2 5 4",
+      "jenis": "csat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "75%",
+        "8 jawaban"
+      ]
+    }
+  },
+  "kemampuan": [
+    "analisis-angka"
+  ],
+  "keahlian": {
+    "istilah": [
+      "csat",
+      "nps",
+      "kepuasan",
+      "survei",
+      "skor"
+    ],
+    "data": [
+      "daftar skor (pisahkan dengan spasi, koma, atau baris baru)",
+      "jenis survei"
+    ],
+    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan",
+    "contoh": {
+      "baik": "Mohon maaf atas keterlambatan; kami cek pesanan Anda dan kabari dalam 2 jam.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menjanjikan ganti rugi tanpa persetujuan."
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "design-reza-alur",
+  "division": "design",
+  "employeeId": "reza",
+  "title": "UI/UX Designer",
+  "version": 1,
+  "name": "Penyusun alur pengguna dan daftar layar",
+  "ringkas": "Ubah daftar langkah pengguna menjadi daftar layar, keadaan yang perlu didesain, dan perkiraan jam kerja.",
+  "kataKunci": [
+    "alur pengguna",
+    "user flow",
+    "daftar layar",
+    "wireframe",
+    "langkah"
+  ],
+  "inputs": [
+    {
+      "key": "fitur",
+      "type": "text",
+      "label": "Nama fitur",
+      "required": true,
+      "contoh": "Pesan produk"
+    },
+    {
+      "key": "pengguna",
+      "type": "text",
+      "label": "Siapa penggunanya?",
+      "required": true,
+      "contoh": "Pelanggan baru"
+    },
+    {
+      "key": "langkah",
+      "type": "longtext",
+      "label": "Langkah pengguna (satu langkah per baris)",
+      "required": true,
+      "contoh": "Buka katalog\nPilih produk\nIsi alamat\nBayar\nLihat bukti pesanan"
+    },
+    {
+      "key": "jam",
+      "type": "choice",
+      "label": "Perkiraan jam desain per layar",
+      "required": true,
+      "default": "4",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2 jam (sederhana)"
+        },
+        {
+          "v": "4",
+          "t": "4 jam (sedang)"
+        },
+        {
+          "v": "8",
+          "t": "8 jam (rumit)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun layar",
+      "set": {
+        "layar": "baris(input.langkah).slice(0, 20).map((l, i, a) => ({ no: i + 1, aksi: l, keadaan: i === 0 ? 'Awal dan kosong' : i === a.length - 1 ? 'Berhasil dan selesai' : 'Memuat, galat isian, lanjut' }))",
+        "jam": "v.layar.length * num(input.jam) + Math.ceil(v.layar.length * 0.5)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Alur \"' + input.fitur + '\": ' + v.layar.length + ' layar, perkiraan ' + v.jam + ' jam desain'",
+    "teks": "'# Alur ' + input.fitur + ' (' + input.pengguna + ')\\n\\n' + tabel(['Layar', 'Aksi pengguna', 'Keadaan yang didesain'], v.layar.map((l) => [l.no, l.aksi, l.keadaan])) + '\\n\\nTermasuk ' + Math.ceil(v.layar.length * 0.5) + ' jam untuk uji alur.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'daftar-layar'",
+        "isi": "csv([['Layar', 'Aksi', 'Keadaan']].concat(v.layar.map((l) => [l.no, l.aksi, l.keadaan])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "fitur": "Pesan produk",
+      "pengguna": "Pelanggan baru",
+      "langkah": "Buka katalog\nPilih produk\nIsi alamat\nBayar\nLihat bukti pesanan",
+      "jam": "4"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 layar",
+        "23 jam"
+      ]
+    }
+  },
+  "kemampuan": [
+    "rancang-struktur"
+  ],
+  "keahlian": {
+    "istilah": [
+      "alur pengguna",
+      "user flow",
+      "daftar layar",
+      "wireframe",
+      "langkah"
+    ],
+    "data": [
+      "nama fitur",
+      "siapa penggunanya?",
+      "langkah pengguna (satu langkah per baris)",
+      "perkiraan jam desain per layar"
+    ],
+    "gaya": "rapi dan jelas, jelaskan alasan desain",
+    "contoh": {
+      "baik": "Perbesar tombol utama dan beri jarak agar mudah ditekan di ponsel.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ukuran dan warna mengikuti panduan merek."
+    ]
+  }
+}

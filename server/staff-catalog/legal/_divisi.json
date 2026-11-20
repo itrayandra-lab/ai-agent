@@ -1,0 +1,16 @@
+{
+  "id": "legal",
+  "nama": "Legal & Compliance",
+  "misi": "Melindungi perusahaan lewat kontrak, kebijakan, dan kepatuhan regulasi.",
+  "manajer": {
+    "id": "rudi",
+    "nama": "Rudi",
+    "jabatan": "Legal Counsel"
+  },
+  "staf": [
+    "legal-tiara",
+    "legal-yohana",
+    "legal-arman"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

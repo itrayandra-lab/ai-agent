@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-analisis-hasil-uji",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan analisis hasil uji",
+  "version": 1,
+  "name": "Analisis hasil uji",
+  "ringkas": "Periksa hasil uji terhadap batas spesifikasi, bandingkan dua kelompok (A/B), atau nilai sebelum dan sesudah, lalu jelaskan artinya.",
+  "kataKunci": ["hasil uji", "spesifikasi", "uji a/b", "sebelum sesudah", "perbandingan", "laboratorium", "batas"],
+  "kemampuan": {
+    "id": "analisis-hasil-uji",
+    "kelompok": "analisis",
+    "tujuanAwam": "Membaca hasil uji: mana yang di luar batas atau mendekati batas, apakah dua kelompok benar-benar berbeda, dan apakah ada perbaikan setelah perubahan."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Mau menganalisis apa?", "required": true, "default": "spek", "choices": [{ "v": "spek", "t": "Cek terhadap batas spesifikasi" }, { "v": "ab", "t": "Bandingkan dua kelompok" }, { "v": "sebelum", "t": "Sebelum dan sesudah" }] },
+    { "key": "nama", "type": "text", "label": "Apa yang diuji atau dibandingkan?", "required": true, "contoh": "Kadar air produk" },
+    { "key": "daftar1", "type": "longtext", "label": "Hasil uji: angka dipisah spasi atau baris (boleh nama | nilai). Dua kelompok: ini kelompok A atau nilai sebelum", "required": true, "contoh": "6.0 7.1 5.1 4.9 6.5" },
+    { "key": "daftar2", "type": "longtext", "label": "Kelompok B atau nilai sesudah (angka dipisah spasi atau baris), khusus perbandingan", "required": false, "contoh": "14 15 13 16 15 14" },
+    { "key": "bawah", "type": "number", "label": "Batas bawah spesifikasi (bila ada), khusus cek spesifikasi", "required": false, "contoh": "5" },
+    { "key": "atas", "type": "number", "label": "Batas atas spesifikasi (bila ada), khusus cek spesifikasi", "required": false, "contoh": "7" }
+  ],
+  "steps": [
+    {
+      "id": "urai",
+      "use": "hitung",
+      "label": "Baca hasil uji",
+      "set": {
+        "it1": "baris(String(input.daftar1)).flatMap((l) => l.includes('|') ? (/[0-9]/.test(l.split('|')[1] || '') ? [{ n: l.split('|')[0].trim(), x: num(l.split('|')[1]) }] : []) : l.replace(/[;]/g, ' ').split(' ').filter((t) => t !== '' && /[0-9]/.test(t)).map((t) => ({ n: '', x: num(t.endsWith(',') ? t.slice(0, -1) : t) }))).slice(0, 500).map((o, i) => ({ n: o.n || 'Hasil ' + (i + 1), x: o.x }))",
+        "x1": "v.it1.map((o) => o.x)",
+        "x2": "baris(String(input.daftar2 === undefined ? '' : input.daftar2)).join(' ').replace(/[;|]/g, ' ').split(' ').filter((t) => t !== '' && /[0-9]/.test(t)).map((t) => num(t.endsWith(',') ? t.slice(0, -1) : t)).slice(0, 500)"
+      }
+    },
+    {
+      "id": "hitung1",
+      "use": "hitung",
+      "label": "Hitung terhadap spesifikasi",
+      "set": {
+        "hsp": "(() => { const lo = input.bawah, hi = input.atas; const hl = lo !== undefined, hh = hi !== undefined; const r2 = (t) => Math.round(t * 100) / 100; const m = hl && hh ? (hi - lo) * 0.1 : hl ? Math.abs(lo) * 0.05 : hh ? Math.abs(hi) * 0.05 : 0; const st = (x) => (hl && x < lo) || (hh && x > hi) ? 'DI LUAR BATAS' : (hl && x - lo <= m + 0.000000001) || (hh && hi - x <= m + 0.000000001) ? 'Mendekati batas' : 'Memenuhi'; const rows = v.it1.map((o) => [o.n, o.x, st(o.x)]); const n = rows.length; const luar = rows.filter((r) => r[2] === 'DI LUAR BATAS').length; const dekat = rows.filter((r) => r[2] === 'Mendekati batas').length; const rata = n ? v.x1.reduce((s, t) => s + t, 0) / n : 0; return { judul: 'Hasil uji terhadap spesifikasi', inti: n ? luar + ' dari ' + n + ' hasil di luar batas, ' + dekat + ' mendekati batas' : 'belum ada hasil uji yang terbaca', kepala: ['Sampel', 'Hasil', 'Status'], rows: n ? rows : [['belum ada hasil', '-', '-']], data: { n: n, luar: luar, dekat: dekat, memenuhi: n - luar, persenMemenuhi: n ? Math.round((n - luar) / n * 1000) / 10 : 0, rata: r2(rata), terkecil: n ? Math.min(...v.x1) : 0, terbesar: n ? Math.max(...v.x1) : 0, ok: n ? 1 : 0 } }; })()"
+      }
+    },
+    {
+      "id": "hitung2",
+      "use": "hitung",
+      "label": "Bandingkan kelompok",
+      "set": {
+        "hab": "(() => { const A = v.x1, B = v.x2; const r2 = (t) => Math.round(t * 100) / 100; const mean = (x) => x.length ? x.reduce((s, t) => s + t, 0) / x.length : 0; const vr = (x) => x.length > 1 ? x.reduce((s, t) => s + (t - mean(x)) * (t - mean(x)), 0) / (x.length - 1) : 0; const tab = [[1, 12.71], [2, 4.30], [3, 3.18], [4, 2.78], [5, 2.57], [6, 2.45], [7, 2.36], [8, 2.31], [9, 2.26], [10, 2.23], [12, 2.18], [15, 2.13], [20, 2.09], [30, 2.04], [60, 2.00], [120, 1.98]]; const nA = A.length, nB = B.length; const ok = nA >= 2 && nB >= 2; const mA = mean(A), mB = mean(B); const qa = vr(A) / Math.max(1, nA), qb = vr(B) / Math.max(1, nB); const se = Math.sqrt(qa + qb); const t = ok && se > 0 ? (mB - mA) / se : 0; const df = ok && se > 0 ? (qa + qb) * (qa + qb) / (qa * qa / (nA - 1) + qb * qb / (nB - 1)) : 0; const crit = (tab.filter((r) => r[0] <= df + 0.000001).pop() || [1, 12.71])[1]; const beda = ok && (se > 0 ? Math.abs(t) > crit : mA !== mB); const sel = mB - mA; const pr = mA !== 0 ? sel / Math.abs(mA) * 100 : 0; return { judul: 'Perbandingan dua kelompok', inti: ok ? 'B ' + (sel >= 0 ? 'lebih tinggi ' : 'lebih rendah ') + Math.abs(r2(sel)) + ' dari A, ' + (beda ? 'berbeda nyata' : 'belum cukup bukti berbeda') : 'data belum cukup, tiap kelompok minimal 2 angka', kepala: ['Hitungan', 'Hasil'], rows: [['Kelompok A', nA + ' data, rata-rata ' + r2(mA) + ', sebaran ' + r2(Math.sqrt(vr(A)))], ['Kelompok B', nB + ' data, rata-rata ' + r2(mB) + ', sebaran ' + r2(Math.sqrt(vr(B)))], ['Selisih rata-rata (B dikurangi A)', r2(sel) + ' (' + r2(pr) + '%)'], ['Nilai uji', r2(t)], ['Batas nilai uji pada keyakinan 95%', crit], ['Kesimpulan', ok ? (beda ? 'Berbeda nyata' : 'Belum cukup bukti berbeda') : 'Data belum cukup']], data: { nA: nA, nB: nB, rataA: r2(mA), rataB: r2(mB), selisih: r2(sel), persen: r2(pr), t: r2(t), batas: crit, beda: beda ? 1 : 0, ok: ok ? 1 : 0 } }; })()",
+        "hsb": "(() => { const n = Math.min(v.x1.length, v.x2.length); const r2 = (t) => Math.round(t * 100) / 100; const a = v.x1.slice(0, n), b = v.x2.slice(0, n); const d = b.map((t, i) => t - a[i]); const md = n ? d.reduce((s, t) => s + t, 0) / n : 0; const ma = n ? a.reduce((s, t) => s + t, 0) / n : 0; const sd = n > 1 ? Math.sqrt(d.reduce((s, t) => s + (t - md) * (t - md), 0) / (n - 1)) : 0; const tab = [[1, 12.71], [2, 4.30], [3, 3.18], [4, 2.78], [5, 2.57], [6, 2.45], [7, 2.36], [8, 2.31], [9, 2.26], [10, 2.23], [12, 2.18], [15, 2.13], [20, 2.09], [30, 2.04], [60, 2.00], [120, 1.98]]; const ok = n >= 2; const t = ok && sd > 0 ? md / (sd / Math.sqrt(n)) : 0; const crit = (tab.filter((r) => r[0] <= n - 1).pop() || [1, 12.71])[1]; const beda = ok && (sd > 0 ? Math.abs(t) > crit : md !== 0); const naik = d.filter((t2) => t2 > 0).length, turun = d.filter((t2) => t2 < 0).length; const pr = ma !== 0 ? md / Math.abs(ma) * 100 : 0; return { judul: 'Perbandingan sebelum dan sesudah', inti: ok ? 'rata-rata ' + (md >= 0 ? 'naik ' : 'turun ') + Math.abs(r2(md)) + ' (' + r2(pr) + '%), ' + (beda ? 'perubahan nyata' : 'belum cukup bukti berubah') : 'data belum cukup, minimal 2 pasang angka', kepala: ['Hitungan', 'Hasil'], rows: [['Jumlah pasangan', n], ['Rata-rata sebelum', r2(ma)], ['Rata-rata sesudah', r2(n ? b.reduce((s, t2) => s + t2, 0) / n : 0)], ['Rata-rata perubahan', r2(md) + ' (' + r2(pr) + '%)'], ['Yang naik / turun / tetap', naik + ' / ' + turun + ' / ' + (n - naik - turun)], ['Nilai uji', r2(t)], ['Batas nilai uji pada keyakinan 95%', crit], ['Kesimpulan', ok ? (beda ? 'Perubahan nyata' : 'Belum cukup bukti berubah') : 'Data belum cukup']], data: { n: n, rataSebelum: r2(ma), rataSelisih: r2(md), persen: r2(pr), t: r2(t), batas: crit, naik: naik, turun: turun, beda: beda ? 1 : 0, ok: ok ? 1 : 0 } }; })()"
+      }
+    },
+    {
+      "id": "pilih",
+      "use": "hitung",
+      "label": "Pilih hasil dan periksa isian",
+      "set": {
+        "pilih": "({ spek: v.hsp, ab: v.hab, sebelum: v.hsb })[input.jenis] || v.hsp",
+        "peringatan": "[input.jenis === 'spek' && input.bawah === undefined && input.atas === undefined ? 'Isi batas bawah atau batas atas agar bisa dinilai.' : '', input.jenis === 'spek' && input.bawah !== undefined && input.atas !== undefined && input.bawah > input.atas ? 'Batas bawah lebih besar dari batas atas, periksa lagi.' : '', input.jenis === 'spek' && v.x1.length === 0 ? 'Tidak ada angka yang terbaca; tulis angka dipisah spasi atau satu per baris.' : '', input.jenis === 'ab' && (v.x1.length < 2 || v.x2.length < 2) ? 'Tiap kelompok perlu minimal 2 angka.' : '', input.jenis === 'ab' && v.x1.length >= 2 && v.x2.length >= 2 && Math.min(v.x1.length, v.x2.length) < 5 ? 'Datanya sedikit (kurang dari 5 per kelompok), kesimpulan masih lemah.' : '', input.jenis === 'sebelum' && v.x1.length !== v.x2.length ? 'Jumlah angka sebelum dan sesudah berbeda; hanya pasangan pertama yang dihitung.' : '', input.jenis === 'sebelum' && Math.min(v.x1.length, v.x2.length) < 2 ? 'Perlu minimal 2 pasang angka.' : '', input.jenis === 'sebelum' && Math.min(v.x1.length, v.x2.length) >= 2 && Math.min(v.x1.length, v.x2.length) < 5 ? 'Datanya sedikit (kurang dari 5 pasang), kesimpulan masih lemah.' : ''].filter((t) => t !== '')"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ': ' + v.pilih.inti",
+    "teks": "'# Analisis ' + input.nama + ' - ' + v.pilih.judul + '\\n\\n' + tabel(v.pilih.kepala, v.pilih.rows) + (v.peringatan.length ? '\\n\\nPerhatian: ' + v.peringatan.join(' ') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'uji-' + input.jenis + '-' + cut(String(input.nama).toLowerCase(), 24)", "isi": "csv([v.pilih.kepala].concat(v.pilih.rows))" }
+    ],
+    "data": "Object.assign({ jenis: input.jenis, peringatan: v.peringatan.length }, v.pilih.data)"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "spek", "nama": "Keasaman produk", "daftar1": "6.0 7.1 5.1 4.9 6.5", "bawah": "5", "atas": "7" }, "expect": { "berkas": 1, "mengandung": ["2 dari 5 hasil di luar batas", "DI LUAR BATAS"] } },
+  "otakProfil": {
+    "peran": "analis hasil uji yang menjelaskan temuan kepada orang awam",
+    "tujuan": "Terangkan hasil uji: mana yang di luar atau mendekati batas, apakah perbedaan itu nyata, dan apa yang sebaiknya diperiksa atau diulang.",
+    "gaya": "teliti, netral, jujur soal keterbatasan data",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Bila data kurang dari 5 angka, katakan kesimpulannya masih lemah.", "Hasil di luar batas dijelaskan dengan tenang; sarankan uji ulang sebelum mengambil keputusan besar.", "Jangan menyebut penyebab pasti; sebut kemungkinan yang perlu diperiksa."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Dua dari lima hasil di luar batas; ulangi uji pada sampel itu sebelum produk dilepas.", "buruk": "Hasil uji jelek, produk gagal." },
+    "batas": { "pembahasan": 600, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["hasil"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Hasil uji menunjukkan sebagian angka perlu diperhatikan. Kesimpulan lebih kuat bila jumlah data bertambah, jadi ulangi uji yang meragukan.\",\"poin\":[\"Ada hasil yang perlu diperiksa\",\"Data masih terbatas\"],\"langkah\":[\"Ulangi uji yang di luar batas\",\"Tambah jumlah sampel\"]}"
+  },
+  "evaluasi": [
+    { "nama": "dua batas dengan nama dan koma desimal", "input": { "jenis": "spek", "nama": "Keasaman produk", "daftar1": "pH 1 | 6.0\npH 2 | 7,1\npH 3 | 5.1\npH 4 | 4,9\n6.5", "bawah": "5", "atas": "7" }, "ai": "{\"pembahasan\":\"Hasil uji menunjukkan dua sampel keluar dari batas dan satu mendekati batas bawah, jadi perlu diuji ulang.\",\"poin\":[\"Dua di luar batas\"],\"langkah\":[\"Ulangi uji sampel yang keluar\"]}", "kriteria": { "mengandung": ["hasil uji", "uji ulang"], "mengandungAturan": ["DI LUAR BATAS", "Mendekati batas", "pH 2"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 5, "max": 5 }, { "path": "data.luar", "min": 2, "max": 2 }, { "path": "data.dekat", "min": 1, "max": 1 }, { "path": "data.persenMemenuhi", "min": 60, "max": 60 }, { "path": "data.rata", "min": 5.9, "max": 5.95 }] } },
+    { "nama": "hanya batas atas dengan angka sebaris", "input": { "jenis": "spek", "nama": "Kadar logam", "daftar1": "9,6 9.9 10.4 8", "atas": "10" }, "ai": "{\"pembahasan\":\"Hasil uji menunjukkan satu angka melewati batas atas dan dua angka sangat dekat dengan batas, jadi perlu perhatian.\",\"poin\":[\"Satu di luar batas\"],\"langkah\":[\"Ulangi uji\"]}", "kriteria": { "mengandung": ["hasil uji", "batas atas"], "mengandungAturan": ["1 dari 4 hasil di luar batas", "2 mendekati batas"], "panjangMin": 120, "panjangMaks": 2500, "nilai": [{ "path": "data.luar", "min": 1, "max": 1 }, { "path": "data.dekat", "min": 2, "max": 2 }, { "path": "data.terbesar", "min": 10.4, "max": 10.4 }] } },
+    { "nama": "dua kelompok berbeda nyata", "input": { "jenis": "ab", "nama": "Waktu muat halaman", "daftar1": "10 12 11 13 12 11", "daftar2": "14, 15, 13, 16, 15, 14" }, "ai": "{\"pembahasan\":\"Perbandingan menunjukkan kelompok B lebih tinggi tiga angka dan perbedaan itu cukup kuat untuk dianggap nyata, bukan kebetulan.\",\"poin\":[\"B lebih tinggi\"],\"langkah\":[\"Pilih kelompok yang lebih baik\"]}", "kriteria": { "mengandung": ["perbandingan", "nyata"], "mengandungAturan": ["Berbeda nyata", "Selisih rata-rata"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.rataA", "min": 11.5, "max": 11.5 }, { "path": "data.rataB", "min": 14.5, "max": 14.5 }, { "path": "data.selisih", "min": 3, "max": 3 }, { "path": "data.persen", "min": 26, "max": 26.2 }, { "path": "data.t", "min": 4.9, "max": 5.0 }, { "path": "data.beda", "min": 1, "max": 1 }] } },
+    { "nama": "dua kelompok tidak beda nyata dan data sedikit", "input": { "jenis": "ab", "nama": "Skor kepuasan", "daftar1": "10 12 11 13", "daftar2": "11 13 12 12" }, "ai": "{\"pembahasan\":\"Perbandingan menunjukkan selisih kecil yang belum cukup kuat, apalagi datanya sedikit, jadi kesimpulannya masih lemah.\",\"poin\":[\"Selisih kecil\"],\"langkah\":[\"Tambah data\"]}", "kriteria": { "mengandung": ["perbandingan", "lemah"], "mengandungAturan": ["Belum cukup bukti berbeda", "kesimpulan masih lemah"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.beda", "min": 0, "max": 0 }, { "path": "data.t", "min": 0.6, "max": 0.7 }, { "path": "data.batas", "min": 2.5, "max": 2.6 }] } },
+    { "nama": "sebelum dan sesudah dengan pemisah campur", "input": { "jenis": "sebelum", "nama": "Nilai ujian", "daftar1": "70; 65; 80, 75 60", "daftar2": "78 70\n85 80 68" }, "ai": "{\"pembahasan\":\"Hasil menunjukkan semua nilai naik setelah perubahan, dan kenaikannya cukup konsisten untuk dianggap nyata.\",\"poin\":[\"Semua pasangan naik\"],\"langkah\":[\"Pertahankan perubahan\"]}", "kriteria": { "mengandung": ["hasil", "naik"], "mengandungAturan": ["Perubahan nyata", "Rata-rata perubahan"], "panjangMin": 150, "panjangMaks": 2500, "nilai": [{ "path": "data.n", "min": 5, "max": 5 }, { "path": "data.rataSelisih", "min": 6.2, "max": 6.2 }, { "path": "data.persen", "min": 8.8, "max": 8.9 }, { "path": "data.t", "min": 8.4, "max": 8.5 }, { "path": "data.naik", "min": 5, "max": 5 }, { "path": "data.beda", "min": 1, "max": 1 }] } }
+  ]
+}

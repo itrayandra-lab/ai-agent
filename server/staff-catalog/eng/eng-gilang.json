@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-gilang",
+  "division": "eng",
+  "employeeId": "gilang",
+  "title": "DevOps Engineer",
+  "version": 1,
+  "name": "Penghitung biaya cloud dan saran hemat",
+  "ringkas": "Cari layanan cloud yang jarang terpakai dan hitung berapa yang bisa dihemat tiap bulan.",
+  "kataKunci": [
+    "biaya cloud",
+    "hemat",
+    "finops",
+    "server",
+    "rightsizing"
+  ],
+  "inputs": [
+    {
+      "key": "layanan",
+      "type": "longtext",
+      "label": "Daftar layanan (satu baris: nama | jenis | biaya per bulan dalam rupiah | rata-rata pemakaian persen)",
+      "required": true,
+      "contoh": "Server web | Mesin virtual | 2500000 | 55"
+    },
+    {
+      "key": "gaya",
+      "type": "choice",
+      "label": "Seberapa berani berhemat?",
+      "required": true,
+      "default": "aman",
+      "choices": [
+        {
+          "v": "aman",
+          "t": "Aman, hanya yang jelas boros"
+        },
+        {
+          "v": "berani",
+          "t": "Berani, lebih agresif"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Cari yang boros",
+      "set": {
+        "rows": "baris(input.layanan).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const b = num(p[2]); const u = num(p[3]); const mati = input.gaya === 'berani' ? 10 : 5; const kecil = input.gaya === 'berani' ? 40 : 25; const aksi = u < mati ? 'Matikan atau hapus' : u < kecil ? 'Kecilkan ukuran' : u < 60 ? 'Pantau' : 'Sudah pas'; const hemat = aksi === 'Matikan atau hapus' ? b : aksi === 'Kecilkan ukuran' ? Math.round(b * 0.4) : 0; return { nama: p[0] || '-', jenis: p[1] || '-', biaya: b, pakai: u, aksi: aksi, hemat: hemat }; }).sort((a, b) => b.hemat - a.hemat)",
+        "total": "v.rows.reduce((a, r) => a + r.biaya, 0)",
+        "hemat": "v.rows.reduce((a, r) => a + r.hemat, 0)",
+        "persen": "v.total ? Math.round(v.hemat / v.total * 1000) / 10 : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Potensi hemat ' + rp(v.hemat) + ' per bulan (' + v.persen + '% dari ' + rp(v.total) + ')'",
+    "teks": "'# Saran hemat biaya cloud\\n\\n' + tabel(['Layanan', 'Jenis', 'Biaya/bulan', 'Pemakaian', 'Saran', 'Hemat/bulan'], v.rows.map((r) => [r.nama, r.jenis, rp(r.biaya), r.pakai + '%', r.aksi, rp(r.hemat)])) + '\\n\\n_Mengecilkan ukuran diasumsikan menghemat 40% biaya layanan itu. Cek dampak performa sebelum mengubah._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'saran-hemat-cloud'",
+        "isi": "csv([['Layanan', 'Jenis', 'Biaya per bulan', 'Pemakaian persen', 'Saran', 'Hemat per bulan']].concat(v.rows.map((r) => [r.nama, r.jenis, r.biaya, r.pakai, r.aksi, r.hemat])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "layanan": "Server web | Mesin virtual | 2500000 | 55\nDatabase | Basis data | 4000000 | 20\nServer uji | Mesin virtual | 1200000 | 3",
+      "gaya": "aman"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 2.800.000",
+        "36.4%",
+        "Matikan atau hapus"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-hemat-otomasi"
+  ],
+  "keahlian": {
+    "istilah": [
+      "biaya cloud",
+      "hemat",
+      "finops",
+      "server",
+      "rightsizing"
+    ],
+    "data": [
+      "daftar layanan (satu baris: nama | jenis | biaya per bulan d",
+      "seberapa berani berhemat?"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
+  }
+}

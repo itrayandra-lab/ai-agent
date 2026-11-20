@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-salsabila",
+  "division": "ecom",
+  "employeeId": "salsabila",
+  "title": "TikTok Shop & Live Commerce Specialist",
+  "version": 1,
+  "name": "Penyusun rundown siaran langsung jualan",
+  "ringkas": "Susun jadwal menit demi menit untuk siaran langsung: sapaan, demo produk, kuis, penawaran kilat, dan penutup sesuai durasi.",
+  "kataKunci": [
+    "live",
+    "rundown",
+    "siaran langsung",
+    "live commerce",
+    "penawaran kilat"
+  ],
+  "inputs": [
+    {
+      "key": "tema",
+      "type": "text",
+      "label": "Tema siaran",
+      "required": true,
+      "contoh": "Promo Gajian Skincare"
+    },
+    {
+      "key": "produk",
+      "type": "longtext",
+      "label": "Produk yang dijual (satu per baris)",
+      "required": true,
+      "contoh": "Serum Wajah\nToner\nPaket Hemat"
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama siaran",
+      "required": true,
+      "default": "90",
+      "choices": [
+        {
+          "v": "60",
+          "t": "1 jam"
+        },
+        {
+          "v": "90",
+          "t": "1,5 jam"
+        },
+        {
+          "v": "120",
+          "t": "2 jam"
+        }
+      ]
+    },
+    {
+      "key": "mulai",
+      "type": "text",
+      "label": "Jam mulai (contoh 19:00)",
+      "required": true,
+      "contoh": "19:00"
+    },
+    {
+      "key": "flash",
+      "type": "choice",
+      "label": "Penawaran kilat",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2 kali"
+        },
+        {
+          "v": "3",
+          "t": "3 kali"
+        },
+        {
+          "v": "4",
+          "t": "4 kali"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "produkList": "baris(input.produk).slice(0, 10)",
+        "mulaiMenit": "(Number(String(input.mulai).split(':')[0]) || 19) * 60 + (Number(String(input.mulai).split(':')[1]) || 0)",
+        "segmen": "(() => { const d = num(input.durasi); const demo = Math.max(1, v.produkList.length); const sisa = d - 10 - 5; const tiap = Math.floor((sisa - num(input.flash) * 5) / demo); const out = [{ menit: 0, kegiatan: 'Sapaan dan pengumuman promo' }]; let t = 5; v.produkList.forEach((p, i) => { out.push({ menit: t, kegiatan: 'Demo dan cerita produk: ' + p }); t += tiap; if (i < num(input.flash)) { out.push({ menit: t, kegiatan: 'Penawaran kilat ' + (i + 1) + ' (5 menit, jumlah terbatas)' }); t += 5; } }); out.push({ menit: d - 5, kegiatan: 'Tanya jawab, ajakan terakhir, dan penutup' }); return out; })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rundown ' + input.durasi + ' menit untuk \"' + input.tema + '\": ' + v.segmen.length + ' segmen'",
+    "teks": "'# Rundown ' + input.tema + '\\n\\n' + v.segmen.map((s) => '- ' + s.menit + ' menit: ' + s.kegiatan).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rundown-live'",
+        "isi": "csv([['Menit ke', 'Kegiatan']].concat(v.segmen.map((s) => [s.menit, s.kegiatan])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "tema": "Promo Gajian Skincare",
+      "produk": "Serum Wajah\nToner\nPaket Hemat",
+      "durasi": "90",
+      "mulai": "19:00",
+      "flash": "3"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Promo Gajian Skincare",
+        "Penawaran kilat 3",
+        "Tanya jawab"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "live",
+      "rundown",
+      "siaran langsung",
+      "live commerce",
+      "penawaran kilat"
+    ],
+    "data": [
+      "tema siaran",
+      "produk yang dijual (satu per baris)",
+      "lama siaran",
+      "jam mulai (contoh 19:00)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}

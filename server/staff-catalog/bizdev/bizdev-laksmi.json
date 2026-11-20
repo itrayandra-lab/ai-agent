@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "bizdev-laksmi",
+  "division": "bizdev",
+  "employeeId": "laksmi",
+  "title": "Partnership Manager — Clinics, Salons & Co-branding",
+  "version": 1,
+  "name": "Kalkulator bagi hasil kemitraan klinik",
+  "ringkas": "Hitung bagi hasil bulanan dengan klinik atau salon mitra dan perkirakan berapa bulan sampai biaya awal kemitraan balik modal.",
+  "kataKunci": [
+    "bagi hasil",
+    "kemitraan klinik",
+    "salon",
+    "balik modal",
+    "professional line"
+  ],
+  "inputs": [
+    {
+      "key": "mitra",
+      "type": "text",
+      "label": "Nama klinik atau salon mitra",
+      "required": true,
+      "contoh": "Klinik Cantik Rina"
+    },
+    {
+      "key": "omzet",
+      "type": "number",
+      "label": "Perkiraan penjualan produk kita lewat mitra per bulan (Rp)",
+      "required": true,
+      "contoh": "40000000"
+    },
+    {
+      "key": "porsi",
+      "type": "choice",
+      "label": "Bagian untuk mitra",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "15",
+          "t": "15%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "25",
+          "t": "25%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        }
+      ]
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Biaya pokok produk dari penjualan itu (%)",
+      "required": true,
+      "contoh": "35"
+    },
+    {
+      "key": "modal",
+      "type": "number",
+      "label": "Biaya awal kemitraan: pelatihan, display, contoh produk (Rp)",
+      "required": true,
+      "contoh": "30000000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung bagi hasil",
+      "set": {
+        "mitraRp": "Math.round(num(input.omzet) * num(input.porsi) / 100)",
+        "pokok": "Math.round(num(input.omzet) * num(input.hpp) / 100)",
+        "kita": "num(input.omzet) - v.mitraRp - v.pokok",
+        "bulan": "v.kita > 0 ? Math.ceil(num(input.modal) / v.kita) : 0",
+        "tahun": "v.kita * 12 - num(input.modal)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kita > 0 ? 'Untung kita ' + rp(v.kita) + ' per bulan; balik modal sekitar ' + v.bulan + ' bulan' : 'Kemitraan ini rugi; ubah bagian mitra atau harga'",
+    "teks": "'# Bagi hasil ' + input.mitra + '\\n\\n' + tabel(['Pos', 'Per bulan'], [['Penjualan', rp(input.omzet)], ['Biaya pokok produk', rp(v.pokok)], ['Bagian mitra (' + input.porsi + '%)', rp(v.mitraRp)], ['**Untung kita**', rp(v.kita)]]) + '\\n\\n- Biaya awal: ' + rp(input.modal) + '\\n- Balik modal: ' + v.bulan + ' bulan\\n- Hasil bersih setahun setelah biaya awal: ' + rp(v.tahun)",
+    "data": "({ kita: v.kita, bulan: v.bulan })"
+  },
+  "sample": {
+    "input": {
+      "mitra": "Klinik Cantik Rina",
+      "omzet": "40000000",
+      "porsi": "20",
+      "hpp": "35",
+      "modal": "30000000"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Rp 18.000.000",
+        "balik modal sekitar 2 bulan",
+        "Rp 186.000.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bagi hasil",
+      "kemitraan klinik",
+      "salon",
+      "balik modal",
+      "professional line"
+    ],
+    "data": [
+      "nama klinik atau salon mitra",
+      "perkiraan penjualan produk kita lewat mitra per bulan (rp)",
+      "bagian untuk mitra",
+      "biaya pokok produk dari penjualan itu (%)"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
+    "contoh": {
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
+  }
+}

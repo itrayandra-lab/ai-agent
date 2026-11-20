@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-puspa-jawab",
+  "division": "studio",
+  "employeeId": "puspa",
+  "title": "Live Host (Live Commerce Presenter)",
+  "version": 1,
+  "name": "Jawaban cepat untuk pertanyaan penonton",
+  "ringkas": "Beri jawaban singkat dan aman yang siap dibacakan untuk pertanyaan penonton soal pemakaian produk.",
+  "kataKunci": [
+    "pertanyaan penonton",
+    "jawaban live",
+    "cara pakai",
+    "jenis kulit",
+    "faq"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Cerah"
+    },
+    {
+      "key": "kulit",
+      "type": "choice",
+      "label": "Jenis kulit penanya",
+      "required": true,
+      "default": "normal",
+      "choices": [
+        {
+          "v": "normal",
+          "t": "Normal"
+        },
+        {
+          "v": "berminyak",
+          "t": "Berminyak"
+        },
+        {
+          "v": "kering",
+          "t": "Kering"
+        },
+        {
+          "v": "sensitif",
+          "t": "Sensitif"
+        },
+        {
+          "v": "kombinasi",
+          "t": "Kombinasi"
+        }
+      ]
+    },
+    {
+      "key": "tanya",
+      "type": "choice",
+      "label": "Pertanyaannya",
+      "required": true,
+      "default": "urutan",
+      "choices": [
+        {
+          "v": "urutan",
+          "t": "Urutan pemakaian"
+        },
+        {
+          "v": "frekuensi",
+          "t": "Seberapa sering dipakai"
+        },
+        {
+          "v": "cocok",
+          "t": "Cocok untuk kulit saya?"
+        },
+        {
+          "v": "hamil",
+          "t": "Aman untuk ibu hamil?"
+        },
+        {
+          "v": "iritasi",
+          "t": "Kalau iritasi bagaimana?"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Pilih jawaban",
+      "set": {
+        "dasar": "{\"urutan\":\"Pakai setelah membersihkan wajah: dari yang paling encer ke paling kental, tabir surya paling akhir di pagi hari.\",\"frekuensi\":\"Mulai 2-3 kali seminggu, naikkan pelan-pelan bila kulit nyaman.\",\"cocok\":\"Cocok untuk banyak jenis kulit, tetapi lakukan uji tempel dulu di belakang telinga atau lengan bagian dalam.\",\"hamil\":\"Untuk ibu hamil atau menyusui sebaiknya tanya dokter dulu sebelum memakai produk baru.\",\"iritasi\":\"Hentikan pemakaian, bilas dengan air bersih, dan konsultasi ke dokter bila perih atau merah tidak reda.\"}[input.tanya]",
+        "tambah": "input.kulit === 'sensitif' && input.tanya !== 'hamil' && input.tanya !== 'iritasi' ? ' Karena kulitmu sensitif, mulai dari sedikit dulu dan pantau 24 jam.' : input.kulit === 'berminyak' && input.tanya === 'cocok' ? ' Untuk kulit berminyak, pakai tipis-tipis agar tidak terasa berat.' : input.kulit === 'kering' && input.tanya === 'cocok' ? ' Untuk kulit kering, lapisi dengan pelembap setelahnya.' : ''",
+        "jawab": "'Soal ' + input.produk + ': ' + v.dasar + v.tambah"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Jawaban siap dibacakan untuk kulit ' + input.kulit",
+    "teks": "'## Jawaban untuk dibacakan\\n\\n' + v.jawab + '\\n\\n_Jangan menjanjikan hasil medis atau hasil pasti saat siaran._'",
+    "berkas": []
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Cerah",
+      "kulit": "sensitif",
+      "tanya": "cocok"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "uji tempel",
+        "sensitif"
+      ]
+    }
+  },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pertanyaan penonton",
+      "jawaban live",
+      "cara pakai",
+      "jenis kulit",
+      "faq"
+    ],
+    "data": [
+      "nama produk",
+      "jenis kulit penanya",
+      "pertanyaannya"
+    ],
+    "gaya": "visual dan hidup, adegan pendek, tanpa klaim berlebihan",
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hak cipta musik dan gambar harus aman."
+    ]
+  }
+}

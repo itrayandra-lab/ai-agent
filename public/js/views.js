@@ -1,14 +1,35 @@
-// All screens + agent/task drawers + modals.
-import { S, api, esc, emp, div, task, note, noteByTitle, ago, clock, usd, num, avatar, toast, modal, drawer, refreshDrawer, closeDrawer, drawerKey, navigate, formData, opt, empOptions, STATUS_LABEL, TASK_COLS, PRIO, onEvent } from './core.js';
+// Layar pengguna biasa: Beranda (Pemandu), Hasil Saya, Catatan, Tim Saya, Kantor 3D, Pengaturan.
+// Layar teknis lama berada di wilayah "pengelola" (penanda di bawah) dan hanya dicapai lewat #admin untuk owner/admin.
+import { TimView, kartuOrang } from './tim-view.js';
+import { HasilView } from './hasil-view.js';
+import { PengaturanView } from './pengaturan-view.js';
+import { AdminView } from './admin-view.js';
+import { awam, bisaKelola } from './awam.js';
+import { S, api, esc, emp, div, task, note, noteByTitle, ago, clock, usd, num, avatar, toast, modal, drawer, refreshDrawer, closeDrawer, drawerKey, navigate, formData, opt, empOptions, STATUS_LABEL, TASK_COLS, PRIO, onEvent, onChange } from './core.js';
 import { md, linksOf } from './md.js';
 import { createGraph } from './graph.js';
 import { StudioView } from './studio.js';
+import { KnowledgeView } from './knowledge-view.js';
+import { sfx } from './sfx.js';
+import { tts, findMessageFor } from './tts.js';
+import { icon, goldIcon } from './icons.js';
+import { buatPengatur } from './office-panels.js';
+import { namaRuang, GRUP_RUANG } from './nama-ruang.js';
+import { langkah as langkahMK, petunjukSatuBaris as petunjukSatuBarisMK } from './mode-kursor.js';
+// Tombol PLAY/EXIT Kantor 3D: ikon emas + label; saat aktif memakai penanda stop (tidak ada segitiga Play).
+const playBtn = (on) => `${on ? '<span class="gi-stop" aria-hidden="true"></span>' : goldIcon('play', 22)}<span class="pl-lbl">${on ? 'KELUAR' : 'JALAN'}</span>`;
+import { BrowserView } from './browser-view.js';
+import { ObrolanView } from './obrolan-view.js';
+import { PesanView } from './pesan-view.js';
 
 const D = () => S.data;
+tts.bind((id) => emp(id));
+tts.watch(() => ({ messages: S.data?.messages, channels: S.data?.channels, me: S.me }));
+if (typeof window !== 'undefined') window.addEventListener('raiverse:suara-gagal', (e) => toast(esc(e.detail?.pesan || 'Suara tidak bisa diputar.') + ' Buka Pengaturan untuk tes suara.', 'warn', () => navigate('settings')));   // conversations are spoken wherever the owner is: chat, dock, meetings
 const me = () => emp(S.me) || emp('owner');
 const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
-const EV_ICON = { task_created: '📥', delegated: '➡️', task_started: '⚡', task_done: '✅', note_written: '📝', message: '💬', reasoning: '💭', learned: '💡', approval_requested: '🛑', approved: '🎉', rejected: '✏️', meeting: '👥', alert: '⚠️', hired: '🎊', handoff: '📦' };
-const FOLDER_COLORS = { Company: '#f5b942', SOP: '#4dd4ac', Deliverables: '#5b8cff', Reports: '#ffd166', Research: '#ff9f43', Marketing: '#ff6b8b', Memori: '#c58bff', Knowledge: '#36c2f0', Notes: '#a3a8b8' };
+const EV_ICON = { task_created: 'inbox', delegated: 'arrow', task_started: 'bolt', task_done: 'check', note_written: 'doc', message: 'chat', reasoning: 'chat', learned: 'spark', approval_requested: 'approvals', approved: 'check', rejected: 'edit', meeting: 'team', alert: 'alert', hired: 'user', handoff: 'folder' };
+const FOLDER_COLORS = { Company: '#f5b942', SOP: '#4dd4ac', Deliverables: '#5b8cff', Reports: '#ffd166', Research: '#ff9f43', Marketing: '#c89aa7', Memori: '#c58bff', Knowledge: '#36c2f0', Notes: '#a3a8b8' };
 const folderColor = (f) => FOLDER_COLORS[f] || '#' + ((Math.abs([...f].reduce((a, c) => a * 31 + c.charCodeAt(0), 7)) % 0xaaaaaa) + 0x444444).toString(16);
 const openTasks = (id) => D().tasks.filter((t) => t.assigneeId === id && t.status !== 'done');
 
@@ -32,29 +53,30 @@ export function openNoteByTitle(title) {
 
 function feedItem(ev, fresh) {
   const a = emp(ev.actorId);
-  return `<div class="feed-item ${fresh ? 'new' : ''}" ${ev.taskId ? `data-task="${ev.taskId}"` : ev.actorId && a ? `data-agent="${ev.actorId}"` : ''}><span>${EV_ICON[ev.type] || '•'}</span><div style="flex:1;min-width:0">${esc(ev.text)}</div><span class="t">${clock(ev.t)}</span></div>`;
+  return `<div class="feed-item ${fresh ? 'new' : ''}" ${ev.taskId ? `data-task="${ev.taskId}"` : ev.actorId && a ? `data-agent="${ev.actorId}"` : ''}><span aria-hidden="true">${icon(EV_ICON[ev.type] || 'dot', 16)}</span><div style="flex:1;min-width:0">${esc(ev.text)}</div><span class="t">${clock(ev.t)}</span></div>`;
 }
 
 function commsItem(m, fresh) {
   const a = emp(m.authorId); const ch = D().channels.find((c) => c.id === m.channelId);
   let where = '';
   if (ch?.kind === 'dm') { const o = emp(ch.members.find((x) => x !== m.authorId)); where = `→ ${esc(o?.name || '?')}`; }
-  else if (ch?.kind === 'meeting') where = `· 👥 ${esc(ch.name.replace(/^Rapat: /, ''))}`;
-  else if (ch) where = `· #${esc(ch.name)}`;
+  else if (ch?.kind === 'meeting') where = `· Rapat ${esc(ch.name.replace(/^Rapat: /, ''))}`;
+  else if (ch) where = `· ${esc(awam(ch.name))}`;
   const txt = String(m.text).replace(/[*_#>`]/g, '').replace(/\s+/g, ' ');
   return `<div class="feed-item ${fresh ? 'new' : ''}" data-goch="${m.channelId}">${avatar(a)}<div style="flex:1;min-width:0"><div class="small"><b>${esc(a?.name || m.authorId)}</b> <span class="muted">${where}</span></div><div class="small" style="color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${esc(txt.slice(0, 280))}</div></div><span class="t">${clock(m.t)}</span></div>`;
 }
 
+// <pengelola>
 export function meetingModal(pre = {}) {
   const ai = D().employees.filter((e) => e.type === 'ai');
-  modal('👥 Adakan rapat multi-agen', `
+  modal('Adakan rapat tim', `
     <label class="f">Topik<input class="input" name="topic" value="${esc(pre.topic || '')}" placeholder="mis. Strategi harga paket Growth tahun depan"></label>
     <label class="f">Agenda / pertanyaan kunci<textarea class="input" name="agenda" rows="3" placeholder="Apa yang harus diputuskan? Data apa yang relevan?">${esc(pre.agenda || '')}</textarea></label>
     <div class="grid2"><label class="f">Pemimpin rapat<select class="input" name="chairId">${empOptions(pre.chairId || 'aria', { aiOnly: true })}</select></label>
     <label class="f">Putaran diskusi<select class="input" name="rounds">${opt(1, '1 putaran (cepat)')}${opt(2, '2 putaran (diskusi)', 2)}${opt(3, '3 putaran (mendalam)')}</select></label></div>
-    <label class="row small" style="align-items:flex-start"><input type="checkbox" name="ownerLed" checked><span><b>Saya mengawali rapat</b><br><span class="muted">Semua agen diam dan mendengarkan sampai Anda mengirim “saya selesai” atau <code>/selesai</code> di chat rapat.</span></span></label>
+    <label class="row small" style="align-items:flex-start"><input type="checkbox" name="ownerLed" checked><span><b>Saya mengawali rapat</b><br><span class="muted">Semua pembantu diam dan mendengarkan sampai Anda mengirim “saya selesai” atau <code>/selesai</code> di chat rapat.</span></span></label>
     <div class="f" style="display:grid;gap:6px"><span class="small muted">Peserta <b id="mtgcount">0 dipilih</b></span><div class="row wrap"><button class="btn sm" type="button" data-ms="all">Pilih semua</button><button class="btn sm" type="button" data-ms="heads">Semua kepala</button><button class="btn sm" type="button" data-ms="clear">Kosongkan</button>${D().divisions.map((d) => `<button class="btn sm ghost" type="button" data-ms="${d.id}">${d.icon} ${esc(d.short)}</button>`).join('')}</div><div class="list-scroll" style="max-height:260px">${D().divisions.map((d) => `<div class="eyebrow" style="margin:6px 0 2px">${esc(d.name)} <button class="btn sm ghost" type="button" data-ms="${d.id}">pilih divisi</button></div>${ai.filter((e) => e.divisionId === d.id).map((e) => `<label class="row small" style="gap:8px;padding:3px 0"><input type="checkbox" data-p="${e.id}" ${(pre.participants || []).includes(e.id) ? 'checked' : ''}>${esc(e.name)} <span class="muted">· ${esc(e.title)}</span></label>`).join('')}`).join('')}</div></div>
-    <p class="small muted" style="margin:0">Untuk pilihan massal, seluruh agen tetap tercatat sebagai peserta yang diwakili; kepala tiap divisi aktif berdiskusi agar rapat tidak menghabiskan 154 panggilan AI. Notulen dan action item otomatis menjadi tugas.</p>`, {
+    <p class="small muted" style="margin:0">Bila memilih banyak orang, perwakilan tiap bagian yang berdiskusi supaya rapat tetap singkat. Catatan rapat dan tindak lanjutnya otomatis menjadi pekerjaan.</p>`, {
     wide: true,
     onMount: (b) => {
       const boxes = () => [...b.querySelectorAll('[data-p]')];
@@ -71,6 +93,7 @@ export function meetingModal(pre = {}) {
     } }],
   });
 }
+// </pengelola>
 
 function kpis() {
   const d = D();
@@ -87,6 +110,21 @@ function kpis() {
 }
 
 // ═════════════════════ OFFICE (3D) ═════════════════════
+// <pengelola>
+/** rincian teknis lama (model, pemakaian, beban PC): hanya untuk owner/admin dan terlipat; pengguna biasa hanya melihat satu kalimat status */
+function hudTeknis(d, h, s) {
+  const prov = d.provider || (d.live ? 'claude' : 'sim');
+  const activeModel = prov === 'groq' ? s.groqModel : s.model;
+  const meter = (v) => (v == null ? '–' : `${v}%<span class="meter"><i style="width:${v}%"></i></span>`);
+  const up = (sec = 0) => sec > 3600 ? `${Math.floor(sec / 3600)}j ${Math.floor((sec % 3600) / 60)}m` : `${Math.floor(sec / 60)}m ${sec % 60}d`;
+  return `<details class="hud-adv"><summary>Rincian teknis</summary>
+      <div class="kv"><span>Model</span><span>${esc(activeModel || '-')}</span></div>
+      <div class="kv"><span>Tokens</span><span>${num(d.usage.tokensIn + d.usage.tokensOut)} · ${usd(d.usage.costToday)}/${usd(s.dailyBudgetUSD)}</span></div>
+      <div class="kv"><span>Host (seluruh PC)</span><span>CPU ${meter(h.cpu)} MEM ${meter(h.mem)}</span></div>
+      <div class="kv"><span>Aplikasi ini</span><span>server ${h.rss ?? '–'} MB · ${h.procCpu ?? '–'}% · tab ${(() => { try { return Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB · ' + (window.__ray3d?.perf?.().fps ?? '–') + ' fps'; } catch { return '–'; } })()}</span></div>
+      <div class="kv"><span>Disk</span><span>${meter(h.disk)} · up ${up(h.uptime)}</span></div></details>`;
+}
+// </pengelola>
 let office = null, officeRoot = null, officeLoading = null;
 async function ensureOffice() {
   if (office) return office;
@@ -94,388 +132,1072 @@ async function ensureOffice() {
   officeRoot = document.createElement('div');
   officeRoot.className = 'office';
   officeRoot.innerHTML = `<div class="canvas-host" style="position:absolute;inset:0"></div><div class="empty" style="position:absolute;inset:0;display:grid;place-items:center" data-loading>Memuat kantor 3D…</div>`;
-  officeLoading = import('./office3d.js').then(({ createOffice }) => {
+  officeLoading = Promise.all([import('./office3d.js'), import('./assets3d.js').then((m) => m.loadAssets())]).then(([{ createOffice }]) => {
     office = createOffice(officeRoot.querySelector('.canvas-host'), {
+      onAgentPie: (id) => (id && OfficeView.pieId !== id ? OfficeView.pie(id) : OfficeView.pie(null)),
       onSelect: (id) => { if (office?.isPlayer()) OfficeView.talkTo(id); },
-      onFollow: (id) => OfficeView.followCard(id),
+      onFollow: (id) => { OfficeView.followCard(id); window.__raiverseFokus3d = id || null; try { window.dispatchEvent(new CustomEvent('raiverse:fokus-3d', { detail: { id: id || null } })); } catch { /* tanpa jendela */ } },   // orang yang diikuti menjadi penerima bawaan obrolan
+      onTime: (t, ph, auto, h) => OfficeView.clock(t, ph, auto, h),
+      onKeys: (j) => { clearTimeout(OfficeView.keyT); OfficeView.keyT = setTimeout(() => api('PATCH', '/api/settings', { uiKeys: j }).catch(() => {}), 600); },
+      onMenu: async (k, id) => { if (k === 'detail') return agentDrawer(id); if (k === 'task') return navigate('dashboard', { untuk: id }); if (k === 'chat') return OfficeView.talkTo(id); },
       onRequestPlay: () => OfficeView.togglePlayer(),
-      onHelp: (show) => OfficeView.help(show),
+      onHelp: (show) => OfficeView.togglePetunjuk(show),   // tombol H atau ? = Petunjuk tombol (kartu kecil di atas)
       onToast: (t) => OfficeView.chip(t),
-      onZone: (z) => { if (office?.isPlayer()) return; z === 'brain' ? navigate('brain', { graph: 1 }) : divisionDrawer(z); },
+      onLower: (z) => OfficeView.lower(z),
+      onTeleport: (i) => OfficeView.teleportChip(i),
+      onTeleportMenu: () => OfficeView.teleportMenu(),
+      onApp: (id) => OfficeView.openApp(id),
+      onHolo: (p) => (p === 1 ? OfficeView.help(true) : p === 2 ? toast('Waktu dan siang-malam: tombol T mengunci atau menjalankan jam', 'ok') : OfficeView.openApp('dashboard')),
+      onZone: (z) => { if (office?.isPlayer()) return; z === 'brain' ? OfficeView.openApp('brain', { graph: 1 }) : divisionDrawer(z); },
+      getMessageText: (ev) => findMessageFor(ev, D().messages),
+      getMeetingMembers: (id) => D().meetings?.find((m) => m.id === id)?.participants,
       onPlayerHint: (h) => OfficeView.playerHint(h), onPlayerAction: (h, kind) => OfficeView.playerAction(h, kind),
     });
     officeRoot.querySelector('[data-loading]')?.remove();
     office.sync(D());
+    try { office.loadKeys(D().settings?.uiKeys); } catch { /* ignore */ }
+    OfficeView.bindClock();
     onEvent((ev) => office.onEvent(ev));
     return office;
-  }).catch((err) => { officeRoot.querySelector('[data-loading]').textContent = 'WebGL tidak tersedia: ' + err.message; throw err; });
+  }).catch((err) => { console.error('[office] gagal:', err.stack || err); const ld = officeRoot.querySelector('[data-loading]'); if (ld) ld.textContent = 'WebGL tidak tersedia: ' + err.message; throw err; });
   return officeLoading;
 }
 export const officeApi = () => office;
+// Obrolan dan Pesan memberi tahu bila satu orang sedang diajak bicara: Kantor 3D membingkai karakternya (detail.sisi 'kanan' = di sisi kanan layar, bila pembingkai mendukung)
+if (typeof window !== 'undefined') window.addEventListener('raiverse:fokus-kontak', (ev) => { try { if (ev.detail?.sisi === 'kanan') OfficeView.syncInset?.(); /* panel kiri terbuka: pusat pandangan sudah di tengah ruang kanan */ office?.focus?.(ev.detail?.id, { sisi: ev.detail?.sisi }); } catch { /* Kantor 3D belum siap */ } });
 
 export const OfficeView = {
   mount(root) {
     root.style.overflow = 'hidden';
-    ensureOffice().then(() => { office.setVisible(true); if (S.params.focus) setTimeout(() => office.focus(S.params.focus), 300); });
+    ensureOffice().then(() => {
+      office.setVisible(true); OfficeView.syncInset?.(); if (S.params.focus) setTimeout(() => office.focus(S.params.focus), 300);
+      // every page load: cinematic overview -> dive to your character -> Play mode (skippable with any key; ?nointro disables)
+      let introTried = 0;
+      try { if (!window.__rayIntroPlayed && !/nointro/.test(location.search + location.hash) && !S.params.focus) {
+        const t = setInterval(() => { introTried++; if (office.hasAvatar('owner')) { clearInterval(t); setTimeout(() => { if (office.isPlayer()) return; window.__rayIntroPlayed = true; /* once per page load: refresh replays the opening, switching tabs inside the app does not */ office.cinematicIntro(() => { if (!office.isPlayer()) OfficeView.togglePlayer(true); }); }, 1800); } else if (introTried > 80) clearInterval(t); }, 500);
+      } } catch { /* storage blocked: no intro */ }
+    });
     if (!officeRoot) return;
     root.appendChild(officeRoot);
     const ov = document.createElement('div');
     ov.className = 'office-ov';
+    const micDock = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
     ov.innerHTML = `
-      <div class="office-brand"><div class="logo">◐</div><div><b>RAY // OFFICE</b><small>${esc(D().company.name.toLowerCase().replace(/\s+/g, ''))}.ai · live office</small></div></div>
-      <div class="ov-left">
-        <div class="kpis" id="okpi"></div>
-        <div class="glass rooms" id="orooms"></div>
-      </div>
-      <div class="ov-right">
+      <div class="ovz tr ov-right" data-wil="tr">
         <div class="cam-btns">
-          <button class="btn glass primary-play" title="Masuk ke kantor sebagai karakter Anda (WASD)" data-cam="play" style="width:auto;padding:0 12px">▶ PLAY</button>
-          <button class="btn glass" title="Tampilan isometrik" data-cam="reset">ISO</button>
-          <button class="btn glass" title="Tampilan atas" data-cam="top">TOP</button>
-          <button class="btn glass" title="Zoom in" data-cam="in">＋</button>
-          <button class="btn glass" title="Zoom out" data-cam="out">－</button>
-          <button class="btn glass" title="Label nama" data-cam="labels">Aa</button>
-          <button class="btn glass" title="Layar penuh" data-cam="full">⛶</button>
-          <button class="btn glass" title="Karakter saya (pria/wanita, rambut, kulit)" data-cam="me">👤</button>
-          <button class="btn glass" title="Kontrol & pintasan keyboard [H]" data-cam="help">?</button>
+          <div class="tod-clock glass" id="oclock"><button type="button" data-clock aria-label="Atur waktu di kantor" title="Atur waktu di kantor"><span data-cph aria-hidden="true"></span><b data-ctm>--:--</b><small data-cmd>otomatis</small></button>
+          <div class="tod-pop" hidden>
+            <input type="range" min="0" max="24" step="0.25" data-cr aria-label="Jam di kantor">
+            <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-ch="7">Pagi</button><button type="button" class="btn sm" data-ch="12">Siang</button><button type="button" class="btn sm" data-ch="17.5">Sore</button><button type="button" class="btn sm" data-ch="22">Malam</button><button type="button" class="btn sm ghost" data-cauto>Otomatis</button></div>
+          </div></div>
+          <button type="button" class="btn glass primary-play" title="Jalan-jalan di kantor sebagai karakterku (tombol WASD)" aria-label="Jalan-jalan di kantor" data-cam="play">${playBtn(false)}</button>
+          <button type="button" class="btn glass mob-only" id="roomtog2" title="Daftar ruangan" aria-label="Daftar ruangan" aria-expanded="false">${icon('office', 22)}</button>
+          <button type="button" class="btn glass mob-only" id="feedtog2" title="Kabar terbaru" aria-label="Kabar terbaru" aria-expanded="false">${icon('bell', 22)}<i class="dotbadge" id="feeddot2" hidden></i></button>
+          <button type="button" class="btn glass dk-only" title="Layar penuh" aria-label="Layar penuh" data-cam="full">${goldIcon('full', 24)}</button>
+          <button type="button" class="btn glass dk-only" data-cam="hint" aria-label="Petunjuk tombol" title="Petunjuk tombol" aria-expanded="false">${icon('help', 18)}</button>
+          <button type="button" class="btn glass" title="Tampilan dan bantuan" aria-label="Tampilan dan bantuan" aria-expanded="false" data-cam="more">${goldIcon('more', 24)}</button>
         </div>
-        <div class="glass hud" id="ohud"></div>
       </div>
-      <div class="ov ov-br glass"><div class="card-h" style="padding:7px 10px;gap:6px"><div class="tabs" style="padding:2px"><button data-ft="comms" class="active">Percakapan</button><button data-ft="events">Aktivitas</button></div><span class="badge soft" id="feedcount">0</span><span style="flex:1"></span><span class="muted small" id="feedtoggle" style="cursor:pointer;padding:4px">▾</span></div><div class="feed" id="ofeed"></div></div>
-      <div class="phud glass mono" id="phud" hidden><b>MODE PEMAIN</b> · WASD gerak · Shift lari · drag = kamera · Q/R putar · <b>E</b> panggil & bicara · <b>F</b> beri tugas · Spasi lompat · G lambai · H bantuan · <b>Esc</b> keluar</div>
-      <div class="follow-card glass" id="ofollow" hidden></div>
-      <div class="help-panel glass" id="ohelp" hidden></div>
+      <div class="ovz rm" data-wil="rm">
+        <div class="glass rooms" id="orooms" role="region" aria-label="Daftar ruangan" hidden></div>
+        <div class="glass cam-menu" hidden role="group" aria-labelledby="cmtitle">
+          <p class="cm-t" id="cmtitle">Tampilan</p>
+          <button type="button" class="cm-i" data-cam="labels"><i>${goldIcon('labels', 24)}</i>Nama di atas kepala</button>
+          <button type="button" class="cm-i" data-cam="visual"><i>${goldIcon('visual', 24)}</i>Gambar dan suasana</button>
+          <button type="button" class="cm-i" data-cam="sound"><i>${goldIcon('settings', 24)}</i>Suara dan tombol</button>
+          <button type="button" class="cm-i" data-cam="me"><i>${goldIcon('me', 24)}</i>Karakter saya</button>
+          <button type="button" class="cm-i" data-cam="info"><i>${goldIcon('info', 24)}</i>Keadaan tim</button>
+        </div>
+        <div class="glass hud" id="ohud" role="status" aria-live="polite" hidden></div>
+        <div class="help-panel glass" id="ohelp" hidden></div>
+        <div class="help-panel glass vis-panel" id="ovis" hidden></div>
+        <div class="oapps glass" id="oapps" hidden></div>
+        <div class="glass keyhint" id="phud" role="dialog" aria-label="Petunjuk tombol" hidden><div class="kh-h"><b>Petunjuk tombol</b><button type="button" class="btn icon ghost" id="khx" aria-label="Tutup petunjuk" title="Tutup">${icon('close', 16)}</button></div><div class="kh-g"><span><kbd>W A S D</kbd>Jalan</span><span><kbd>Shift</kbd>Lari</span><span><kbd>Mouse</kbd>Arah kamera</span><span><kbd>E</kbd>Bicara</span><span><kbd>F</kbd>Beri pekerjaan</span><span><kbd>Spasi</kbd>Lompat</span><span><kbd>V</kbd>Pindah cepat</span><span><kbd>G</kbd>Lambai</span><span><kbd>M</kbd>Suara</span><span><kbd>Tab</kbd>Kursor bebas ⇄ kunci</span><span><kbd>Enter</kbd>Ngobrol (Esc kembali)</span><span><kbd>Seret</kbd>Geser pandangan</span><span><kbd>Klik kanan + seret</kbd>Putar</span><span><kbd>Gulir</kbd>Zoom</span><span><kbd>H</kbd>Petunjuk ini</span><span><kbd>Esc</kbd>Keluar</span></div></div>
+        <div class="follow-card glass" id="ofollow" hidden></div>
+        <div class="glass ov-feed" id="ofeedp" role="region" aria-label="Kabar terbaru" hidden><div class="card-h"><b>Kabar</b><span style="flex:1"></span><button type="button" class="btn ghost icon" id="feedclose" aria-label="Tutup daftar kabar" title="Tutup">${icon('close', 18)}</button></div><div class="feed" id="ofeed"></div></div>
+      </div>
+      <div class="ovz br" data-wil="br"><div class="ov-infobar glass dk-only" id="oinfobar" role="group" aria-label="Status dan jalan pintas"><div class="ib-ai" id="okpi"></div><button type="button" class="ib-btn" id="roomtog" aria-expanded="false" aria-controls="orooms" aria-label="Ruangan" title="Ruangan">${icon('office', 18)}</button><button type="button" class="ib-btn" id="feedchip" aria-expanded="false" aria-controls="ofeedp" aria-label="Kabar terbaru" title="Kabar terbaru">${icon('bell', 18)}<b class="badge soft" id="feedcount" aria-label="belum dibaca" hidden>0</b></button><button type="button" class="ib-btn" data-cam="tele" aria-label="Pindah cepat" title="Pindah cepat (tombol V)">${goldIcon('tele', 24)}</button></div></div>
+      <div class="pie" id="opie" hidden></div>
       <div class="tod-chip glass mono" id="ochip" hidden></div>
       <div class="phint glass" id="phint" hidden></div>
-      <div class="ptalk glass" id="ptalk" hidden></div>
-      <div class="pmobile" id="pmobile" hidden><div class="pjoy">◎<small>geser</small></div><div class="pbtns"><button class="btn glass" data-pm="talk">E</button><button class="btn glass" data-pm="wave">👋</button><button class="btn glass" data-pm="exit">✕</button></div></div>
-      <div class="cmdbar-hint">WASD terbang · E/Q naik-turun · klik agen = ikuti kamera · U/I waktu · Spasi = jalan sebagai karakter · <b>H</b> bantuan</div>
-      <div class="cmdbar glass"><input id="goalq" placeholder="Beri goal ke perusahaan… mis. “Luncurkan promo akhir tahun”" maxlength="300"><button class="btn" id="meetgo" title="Adakan rapat multi-agen">Rapat</button><button class="btn primary" id="goalgo">Jalankan</button></div>`;
+      <div class="lower3" id="olower" hidden></div>
+      <div class="tele3" id="otele" hidden></div>
+      <div class="tpm" id="otpm" hidden></div>
+      <div class="owins" id="owins"></div>
+      <div class="pmobile" id="pmobile" hidden><div class="pjoy" aria-hidden="true">◎<small>geser</small></div><div class="pbtns"><button type="button" class="btn glass" data-pm="talk" aria-label="Bicara dengan yang terdekat">E</button><button type="button" class="btn glass" data-pm="wave" aria-label="Melambai">${icon('user', 22)}</button><button type="button" class="btn glass" data-pm="exit" aria-label="Keluar dari jalan-jalan">${icon('close', 22)}</button></div></div>
+      <button type="button" class="btn glass" id="cleanback" aria-label="Tampilkan menu kembali" title="Tampilkan menu kembali" hidden>${icon('menu', 18)} Menu</button>
+      <div class="ovz dk" data-wil="dk"><section class="glass lpage" id="lpage" role="region" aria-labelledby="lptitle" hidden><div class="lp-h"><b id="lptitle"></b><span style="flex:1"></span><button type="button" class="btn icon ghost" id="lpfs" aria-label="Perbesar halaman ke ujung kanan" aria-pressed="false" title="Perbesar">${icon('maximize', 18)}</button><button type="button" class="btn icon ghost" id="lpx" aria-label="Tutup dan kembali ke kantor" title="Tutup (Esc)">${icon('close', 18)}</button></div><div class="lp-b" id="lpb"></div></section><div class="odock glass collapsed" id="odock" role="region" aria-label="Percakapan dengan asisten">
+        <div class="od-top">
+          <div class="od-h"><button type="button" class="btn icon ghost od-back" id="odback" aria-label="Tutup percakapan dan kembali" title="Kembali (Esc)">${icon('arrow', 18, 'flip')}</button><b>Percakapan</b><button type="button" class="btn sm ghost" id="odhistb" aria-expanded="false" title="Percakapan sebelumnya">${icon('clock', 16)} Riwayat</button><button type="button" class="btn sm ghost" id="odnew" title="Mulai percakapan baru">${icon('plus', 16)} Baru</button><button type="button" class="btn sm ghost" id="odadd" title="Ajak orang lain ke percakapan" aria-label="Ajak orang lain ke percakapan">${icon('plus', 16)} Ajak orang</button><button type="button" class="btn sm ghost" id="odmode" title="Cara asisten menanggapi">Pilihkan</button><button type="button" class="btn sm ghost" id="odinfo" title="Cara memakai" aria-label="Cara memakai percakapan ini">${icon('info', 16)}</button></div>
+          <div class="od-pick od-hist" id="odhist" hidden></div>
+          <div class="od-pick" id="odpick" hidden><label class="sr-only" for="odq">Cari orang</label><input id="odq" placeholder="Cari orang… nama atau peran" autocomplete="off"><div class="od-list" id="odlist"></div></div>
+          <div class="od-need" id="odneedp" hidden></div>
+          <div class="od-info small muted" id="odinfotxt" hidden>Tulis di bawah. Asisten akan membagi pekerjaan ke orang yang tepat di timmu. Ajak orang tertentu dengan tombol Ajak orang, atau tulis @nama.</div>
+          <div class="od-body" id="odbody"><div class="od-msgs" id="odmsgs" aria-live="polite"></div><div class="od-work" id="odwork"></div></div>
+        </div>
+        <div class="od-imgs" id="odimgs"></div>
+        <div class="od-to" id="odto"></div>
+        <div class="cmdbar"><label class="btn icon" id="odimg" title="Lampirkan gambar (atau tempel dengan Ctrl+V)" aria-label="Lampirkan gambar">${icon('plus', 20)}<input type="file" accept="image/*" multiple hidden id="odimgf"></label><label class="sr-only" for="goalq">Tulis pesan untuk asisten</label><input id="goalq" placeholder="Tanya atau beri pekerjaan…" maxlength="2000" autocomplete="off">${micDock ? `<button type="button" class="btn icon ghost" id="odmic" aria-pressed="false" aria-label="Bicara" title="Bicara">${icon('mic', 20)}</button>` : ''}<button type="button" class="btn primary" id="goalgo" aria-label="Kirim" title="Kirim">${icon('up', 18)}</button></div>
+        <div class="od-foot"><button type="button" class="btn sm ghost od-who" id="odwho" aria-label="Pilih siapa yang kamu ajak bicara" title="Pilih siapa yang kamu ajak bicara"></button><span class="od-perm" id="odperm"></span><span class="od-keyhint" id="odkeyhint" hidden>Enter untuk ngobrol</span><button type="button" class="btn sm ghost od-needb" id="odneed" title="Hasil yang perlu kamu cek, izin, dan pekerjaan yang tersendat">${icon('alert', 12)} Menunggu<span class="od-n" id="odneedn"></span></button><button type="button" class="btn sm ghost ob-only" id="odbaru" aria-label="Percakapan baru" title="Percakapan baru">${icon('edit', 14)}</button><button type="button" class="btn sm ghost ob-only" id="odsum" aria-label="Sumber percakapan" title="Sumber percakapan">${icon('doc', 12)} Sumber</button><button type="button" class="btn sm ghost ob-only" id="odlatar" aria-label="Latar utas: Transparan" title="Latar utas: Transparan">${icon('eye', 14)}</button><button type="button" class="btn sm ghost ob-only" id="odfs" aria-label="Perbesar obrolan" title="Perbesar obrolan">${icon('maximize', 14)}</button><button type="button" class="btn sm ghost" id="odriw" aria-label="Riwayat percakapan" title="Riwayat percakapan">${icon('clock', 14)}</button><span style="flex:1"></span><button type="button" class="btn sm ghost" id="odtog" aria-expanded="false" aria-label="Buka percakapan" title="Buka atau tutup percakapan">Percakapan ▴</button></div>
+      </div></div>`;
     root.appendChild(ov);
-    const send = async () => {
-      const q = ov.querySelector('#goalq');
-      if (!q.value.trim()) return q.focus();
-      await api('POST', '/api/goals', { title: q.value.trim(), userId: S.me });
-      toast(`Goal dikirim ke ${emp('aria')?.name || 'Chief of Staff'} — lihat tim bergerak`, 'ok');
-      q.value = '';
-    };
-    ov.querySelector('#goalgo').onclick = send;
-    ov.querySelector('#meetgo').onclick = () => meetingModal();
+    const q$ = (s) => ov.querySelector(s);
+    const send = () => OfficeView.dockSend();
+    q$('#goalgo').onclick = send;
     ov.querySelectorAll('[data-pm]').forEach((b) => (b.onclick = () => { const k = b.dataset.pm; if (k === 'exit') this.togglePlayer(); if (k === 'wave') office?.wave(); if (k === 'talk') dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })); }));
-    this.feedTab = this.feedTab || 'comms';
-    ov.querySelectorAll('[data-ft]').forEach((b) => (b.onclick = () => { this.feedTab = b.dataset.ft; ov.querySelectorAll('[data-ft]').forEach((x) => x.classList.toggle('active', x === b)); this.update(new Set(['*'])); }));
-    ov.querySelector('#goalq').onkeydown = (e) => { if (e.key === 'Enter') send(); };
+    this.feedTab = 'events';   // "Kabar" = lonceng aktivitas; obrolan hanya ada di kolom ketik tengah
+    q$('#goalq').onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.isComposing) send(); };
+    q$('#goalq').onkeyup = (e) => e.stopPropagation();
+    // ───── panel: setiap panel punya wilayahnya sendiri; yang terbuka bersamaan dibatasi (desktop 2, HP 1) oleh pengatur
+    const roomsEl = q$('#orooms'), feedEl = q$('#ofeedp'), menuEl = q$('.cam-menu'), hudEl = q$('#ohud'), dockEl = q$('#odock');
+    const tutupSembunyi = (el) => () => { el.hidden = true; };
+    const pn = (this.pn = buatPengatur(ov, { maks: () => 1 }));
+    pn.daftarkan('rooms', roomsEl, { terbuka: () => !roomsEl.hidden, tutup: tutupSembunyi(roomsEl) });
+    pn.daftarkan('feed', feedEl, { terbuka: () => !feedEl.hidden, tutup: tutupSembunyi(feedEl) });
+    pn.daftarkan('menu', menuEl, { terbuka: () => !menuEl.hidden, tutup: tutupSembunyi(menuEl) });
+    pn.daftarkan('info', hudEl, { terbuka: () => !hudEl.hidden, tutup: tutupSembunyi(hudEl) });
+    for (const id of ['ohelp', 'ovis', 'oapps']) { const el = q$('#' + id); pn.daftarkan(id, el, { terbuka: () => !el.hidden, tutup: tutupSembunyi(el) }); }
+    pn.daftarkan('petunjuk', q$('#phud'), { terbuka: () => !q$('#phud').hidden, tutup: tutupSembunyi(q$('#phud')) });
+    pn.daftarkan('pindah', q$('#otpm'), { terbuka: () => !q$('#otpm').hidden, tutup: tutupSembunyi(q$('#otpm')) });
+    pn.daftarkan('jam', q$('#oclock .tod-pop'), { terbuka: () => !q$('#oclock .tod-pop').hidden, tutup: tutupSembunyi(q$('#oclock .tod-pop')) });
+    const semuaTutup = () => { for (const [, p] of pn.daftar) if (p.terbuka()) p.tutup(); };
+    const POPUP = '.cam-menu, #orooms, #ofeedp, #ohud, #ohelp, #ovis, #oapps, #otpm, #phud, .tod-pop, .ov-infobar, .cam-btns, .help-panel, .tpm-card';
+    this._offClick = (e) => { if (this.ov && !e.target.closest(POPUP)) semuaTutup(); };
+    this._offKey = (e) => { if (e.key === 'Escape' && [...pn.daftar.values()].some((p) => p.terbuka())) { semuaTutup(); e.stopPropagation(); e.preventDefault(); } };
+    document.addEventListener('pointerdown', this._offClick, true);
+    document.addEventListener('keydown', this._offKey, true);
+    q$('#khx').onclick = () => { q$('#phud').hidden = true; clearTimeout(this._hintT); };
+    const tandai = () => {
+      const buka = (e) => !e.hidden;
+      for (const b of ov.querySelectorAll('#roomtog, #roomtog2')) b.setAttribute('aria-expanded', String(buka(roomsEl)));
+      for (const b of ov.querySelectorAll('#feedchip, #feedtog2')) b.setAttribute('aria-expanded', String(buka(feedEl)));
+      q$('[data-cam="more"]')?.setAttribute('aria-expanded', String(buka(menuEl)));
+      if (buka(roomsEl)) this.renderRooms(true);
+      if (buka(feedEl)) { this.feedSeen = Date.now(); this.renderFeed(true); this.feedBadge(); }
+      const t = q$('#odtog'); if (t) { const o = !dockEl.classList.contains('collapsed'); t.textContent = o ? 'Percakapan ▾' : 'Percakapan ▴'; t.setAttribute('aria-expanded', String(o)); }
+    };
+    ov.addEventListener('panel-berubah', tandai);
+    const kalang = (el) => () => { el.hidden = !el.hidden; };
+    q$('#roomtog').onclick = q$('#roomtog2').onclick = kalang(roomsEl);
+    q$('#feedchip').onclick = q$('#feedtog2').onclick = kalang(feedEl);
+    q$('#feedclose').onclick = () => { feedEl.hidden = true; };
     ov.querySelectorAll('[data-cam]').forEach((b) => (b.onclick = () => {
       const c = b.dataset.cam;
+      if (b.closest('.cam-menu')) menuEl.hidden = true; // pilihan dari menu ⋯ menutup menu
       if (!office) return;
       if (c === 'play') return OfficeView.togglePlayer();
+      if (c === 'tele') return OfficeView.teleportMenu();
       if (c === 'reset') office.resetView(); if (c === 'top') office.topView(); if (c === 'in') office.zoom(0.7); if (c === 'out') office.zoom(1.4);
       if (c === 'labels') office.toggleLabels();
+      if (c === 'floor') { const n = office.floorCount(); const k = office.setFloor((office.getFloor() - 1 + n) % n); document.querySelectorAll('[data-cam="floor"]').forEach((x) => (x.textContent = k === n - 1 ? 'Semua' : 'L' + (k + 1))); toast('Lantai ' + (k + 1) + ' dari ' + n + (k === n - 1 ? ' (seluruh gedung)' : ''), 'ok'); }
+      if (c === 'more') { menuEl.hidden = !menuEl.hidden; if (!menuEl.hidden) setTimeout(() => document.addEventListener('click', function off(e) { if (!e.target.closest('.cam-menu, [data-cam="more"]')) { menuEl.hidden = true; document.removeEventListener('click', off); } }), 0); }
+      if (c === 'info') hudEl.hidden = !hudEl.hidden;
+      if (c === 'roof') { const m = office.toggleRoof(); toast('Atap: ' + ({ auto: 'otomatis (terbuka saat melihat ke dalam)', on: 'selalu tampil', off: 'selalu sembunyi' })[m], 'ok'); }
+      if (c === 'sound') OfficeView.help();   // gear = office settings: Navigasi, Mode Karakter, Atur Tombol, Grafis, Suara
       if (c === 'help') OfficeView.help();
+      if (c === 'settings') return navigate('settings');
+      if (c === 'home') return navigate('dashboard');
+      if (c === 'clean') return OfficeView.bersih(true);
+      if (c === 'hint') return OfficeView.togglePetunjuk();
+      if (c === 'visual') OfficeView.visual();
+      if (c === 'apps') OfficeView.appsMenu();
       if (c === 'me') OfficeView.characterPicker();
       if (c === 'full') (document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen?.());
     }));
-    let collapsed = matchMedia('(max-width: 820px)').matches;
-    const applyCollapse = () => { ov.querySelector('#ofeed').style.display = collapsed ? 'none' : ''; ov.querySelector('#feedtoggle').textContent = collapsed ? '▴' : '▾'; };
-    ov.querySelector('#feedtoggle').onclick = () => { collapsed = !collapsed; applyCollapse(); };
-    applyCollapse();
     bindCommon(ov);
+    q$('#lpx').onclick = () => navigate('office');
+    q$('#lpfs').onclick = () => this.penuh(!ov.classList.contains('lp-penuh'));
+    this.pasangModeKursor();
+    q$('#cleanback').onclick = () => OfficeView.bersih(false);
     this.ov = ov;
+    try { if (localStorage.getItem('ui-bersih') === '1') this.bersih(true, true); } catch { /* ignore */ }
+    // sinematik pembuka: sembunyikan semua HUD/chat supaya layar bersih; cek ringan 5x per detik
+    clearInterval(this._introWatch); this._introWatch = setInterval(() => { const on = !!office?.introActive?.(); if (ov.classList.contains('intro') !== on) { ov.classList.toggle('intro', on); document.body.classList.toggle('sinema', on); } }, 200);   /* satu keadaan 'intro': UI di atas 3D memudar lewat .intro, navigasi dan toast di luar overlay lewat body.sinema */
+    this.dockInit(); // harus setelah this.ov terisi, kalau tidak handler dock tidak terpasang
     this.update(new Set(['*']));
     clearInterval(this.roomTimer);
     this.roomTimer = setInterval(() => this.renderRooms(), 2000);
+    try {
+      if (innerWidth > 900 && localStorage.getItem('ui-petunjuk') !== '1') {
+        this._hintT = setTimeout(() => {
+          const p = q$('#phud'); if (!this.ov || !p) return;
+          p.hidden = false; this._hintAuto = true; try { localStorage.setItem('ui-petunjuk', '1'); } catch { /* ignore */ }
+          this._hintT = setTimeout(() => { if (!this._hintAuto || p.hidden) return; p.classList.add('pudar'); setTimeout(() => { p.hidden = true; p.classList.remove('pudar'); }, 700); }, 9000);
+        }, 2500);
+      }
+    } catch { /* penyimpanan terblokir: tanpa petunjuk otomatis */ }
+    this.stateTimer = setInterval(() => { if (!office) return; ov.classList.toggle('scene-loading', !!officeRoot?.querySelector('[data-loading]')); }, 500);
   },
-  renderRooms() {
+  leftId: null, leftView: null,
+  /** panel kiri: satu panel, isi berganti. null = kantor saja; 'dashboard' = obrolan (kolom ketik dibesarkan); lainnya = halaman di panel kaca */
+  setLeft(id) {
+    const ov = this.ov; if (!ov) return;
+    const lp = ov.querySelector('#lpage'), body = ov.querySelector('#lpb'), dock = ov.querySelector('#odock');
+    if (this.leftId === 'dashboard' && id !== 'dashboard') this.pindahKontrol(false);   // kembalikan baris kontrol ke dock SEBELUM isi panel dihapus (kalau tidak ikut terhapus)
+    if (this.leftView && this.leftId !== id) { try { this.leftView.unmount?.(body); } catch { /* ignore */ } this.leftView = null; body.innerHTML = ''; }
+    this.leftId = id;
+    this.penuh(!!(id && VIEWS[id]) && this.prefPenuh(id), true);   // juga memasang mode (dock-utas atau panel besar)
+    if (id && VIEWS[id]) {   // termasuk 'dashboard' (Obrolan): komponen obrolan yang sama dengan halaman penuh di HP, satu riwayat
+      this.dock.open = false;
+      lp.hidden = false; dock.hidden = true;
+      ov.querySelector('#lptitle').textContent = VIEWS[id].title;
+      if (!this.leftView) { this.leftView = VIEWS[id].view; this.leftView.mount(body); }
+    } else {
+      lp.hidden = true; dock.hidden = false;
+      this.dock.open = false;
+    }
+    this.dockRender(); this.syncInset();
+    this.pindahKontrol(id === 'dashboard');
+  },
+  /** pemandangan bergeser ke kanan saat panel kiri terbuka (setInset yang sudah ada); tertutup = kembali halus */
+  syncInset() {
+    if (!this.ov) return;
+    const dk = this.dock, buka = !!this.leftId || dk.open;
+    const ov = this.ov, pl = parseFloat(getComputedStyle(ov).paddingLeft) || 80;
+    // lebar panel sebenarnya dari variabel CSS --lw lewat elemen ukur (bukan ukuran tata letak yang bisa tertinggal saat kelas baru dipasang)
+    const probe = document.createElement('div'); probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;height:0;width:var(--lw)'; ov.appendChild(probe); const lw = probe.getBoundingClientRect().width || 440; probe.remove();
+    const penuh = ov.classList.contains('lp-penuh');   // halaman diperbesar sampai ujung kanan: pemandangan tidak perlu digeser
+    const geser = buka && !penuh && innerWidth > 900 ? Math.round(pl + lw) : 0;   // juga saat mode karakter: karakter di tengah ruang kanan, tidak tertutup panel
+    if (!this._rs) { this._rs = true; addEventListener('resize', () => { this._insetTarget = null; this.syncInset?.(); }); }
+    if (!office) return;   // Kantor 3D belum siap (muat langsung lewat #hash): jangan catat target dulu; dihitung ulang begitu siap
+    if (this._insetTarget === geser) return;
+    this._insetTarget = geser; cancelAnimationFrame(this._insetRaf);
+    const dari = this._inset || 0, t0 = performance.now();
+    const langkah = (t) => { const k = Math.min(1, (t - t0) / 450), e = 1 - Math.pow(1 - k, 3); this._inset = dari + (geser - dari) * e; office?.setInset?.(this._inset); if (k < 1) this._insetRaf = requestAnimationFrame(langkah); };
+    this._insetRaf = requestAnimationFrame(langkah);
+  },
+  /** SATU komponen komposer: baris kontrol dock (tujuan, izin, kursor, menunggu, riwayat) pindah ke kaki panel Obrolan dan kembali ke dock saat panel ditutup */
+  pindahKontrol(keObrolan) {
+    const ov = this.ov; if (!ov) return;
+    clearInterval(this._ctlT);
+    const foot = ov.querySelector('.od-foot'), dock = ov.querySelector('#odock'); if (!foot || !dock) return;
+    if (!keObrolan) { if (foot.parentElement !== dock) dock.appendChild(foot); return; }
+    let n = 0;
+    const pasang = () => {
+      const kaki = ov.querySelector('#lpb .pm-dock'), form = ov.querySelector('#lpb .pm-compose');
+      if (!kaki || !form) { if (++n > 60) clearInterval(this._ctlT); return; }
+      clearInterval(this._ctlT);
+      if (!form.querySelector('#ctlplus')) {   // "+" lampiran/sumber di kiri komposer, sama dengan dock
+        const plus = document.createElement('button'); plus.type = 'button'; plus.id = 'ctlplus'; plus.className = 'btn icon ghost ctl-plus'; plus.setAttribute('aria-label', 'Tambah sumber atau lampiran'); plus.title = 'Tambah sumber atau lampiran'; plus.innerHTML = icon('plus', 18);
+        plus.onclick = () => document.querySelector('#obSumber')?.click(); form.prepend(plus);
+      }
+      kaki.appendChild(foot);
+      const ke = ov.querySelector('#obKe'); if (ke && !ke.dataset.pilih) { ke.dataset.pilih = '1'; ke.setAttribute('role', 'button'); ke.tabIndex = 0; ke.title = 'Ganti penerima'; ke.onclick = () => this.pilihTujuan(); ke.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.pilihTujuan(); } }; }
+      const pf = ov.querySelector('#pmFoot'); if (pf && pf.parentElement !== foot) foot.insertBefore(pf, foot.querySelector('#odtog'));   // indikator jatah kecil di dalam baris kontrol
+      this.ctlSegar();
+      this._ctlT = setInterval(() => this.ctlSegar(), 1500);
+    };
+    this._ctlT = setInterval(pasang, 100); pasang();
+  },
+  /** tujuan: tampilkan peserta yang sedang dipilih di komponen Obrolan, atau aray (otomatis) */
+  ctlSegar() {
+    const ov = this.ov, who = ov?.querySelector('#odwho'); if (!who || this.leftId !== 'dashboard') return;
+    const nm = [...ov.querySelectorAll('#obPeserta .ob-keping, #obPeserta .ob-chip, #obPeserta [data-id], #obPeserta [data-peserta]')].map((x) => x.textContent.replace(/[✕×x]\s*$/i, '').trim()).filter(Boolean);
+    who.innerHTML = `${icon('user', 12)} ${esc(nm.length ? nm.join(', ') : this.namaPenerima() + ' · otomatis')}`;
+  },
+  pilihTujuan() {
+    if (this.leftId === 'dashboard') { const t = this.ov?.querySelector('#obPeserta [data-tambah]'); if (t) return t.click(); this.ov?.querySelector('#pmIn')?.focus(); return; }
+    navigate('dashboard');
+  },
+  /** Obrolan = dock-utas kecil di kiri bawah (utas tumbuh ke atas, latar transparan); halaman lain = panel kiri besar; Obrolan diperbesar = panel besar */
+  aturMode() {
+    const ov = this.ov; if (!ov) return;
+    const ada = !!(this.leftId && VIEWS[this.leftId]), penuh = ov.classList.contains('lp-penuh');
+    const dockMode = this.leftId === 'dashboard' && !penuh;
+    ov.classList.toggle('lp-ob', dockMode); ov.classList.toggle('has-left', ada && !dockMode);
+    const lp = ov.querySelector('#lpage'); if (lp) { lp.classList.toggle('lp-dock', dockMode); this.pasangLatar(); }
+  },
+  /** latar utas: trans (teks dengan bayangan), kaca (blur ringan), solid; pilihan diingat (try/catch) */
+  pasangLatar(ganti) {
+    const lp = this.ov?.querySelector('#lpage'); if (!lp) return;
+    const urut = ['trans', 'kaca', 'solid'], nama = { trans: 'Transparan', kaca: 'Kaca', solid: 'Solid' };
+    let cur = 'trans'; try { cur = localStorage.getItem('ui-latar-utas') || 'trans'; } catch { /* ignore */ }
+    if (!urut.includes(cur)) cur = 'trans';
+    if (ganti) { cur = urut[(urut.indexOf(cur) + 1) % 3]; try { localStorage.setItem('ui-latar-utas', cur); } catch { /* ignore */ } }
+    for (const k of urut) lp.classList.toggle('lat-' + k, k === cur);
+    const b = this.ov.querySelector('#odlatar'); if (b) { b.setAttribute('aria-label', 'Latar utas: ' + nama[cur] + ' (ketuk untuk ganti)'); b.title = 'Latar utas: ' + nama[cur] + ' (ketuk untuk ganti)'; b.dataset.latar = cur; }
+  },
+  prefPenuh(id) { try { return localStorage.getItem('ui-penuh-' + id) === '1'; } catch { return false; } },
+  /** perbesar halaman di panel kiri sampai ujung kanan (menyisakan bilah navigasi) atau ciutkan lagi; pilihan diingat per halaman */
+  penuh(on, diam) {
+    const ov = this.ov; if (!ov) return;
+    ov.classList.toggle('lp-penuh', !!on && !!this.leftId);
+    this.aturMode();
+    const b = ov.querySelector('#lpfs'), nyala = ov.classList.contains('lp-penuh');
+    const b2 = ov.querySelector('#odfs'); if (b2) { b2.innerHTML = icon(nyala ? 'minimize' : 'maximize', 12); b2.setAttribute('aria-label', nyala ? 'Kembali ke dock' : 'Perbesar obrolan'); b2.title = nyala ? 'Kembali ke dock' : 'Perbesar obrolan'; }
+    if (b) { b.innerHTML = icon(nyala ? 'minimize' : 'maximize', 18); b.setAttribute('aria-pressed', String(nyala)); b.setAttribute('aria-label', nyala ? 'Ciutkan halaman' : 'Perbesar halaman ke ujung kanan'); b.title = nyala ? 'Ciutkan' : 'Perbesar'; }
+    if (!diam && this.leftId) { try { localStorage.setItem('ui-penuh-' + this.leftId, nyala ? '1' : '0'); } catch { /* ignore */ } }
+    if (!diam) this.syncInset();
+  },
+  /** mode karakter <-> mode kursor tanpa Esc berulang (logika di mode-kursor.js): Tab bolak-balik, Esc dari komposer kembali ke karakter */
+  pasangModeKursor() {
+    if (this._mk) return;
+    const kanvas = () => officeRoot?.querySelector('canvas');
+    const state = () => { const a = document.activeElement; return a && /INPUT|TEXTAREA/.test(a.tagName) && this.ov?.contains(a) ? 'mengetik' : (document.pointerLockElement ? 'karakter' : 'kursor'); };
+    const aksi = (x) => {
+      try {
+        if (x === 'lepas') document.exitPointerLock?.();
+        else if (x === 'kunci') kanvas()?.requestPointerLock?.();
+        else if (x === 'blurKomposer') { document.activeElement?.blur?.(); kanvas()?.requestPointerLock?.(); }
+      } catch { /* kunci kursor butuh gerakan pengguna; bila ditolak, klik layar mengunci lagi */ }
+    };
+    this._mk = (e) => {
+      if (!this.ov || !office?.isPlayer?.()) return;
+      const mengetik = /INPUT|TEXTAREA|SELECT/.test(e.target?.tagName || '');
+      let acara = null;
+      if (e.key === 'Tab') acara = 'tab'; else if (e.key === 'Escape' && mengetik) acara = 'esc'; else return;
+      const r = langkahMK(state(), acara);
+      e.preventDefault(); e.stopPropagation(); aksi(r.aksi); setTimeout(() => this._mkHint?.(), 60);
+    };
+    this._mkHint = () => { const h = this.ov?.querySelector('#odkeyhint'); if (!h) return; h.textContent = petunjukSatuBarisMK(state()); h.hidden = !office?.isPlayer?.(); };
+    document.addEventListener('keydown', this._mk, true);
+    document.addEventListener('pointerlockchange', this._mkHint);
+    document.addEventListener('focusin', this._mkHint); document.addEventListener('focusout', this._mkHint);
+  },
+  /** tombol H atau ?: buka/tutup kartu Petunjuk tombol (juga di mode karakter); show=false menutup */
+  togglePetunjuk(show) {
+    const p = this.ov?.querySelector('#phud'); if (!p) return;
+    p.hidden = show === undefined ? !p.hidden : !show; clearTimeout(this._hintT); this._hintAuto = false; p.classList.remove('pudar');
+    if (!p.hidden) this.petunjukOtomatis(9000);
+  },
+  /** kartu petunjuk tampil `ms` lalu memudar sendiri (tombol X menutup langsung) */
+  petunjukOtomatis(ms) {
+    const p = this.ov?.querySelector('#phud'); if (!p) return;
+    clearTimeout(this._hintT); this._hintAuto = true;
+    this._hintT = setTimeout(() => { if (!this._hintAuto || p.hidden) return; p.classList.add('pudar'); setTimeout(() => { p.hidden = true; p.classList.remove('pudar'); }, 700); }, ms);
+  },
+  /** tampilan bersih: sembunyikan HUD dan navigasi, sisakan kantor dan satu tombol */
+  bersih(on, diam) {
+    document.body.classList.toggle('mode-bersih', !!on);
+    const b = this.ov?.querySelector('#cleanback'); if (b) b.hidden = !on;
+    if (!diam) { try { localStorage.setItem('ui-bersih', on ? '1' : '0'); } catch { /* ignore */ } }
+    if (on) navigate('office');
+  },
+  /** daftar ruangan: nama Indonesia lewat pemetaan tampilan, dikelompokkan, bisa dicari; klik memindahkan kamera lewat focusZone yang sudah ada */
+  renderRooms(paksa) {
     const ov = this.ov; if (!ov || !office) return;
     const st = office.stats();
-    const color = (r) => div(r.id)?.color || '#e0c9a6';
-    const html = st.rooms.map((r) => `<div class="room" data-room="${r.id}"><i style="background:${color(r)}"></i>${esc(r.name)}<b>${r.here}</b></div>`).join('') + `<div class="room"><i style="background:#555"></i>Koridor<b>${st.corridor}</b></div>`;
-    this.roomsOpen ??= innerWidth >= 1500;
-    const key = html + this.roomsOpen;
-    if (key !== this.roomsHtml) {
-      this.roomsHtml = key;
-      ov.querySelector('#orooms').innerHTML = `<div class="mono" data-rt style="display:flex;justify-content:space-between;letter-spacing:.14em;font-weight:600;cursor:pointer;gap:16px"><span>SECTIONS ${this.roomsOpen ? '▾' : '▸'}</span><span class="faint">${st.rooms.length} · ${st.rooms.reduce((n, r) => n + r.here, 0)} agen</span></div>${this.roomsOpen ? `<div style="margin-top:4px">${html}</div>` : ''}`;
-      ov.querySelector('[data-rt]').onclick = () => { this.roomsOpen = !this.roomsOpen; this.renderRooms(); };
-      ov.querySelectorAll('[data-room]').forEach((x) => (x.onclick = () => office.focusZone(x.dataset.room)));
+    const total = st.rooms.reduce((n, r) => n + r.here, 0) + (st.corridor || 0);
+        const el = ov.querySelector('#orooms'); if (!el || el.hidden) return;
+    if (!el.dataset.siap) {
+      el.dataset.siap = '1';
+      el.innerHTML = `<div class="rm-h"><b>Ruangan</b><span class="faint" id="rmsum"></span><span style="flex:1"></span><button type="button" class="btn ghost icon" id="rmclose" aria-label="Tutup daftar ruangan" title="Tutup">${icon('close', 18)}</button></div><label class="sr-only" for="rmq">Cari ruangan</label><input id="rmq" class="rm-q" type="search" placeholder="Cari ruangan…" autocomplete="off"><div class="rm-list" id="rmlist"></div>`;
+      el.querySelector('#rmclose').onclick = () => { el.hidden = true; };
+      const qi = el.querySelector('#rmq'); qi.onkeydown = (e) => e.stopPropagation(); qi.onkeyup = (e) => e.stopPropagation(); qi.oninput = () => this.renderRooms(true);
     }
+    const kata = (el.querySelector('#rmq').value || '').trim().toLowerCase();
+    const color = (r) => div(r.id)?.color || '#e0c9a6';
+    const byId = new Map(st.rooms.map((r) => [r.id, r]));
+    const used = new Set();
+    const grup = GRUP_RUANG.map(([judul, ids]) => [judul, ids.map((id) => byId.get(id)).filter(Boolean)]);
+    for (const [, rs] of grup) rs.forEach((r) => used.add(r.id));
+    const sisa = st.rooms.filter((r) => !used.has(r.id)); if (sisa.length) grup.push(['Lainnya', sisa]);
+    const cocok = (r) => !kata || (namaRuang(r.id, r.name) + ' ' + r.name).toLowerCase().includes(kata);
+    const html = grup.map(([judul, rs]) => [judul, rs.filter(cocok)]).filter(([, rs]) => rs.length)
+      .map(([judul, rs]) => `<div class="rm-g"><h4>${esc(judul)}</h4>${rs.map((r) => `<button type="button" class="room" data-room="${esc(r.id)}"><i style="background:${color(r)}"></i><span>${esc(namaRuang(r.id, r.name))}</span><b>${r.here}</b></button>`).join('')}</div>`).join('')
+      + (!kata || 'lorong'.includes(kata) ? `<div class="rm-g"><div class="room static"><i style="background:#8a93a6"></i><span>Lorong</span><b>${st.corridor || 0}</b></div></div>` : '');
+    const key = html + '|' + st.rooms.length;
+    if (!paksa && key === this.roomsHtml) return;
+    this.roomsHtml = key;
+    el.querySelector('#rmsum').textContent = `${st.rooms.length} ruangan · ${total} orang`;
+    el.querySelector('#rmlist').innerHTML = html || '<div class="empty small">Tidak ada ruangan yang cocok.</div>';
+    el.querySelectorAll('[data-room]').forEach((x) => (x.onclick = () => { office.focusZone(x.dataset.room); if (matchMedia('(max-width: 900px)').matches) el.hidden = true; }));
+  },
+  /** angka kecil: pesan baru dari tim sejak daftar terakhir dibuka */
+  feedBadge() {
+    const ov = this.ov; if (!ov) return; const d = D();
+    this.feedSeen ??= Date.now();
+    const n = d.events.filter((e) => e.t > this.feedSeen).length;
+    const b = ov.querySelector('#feedcount'); if (b) { b.hidden = !n; b.textContent = n > 99 ? '99+' : String(n); }
+    const dot = ov.querySelector('#feeddot2'); if (dot) dot.hidden = !n;
+  },
+  renderFeed(paksa) {
+    const ov = this.ov; if (!ov) return; const d = D();
+    if (ov.querySelector('#ofeedp').hidden) return;
+    if (this.feedTab === 'comms') {
+      const msgs = d.messages.filter((m) => emp(m.authorId)?.type === 'ai').slice(-40).reverse();
+      const sig = 'c' + (msgs[0]?.id || '') + msgs.length; if (!paksa && sig === this._fsig) return; this._fsig = sig;
+      const seen = this.seenM || 0; this.seenM = msgs[0]?.t || seen;
+      ov.querySelector('#ofeed').innerHTML = msgs.map((m) => commsItem(m, seen && m.t > seen)).join('') || '<div class="empty small">Belum ada percakapan. Saat timmu berdiskusi, kabarnya muncul di sini.</div>';
+      ov.querySelectorAll('[data-goch]').forEach((x) => (x.onclick = () => navigate('tasks')));
+      return;
+    }
+    const evs = d.events.slice(-40).reverse();
+    const sig = 'e' + (evs[0]?.id || '') + evs.length; if (!paksa && sig === this._fsig) return; this._fsig = sig;
+    const seen = this.seenT || 0; this.seenT = evs[0]?.t || seen;
+    ov.querySelector('#ofeed').innerHTML = evs.map((e) => feedItem(e, seen && e.t > seen)).join('') || '<div class="empty small">Belum ada kabar. Beri pekerjaan pertama lewat kolom di bawah.</div>';
   },
   update(colls) {
     if (office && (colls.has('*') || colls.has('employees') || colls.has('tasks') || colls.has('divisions'))) office.sync(D());
     const ov = this.ov; if (!ov) return;
+    if (colls.has('*') || colls.has('messages') || colls.has('employees') || colls.has('channels') || colls.has('tasks')) this.dockRender();
     const k = kpis(); const d = D(); const h = d.host || {};
-    ov.querySelector('#okpi').innerHTML = [
-      [k.working, 'aktif'], [k.active, 'tugas'], [k.doneToday, 'selesai'], [k.approvals, 'approval'],
-    ].map(([v, l], idx) => `<div class="glass kpi-mini" ${idx === 3 && v ? 'style="border-color:var(--warn);cursor:pointer" data-go="approvals"' : ''}><b>${v}</b><span>${l}</span></div>`).join('');
-    ov.querySelector('[data-go]')?.addEventListener('click', () => navigate('approvals'));
+    const wk = k.working, st4 = !d.settings.autonomy ? 'Tim dijeda' : d.tasks.some((t) => t.status === 'blocked') ? 'Terhambat' : k.approvals ? 'Perlu kamu' : wk ? 'Sedang jalan' : 'Siap';
+    ov.querySelector('#okpi').innerHTML = `<span class="ib-ai-i" role="img" tabindex="0" aria-label="${wk} AI sedang bekerja. Status: ${st4}" title="${wk} AI sedang bekerja · Status: ${st4}">${icon('bolt', 16)}<b>${wk}</b><i>AI</i></span>${k.approvals ? `<button type="button" class="ib-btn warn" data-go="tasks" aria-label="${k.approvals} hal menunggu jawabanmu" title="${k.approvals} hal menunggu jawabanmu">${icon('alert', 18)}<b class="badge soft">${k.approvals}</b></button>` : ''}`;
+    ov.querySelector('[data-go]')?.addEventListener('click', () => navigate('tasks'));
     const s = d.settings;
     const ai = d.employees.filter((e) => e.type === 'ai');
-    const meter = (v) => (v == null ? '–' : `${v}%<span class="meter"><i style="width:${v}%"></i></span>`);
-    const up = (sec = 0) => sec > 3600 ? `${Math.floor(sec / 3600)}j ${Math.floor((sec % 3600) / 60)}m` : `${Math.floor(sec / 60)}m ${sec % 60}d`;
-    const prov = d.provider || (d.live ? 'claude' : 'sim');
-    const state = !s.autonomy ? 'paused · engine idle' : prov === 'groq' ? 'online · groq live' : prov === 'claude' ? 'online · claude live' : 'online · simulasi';
-    const activeModel = prov === 'groq' ? s.groqModel : s.model;
-    ov.querySelector('#ohud').innerHTML = `<div class="hud-h">RAY // OFFICE <span>${d.live ? 'live' : 'sim'}</span></div>
-      <div class="kv"><span>Status</span><span><i class="live-dot ${!s.autonomy || !d.live ? 'sim-dot' : ''}"></i>${state}</span></div>
-      <div class="kv"><span>Build</span><span>v1.1.0 · agora</span></div>
-      <div class="kv"><span>Agents</span><span>${ai.length} AI · ${d.employees.length - ai.length} human / ${ai.filter((e) => e.status === 'working' || e.status === 'meeting').length} active</span></div>
-      <div class="kv"><span>Sessions</span><span>${d.tasks.filter((t) => t.status === 'in_progress').length} running · ${d.tasks.filter((t) => t.status === 'waiting').length} waiting</span></div>
-      <div class="kv"><span>Model</span><span>${esc(activeModel || '-')}</span></div>
-      <div class="kv"><span>Tokens</span><span>${num(d.usage.tokensIn + d.usage.tokensOut)} · ${usd(d.usage.costToday)}/${usd(s.dailyBudgetUSD)}</span></div>
-      <div class="kv"><span>Brain</span><span>${d.notes.length} notes · ${d.skills?.length || 0} skills</span></div>
-      <div class="kv"><span>Host</span><span>CPU ${meter(h.cpu)} MEM ${meter(h.mem)}</span></div>
-      <div class="kv"><span>Disk</span><span>${meter(h.disk)} · up ${up(h.uptime)}</span></div>`;
-    if (this.talkId && (colls.has('messages') || colls.has('employees')) && !this.ov.querySelector('#ptin:focus')) this.renderTalk(false);
-    else if (this.talkId && colls.has('messages')) { const box = this.ov.querySelector('.ptalk-msgs'); const n = D().messages.filter((m) => m.channelId === this.talkCh).length; if (n !== this.talkN) { this.talkN = n; const v = this.ov.querySelector('#ptin').value; this.renderTalk(true); this.ov.querySelector('#ptin').value = v; } }
-    if (this.feedTab === 'comms') {
-      if (!colls.has('messages') && !colls.has('*')) return;
-      const msgs = d.messages.filter((m) => emp(m.authorId)?.type === 'ai').slice(-40).reverse();
-      const seen = this.seenM || 0; this.seenM = msgs[0]?.t || seen;
-      ov.querySelector('#ofeed').innerHTML = msgs.map((m) => commsItem(m, seen && m.t > seen)).join('') || '<div class="empty small">Belum ada percakapan. Agen akan berdiskusi, rapat, dan berkonsultasi di sini.</div>';
-      ov.querySelector('#feedcount').textContent = d.messages.length;
-      ov.querySelectorAll('[data-goch]').forEach((x) => (x.onclick = () => navigate('chat', { ch: x.dataset.goch })));
-      return;
-    }
-    if (!colls.has('events') && !colls.has('*')) return;
-    const evs = d.events.slice(-40).reverse();
-    const seen = this.seenT || 0; this.seenT = evs[0]?.t || seen;
-    ov.querySelector('#ofeed').innerHTML = evs.map((e) => feedItem(e, seen && e.t > seen)).join('') || '<div class="empty small">Belum ada aktivitas. Kirim goal pertama di bawah.</div>';
-    ov.querySelector('#feedcount').textContent = d.events.length;
+    const kerja = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length;
+    const nunggu = d.approvals.filter((a) => a.status === 'pending').length;
+    const state = !s.autonomy ? 'Tim sedang dijeda.' : kerja ? `${kerja} orang sedang bekerja${nunggu ? `, ${nunggu} hal menunggu jawabanmu.` : '.'}` : nunggu ? `Tim siap membantu, ${nunggu} hal menunggu jawabanmu.` : 'Tim siap membantu.';
+    ov.querySelector('#ohud').innerHTML = `<div class="hud-h">R<b class="ai">AI</b>VERSE <em>AGENT</em></div><p class="hud-s">${esc(state)}</p>${bisaKelola(d) ? hudTeknis(d, h, s) : ''}`;
+    this.feedBadge();
+    if (colls.has('events') || colls.has('*')) this.renderFeed();
+    try { this.leftView?.update?.(colls); } catch { /* halaman di panel kiri */ }
   },
-  togglePlayer() {
+  togglePlayer(noCinematic = false) {
     if (!office) return;
     const ov = this.ov;
     if (office.isPlayer()) { office.exitPlayer(); return this.playerUI(false); }
-    if (!office.enterPlayer(S.me)) return toast('Karakter Anda belum ada di kantor', 'warn');
-    this.playerUI(true);
-    toast('🎮 Anda masuk ke kantor. Dekati rekan lalu tekan E untuk bicara.', 'ok');
+    if (office.introActive()) return;
+    const enter = () => {
+      if (!office.enterPlayer(S.me)) return toast('Karaktermu belum ada di kantor', 'warn');
+      this.playerUI(true);
+      toast('Kamu sekarang jalan-jalan di kantor. Dekati rekan lalu tekan E untuk bicara.', 'ok');
+    };
+    // entering Play again: a short cinematic dive from wherever the camera is now (no title, no overview hold)
+    if (noCinematic || !office.cinematicIntro(enter, { hold: 0, dur: 5.2, id: S.me, title: false })) enter();
+  },
+  // ───── Orchestrator dock: one chat for everything (chat with one agent, group discussion, or a goal for the whole company); sits at the left so the 3D stays visible
+  dock: { ch: null, to: [], mode: 'auto', open: false, auto: true, sentAt: 0, seen: new Set() },
+  orchestrator() { const d = D(); return d.employees.find((e) => e.isMaster) || d.employees.find((e) => e.isPA && e.ownerId === S.me && e.status !== 'offline') || emp('aria'); },   // penerima bawaan = Aray (koordinator, kembaran digital Owner)
+  namaPenerima() { const o = this.orchestrator(); return o?.isMaster ? 'Aray' : (o?.name?.split(' ')[0] || 'Aray'); },
+  async dockInit() {
+    const ov = this.ov, dk = this.dock; if (!ov) return;
+    ov.querySelector('#odtog').onclick = () => navigate(this.leftId === 'dashboard' ? 'office' : 'dashboard');   // satu obrolan: tombol ini membuka panel Obrolan
+    ov.querySelector('#odimgf').onchange = (e) => { this.dockAddImages(e.target.files); e.target.value = ''; };
+    ov.querySelector('#goalq').addEventListener('paste', (e) => { const imgs = [...(e.clipboardData?.files || [])].filter((x) => /^image\//.test(x.type)); if (imgs.length) { e.preventDefault(); this.dockAddImages(imgs); } });
+    ov.querySelector('#odneed').onclick = () => navigate('tasks');
+    ov.querySelector('#odbaru').onclick = () => document.querySelector('#obBaru')?.click();
+    ov.querySelector('#odsum').onclick = () => document.querySelector('#obSumber')?.click();
+    ov.querySelector('#odlatar').onclick = () => this.pasangLatar(true);
+    ov.querySelector('#odfs').onclick = () => this.penuh(!ov.classList.contains('lp-penuh'));
+    ov.querySelector('#odriw').onclick = () => { const klik = () => document.querySelector('#obRiwayat')?.click(); if (this.leftId === 'dashboard') klik(); else { navigate('dashboard'); setTimeout(klik, 500); } };   // yang menunggu keputusanmu ada di Hasil Saya
+    this.dockMic();
+    ov.querySelector('#odback').onclick = () => { dk.open = false; this.dockRender(); };
+    ov.querySelector('#odnew').onclick = () => { dk.to = []; dk.ch = null; dk.thread = null; dk.mode = 'auto'; dk.need = false; this._odSig = null; ov.querySelector('#odhist').hidden = true; this.dockInit(); ov.querySelector('#goalq').focus(); };
+    ov.querySelector('#odhistb').onclick = () => { dk.open = true; const h = ov.querySelector('#odhist'); h.hidden = !h.hidden; ov.querySelector('#odhistb').setAttribute('aria-expanded', String(!h.hidden)); if (!h.hidden) this.dockHist(); this.dockRender(); };
+    const gq = ov.querySelector('#goalq');
+    gq.addEventListener('input', () => { const m = /(^|\s)@(\S*)$/.exec(gq.value); const p = ov.querySelector('#odpick'); if (m) { dk.open = true; this.dockRender(); p.hidden = false; this.dockPick(m[2]); } else if (!ov.querySelector('#odq').value) p.hidden = true; });
+    gq.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (dk.open && !office?.isPlayer?.()) { dk.open = false; this.dockRender(); } gq.blur(); } });
+    const bukaObrolan = () => { ov.querySelector('#odkeyhint').hidden = true; if (!this.leftId && !this._membuka) { this._membuka = true; gq.blur(); navigate('dashboard'); setTimeout(() => { ov.querySelector('#pmIn')?.focus(); this._membuka = false; }, 250); } };
+    gq.addEventListener('focus', bukaObrolan); gq.addEventListener('click', bukaObrolan);   // fokus atau klik komposer dock tertutup = langsung panel Obrolan
+    gq.addEventListener('blur', () => { ov.querySelector('#odkeyhint').hidden = !office?.isPlayer?.(); });
+    ov.querySelector('#odinfo').onclick = () => { const t = ov.querySelector('#odinfotxt'); t.hidden = !t.hidden; };
+    ov.querySelector('#odmode').onclick = () => { dk.mode = dk.mode === 'auto' ? 'chat' : dk.mode === 'chat' ? 'goal' : 'auto'; this.dockRender(); };
+    ov.querySelector('#odadd').onclick = () => { const p = ov.querySelector('#odpick'); p.hidden = !p.hidden; if (!p.hidden) { const q = ov.querySelector('#odq'); q.value = ''; this.dockPick(''); q.focus(); } };
+    const q = ov.querySelector('#odq'); q.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Escape') ov.querySelector('#odpick').hidden = true; }; q.onkeyup = (e) => e.stopPropagation(); q.oninput = () => this.dockPick(q.value);
+    /* Enter while playing: release the mouse and jump into the chat box */
+    if (!this._dockKey) { this._dockKey = true; addEventListener('keydown', (e) => { if ((e.key !== 'Enter' && e.key !== '/') || !office?.isPlayer?.()) return; if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '')) return; e.preventDefault(); try { document.exitPointerLock(); } catch { /* ignore */ } this.bukaObrolan(''); }, true); }
+    /* problems are visible in the office: every 25 s, stuck and overdue people show a label over their head for 8 s; at most 6, calm, no flicker */
+    if (!this._flagT) this._flagT = setInterval(() => {
+      if (!office?.mark || document.hidden) return;   /* 3d: penanda di atas kepala memakai simbol dari dunia 3D */
+      const now = Date.now(), seen = new Set();
+      for (const t of D().tasks) {
+        if (seen.size >= 6) break;
+        const late = ['todo', 'in_progress', 'waiting'].includes(t.status) && t.dueAt && t.dueAt < now;
+        if ((t.status !== 'blocked' && !late) || seen.has(t.assigneeId) || emp(t.assigneeId)?.type !== 'ai') continue;
+        seen.add(t.assigneeId); office.mark(t.assigneeId, t.status === 'blocked' ? '⚠️' : '⏰', 8000);   /* 3d */
+      }
+    }, 25000);
+    if (!dk.ch) { const pa = this.orchestrator(); if (pa) { try { dk.ch = (await api('POST', '/api/dm', { with: pa.id, userId: S.me })).id; } catch { /* retry on send */ } } }
+    this.dockRender();
+  },
+  /** tombol mik di kolom ketik: ucapan masuk ke kolom, tidak langsung terkirim */
+  dockMic() {
+    const b = this.ov?.querySelector('#odmic'); if (!b || b._siap) return; b._siap = true;
+    const Rec = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null;
+    b.onclick = () => {
+      const q = this.ov.querySelector('#goalq');
+      if (rec) { try { rec.stop(); } catch { /* sudah berhenti */ } return; }
+      rec = new Rec(); rec.lang = 'id-ID'; rec.interimResults = true; rec.continuous = false;
+      const awal = q.value ? q.value.trim() + ' ' : '';
+      rec.onresult = (e) => { q.value = awal + [...e.results].map((r) => r[0].transcript).join(' '); };
+      rec.onend = () => { rec = null; b.setAttribute('aria-pressed', 'false'); b.classList.remove('on'); q.focus(); };
+      rec.onerror = () => { toast('Suaranya belum tertangkap. Coba lagi atau ketik saja.', 'warn'); };
+      b.setAttribute('aria-pressed', 'true'); b.classList.add('on');
+      try { rec.start(); } catch { rec = null; b.setAttribute('aria-pressed', 'false'); }
+    };
+  },
+  /** attached pictures waiting to be sent: shrunk in the browser first (max 1600 px, JPEG) so they are light for the vision model */
+  async dockAddImages(files) {
+    const dk = this.dock; dk.images = dk.images || [];
+    const shrink = (file) => new Promise((ok, no) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok({ dataUrl: c.toDataURL('image/jpeg', 0.85), name: file.name || 'gambar' }); };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error('bukan gambar')); };
+      img.src = url;
+    });
+    for (const f of [...files].filter((x) => /^image\//.test(x.type)).slice(0, 3 - dk.images.length)) { try { dk.images.push(await shrink(f)); } catch { toast('File itu bukan gambar', 'warn'); } }
+    this.dockImgs();
+  },
+  dockImgs() {
+    const box = this.ov?.querySelector('#odimgs'), dk = this.dock; if (!box) return;
+    box.innerHTML = (dk.images || []).map((im, i) => `<button type="button" class="od-thumb" data-imx="${i}" title="Hapus gambar ini" aria-label="Hapus gambar ini"><img src="${im.dataUrl}" alt=""><span>✕</span></button>`).join('');
+    box.querySelectorAll('[data-imx]').forEach((b) => (b.onclick = () => { dk.images.splice(+b.dataset.imx, 1); this.dockImgs(); }));
+  },
+  dockPick(text) {
+    const ov = this.ov, list = ov?.querySelector('#odlist'); if (!list) return; const t = text.trim().toLowerCase(), dk = this.dock;
+    const rows = D().employees.filter((e) => e.type === 'ai' && !dk.to.includes(e.id) && (!t || (e.name + ' ' + e.title + ' ' + (e.team || '')).toLowerCase().includes(t))).slice(0, 8);
+    list.innerHTML = rows.map((e) => `<button class="od-row" data-pk="${e.id}">${avatar(e)}<span><b>${esc(e.name)}</b><small>${esc(e.title || '')}</small></span></button>`).join('') || '<div class="small muted" style="padding:8px">Tidak ada yang cocok</div>';
+    list.querySelectorAll('[data-pk]').forEach((b) => (b.onclick = () => { const g = ov.querySelector('#goalq'); g.value = g.value.replace(/(^|\s)@\S*$/, '$1'); dk.open = true; dk.to.push(b.dataset.pk); dk.ch = null; dk.thread = null; ov.querySelector('#odpick').hidden = true; this.dockRender(); ov.querySelector('#goalq').focus(); }));
+  },
+  /** pilihan izin tiga kata di bawah kolom ketik; "Serahkan penuh" hanya untuk pengelola dan dengan peringatan jelas */
+  dockIzin() {
+    const el = this.ov?.querySelector('#odperm'); if (!el) return; const st = D().settings || {};
+    const cur = st.permission || (st.autoApprove === false ? 'ask' : 'auto'), penuh = bisaKelola(D());
+    const opsi = [['ask', 'Tanya dulu', 'Semua hal yang berdampak minta izinmu dulu.'], ['auto', 'Lanjut sendiri', 'Hal berisiko rendah jalan sendiri; yang berdampak tetap minta izinmu.'], ...(penuh ? [['full', 'Serahkan penuh', 'Hasil kerja ikut disetujui otomatis. Kirim ke luar dan otomasi tetap minta izinmu.']] : [])];
+    const sig = cur + '|' + penuh; if (el.dataset.sig === sig) return; el.dataset.sig = sig;
+    el.innerHTML = `<label class="sr-only" for="odizin">Izin untuk asisten</label><select class="input od-izin" id="odizin" title="${esc(opsi.find((o) => o[0] === cur)?.[2] || '')}">${opsi.map(([v, t]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+    el.querySelector('select').onchange = async (e) => {
+      const v = e.target.value; const kirim = async () => { try { await api('PATCH', '/api/settings', { permission: v }); toast('Izin: ' + opsi.find((o) => o[0] === v)[1], 'ok'); } catch { el.dataset.sig = ''; this.dockIzin(); } };
+      if (v === 'full') modal('Serahkan penuh?', '<p>Asisten boleh menyetujui hasil kerja sendiri tanpa menunggumu. Pengiriman ke luar dan otomasi <b>tetap</b> meminta persetujuanmu. Kamu bisa mengembalikannya kapan saja.</p>', { actions: [{ label: 'Batal', run: async () => { el.dataset.sig = ''; this.dockIzin(); } }, { label: 'Ya, serahkan penuh', kind: 'primary', run: kirim }] });
+      else kirim();
+    };
+  },
+  /** riwayat percakapan: pekerjaan dan diskusi kelompok yang pernah kamu ikuti */
+  dockHist() {
+    const el = this.ov?.querySelector('#odhist'); if (!el) return; const d = D();
+    const last = (id) => d.messages.filter((m) => m.channelId === id).at(-1);
+    const rows = d.channels.filter((c) => c.kind === 'group' && c.members.includes(S.me) && last(c.id)).sort((a, b) => (last(b.id)?.t || 0) - (last(a.id)?.t || 0)).slice(0, 12);
+    const kata = (el.dataset.q || '').toLowerCase(); el.innerHTML = '<label class="sr-only" for="odhq">Cari percakapan</label><input id="odhq" type="search" placeholder="Cari percakapan…" value="' + esc(el.dataset.q || '') + '" autocomplete="off">' + rows.filter((c) => !kata || awam(String(c.name)).toLowerCase().includes(kata)).map((c) => `<button type="button" class="od-row" data-hist="${esc(c.id)}"><span><b>${esc(awam(String(c.name)).slice(0, 48))}</b><small>${ago(last(c.id).t)}</small></span></button>`).join('') || '<div class="small muted" style="padding:8px">Belum ada percakapan sebelumnya.</div>';
+    { const hq = el.querySelector('#odhq'); hq.onkeydown = (e) => e.stopPropagation(); hq.onkeyup = (e) => e.stopPropagation(); hq.oninput = () => { el.dataset.q = hq.value; this.dockHist(); const n = el.querySelector('#odhq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }; }
+    el.querySelectorAll('[data-hist]').forEach((b) => (b.onclick = () => { const dk = this.dock; dk.thread = b.dataset.hist; dk.ch = dk.thread; dk.to = []; this._odSig = null; el.hidden = true; this.dockRender(); }));
+  },
+  /** bilah dok = pintu masuk: membuka panel Obrolan lalu mengirim lewat komponen yang sama (satu mesin, satu riwayat) */
+  async dockSend() {
+    const q = this.ov?.querySelector('#goalq'); if (!q) return;
+    const text = q.value.trim(); if (!text) return q.focus();
+    q.value = '';
+    this.bukaObrolan(text);
+  },
+  bukaObrolan(text) {
+    ObrolanView.kirimNanti = text || null;   // dikirim oleh panel Obrolan begitu terpasang
+    const sudah = this.leftId === 'dashboard' && ObrolanView.ctl;
+    if (sudah) { const ov = this.ov?.querySelector('#pmIn'); if (text) { ObrolanView.kirimNanti = null; ObrolanView.ctl.send({ input: text }); } else ov?.focus(); return; }
+    navigate('dashboard');
+  },
+  /** "Butuh kamu": reviews, approvals, stuck and overdue work from the Owner's own goals, in one list */
+  needItems() {
+    const d = D(), me = S.me, now = Date.now();
+    const rootOf = (t) => d.tasks.find((x) => x.id === (t.rootId || t.id)) || t;
+    const mine = (t) => rootOf(t).createdBy === me;
+    const aps = (d.approvals || []).filter((a) => a.status === 'pending' && (a.approverId === me || a.approverId === 'owner'));
+    const blocked = d.tasks.filter((t) => t.status === 'blocked' && mine(t)).slice(0, 6);
+    const late = d.tasks.filter((t) => ['todo', 'in_progress', 'waiting'].includes(t.status) && t.dueAt && t.dueAt < now && mine(t)).slice(0, 6);
+    const thread = (t) => { const r = rootOf(t); return r.kind === 'goal' && d.channels.some((c) => c.id === 'goal-' + r.id) ? `<button type="button" class="btn sm ghost" data-thread="goal-${r.id}">Percakapan</button>` : ''; };
+    const rev = aps.map((a) => { const t = d.tasks.find((x) => x.id === a.taskId) || {}; const ev = a.evidence || t.evidence || []; const rv = a.kind === 'review'; return `<div class="od-ni"><div class="od-nt" data-task="${a.taskId}">${rv ? 'Perlu dicek' : 'Boleh?'} · <b>${esc(awam(String(a.title)).slice(0, 70))}</b></div><div class="small muted">${esc(emp(a.requesterId)?.name || '')}${a.summary ? ': ' + esc(awam(String(a.summary)).slice(0, 140)) : ''}</div><div class="small">${ev.length ? `Sudah dicek ${ev.filter((x) => x.ok).length} dari ${ev.length}` : 'Belum ada yang bisa dicek'}${(a.unverified ?? t.unverified) ? ' · <b style="color:var(--warn)">anggap sebagai perkiraan</b>' : ''}${(a.gaps || t.gaps) ? `<br>Belum terpenuhi: ${esc(awam(String(a.gaps || t.gaps)).slice(0, 160))}` : ''}</div><div class="row"><button type="button" class="btn sm ok" data-approve="${a.id}">${rv ? 'Pakai ini' : 'Boleh'}</button><button type="button" class="btn sm" data-reject="${a.id}">${rv ? 'Ubah sedikit' : 'Jangan dulu'}</button><button type="button" class="btn sm ghost" data-task="${a.taskId}">Lihat hasil</button>${thread(t)}</div></div>`; }).join('');
+    const blk = blocked.map((t) => `<div class="od-ni"><div class="od-nt" data-task="${t.id}">Ada kendala · <b>${esc(awam(t.title).slice(0, 70))}</b></div><div class="small muted">${esc(emp(t.assigneeId)?.name || '')}: ${esc(awam(String((t.log || []).filter((l) => l.type === 'error').at(-1)?.text || '')).slice(0, 140))}</div><div class="row"><button type="button" class="btn sm" data-retry="${t.id}">Coba lagi</button><button type="button" class="btn sm ghost" data-task="${t.id}">Lihat</button>${thread(t)}</div></div>`).join('');
+    const lt = late.map((t) => `<div class="od-ni"><div class="od-nt" data-task="${t.id}">Lewat tenggat · <b>${esc(awam(t.title).slice(0, 70))}</b></div><div class="small muted">${esc(emp(t.assigneeId)?.name || '')} · tenggat ${ago(t.dueAt)}</div><div class="row"><button type="button" class="btn sm ghost" data-task="${t.id}">Lihat</button>${thread(t)}</div></div>`).join('');
+    const count = aps.length + blocked.length + late.length;
+    return { count, sig: [...aps.map((a) => a.id), ...blocked.map((t) => t.id), ...late.map((t) => t.id)].join(','), html: count ? rev + blk + lt : '<div class="small muted" style="padding:6px 4px">Tidak ada yang menunggu keputusanmu.</div>' };
+  },
+  dockRender() {
+    const ov = this.ov, dk = this.dock; if (!ov) return; const box = ov.querySelector('#odock'); if (!box) return;
+    const need = this.needItems(), nEl = ov.querySelector('#odneedn'), np = ov.querySelector('#odneedp');
+    if (nEl) { nEl.textContent = need.count ? String(need.count) : ''; nEl.hidden = !need.count; }
+    { const nb = ov.querySelector('#odneed'); if (nb) nb.hidden = !need.count; }   // tanpa tombol kosong bila tidak ada yang menunggu
+    if (np) {
+      np.hidden = !dk.need;
+      if (dk.need && need.sig + '|' !== this._odNeed) {
+        this._odNeed = need.sig + '|'; np.innerHTML = need.html; bindApprovalButtons(np);
+        np.querySelectorAll('[data-retry]').forEach((b) => (b.onclick = async (e) => { e.stopPropagation(); try { await api('PATCH', `/api/tasks/${b.dataset.retry}`, { status: 'todo', userId: S.me }); toast('Diulang dari awal', 'ok'); } catch (err) { toast(err.message, 'warn'); } }));
+        np.querySelectorAll('[data-thread]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); dk.thread = b.dataset.thread; dk.ch = dk.thread; dk.to = []; dk.need = false; this._odSig = null; this.dockRender(); }));
+      }
+    }
+    if (!dk.open && dk.ch && dk.sentAt && Date.now() - dk.sentAt < 180000) { const lastM = D().messages.filter((m) => m.channelId === dk.ch).at(-1); if (lastM && lastM.authorId !== S.me && lastM.t > dk.sentAt) dk.open = true; }   /* balasan datang: percakapan terbuka sendiri */
+    box.classList.toggle('collapsed', !dk.open);
+    this.dockIzin();
+    { const who = ov.querySelector('#odwho'); if (who) { const nm = dk.to.map((id) => emp(id)?.name?.split(' ')[0]).filter(Boolean); who.innerHTML = `${icon('user', 12)} ${esc(nm.length ? nm.join(', ') : (dk.thread ? 'Tim pekerjaan' : this.namaPenerima() + ' · otomatis'))}`; who.onclick = () => this.pilihTujuan(); } }
+    ov.querySelector('#odmode').textContent = ({ auto: 'Pilihkan', chat: 'Ngobrol', goal: 'Kerjakan' })[dk.mode];
+    ov.querySelector('#odmode').title = ({ auto: 'Asisten memilih sendiri: kalimat perintah dikerjakan, selain itu diajak ngobrol', chat: 'Semua pesan hanya untuk ngobrol', goal: 'Semua pesan dijadikan pekerjaan' })[dk.mode];
+    const pa = this.orchestrator();
+    const th = dk.thread && D().channels.find((c) => c.id === dk.thread);
+    ov.querySelector('#odto').innerHTML = th && !dk.to.length ? `<button type="button" class="od-chip" data-leave="1" aria-label="Keluar dari percakapan pekerjaan ini">${esc(awam(String(th.name)).slice(0, 28))} ${icon('close', 12)}</button>` : (dk.to.length ? dk.to.map((id) => `<button type="button" class="od-chip" data-rm="${id}" aria-label="Keluarkan ${esc(emp(id)?.name || '')} dari percakapan">${esc(emp(id)?.name?.split(' ')[0] || id)} ${icon('close', 12)}</button>`).join('') : '');
+    ov.querySelector('[data-leave]')?.addEventListener('click', () => { dk.thread = null; dk.ch = null; this._odSig = null; this.dockInit(); });
+    ov.querySelectorAll('[data-rm]').forEach((c) => (c.onclick = () => { dk.to = dk.to.filter((x) => x !== c.dataset.rm); dk.ch = null; this.dockRender(); }));
+    /* messages of the active thread, newest at the bottom; older ones fade out by CSS */
+    const msgs = dk.ch ? D().messages.filter((m) => m.channelId === dk.ch).slice(-12) : [];
+    const el = ov.querySelector('#odmsgs'), sig = msgs.map((m) => m.id).join(',');
+    if (el && sig !== this._odSig) {
+      this._odSig = sig; const near = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+      el.innerHTML = msgs.map((m) => { const a = emp(m.authorId), me = m.authorId === S.me; return `<div class="od-m ${me ? 'me' : ''}">${me ? '' : avatar(a)}<div class="od-b"><div class="od-w">${me ? 'Kamu' : esc(a?.name || m.authorId)}</div><div class="md">${md(String(m.text).slice(0, 4000))}</div>${me ? '' : `<button type="button" class="od-say" data-say="${esc(m.id)}" aria-label="Bacakan balasan ini" title="Bacakan">${icon('sound', 16)} Bacakan</button>`}${(m.attachments || []).filter((x) => x.type === 'image').map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener"><img class="od-att" src="${esc(x.url)}" alt="${esc(x.name || 'gambar')}" loading="lazy"></a>`).join('')}</div></div>`; }).join('');
+      el.querySelectorAll('[data-say]').forEach((b) => (b.onclick = () => { const m = D().messages.find((x) => x.id === b.dataset.say); if (m) tts.speak(m.authorId, m.text); }));
+      if (near || !this._odInit) el.scrollTop = el.scrollHeight; this._odInit = true;
+    }
+    /* who is busy right now: chips + spotlight in the 3D world */
+    const busy = D().employees.filter((e) => e.type === 'ai' && ['working', 'meeting', 'chatting'].includes(e.status)).slice(0, 10);
+    const talkTo = new Set(dk.to.length ? dk.to : dk.lastAction === 'chat' && dk.lastMembers?.length ? dk.lastMembers : [pa?.id]);
+    const relevant = (e) => talkTo.has(e.id) || ((dk.lastAction === 'goal' || dk.lastAction === 'meeting') && Date.now() - dk.sentAt < 10 * 60000 && e.status !== 'chatting');
+    /* a meeting the Owner sits in: say so plainly, because every message without a chosen agent now goes to the room */
+    const liveM = (D().meetings || []).find((m) => m.status === 'waiting_owner' && m.ownerId === S.me);
+    const wk = ov.querySelector('#odwork'), wsig = busy.map((e) => e.id + e.status).join(',') + '|' + (liveM?.id || '') + dk.to.length;
+    if (wk && wsig !== this._odW) {
+      this._odW = wsig;
+      const mBar = liveM ? `<div class="od-live"><span>${icon('mic', 16)} <b>Rapat berlangsung</b> · ${esc(String(liveM.topic || '').slice(0, 40))}<small>${dk.to.length ? 'Pesan ke orang pilihan tetap jadi obrolan pribadi. Hapus pilihan orang untuk bicara ke ruang rapat.' : 'Pesanmu didengar semua peserta. Sebut nama agar orang itu yang menjawab.'}</small></span><button type="button" class="btn sm" id="odend">Tutup rapat</button></div>` : '';
+      wk.innerHTML = mBar + (busy.length ? '<span class="od-wl">Sedang bekerja</span>' + busy.map((e) => `<button class="od-chip work" data-wf="${e.id}" title="${esc(e.statusText || '')}">● ${esc(e.name.split(' ')[0])}</button>`).join('') : '');
+      wk.querySelector('#odend')?.addEventListener('click', async () => { try { await api('POST', '/api/orchestrate', { text: 'tutup rapat', userId: S.me, to: [], mode: 'chat' }); toast('Rapat ditutup. Ringkasannya sedang disusun.', 'ok'); } catch { /* api() sudah memberi tahu */ } });
+      wk.querySelectorAll('[data-wf]').forEach((c) => (c.onclick = () => office?.startChase?.(c.dataset.wf)));
+      /* a freshly started agent right after you sent something: the camera glides to them (only if you are not already following someone or playing) */
+      for (const e of busy) if (!dk.seen.has(e.id)) { dk.seen.add(e.id); if (dk.auto && relevant(e) && Date.now() - dk.sentAt < 90000 && office && !office.isPlayer?.() && !office.following?.()) { office.startChase?.(e.id); } }
+      for (const id of [...dk.seen]) if (!busy.some((e) => e.id === id)) dk.seen.delete(id);
+    }
+    /* only the people of THIS conversation glow (chat with aray = aray; a goal = whoever starts working on it), not every agent that happens to be busy */
+    office?.spotlight?.(busy.filter(relevant).map((e) => e.id));
+    {   /* mode ngobrol: panel kaca di kiri, pemandangan (dan agen yang diajak bicara) bergeser ke kanan lewat setInset yang sudah ada; ditutup = kembali halus */
+      this.syncInset();
+      const sasaran = dk.open && dk.to.length ? dk.to[0] : null;
+      if (sasaran !== this._ngobrolDgn) { if (sasaran && !office?.isPlayer?.()) office?.startChase?.(sasaran); else if (!sasaran && this._ngobrolDgn && !office?.isPlayer?.()) office?.stopChase?.(); this._ngobrolDgn = sasaran; }
+    }
   },
   playerUI(on) {
     const ov = this.ov; if (!ov) return;
-    ov.querySelector('#phud').hidden = !on;
     ov.querySelector('#pmobile').hidden = !on || !matchMedia('(pointer: coarse)').matches;
-    ov.querySelector('[data-cam="play"]').textContent = on ? '■ EXIT' : '▶ PLAY';
-    ov.classList.toggle('playing', on);
-    if (!on) { ov.querySelector('#phint').hidden = true; ov.querySelector('#ptalk').hidden = true; this.talkId = null; }
+    const pb = ov.querySelector('[data-cam="play"]'); pb.innerHTML = playBtn(on);
+    pb.setAttribute('aria-label', on ? 'Keluar dari mode jalan-jalan' : 'Masuk mode jalan-jalan');
+    ov.classList.toggle('playing', on); this.syncInset();
+    if (on) { const p = ov.querySelector('#phud'); if (p) { p.hidden = false; this.petunjukOtomatis(9000); } }   // petunjuk tombol muncul otomatis saat masuk mode karakter
+    this._mkHint?.(); { const h = ov.querySelector('#odkeyhint'); if (h) h.hidden = !on || document.activeElement?.id === 'goalq'; }
+    if (!on) { ov.querySelector('#phint').hidden = true; this.talkId = null; this.syncInset(); }
   },
   playerHint(h) {
     const el = this.ov?.querySelector('#phint'); if (!el) return;
-    if (!office?.isPlayer()) { el.hidden = true; return; }
-    if (!h) { el.hidden = true; return; }
-    el.hidden = false;
+    if (!office?.isPlayer()) { el.hidden = true; if (this.ov?.classList.contains('playing')) this.playerUI(false); return; }   // left Play with Esc: the button must say PLAY again
+    if (!h) { el.hidden = true; this._phSig = null; return; }
+    const sig = h.type + '|' + h.id + '|' + h.label;
+    if (sig === this._phSig) return;   // keadaan sama: jangan muncul lagi
+    this._phSig = sig; el.hidden = false; el.classList.remove('pudar'); clearTimeout(this._phT); clearTimeout(this._phT2);
+    this._phT = setTimeout(() => { el.classList.add('pudar'); this._phT2 = setTimeout(() => { el.hidden = true; el.classList.remove('pudar'); }, 600); }, 3000);
     const e = h.type === 'agent' ? emp(h.id) : null;
     el.innerHTML = h.type === 'agent'
-      ? `${avatar(e)}<div><b>${esc(h.label)}</b><div class="small muted">${esc(h.sub || '')} · ${esc(e?.statusText || '')}</div></div><span class="key">E</span> bicara <span class="key">F</span> beri tugas`
+      ? `${avatar(e)}<div><b>${esc(h.label)}</b><div class="small muted">${esc(h.sub || '')} · ${esc(e?.statusText || '')}</div></div><span class="key">E</span> bicara <span class="key">F</span> beri pekerjaan`
       : `<div><b>${esc(h.label)}</b><div class="small muted">${esc(h.sub || '')}</div></div><span class="key">E</span> gunakan`;
   },
   async playerAction(h, kind) {
     if (h.type === 'agent') {
-      if (kind === 'task') return newTaskModal({ assigneeId: h.id });
+      if (kind === 'task') return navigate('dashboard', { untuk: h.id });
       office?.summon?.(h.id);
       return this.talkTo(h.id);
     }
     if (h.id.startsWith('div:')) return divisionDrawer(h.id.slice(4));
-    if (h.id === 'brain') return navigate('brain', { graph: 1 });
+    if (h.id === 'brain') return this.openApp('brain', { graph: 1 });
+    if (h.id.startsWith('app:')) return this.openApp(h.id.slice(4));
     if (h.id === 'meeting') return meetingModal();
-    if (h.id === 'board') { const m = (D().meetings || []).at(-1); return m ? navigate('chat', { ch: `mtg-${m.id}` }) : toast('Belum ada rapat', 'warn'); }
-    if (h.id === 'coffee') { office.wave(); return toast('☕ Kopi siap. Energi +10', 'ok'); }
-    if (h.id === 'lounge') return toast('🛋️ Santai sejenak… agen di sekitar Anda tetap bekerja.', 'ok');
+    if (h.id === 'board') { const m = (D().meetings || []).at(-1); return m ? navigate('tasks') : toast('Belum ada rapat', 'warn'); }
+    if (h.id === 'coffee') { office.wave(); return toast('Kopi siap. Semangat bertambah.', 'ok'); }
+    if (h.id === 'lounge') return toast('Santai sejenak. Orang-orang di sekitarmu tetap bekerja.', 'ok');
   },
+  /** "bicara" / "beri pekerjaan" pada seseorang: hanya mengisi tujuan di kolom ketik tengah dan memfokuskannya (satu permukaan chat) */
   async talkTo(id) {
     const e = emp(id); if (!e || e.id === S.me) return;
-    if (this.talkId && this.talkId !== id) office?.endTalk?.(this.talkId);
     if (office?.isPlayer()) office.summon?.(id);
-    office?.express?.(id, e.type === 'ai' ? '👋' : '🙂', 'wave');
-    const r = await api('POST', '/api/dm', { with: id, userId: S.me });
-    this.talkId = id; this.talkCh = r.id;
-    this.renderTalk(true);
+    office?.express?.(id, e.type === 'ai' ? '👋' : '🙂', 'wave');   /* 3d: ekspresi di atas kepala */
+    const dk = this.dock; dk.to = [id]; dk.ch = null; dk.thread = null; dk.mode = 'chat'; dk.open = true; this._odSig = null;
+    this.talkId = id;
+    this.dockRender();
+    try { document.exitPointerLock?.(); } catch { /* ignore */ }
+    this.ov?.querySelector('#goalq')?.focus();
   },
-  renderTalk(focus) {
-    const el = this.ov?.querySelector('#ptalk'); if (!el || !this.talkId) return;
-    const e = emp(this.talkId);
-    const msgs = D().messages.filter((m) => m.channelId === this.talkCh).slice(-6);
-    const typing = el.querySelector('input')?.value || '';
-    el.hidden = false;
-    el.innerHTML = `<div class="row" style="margin-bottom:6px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(e.name)}</b><div class="small muted">${esc(e.title)} · ${esc(e.statusText || '')}</div></div><button class="btn sm ghost" data-tk="full">Buka chat</button><button class="btn sm ghost" data-tk="close">✕</button></div>
-      <div class="ptalk-msgs">${msgs.map((m) => `<div class="ptalk-m ${m.authorId === S.me ? 'me' : ''}"><div class="md">${md(m.text.slice(0, 900))}</div></div>`).join('') || `<div class="small muted">Sapa ${esc(e.name)}… mis. “${esc((e.starters || [])[0] || 'Apa yang sedang kamu kerjakan?')}”</div>`}</div>
-      <div class="row" style="margin-top:6px"><input class="input" id="ptin" placeholder="Bicara dengan ${esc(e.name)}…" value="${esc(typing)}"><button class="btn primary" data-tk="send">Kirim</button></div>`;
-    const box = el.querySelector('.ptalk-msgs'); box.scrollTop = box.scrollHeight;
-    const input = el.querySelector('#ptin');
-    const send = async () => { const text = input.value.trim(); if (!text) return; input.value = ''; office?.listen?.(this.talkId); await api('POST', '/api/messages', { channelId: this.talkCh, text, userId: S.me }); };
-    el.querySelector('[data-tk="send"]').onclick = send;
-    const close = () => { el.hidden = true; office?.endTalk?.(this.talkId); this.talkId = null; };
-    input.onkeydown = (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') send(); if (ev.key === 'Escape') close(); };
-    input.onkeyup = (ev) => ev.stopPropagation();
-    el.querySelector('[data-tk="close"]').onclick = close;
-    el.querySelector('[data-tk="full"]').onclick = () => navigate('chat', { ch: this.talkCh });
-    if (focus) input.focus();
-  },
+  renderTalk() { /* panel DM lama dihapus: semua obrolan lewat kolom ketik tengah */ },
   /** Compact card for the agent the camera is following (replaces opening the drawer on click). */
   followCard(id) {
     const el = this.ov?.querySelector('#ofollow'); if (!el) return;
     clearInterval(this.followTimer);
-    if (!id) { el.hidden = true; return; }
+    if (!id) { el.hidden = true; this.pie(null); return; }
     const draw = () => {
       const e = emp(id); if (!e) return;
       const t = D().tasks.find((x) => x.id === e.currentTaskId);
       el.hidden = false;
-      el.innerHTML = `<div class="row">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(e.name)}</b> <span class="status-dot st-${e.status}"></span><div class="small muted">${esc(e.title)}${e.team ? ' · ' + esc(e.team) : ''}</div></div><span class="chip mono">📷 IKUTI</span></div>
-        <div class="small" style="margin:8px 0 2px">${esc(e.statusText || STATUS_LABEL[e.status] || '')}</div>${t ? `<div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ${esc(t.title)}</div>` : ''}
-        ${e.mind?.mood ? `<div class="small muted">Mood: ${esc(e.mind.mood)} · confidence ${e.mind.confidence ?? '–'}</div>` : ''}
-        <div class="row" style="gap:6px;margin-top:8px"><button class="btn sm" data-fc="detail">Detail</button><button class="btn sm" data-fc="chat">Chat</button><button class="btn sm" data-fc="task">＋ Tugas</button><span style="flex:1"></span><button class="btn sm ghost" data-fc="stop" title="Esc">✕</button></div>
-        <div class="small faint mono" style="margin-top:6px">drag = putar kamera · Tab = agen berikutnya · Esc = berhenti</div>`;
+      el.innerHTML = `<div class="row">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(e.name)}</b> <span class="status-dot st-${e.status}"></span><div class="small muted">${esc(e.title)}${e.team ? ' · ' + esc(e.team) : ''}</div></div><span class="chip mono">${icon('eye', 14)} MENGIKUTI</span></div>
+        <div class="small" style="margin:8px 0 2px">${esc(e.statusText || STATUS_LABEL[e.status] || '')}</div>${t ? `<div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${icon('tasks', 14)} ${esc(awam(t.title))}</div>` : ''}
+        ${e.mind?.mood ? `<div class="small muted">Suasana hati: ${esc(e.mind.mood)}</div>` : ''}
+        ${(() => { const open = D().tasks.filter((x) => x.assigneeId === id && x.status !== 'done').length; const bars = [['Percaya diri', e.mind?.confidence ?? 60], ['Kapasitas', Math.max(5, 100 - open * 22)]]; return `<div class="needs">${bars.map(([l, v]) => `<div class="need ${v < 35 ? 'low' : ''}">${l}<i><b style="width:${Math.round(v)}%"></b></i></div>`).join('')}</div>`; })()}
+        <div class="row" style="gap:6px;margin-top:8px"><button type="button" class="btn sm" data-fc="detail">Profil</button><button type="button" class="btn sm" data-fc="chat">Bicara</button><button type="button" class="btn sm" data-fc="task">Beri pekerjaan</button><span style="flex:1"></span><button type="button" class="btn sm ghost" data-fc="stop" title="Esc" aria-label="Berhenti mengikuti">${icon('close', 16)}</button></div>
+        <div class="small faint mono" style="margin-top:6px">drag = putar kamera · Tab = orang berikutnya · Esc = berhenti</div>`;
       el.querySelector('[data-fc="detail"]').onclick = () => agentDrawer(id);
-      el.querySelector('[data-fc="chat"]').onclick = async () => { const r = await api('POST', '/api/dm', { with: id, userId: S.me }); navigate('chat', { ch: r.id }); };
-      el.querySelector('[data-fc="task"]').onclick = () => newTaskModal({ assigneeId: id });
+      el.querySelector('[data-fc="chat"]').onclick = () => OfficeView.talkTo(id);
+      el.querySelector('[data-fc="task"]').onclick = () => navigate('dashboard', { untuk: id });
       el.querySelector('[data-fc="stop"]').onclick = () => office?.stopChase();
     };
     draw(); this.followTimer = setInterval(draw, 2500);
   },
+  /** Sims-style pie menu that floats around the selected agent and follows it on screen. */
+  pie(id) {
+    cancelAnimationFrame(this.pieRaf);
+    const el = this.ov?.querySelector('#opie'); if (!el) return;
+    if (!id || !emp(id)) { el.hidden = true; el.classList.remove('open'); this.pieId = null; return; }
+    if (this.pieId !== id) {
+      this.pieId = id;
+      const e = emp(id);
+      const items = [['Bicara', 'chat'], ['Beri pekerjaan', 'task'], ['Profil', 'detail'], ['Sapa', 'wave'], ['Lainnya', 'more']];
+      const R = 96;
+      el.innerHTML = `<div class="pie-n glass"><b>${esc(e.name)}</b> · ${esc(STATUS_LABEL[e.status] || '')}</div>` + items.map(([label, act], i) => { const a = -Math.PI / 2 + (i - (items.length - 1) / 2) * 0.82; return `<button type="button" class="pie-i glass" data-pa="${act}" style="left:${Math.cos(a) * R * 1.25}px;top:${Math.sin(a) * R}px">${label}</button>`; }).join('');
+      const run = { chat: () => OfficeView.talkTo(id), task: () => navigate('dashboard', { untuk: id }), detail: () => agentDrawer(id), wave: () => { office?.wave(id); toast(emp(id).name + ' menyapa balik', 'ok'); }, more: () => office?.agentMenuAt?.(id) };
+      el.querySelectorAll('[data-pa]').forEach((b) => (b.onclick = (ev) => { ev.stopPropagation(); this.pie(null); run[b.dataset.pa](); }));
+      el.hidden = false; requestAnimationFrame(() => el.classList.add('open'));
+    }
+    const follow = () => {
+      const pt = office?.screenOf(id);
+      if (pt) { el.style.left = pt.x + 'px'; el.style.top = pt.y + 'px'; el.style.visibility = 'visible'; } else el.style.visibility = 'hidden';
+      this.pieRaf = requestAnimationFrame(follow);
+    };
+    follow();
+  },
   /** Enscape-style controls reference. */
+  // ───── application windows: every page of the platform opens right inside the 3D scene
+  appsMenu() {
+    const el = this.ov?.querySelector('#oapps'); if (!el) return;
+    if (!el.hidden) { el.hidden = true; return; }
+    const APPS = [['dashboard', 'dashboard', 'Obrolan', 'Ceritakan yang kamu butuhkan'], ['tasks', 'tasks', 'Hasil Saya', 'Pekerjaan dan hasilnya'], ['brain', 'brain', 'Catatan', 'Yang sudah disimpan'], ['team', 'team', 'Tim Saya', 'Orang-orang yang membantumu'], ['settings', 'settings', 'Pengaturan', 'Akun, tampilan, sambungan']];
+    el.innerHTML = '<div class="oapps-h">Buka layar di kantor</div>' + APPS.map(([id, ic, t, s]) => '<button type="button" class="oapp" data-app="' + id + '"><span class="oapp-ic" aria-hidden="true">' + icon(ic, 22) + '</span><span><b>' + t + '</b><small>' + s + '</small></span></button>').join('');
+    el.hidden = false;
+    el.querySelectorAll('[data-app]').forEach((b) => (b.onclick = () => { el.hidden = true; this.openApp(b.dataset.app); }));
+  },
+  openApp(id, params = {}) {
+    const host = this.ov?.querySelector('#owins'); const V = VIEWS[id]; if (!host || !V || id === 'office') return;
+    this.wins = this.wins || new Map();
+    this.ov.querySelector('#oapps')?.setAttribute('hidden', '');
+    let w = this.wins.get(id);
+    if (w) { w.view.unmount?.(w.body); w.body.innerHTML = ''; w.body.style.overflow = ''; }
+    else {
+      const el = document.createElement('div'); el.className = 'owin glass'; el.dataset.win = id;
+      el.innerHTML = '<div class="owin-h"><span class="owin-t">' + icon(V.icon, 18) + ' ' + esc(V.title) + '</span><span style="flex:1"></span><button type="button" class="owin-b" data-w="max" title="Perbesar" aria-label="Perbesar jendela">' + icon('expand', 16) + '</button><button type="button" class="owin-b" data-w="x" title="Tutup" aria-label="Tutup jendela">' + icon('close', 16) + '</button></div><div class="owin-body"></div>';
+      const n = this.wins.size; el.style.left = 6 + n * 3 + '%'; el.style.top = 7 + n * 3 + '%';
+      host.appendChild(el);
+      const body = el.querySelector('.owin-body'); w = { id, el, body, view: V.view }; this.wins.set(id, w);
+      const front = () => { el.style.zIndex = (this.winZ = (this.winZ || 20) + 1); S.embedUntil = performance.now() + 2500; };
+      el.addEventListener('pointerdown', front, true); el.addEventListener('keydown', () => { S.embedUntil = performance.now() + 2500; }, true); front();
+      el.querySelector('[data-w="x"]').onclick = () => this.closeApp(id);
+      el.querySelector('[data-w="max"]').onclick = () => el.classList.toggle('max');
+      const hd = el.querySelector('.owin-h'); let drag = null;
+      hd.addEventListener('pointerdown', (e) => { if (e.target.closest('button') || el.classList.contains('max')) return; const r = el.getBoundingClientRect(), pr = host.getBoundingClientRect(); drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, pr }; hd.setPointerCapture(e.pointerId); });
+      hd.addEventListener('pointermove', (e) => { if (!drag) return; el.style.left = Math.max(0, Math.min(drag.pr.width - 120, e.clientX - drag.pr.left - drag.dx)) + 'px'; el.style.top = Math.max(0, Math.min(drag.pr.height - 40, e.clientY - drag.pr.top - drag.dy)) + 'px'; });
+      hd.addEventListener('pointerup', () => { drag = null; });
+      if (!this.appHooked) { this.appHooked = true; onChange((colls) => { for (const x of this.wins?.values() || []) x.view.update?.(colls); }); S.embedHook = (view, p) => { if (S.view !== 'office' || !VIEWS[view] || view === 'office') return false; this.openApp(view, p); return true; }; }
+    }
+    S.params = params || {};
+    try { w.view.mount(w.body); } catch (err) { w.body.innerHTML = '<div class="page"><p class="muted">Layar ini belum bisa dibuka. Coba tutup lalu buka lagi.</p></div>'; }
+    w.el.style.zIndex = (this.winZ = (this.winZ || 20) + 1);
+    office?.setBlocking?.(true);
+  },
+  closeApp(id) {
+    const w = this.wins?.get(id); if (!w) return; try { w.view.unmount?.(w.body); } catch { /* ignore */ } w.el.remove(); this.wins.delete(id);
+    if (!this.wins.size) { office?.setBlocking?.(false); S.embedUntil = 0; }
+  },
+  closeAllApps() { for (const id of [...(this.wins?.keys() || [])]) this.closeApp(id); },
+  /** teleport menu (V): releases the mouse (setBlocking), lists plaza landmarks, rooms and agents with a search box; picking one jumps there and re-locks the mouse */
+  teleportMenu() {
+    const ORANG = 'Agen';   /* 3d: nama kelompok yang dikirim dunia 3D */
+    const el = this.ov?.querySelector('#otpm'); if (!el || !office) return;
+    if (!el.hidden) return this.teleportClose();
+    const all = office.teleportTargets(), groups = ['Plaza', 'Sky Deck', 'Ruangan', ORANG];
+    el.hidden = false; office.setBlocking?.(true);
+    el.innerHTML = '<div class="tpm-card glass" role="dialog" aria-label="Pindah cepat"><div class="tpm-h"><b>Pindah cepat</b><small>pilih tujuan · Enter = yang pertama · Esc = tutup</small><button type="button" class="tpm-x" data-x title="Tutup" aria-label="Tutup">' + icon('close', 18) + '</button></div><label class="sr-only" for="tpmq">Cari tempat atau orang</label><input id="tpmq" class="tpm-q" placeholder="Cari tempat atau orang…" autocomplete="off" spellcheck="false"><div class="tpm-body"></div></div>';
+    const q = el.querySelector('.tpm-q'), body = el.querySelector('.tpm-body');
+    const go = (id) => { this.teleportClose(); office.teleportTo(id); office.relock?.(); };
+    const draw = () => {
+      const t = q.value.trim().toLowerCase();
+      body.innerHTML = groups.map((g) => {
+        let rows = all.filter((x) => x.group === g && (!t || (x.label + ' ' + x.sub).toLowerCase().includes(t)));
+        rows = g === ORANG && !t ? rows.filter((x) => x.status === 'working' || x.status === 'meeting').slice(0, 8) : rows.slice(0, 30);
+        if (!rows.length) return '';
+        return '<div class="tpm-g"><h4>' + ({ Plaza: 'Plaza', 'Sky Deck': 'Dek atas', Ruangan: 'Ruangan', [ORANG]: 'Orang' })[g] + (g === ORANG && !t ? ' <em>yang sedang aktif · ketik untuk mencari</em>' : '') + '</h4><div class="tpm-grid">' + rows.map((x) => '<button class="tpm-i" data-id="' + esc(x.id) + '"><i>' + x.icon + '</i><span><b>' + esc(x.label) + '</b><small>' + esc(x.sub || '') + '</small></span></button>').join('') + '</div></div>';
+      }).join('') || '<div class="tpm-empty">Tidak ada yang cocok</div>';
+      body.querySelectorAll('[data-id]').forEach((b) => (b.onclick = () => go(b.dataset.id)));
+    };
+    q.oninput = draw; draw();
+    q.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Escape') { e.preventDefault(); this.teleportClose(); } else if (e.key === 'Enter') { e.preventDefault(); const b = body.querySelector('[data-id]'); if (b) go(b.dataset.id); } };
+    el.onclick = (e) => { if (e.target === el || e.target.closest('[data-x]')) this.teleportClose(); };
+    setTimeout(() => q.focus(), 30);
+  },
+  teleportClose() { const el = this.ov?.querySelector('#otpm'); if (!el || el.hidden) return; el.hidden = true; el.innerHTML = ''; office?.setBlocking?.(false); },
+  /** teleport chip: a gradient glass pill that slides in at the bottom right while agents jump across the campus */
+  teleportChip(i) {
+    const el = this.ov?.querySelector('#otele'); if (!el) return;
+    clearTimeout(this.teleT1); clearTimeout(this.teleT2);
+    const names = i.names.slice(0, 4).map(esc).join(', ') + (i.n > 4 ? ' +' + (i.n - 4) : '');
+    el.innerHTML = '<span class="tp-ic" aria-hidden="true"><i></i><b>' + icon('bolt', 18) + '</b></span><div><div class="tp-k">Pindah cepat</div><div class="tp-t">' + names + '</div><div class="tp-s">→ ' + esc(i.label) + '</div></div>';
+    el.hidden = false; el.classList.remove('in', 'out'); void el.offsetWidth; el.classList.add('in');
+    this.teleT1 = setTimeout(() => { el.classList.remove('in'); el.classList.add('out'); }, 2600);
+    this.teleT2 = setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, 3300);
+  },
+  /** lower third: slides in for a few seconds to say where you are, then fades away */
+  lower(z) {
+    const el = this.ov?.querySelector('#olower'); if (!el || !office?.isPlayer?.()) return;
+    clearTimeout(this.lowerT1); clearTimeout(this.lowerT2);
+    el.innerHTML = '<span class="l3-bar" style="background:' + esc(z.color || '#7c83ff') + '"></span><span class="l3-ic" aria-hidden="true">' + icon('office', 22) + '</span><div><div class="l3-k">Kamu berada di</div><div class="l3-t">' + esc(z.title) + '</div><div class="l3-s">' + esc(z.sub || '') + '</div></div>';
+    el.hidden = false; el.classList.remove('in', 'out'); void el.offsetWidth; el.classList.add('in');
+    this.lowerT1 = setTimeout(() => { el.classList.remove('in'); el.classList.add('out'); }, 3800);
+    this.lowerT2 = setTimeout(() => { el.hidden = true; el.classList.remove('out'); }, 4500);
+  },
+  /** Enscape-style visual settings: camera, image, atmosphere (fog, clouds, sky orbs); presets can be saved */
+  visual(show) {
+    const el = this.ov?.querySelector('#ovis'); if (!el || !office?.visual) return;
+    el.hidden = show === undefined ? !el.hidden : !show; if (el.hidden) return;
+    const hp = this.ov.querySelector('#ohelp'); if (hp) hp.hidden = true;
+    const tab = this.visTab || 'main';
+    const pct = (x) => Math.round(x * 100) + '%';
+    const mm = (f) => (12 / Math.tan((f * Math.PI) / 360)).toFixed(1) + 'mm';
+    // [key, label, min, max, step, formatter]
+    const SCHEMA = {
+      main: [['Kamera', [['fov', 'Lebar pandangan', 20, 90, 1, (x) => Math.round(x) + '° / ' + mm(x)], ['dof', 'Latar kabur', 0, 2.5, 0.05, pct], ['exposure', 'Kecerahan', 0, 1, 0.01, pct]]], ['Keramaian', [['crowd', 'Orang santai yang boleh berkeliling sekaligus', 0, 60, 1, (x) => Math.round(x) + ' orang'], ['tele', 'Orang pindah cepat bila jarak lebih dari', 0, 120, 5, (x) => (x ? Math.round(x) + ' unit' : 'mati')]]]],
+      image: [['Koreksi', [['hi', 'Bagian terang', -1, 1, 0.01, pct], ['sh', 'Bagian gelap', -1, 1, 0.01, pct]]], ['Warna', [['sat', 'Saturasi', 0, 2, 0.01, pct], ['temp', 'Suhu warna', 3000, 10000, 100, (x) => Math.round(x) + ' K']]], ['Efek', [['bloom', 'Cahaya lembut', 0, 1, 0.01, pct], ['vig', 'Pinggiran gelap', 0, 1, 0.01, pct], ['ca', 'Pinggiran berwarna', 0, 1, 0.01, pct]]]],
+      atmos: [['Kabut', [['fog', 'Atmosfer (kabut)', 0, 100, 1, (x) => Math.round(x) + '%']]], ['Awan', [['density', 'Kepadatan', 0, 1, 0.01, pct], ['variety', 'Keragaman', 0, 1, 0.01, pct], ['cirrus', 'Awan cirrus (tipis tinggi)', 0, 1, 0.01, pct], ['contrails', 'Jejak pesawat', 0, 6, 1, (x) => Math.round(x)], ['lon', 'Bujur (arah awan)', 0, 1, 0.01, (x) => Math.round(x * 10000) + 'm'], ['lat', 'Lintang (jarak awan)', 0, 1, 0.01, (x) => Math.round(x * 10000) + 'm']]], ['Mimpi berkabut', [['dream', 'Kabut tipis & berkas cahaya', 0, 1, 0.01, pct]]], ['Cahaya langit', [['sun', 'Kecerahan matahari', 0, 2, 0.01, pct], ['starsMoon', 'Bintang & bulan', 0, 2, 0.01, pct], ['moon', 'Ukuran bulan', 0.5, 3, 0.05, pct]]]],
+    };
+    const PRESETS = {
+      'Pilihan Ray (bawaan)': { look: 'soft', dof: 0.3, fov: 50, exposure: 0.21, hi: 0.39, sh: -0.49, sat: 1.4, temp: 5400, bloom: 0.67, vig: 0.59, ca: 0.33, fog: 41, density: 1, variety: 0, cirrus: 1, contrails: 2, lon: 0.49, lat: 0, sun: 0.36, starsMoon: 2, moon: 3, dream: 0.6 },
+      'Foggy Dreams': { look: 'soft', dof: 0.35, fov: 50, exposure: 0.25, hi: 0.3, sh: -0.3, sat: 1.15, temp: 6300, bloom: 0.55, vig: 0.5, ca: 0.2, fog: 62, density: 0.9, variety: 0.2, cirrus: 0.8, contrails: 0, sun: 0.5, starsMoon: 1.2, dream: 1 },
+      'Film sinematik': { look: 'cinema', dof: 0.8, exposure: 0.5, hi: 0, sh: 0, sat: 1, temp: 6600, bloom: 0.15, vig: 0.3, ca: 0.25, fog: 20 },
+      'Lembut & menenangkan': { look: 'soft', dof: 0.9, sat: 0.9, temp: 6000, bloom: 0.35, vig: 0.35, fog: 30, density: 0.6, cirrus: 0.7, contrails: 1 },
+      'Alami': { look: 'natural', dof: 0.4, sat: 1, temp: 6600, bloom: 0, vig: 0.15, ca: 0, fog: 15, density: 0.5, cirrus: 0.4 },
+      'Dingin segar': { look: 'cool', temp: 7600, fog: 15, density: 0.4, bloom: 0.1 },
+      'Langit dramatis': { density: 0.9, variety: 1, cirrus: 0.8, contrails: 3, sun: 1.2, fog: 25, hi: -0.15, sh: 0.1 },
+      'Senja emas': { time: 17.5, temp: 5200, bloom: 0.3, fog: 28, sun: 1.1 },
+      'Malam tenang': { time: 23, starsMoon: 1.4, moon: 1.3, bloom: 0.25, fog: 22 },
+    };
+    const mine = () => { try { return JSON.parse(localStorage.getItem('office-presets') || '{}'); } catch { return {}; } };
+    const applyPreset = (p) => { const { time, look, ...rest } = p; office.setVisual(rest); if (look) office.setLook(look); if (time != null) office.timeOfDay?.(time); };
+    const draw = () => {
+      const V = office.visual(), D0 = office.visualDefaults();
+      const row = ([k, l, mn, mx, st, f]) => '<div class="vis-row"><div class="vis-l"><span>' + l + '</span><b data-val="' + k + '">' + f(V[k]) + '</b></div><input type="range" min="' + mn + '" max="' + mx + '" step="' + st + '" value="' + V[k] + '" data-k="' + k + '"></div>';
+      const groups = tab === 'main'
+        ? SCHEMA.main.map(([g, rows]) => '<div class="vis-g"><h4>' + g + '</h4>' + rows.map(row).join('') + '</div>').join('') + '<div class="vis-g"><h4>Gaya & bingkai</h4><div class="hp-row"><span><b>Gaya warna film</b></span><span>' + ['natural', 'cinema', 'soft', 'cool'].map((k) => '<button class="btn sm ' + (office.look() === k ? '' : 'ghost') + '" data-look="' + k + '">' + ({ natural: 'Alami', cinema: 'Film', soft: 'Lembut', cool: 'Dingin' })[k] + '</button>').join(' ') + '</span></div><div class="hp-row"><span><b>Bingkai layar lebar 2,39:1</b></span><button class="btn sm ' + (office.bars() ? '' : 'ghost') + '" data-bars>' + (office.bars() ? 'Nyala' : 'Mati') + '</button></div></div>'
+        : SCHEMA[tab].map(([g, rows]) => '<div class="vis-g"><h4>' + g + '</h4>' + rows.map(row).join('') + '</div>').join('');
+      const all = { ...PRESETS, ...mine() };
+      el.innerHTML = '<div class="row" style="margin-bottom:8px"><b style="flex:1;font-size:14px">Gambar dan suasana</b><button type="button" class="btn sm ghost" data-vc aria-label="Tutup">' + icon('close', 16) + '</button></div>' +
+        '<div class="row" style="gap:6px;margin-bottom:8px"><select class="input" data-vp style="flex:1"><option value="">Pilih preset…</option>' + Object.keys(all).map((n) => '<option>' + esc(n) + '</option>').join('') + '</select><button type="button" class="btn sm" data-vs title="Simpan pengaturan sekarang" aria-label="Simpan pengaturan sekarang">' + icon('download', 16) + ' Simpan</button></div>' +
+        '<div class="tabs" style="margin-bottom:8px">' + [['main', 'Utama'], ['image', 'Gambar'], ['atmos', 'Atmosfer']].map(([k, l]) => '<button data-vt="' + k + '" class="' + (tab === k ? 'active' : '') + '">' + l + '</button>').join('') + '</div>' +
+        '<div class="vis-body">' + groups + '</div><div class="row" style="margin-top:10px"><button class="btn sm ghost" data-vr>Reset tab ini</button></div>';
+      el.querySelector('[data-vc]').onclick = () => (el.hidden = true);
+      el.querySelectorAll('[data-vt]').forEach((b) => (b.onclick = () => { this.visTab = b.dataset.vt; this.visual(true); }));
+      el.querySelectorAll('input[data-k]').forEach((inp) => (inp.oninput = () => { const k = inp.dataset.k, val = +inp.value; office.setVisual({ [k]: val }); const f = [].concat(...Object.values(SCHEMA).map((g) => (Array.isArray(g[0]) ? g.flatMap((x) => x[1]) : g))).find((r) => r[0] === k)?.[5]; const lab = el.querySelector('[data-val="' + k + '"]'); if (lab && f) lab.textContent = f(val); }));
+      el.querySelectorAll('[data-look]').forEach((b) => (b.onclick = () => { office.setLook(b.dataset.look); draw(); }));
+      el.querySelector('[data-bars]')?.addEventListener('click', () => { office.setBars(!office.bars()); draw(); });
+      el.querySelector('[data-vp]').onchange = (ev) => { const p = all[ev.target.value]; if (p) { applyPreset(p); draw(); } };
+      el.querySelector('[data-vs]').onclick = () => { const n = prompt('Nama preset:'); if (!n) return; const m = mine(); m[n] = office.visual(); try { localStorage.setItem('office-presets', JSON.stringify(m)); } catch { /* ignore */ } draw(); toast('Pengaturan "' + n + '" disimpan', 'ok'); };
+      el.querySelector('[data-vr]').onclick = () => { const keys = tab === 'main' ? ['fov', 'dof', 'exposure'] : (SCHEMA[tab] || []).flatMap((g) => g[1].map((r) => r[0])); office.setVisual(Object.fromEntries(keys.map((k) => [k, D0[k]]))); draw(); };
+    };
+    draw();
+  },
   help(show) {
     const el = this.ov?.querySelector('#ohelp'); if (!el) return;
     const on = show === undefined ? el.hidden : show; el.hidden = !on; if (!on) return;
     const k = (...ks) => ks.map((x) => `<span class="kbd">${x}</span>`).join('');
+    const ka = office?.keyActions?.() || [], kn = (c) => String(c).replace(/^Key/, '').replace(/^Digit/, '').replace('Arrow', 'Panah '), kk = (m, id, d) => kn((ka.find((a) => a.mode === m && a.id === id) || { key: d }).key);
     const rows = (title, list) => `<div class="hp-sec">${title}</div>` + list.map(([l, keys]) => `<div class="hp-row"><span>${l}</span><span>${keys}</span></div>`).join('');
-    el.innerHTML = `<div class="row" style="margin-bottom:6px"><b style="flex:1">Bantuan [H]</b><button class="btn sm ghost" data-hx>✕</button></div>
-      <div class="hp-tabs"><button class="on" data-hp="nav">Navigasi</button><button data-hp="play">Mode Karakter</button></div>
-      <div data-hpv="nav">${rows('Dasar', [['Gerak', k('W', 'A', 'S', 'D')], ['Naik / Turun', k('E', 'Q')], ['Jalan sebagai karakter', k('Space')], ['Putar kamera', '🖱 kiri + drag'], ['Geser (pan)', '🖱 kanan + drag'], ['Zoom', '🖱 scroll'], ['Teleport', '🖱 klik ganda lantai'], ['Ikuti agen', '🖱 klik agen'], ['Agen berikutnya', k('Tab')]])}
-        ${rows('Lanjutan', [['Keluar / tutup', k('Esc')], ['Gerak cepat', k('⇧')], ['Gerak sangat cepat', k('Alt')], ['Tampilan standar', k('8', '4', '5', '6', '2')], ['Posisi awal', k('0')], ['Waktu (pagi ↔ malam)', k('U') + ' / ' + k('I')], ['Sudut matahari', k('⇧') + '+' + k('U') + ' / ' + k('I')], ['Simpan tampilan favorit', k('B')], ['Favorit sebelumnya / berikutnya', k('PgUp', 'PgDn')], ['Label nama', k('L')]])}</div>
-      <div data-hpv="play" hidden>${rows('Mode Karakter', [['Jalan', k('W', 'A', 'S', 'D')], ['Lari', k('⇧')], ['Putar', k('Q', 'R') + ' / drag'], ['Lompat', k('Space')], ['Lambai', k('G')], ['Panggil & bicara (agen menghampiri)', k('E')], ['Beri tugas', k('F')], ['Keluar', k('Esc')]])}
-        <div class="small muted" style="margin-top:8px">Tekan <b>E</b> di dekat agen: dia akan berjalan ke depanmu, menatap, mendengarkan, lalu menjawab dengan ekspresi.</div></div>`;
+    el.innerHTML = `<div class="row" style="margin-bottom:6px"><b style="flex:1">Pengaturan</b><button type="button" class="btn sm ghost" data-hx aria-label="Tutup">✕</button></div>
+      <div class="hp-tabs"><button class="on" data-hp="nav">Navigasi</button><button data-hp="play">Mode Karakter</button><button data-hp="keys">Atur Tombol</button><button data-hp="gfx">Grafis</button><button data-hp="snd">Suara</button></div>
+      <div data-hpv="nav">${rows('Dasar', [['Geser (pan)', 'Mouse kiri + drag / ' + k('W', 'A', 'S', 'D')], ['Tengok kiri / kanan', k(kk('free', 'Act:lookLeft', 'KeyZ'), kk('free', 'Act:lookRight', 'KeyC')) + ' (menoleh di tempat)'], ['Orbit', 'Mouse kanan + drag'], ['Naik / Turun', k(kk('free', 'Act:up', 'KeyQ'), kk('free', 'Act:down', 'KeyE'))], ['Lebih cepat', 'tahan ' + k('Shift')], ['Zoom ke kursor', 'Mouse scroll'], ['Mode jalan / terbang', k('Space')], ['Pindah cepat', 'Mouse klik ganda lantai'], ['Ikuti orang', 'Mouse klik orang'], ['Orang berikutnya', k('Tab')]])}
+        ${rows('Lanjutan', [['Keluar / tutup', k('Esc')], ['Gerak cepat', k('⇧')], ['Gerak sangat cepat', k('Alt')], ['Tampilan standar', k('8', '4', '5', '6', '2')], ['Posisi awal', k('0')], ['Waktu (pagi sampai malam)', k('U') + ' / ' + k('I')], ['Sudut matahari', k('⇧') + '+' + k('U') + ' / ' + k('I')], ['Simpan tampilan favorit', k('B')], ['Favorit sebelumnya / berikutnya', k('PgUp', 'PgDn')], ['Label nama', k('L')]])}</div>
+      <div data-hpv="keys" hidden></div>
+      <div data-hpv="gfx" hidden></div>
+      <div data-hpv="snd" hidden></div>
+      <div data-hpv="play" hidden>${rows('Mode Karakter', [['Jalan', k('W', 'A', 'S', 'D')], ['Lari', k('⇧')], ['Putar', k('Q', 'R') + ' / drag'], ['Lompat', k('Space')], ['Lambai', k('G')], ['Panggil & bicara (orang menghampiri)', k('E')], ['Beri pekerjaan', k('F')], ['Keluar', k('Esc')]])}
+        <div class="small muted" style="margin-top:8px">Tekan <b>E</b> di dekat seseorang: dia akan berjalan ke depanmu, menatap, mendengarkan, lalu menjawab dengan ekspresi.</div></div>`;
+    const kp = el.querySelector('[data-hpv="keys"]');
+    const drawKeys = () => {
+      if (!office?.keyActions) { kp.innerHTML = '<div class="small muted">Kantor belum siap.</div>'; return; }
+      const acts = office.keyActions(), inv = office.lookInvert();
+      const sec = (title, mode) => '<div class="hp-sec">' + title + '</div>' + acts.filter((a) => a.mode === mode).map((a) => '<div class="hp-row"><span>' + esc(a.label) + '</span><button class="btn sm ' + (a.key === a.def ? 'ghost' : '') + '" data-bind="' + mode + '|' + a.id + '">' + esc(kn(a.key)) + '</button></div>').join('');
+      kp.innerHTML = '<div class="small muted" style="margin:4px 0 6px">Klik sebuah tombol lalu tekan tombol keyboard yang kamu mau (Esc membatalkan). Kalau tombolnya sudah dipakai fungsi lain, keduanya saling bertukar. Tersimpan otomatis di browser dan di server, jadi tetap ada setelah hard refresh.</div>' +
+        sec('Kamera bebas', 'free') + '<div class="hp-row"><span>Balik arah tengok</span><button class="btn sm ' + (inv ? '' : 'ghost') + '" data-inv>' + (inv ? 'Aktif' : 'Mati') + '</button></div>' + sec('Mode karakter (PLAY)', 'play') +
+        '<div style="margin:10px 0 2px"><button class="btn sm ghost" data-reset>Kembalikan semua ke standar</button></div>';
+      kp.querySelectorAll('[data-bind]').forEach((b) => (b.onclick = () => {
+        b.textContent = 'tekan tombol…';
+        const on = (ev) => { ev.preventDefault(); ev.stopPropagation(); removeEventListener('keydown', on, true); if (ev.code !== 'Escape' && !office.setKey(...b.dataset.bind.split('|'), ev.code)) toast('Tombol itu tidak bisa dipakai', 'warn'); drawKeys(); };
+        addEventListener('keydown', on, true);
+      }));
+      kp.querySelector('[data-inv]').onclick = () => { office.setLookInvert(!inv); drawKeys(); };
+      kp.querySelector('[data-reset]').onclick = () => { office.resetKeys(); drawKeys(); };
+    };
+    drawKeys();
+    const sp = el.querySelector('[data-hpv="snd"]');
+    const drawSnd = () => {
+      const st = sfx.state(), row = (k, l, d) => '<div class="hp-row"><span><b>' + l + '</b><br><small class="muted">' + d + '</small></span><button class="btn sm ' + (st[k] ? '' : 'ghost') + '" data-s="' + k + '">' + (st[k] ? 'Nyala' : 'Mati') + '</button></div>';
+      sp.innerHTML = '<div class="small muted" style="margin:4px 0 8px">Musik latar yang menenangkan dibuat langsung di browser (tanpa file). Matikan kapan saja bila mengganggu. Tombol <b>M</b> menyalakan atau mematikan semuanya.</div>' +
+        row('on', 'Semua suara', 'saklar utama') + row('music', 'Musik latar', 'pad lembut & lonceng pelan') + row('fx', 'Efek suara', 'lonceng tugas, air, langkah, dll') +
+        '<div class="hp-row"><span><b>Volume</b></span><input type="range" min="0" max="100" value="' + Math.round(st.vol * 100) + '" data-sv style="width:140px"></div>' +
+        (() => { const t = tts.state(); return '<div class="small muted" style="margin:14px 0 8px"><b>Suara orang di kantor</b>: timmu membacakan balasannya dalam bahasa Indonesia memakai suara bawaan browser. Tidak ada unduhan. Setiap orang punya nada dan kecepatan sendiri.</div>' +
+          (t.available ? '<div class="hp-row"><span><b>Suara bicara</b><br><small class="muted">' + (t.hasIndonesian ? t.voiceCount + ' suara Indonesia ditemukan' : 'belum ada suara Indonesia di perangkat ini, jadi kalimat dibaca dengan logat asing. Pasang paket suara Indonesia di Windows (Bahasa, Bicara) atau pakai Edge') + '</small></span><button class="btn sm ' + (t.on ? '' : 'ghost') + '" data-tts="on">' + (t.on ? 'Nyala' : 'Mati') + '</button></div>' +
+          '<div class="hp-row"><span><b>Mesin suara</b><br><small class="muted">' + (t.engine === 'edge' ? 'Microsoft (suara Gadis dan Ardi lewat server; natural dan ringan, butuh internet; teks yang dibacakan dikirim ke Microsoft)' : 'Browser (suara bawaan perangkat; tanpa pihak ketiga, tetapi kurang natural)') + '</small></span><span style="display:flex;gap:6px"><button class="btn sm ' + (t.engine === 'edge' ? '' : 'ghost') + '" data-te="edge">' + (t.engine === 'edge' ? icon('check', 14) + ' ' : '') + 'Microsoft</button><button class="btn sm ' + (t.engine === 'browser' ? '' : 'ghost') + '" data-te="browser">' + (t.engine === 'browser' ? icon('check', 14) + ' ' : '') + 'Browser</button></span></div>' +
+          (t.edge.avail === false ? '<div class="small" style="margin:0 0 8px;color:var(--warn,#b45309)">Microsoft belum bisa dipakai: ' + esc(t.edge.availErr || 'layanan suara belum tersedia') + '. Sementara suara browser yang dipakai.</div>' : '') + (t.engine === 'edge' && t.edge.avail !== false ? '<div class="small muted" style="margin:0 0 8px">' + (t.edge.avail === false ? '' : t.edge.ok === false ? 'Server suara tidak menjawab beberapa kali: memakai suara browser. Pilih Microsoft lagi untuk mencoba ulang. ' + esc(t.edge.err) : t.edge.ok ? 'Berjalan. Kalimat pertama terdengar ' + t.edge.ms + ' ms setelah dikirim.' : 'Dicoba saat pertama dipakai; kalau gagal otomatis pakai suara browser.') + '</div>' : '') +
+          (t.engine === 'browser' && t.voiceCount ? '<div class="small muted" style="margin:0 0 8px">Suara browser di perangkat ini: ' + t.voiceInfo.female.length + ' wanita, ' + t.voiceInfo.male.length + ' pria, ' + t.voiceInfo.unknown.length + ' tanpa keterangan.' + (t.maleBrowser ? '' : t.maleViaEdge ? ' Belum ada suara pria Indonesia, jadi rekan pria memakai suara pria <b>Microsoft (Ardi)</b>; teks yang dibacakan rekan pria dikirim ke Microsoft dan terdengar sedikit lebih lambat.' : ' <span style="color:var(--warn,#b45309)">Belum ada suara pria Indonesia' + (t.maleEdge ? (t.maleSlow ? ' dan server Microsoft sedang lambat (dicoba lagi nanti)' : ' dan server Microsoft belum tersedia') : '') + ': rekan pria memakai suara yang ada dengan nada lebih rendah, jadi bisa masih terdengar seperti wanita.</span>') + '</div>' + (t.maleBrowser ? '' : '<div class="hp-row"><span><b>Suara pria dari Microsoft</b><br><small class="muted">dipakai hanya untuk rekan pria, selama browser belum punya suara pria Indonesia</small></span><button class="btn sm ' + (t.maleEdge ? '' : 'ghost') + '" data-mm="1">' + (t.maleEdge ? 'Nyala' : 'Mati') + '</button></div>') : '') +
+          '<div class="hp-row"><span><b>Volume suara bicara</b></span><input type="range" min="0" max="100" value="' + Math.round(t.vol * 100) + '" data-tv style="width:140px"></div>' +
+          '<div class="hp-row"><span><b>Bacakan percakapan</b><br><small class="muted">pesan baru di obrolan, grup dan rapat yang kamu ikuti dibacakan otomatis, bergiliran</small></span><button class="btn sm ' + (t.autoRead ? '' : 'ghost') + '" data-ar="1">' + (t.autoRead ? 'Nyala' : 'Mati') + '</button></div>' +
+          (t.autoRead ? '<div class="hp-row"><span><b>Suaraku ikut dibacakan</b><br><small class="muted">pesan yang kamu kirim dibacakan dengan suaramu, lalu timmu menjawab</small></span><button class="btn sm ' + (t.ownerVoice ? '' : 'ghost') + '" data-ov="1">' + (t.ownerVoice ? 'Nyala' : 'Mati') + '</button></div>' : '') +
+          (() => { const pr = tts.pron(), n = Object.keys(pr.dict).length; return '<details style="margin:10px 0"' + (n ? ' open' : '') + '><summary class="small muted" style="cursor:pointer">Lanjutan: kamus ucapan' + (n ? ' (' + n + ')' : '') + '</summary>' +
+            '<div class="hp-row" style="flex-wrap:wrap;gap:6px"><span><small class="muted">hanya bila ada kata yang salah diucapkan: tulis katanya dan cara menulisnya agar benar</small></span><span style="display:flex;gap:6px;flex-wrap:wrap"><input class="input" data-pw placeholder="kata" style="width:110px"><input class="input" data-py placeholder="ditulis" style="width:110px"><button class="btn sm" data-pd="1">Tambah</button></span></div>' +
+            (n ? '<div class="small" style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px">' + Object.entries(pr.dict).map(([k, v]) => '<button class="btn sm ghost" data-pk="' + esc(k) + '" title="Hapus">' + esc(k) + ' → ' + esc(v) + ' ×</button>').join('') + '</div>' : '') + '</details>'; })() +
+          '<div class="hp-row"><span><b>Uji suara</b><br><small class="muted">dengarkan 3 suara berbeda</small></span><button class="btn sm" data-tt="1">' + icon('sound', 15) + ' Uji</button></div>' : '<div class="small muted">Browser ini tidak mendukung suara bicara.</div>'); })();
+      sp.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { sfx.set({ [b.dataset.s]: !sfx.state()[b.dataset.s] }); drawSnd(); }));
+      sp.querySelector('[data-sv]').oninput = (e) => sfx.set({ vol: e.target.value / 100 });
+      sp.querySelector('[data-tts]')?.addEventListener('click', () => { tts.set({ on: !tts.isOn() }); drawSnd(); });
+      sp.querySelector('[data-ar]')?.addEventListener('click', () => { tts.set({ autoRead: !tts.state().autoRead }); drawSnd(); });
+      sp.querySelector('[data-ov]')?.addEventListener('click', () => { tts.set({ ownerVoice: !tts.state().ownerVoice }); drawSnd(); });
+      sp.querySelector('[data-mm]')?.addEventListener('click', () => { tts.set({ maleEdge: !tts.state().maleEdge }); drawSnd(); });
+      sp.querySelectorAll('[data-te]').forEach((b) => b.addEventListener('click', () => { tts.set({ engine: b.dataset.te }); drawSnd(); if (b.dataset.te === 'edge') tts.checkEdge().then(() => sp.isConnected && drawSnd()); }));
+      if (tts.state().edge.avail === undefined) tts.checkEdge().then(() => sp.isConnected && drawSnd());
+      sp.querySelector('[data-tv]')?.addEventListener('input', (e) => tts.set({ vol: e.target.value / 100 }));
+      sp.querySelector('[data-pd]')?.addEventListener('click', () => { const w = sp.querySelector('[data-pw]').value, v = sp.querySelector('[data-py]').value; if (w.trim() && v.trim()) { tts.setPron({ word: w, say: v }); drawSnd(); } });
+      sp.querySelectorAll('[data-pk]').forEach((b) => b.addEventListener('click', () => { tts.setPron({ word: b.dataset.pk, say: '' }); drawSnd(); }));
+      sp.querySelector('[data-tt]')?.addEventListener('click', () => { const ids = (D().employees || []).filter((x) => x.type === 'ai').slice(0, 3).map((x) => x.id); const lines = ['Halo, saya asisten RAIVERSE. Tugas hari ini sudah selesai, sembilan puluh lima persen sesuai target.', 'Saya setuju. Biar saya cek dulu datanya.', 'Rapat dimulai pukul sepuluh. Mohon siapkan laporan.']; tts.stop(); (ids.length ? ids : ['a', 'b', 'c']).forEach((id, i) => tts.speak(id, lines[i], { force: true })); });
+    };
+    drawSnd();
+    const gp = el.querySelector('[data-hpv="gfx"]');
+    const drawGfx = () => {
+      if (!office?.gfx) return; const m = office.gfx(), st = office.gfxStats();
+      const opt = [['auto', 'Otomatis', 'menyesuaikan sendiri'], ['eco', 'Hemat', '30 fps, tanpa bayangan, paling ringan'], ['high', 'Tinggi', 'bloom, warna sinematik, blur kedalaman']];
+      gp.innerHTML = '<div class="small muted" style="margin:4px 0 8px">Pilih beban grafis. Kantor selalu otomatis menurunkan resolusi bila terasa berat, menyembunyikan kota yang jauh, dan menggambar orang yang jauh sebagai titik.</div>' +
+        opt.map(([k, l, d]) => '<div class="hp-row"><span><b>' + l + '</b><br><small class="muted">' + d + '</small></span><button class="btn sm ' + (m === k ? '' : 'ghost') + '" data-g="' + k + '">' + (m === k ? 'Aktif' : 'Pilih') + '</button></div>').join('') +
+        '<div class="hp-row"><span><b>Gaya warna film</b><br><small class="muted">' + ({ natural: 'Alami', cinema: 'Sinematik: bayangan sejuk, cahaya hangat, glow lembut', soft: 'Lembut & menenangkan', cool: 'Dingin segar' })[office.look?.() || 'cinema'] + '</small></span><span>' + ['natural', 'cinema', 'soft', 'cool'].map((k) => '<button class="btn sm ' + ((office.look?.() || 'cinema') === k ? '' : 'ghost') + '" data-look="' + k + '">' + ({ natural: 'Alami', cinema: 'Film', soft: 'Lembut', cool: 'Dingin' })[k] + '</button>').join(' ') + '</span></div>' +
+        '<div class="hp-row"><span><b>Bingkai layar lebar</b><br><small class="muted">garis hitam atas-bawah 2,39:1 seperti film</small></span><button class="btn sm ' + (office.bars?.() ? '' : 'ghost') + '" data-bars>' + (office.bars?.() ? 'Nyala' : 'Mati') + '</button></div>' +
+        '<div class="hp-row"><span><b>Fokus lensa (blur latar)</b><br><small class="muted">0 = tajam semua · lebih tinggi = latar & foreground makin kabur</small></span><input type="range" min="0" max="200" value="' + Math.round((office.dof?.() ?? 1.3) * 100) + '" data-dof style="width:120px"></div>' +
+        '<div class="hp-row"><span><b>Lebar pandangan</b><br><small class="muted">kecil = lensa tele sinematik · besar = lebar</small></span><input type="range" min="22" max="75" value="' + Math.round(office.fov?.() ?? 45) + '" data-fov style="width:120px"></div>' +
+        '<div class="small muted mono" style="margin-top:8px" data-gs>' + st.fps + ' fps · resolusi ' + Math.round(st.res * 100) + '% · ' + st.calls + ' draw · ' + Math.round(st.tris / 1000) + 'k segitiga</div>';
+      gp.querySelectorAll('[data-look]').forEach((b) => (b.onclick = () => { office.setLook(b.dataset.look); drawGfx(); }));
+      gp.querySelector('[data-bars]').onclick = () => { office.setBars(!office.bars()); drawGfx(); };
+      gp.querySelector('[data-dof]').oninput = (ev) => office.setDof(ev.target.value / 100);
+      gp.querySelector('[data-fov]').oninput = (ev) => office.setFov(+ev.target.value);
+      gp.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { office.setGfx(b.dataset.g); drawGfx(); }));
+    };
+    drawGfx(); clearInterval(this.gfxT); this.gfxT = setInterval(() => { if (el.hidden || gp.hidden) return; const st = office?.gfxStats?.(), e2 = gp.querySelector('[data-gs]'); if (st && e2) e2.textContent = 'Kelancaran ' + st.fps + ' gambar per detik'; }, 1000);
     el.querySelector('[data-hx]').onclick = () => (el.hidden = true);
     el.querySelectorAll('[data-hp]').forEach((b) => (b.onclick = () => { el.querySelectorAll('[data-hp]').forEach((x) => x.classList.toggle('on', x === b)); el.querySelectorAll('[data-hpv]').forEach((v) => (v.hidden = v.dataset.hpv !== b.dataset.hp)); }));
   },
+  clock(t, ph, auto, h) {
+    const el = this.ov?.querySelector('#oclock'); if (!el) return;
+    el.querySelector('[data-cph]').innerHTML = icon(/[\u{1F319}\u{1F31B}\u{1F31C}]/u.test(String(ph)) ? 'moon' : 'sun', 18); el.querySelector('[data-ctm]').textContent = t; el.querySelector('[data-cmd]').textContent = auto ? 'otomatis' : 'manual';
+    const r = el.querySelector('[data-cr]'); if (r && document.activeElement !== r) r.value = h;
+  },
+  bindClock() {
+    const el = this.ov?.querySelector('#oclock'); if (!el || el.dataset.bound) return; el.dataset.bound = '1';
+    const pop = el.querySelector('.tod-pop');
+    el.querySelector('[data-clock]').onclick = () => (pop.hidden = !pop.hidden);
+    el.querySelector('[data-cr]').oninput = (e) => { office.setAutoDay(false); office.timeOfDay(+e.target.value); };
+    el.querySelectorAll('[data-ch]').forEach((b) => (b.onclick = () => { office.setAutoDay(false); office.timeOfDay(+b.dataset.ch); }));
+    el.querySelector('[data-cauto]').onclick = () => office.setAutoDay(true);
+  },
   chip(text) {
     const el = this.ov?.querySelector('#ochip'); if (!el) return;
-    el.textContent = text; el.hidden = false; clearTimeout(this.chipT); this.chipT = setTimeout(() => (el.hidden = true), 1600);
+    el.textContent = text; el.hidden = false; el.classList.remove('pudar'); clearTimeout(this.chipT); clearTimeout(this.chipT2);
+    this.chipT = setTimeout(() => { el.classList.add('pudar'); this.chipT2 = setTimeout(() => { el.hidden = true; el.classList.remove('pudar'); }, 600); }, 2800);   // ±3 detik, lalu hilang halus
   },
   /** Choose the player's character: female/male, hair style, skin tone, hair colour, glasses. */
-  characterPicker() {
-    const me = emp(S.me); if (!me) return;
-    const ap = { gender: 'female', hairStyle: '', skin: 1, hair: 1, glasses: false, ...(me.appearance || {}) };
-    const STY = { female: [['long', 'Panjang'], ['bob', 'Bob'], ['bun', 'Cepol'], ['ponytail', 'Kuncir'], ['hijab', 'Hijab'], ['curly', 'Keriting']], male: [['crop', 'Cepak'], ['side', 'Belah samping'], ['quiff', 'Quiff'], ['curly', 'Keriting'], ['bald', 'Plontos']] };
-    const SK = ['#f3d2b8', '#e7b995', '#d29e76', '#b27a54', '#8c5a3a', '#6b4128'], HR = ['#1b1411', '#2e1f17', '#4a3022', '#6b4a2e', '#0d0d0f', '#8a6a4a', '#b7b0a6'];
-    const body = () => `<div class="pick-row"><span>Jenis kelamin</span><div class="seg">${[['female', '👩 Wanita'], ['male', '👨 Pria']].map(([v, l]) => `<button class="${ap.gender === v ? 'on' : ''}" data-g="${v}">${l}</button>`).join('')}</div></div>
-      <div class="pick-row"><span>Gaya rambut</span><div class="seg wrap">${STY[ap.gender].map(([v, l]) => `<button class="${ap.hairStyle === v ? 'on' : ''}" data-h="${v}">${l}</button>`).join('')}</div></div>
-      <div class="pick-row"><span>Warna kulit</span><div class="swatches">${SK.map((c, i) => `<button style="background:${c}" class="${ap.skin === i ? 'on' : ''}" data-s="${i}"></button>`).join('')}</div></div>
-      <div class="pick-row"><span>Warna rambut</span><div class="swatches">${HR.map((c, i) => `<button style="background:${c}" class="${ap.hair === i ? 'on' : ''}" data-c="${i}"></button>`).join('')}</div></div>
-      <label class="pick-row"><span>Kacamata</span><input type="checkbox" data-gl ${ap.glasses ? 'checked' : ''}></label>`;
-    modal('👤 Karakter saya', `<div id="pickbox">${body()}</div><div class="small muted" style="margin-top:8px">Perubahan langsung terlihat di kantor 3D (dan di mode Play).</div>`, {
-      onMount: (el) => {
-        const box = el.querySelector('#pickbox');
-        const bind = () => {
-          box.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { ap.gender = b.dataset.g; ap.hairStyle = ''; box.innerHTML = body(); bind(); }));
-          box.querySelectorAll('[data-h]').forEach((b) => (b.onclick = () => { ap.hairStyle = b.dataset.h; box.innerHTML = body(); bind(); }));
-          box.querySelectorAll('[data-s]').forEach((b) => (b.onclick = () => { ap.skin = +b.dataset.s; box.innerHTML = body(); bind(); }));
-          box.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { ap.hair = +b.dataset.c; box.innerHTML = body(); bind(); }));
-          box.querySelector('[data-gl]').onchange = (ev) => (ap.glasses = ev.target.checked);
-        };
-        bind();
-      },
-      actions: [{ label: 'Batal' }, { label: 'Simpan karakter', kind: 'primary', run: async () => { const clean = { ...ap }; if (!clean.hairStyle) delete clean.hairStyle; await api('PATCH', `/api/employees/${S.me}`, { appearance: clean }); toast('✨ Karakter diperbarui', 'ok'); } }],
-    });
-  },
-  unmount(root) { if (office?.isPlayer()) office.exitPlayer(); clearInterval(this.roomTimer); clearInterval(this.followTimer); office?.stopChase?.(); office?.setVisible(false); officeRoot?.remove(); this.ov?.remove(); this.ov = null; this.roomsHtml = ''; root.style.overflow = ''; },
+  /** Karakter saya: editor robot Mascot V4.2 dengan pratinjau 3D (karakter-view.js); editor manusia lama sudah dihapus */
+  characterPicker() { import('./karakter-view.js').then((m) => m.bukaEditorKarakter()); },   // perf: editor 3D (dan Three.js) baru dimuat saat dibuka
+  unmount(root) { document.body.classList.remove('sinema'); clearInterval(this._introWatch); try { this.leftView?.unmount?.(null); } catch { /* ignore */ } this.leftView = null; this.leftId = null; this._inset = 0; this._insetTarget = 0; office?.setInset?.(0); this.closeAllApps?.(); if (office?.isPlayer()) office.exitPlayer(); clearInterval(this.roomTimer); clearInterval(this.stateTimer); clearInterval(this.followTimer); this.pn?.putus(); this.pn = null; document.removeEventListener('pointerdown', this._offClick, true); document.removeEventListener('keydown', this._offKey, true); clearTimeout(this._hintT); cancelAnimationFrame(this._insetRaf); if (this._mk) { document.removeEventListener('keydown', this._mk, true); document.removeEventListener('pointerlockchange', this._mkHint); document.removeEventListener('focusin', this._mkHint); document.removeEventListener('focusout', this._mkHint); this._mk = null; } office?.stopChase?.(); office?.setVisible(false); officeRoot?.remove(); this.ov?.remove(); this.ov = null; this.roomsHtml = ''; root.style.overflow = ''; },
 };
 
+// <pengelola>
 // ═════════════════════ DASHBOARD ═════════════════════
 export const DashboardView = {
   mount(root) {
-    root.innerHTML = `<div class="page">
-      <div class="kpi-grid" id="dk"></div>
-      <div class="dash">
-        <div style="display:grid;gap:16px">
-          <div class="card"><div class="card-h">🎯 Goal Perusahaan<span style="flex:1"></span><span class="muted small">AI Chief of Staff memecahnya ke divisi</span></div>
-            <div class="card-b" style="display:grid;gap:10px">
-              <input class="input" id="gt" placeholder="Apa yang ingin dicapai? mis. Tingkatkan penjualan paket Growth 30% bulan ini">
-              <textarea class="input" id="gd" rows="2" placeholder="Konteks tambahan, batasan, target, deadline (opsional)"></textarea>
-              <div class="row"><select class="input" id="gp" style="width:auto">${opt('high', PRIO.high, 'high')}${opt('medium', PRIO.medium)}${opt('low', PRIO.low)}</select><span style="flex:1"></span><button class="btn primary" id="gsend">🚀 Jalankan goal</button></div>
-              <div id="goals" style="display:grid;gap:8px"></div>
-            </div></div>
-          <div class="card"><div class="card-h">🏢 Divisi<span style="flex:1"></span><button class="btn sm" data-nav="team">Kelola tim</button></div><div class="card-b"><div class="div-grid" id="dd"></div></div></div>
-        </div>
-        <div style="display:grid;gap:16px">
-          <div class="card"><div class="card-h">🛑 Menunggu persetujuan <span class="badge" id="apc">0</span></div><div class="card-b" id="dap" style="display:grid;gap:8px"></div></div>
-          <div class="card"><div class="card-h">📈 Throughput 12 jam</div><div class="card-b"><div class="spark" id="spark"></div><div class="row small muted" style="justify-content:space-between;margin-top:6px"><span>-12j</span><span>sekarang</span></div></div></div>
-          <div class="card"><div class="card-h">📡 Aktivitas</div><div class="feed" id="dfeed" style="max-height:420px"></div></div>
-        </div>
-      </div></div>`;
+    root.innerHTML = `<div class="page simple home">
+      <div class="hero"><div><div class="hero-k">${esc(D().company.name)}</div><h2>Apa yang ingin kamu kerjakan?</h2><p class="home-intro">Ceritakan tujuannya. Tim AI membantu mengerjakan langkah berikutnya.</p><div class="hero-s" id="dhs"></div></div><div class="hero-a"><button class="btn ghost" id="hgo">${icon('office')} Lihat kantor 3D</button><button class="btn ghost" id="hfind" title="Cari karyawan, pekerjaan, catatan (Ctrl K)">${icon('search')} Cari <kbd>Ctrl K</kbd></button></div></div>
+      <ol class="flow" aria-label="Alur kerja"><li><button type="button" data-flow="ask"><b>1</b><span>Ceritakan tujuan</span></button></li><li><button type="button" data-flow="tasks"><b>2</b><span>Tim mengerjakan</span></button></li><li><button type="button" data-flow="brain"><b>3</b><span>Tinjau &amp; simpan hasil</span></button></li></ol>
+      <div class="card ask"><div class="card-b" style="display:grid;gap:10px">
+        <label class="sr-only" for="gt">Tugas untuk tim AI</label><div class="row home-compose"><textarea class="input big" id="gt" rows="2" placeholder="Misalnya, siapkan rencana konten untuk minggu depan…" style="flex:1"></textarea><button class="btn primary" id="gsend">${icon('play')} Mulai</button></div>
+        <details class="more"><summary>Detail tugas <span class="muted">· opsional</span></summary><div style="display:grid;gap:8px;margin-top:8px"><label class="f" for="gd">Konteks dan hasil yang diharapkan</label><textarea class="input" id="gd" rows="2" placeholder="Tambahkan batasan, target, atau tenggat"></textarea><label class="f" for="gp">Prioritas</label><select class="input" id="gp" style="width:auto">${opt('high', PRIO.high, 'high')}${opt('medium', PRIO.medium)}${opt('low', PRIO.low)}</select></div></details><p class="compose-hint">Enter untuk mulai · Shift + Enter untuk baris baru</p>
+      </div></div>
+      <div class="home-suggestions" aria-label="Contoh tugas"><button class="btn" data-prompt="Siapkan rencana konten untuk minggu depan">${icon('brain')} Rencana konten</button><button class="btn" data-prompt="Riset kompetitor dan rangkum peluang untuk bisnis kita">${icon('search')} Riset kompetitor</button><button class="btn" data-prompt="Susun langkah untuk meluncurkan produk baru">${icon('goal')} Rencana peluncuran</button></div>
+      <div id="dapw"></div>
+      <div class="card"><div class="card-h">${icon('tasks')} Pekerjaan terbaru<span style="flex:1"></span><button class="btn sm ghost" data-nav="tasks">Lihat semua →</button></div><div class="card-b" id="goals" style="display:grid;gap:8px"></div></div>
+      <details class="card acc"><summary class="card-h">${icon('bolt')} Jejak aktivitas</summary><div class="feed" id="dfeed" style="max-height:360px"></div></details>
+    </div>`;
     root.querySelector('#gsend').onclick = async () => {
       const title = root.querySelector('#gt').value.trim();
       if (!title) return root.querySelector('#gt').focus();
-      await api('POST', '/api/goals', { title, description: root.querySelector('#gd').value, priority: root.querySelector('#gp').value, userId: S.me });
-      root.querySelector('#gt').value = ''; root.querySelector('#gd').value = '';
-      toast('🎯 Goal diterima. Tim mulai bekerja.', 'ok');
+      const button = root.querySelector('#gsend');
+      if (button.disabled) return;
+      button.disabled = true; button.setAttribute('aria-busy', 'true'); button.textContent = 'Mengirim…';
+      try {
+        await api('POST', '/api/goals', { title, description: root.querySelector('#gd').value, priority: root.querySelector('#gp').value, userId: S.me });
+        root.querySelector('#gt').value = ''; root.querySelector('#gd').value = '';
+        toast('Tugas diterima. Pantau hasilnya di Pekerjaan terbaru.', 'ok');
+      } catch { /* api displays the error; preserve the draft for retry */ }
+      finally { button.disabled = false; button.removeAttribute('aria-busy'); button.innerHTML = `${icon('play')} Mulai`; }
     };
-    root.querySelector('[data-nav]').onclick = () => navigate('team');
+    root.querySelector('#gt').onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); root.querySelector('#gsend').click(); } };
+    root.querySelectorAll('[data-prompt]').forEach((button) => { button.onclick = () => { const input = root.querySelector('#gt'); input.value = button.dataset.prompt; input.focus(); }; });
+    root.querySelector('[data-nav]').onclick = () => navigate('tasks');
+    root.querySelectorAll('[data-flow]').forEach((b) => (b.onclick = () => (b.dataset.flow === 'ask' ? root.querySelector('#gt').focus() : navigate(b.dataset.flow))));
+    root.querySelector('#hgo').onclick = () => navigate('office');
+    root.querySelector('#hfind').onclick = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
     bindCommon(root);
     this.root = root; this.update();
   },
   update() {
-    const r = this.root; const k = kpis(); const d = D();
-    r.querySelector('#dk').innerHTML = [
-      ['Karyawan AI', k.ai, `${k.humans} manusia`], ['Sedang aktif', k.working, 'bekerja / rapat'], ['Tugas aktif', k.active, `${d.tasks.filter((t) => t.status === 'in_progress').length} dikerjakan`],
-      ['Selesai hari ini', k.doneToday, `${d.tasks.filter((t) => t.status === 'done').length} total`], ['Approval', k.approvals, 'butuh keputusan manusia'],
-      ['Biaya AI hari ini', usd(k.cost), `budget ${usd(d.settings.dailyBudgetUSD)} · ${num(d.usage.tokensIn + d.usage.tokensOut)} token`],
-    ].map(([l, v, s]) => `<div class="card kpi"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
-    const goals = d.tasks.filter((t) => t.kind === 'goal').slice(-6).reverse();
+    const r = this.root; const d = D();
+    const ai = d.employees.filter((e) => e.type === 'ai'); const busy = ai.filter((e) => e.status === 'working' || e.status === 'meeting').length; const open = d.tasks.filter((t) => t.status !== 'done' && t.kind !== 'routine').length;
+    const hs = r.querySelector('#dhs'); if (hs) hs.innerHTML = `<span class="dot ok"></span><b>${busy}</b> dari ${ai.length} agen sedang bekerja · <b>${open}</b> tugas berjalan · biaya hari ini <b>${usd(d.usage.costToday)}</b>`;
+    const aps = d.approvals.filter((a) => a.status === 'pending');
+    r.querySelector('#dapw').innerHTML = aps.length ? `<div class="card need"><div class="card-h">🛑 Perlu keputusanmu <span class="badge">${aps.length}</span></div><div class="card-b" id="dap" style="display:grid;gap:8px">${aps.slice(0, 4).map(approvalCard).join('')}</div></div>` : '';
+    if (aps.length) bindApprovalButtons(r.querySelector('#dap'));
+    const goals = d.tasks.filter((t) => t.kind === 'goal' && !/^\s*(\/|saya selesai\s*$)/i.test(t.title)).slice(-4).reverse();
     r.querySelector('#goals').innerHTML = goals.map((g) => {
       const all = descendants(g.id); const done = all.filter((t) => t.status === 'done').length;
       const pct = g.status === 'done' ? 100 : all.length ? Math.round((done / all.length) * 90) : 5;
-      return `<div class="tcard" data-task="${g.id}" style="--c:var(--accent)"><div class="row"><div class="tt" style="flex:1">${esc(g.title)}</div>${statusChip(g.status)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="meta">${done}/${all.length} subtugas · ${[...new Set(all.map((t) => t.divisionId))].map((x) => div(x)?.icon).join(' ')} · ${ago(g.createdAt)}</div></div>`;
-    }).join('') || '<div class="muted small">Belum ada goal. Coba: “Siapkan peluncuran fitur integrasi WhatsApp”.</div>';
+      return `<div class="tcard" data-task="${g.id}" style="--c:var(--accent)"><div class="row"><div class="tt" style="flex:1">${esc(g.title)}</div>${statusChip(g.status)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="meta">${all.length ? `${done}/${all.length} langkah · ` : ''}${ago(g.createdAt)}</div></div>`;
+    }).join('') || '<div class="muted small">Belum ada. Ketik di atas, mis. “Siapkan peluncuran fitur integrasi WhatsApp”.</div>';
+    if (r.querySelector('#dd')) { r.querySelector('#dvn').textContent = `· ${d.divisions.length}`;
     r.querySelector('#dd').innerHTML = d.divisions.map((x) => {
       const members = d.employees.filter((e) => e.divisionId === x.id);
-      const ts = d.tasks.filter((t) => t.divisionId === x.id);
-      const done = ts.filter((t) => t.status === 'done').length;
-      return `<div class="div-card" style="--c:${x.color}" data-div="${x.id}"><div class="row"><b>${x.icon} ${esc(x.name)}</b><span style="flex:1"></span><span class="chip">${members.filter((e) => e.status === 'working').length}/${members.length} aktif</span></div>
-        <div class="faces">${members.slice(0, 8).map((e) => avatar(e)).join('')}</div>
-        <div class="bar"><i style="width:${ts.length ? (done / ts.length) * 100 : 0}%"></i></div><div class="small muted">${ts.length - done} aktif · ${done} selesai</div></div>`;
+      const act = members.filter((e) => e.status === 'working').length;
+      return `<button class="div-chip" style="--c:${x.color}" data-div="${x.id}"><span>${x.icon} ${esc(x.name)}</span><em>${act ? act + ' aktif' : members.length + ' agen'}</em></button>`;
     }).join('');
-    r.querySelectorAll('[data-div]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.div)));
-    const aps = d.approvals.filter((a) => a.status === 'pending');
-    r.querySelector('#apc').textContent = aps.length;
-    r.querySelector('#dap').innerHTML = aps.slice(0, 6).map(approvalCard).join('') || '<div class="muted small">Tidak ada yang menunggu. 👌</div>';
-    bindApprovalButtons(r.querySelector('#dap'));
-    const now = Date.now(); const buckets = Array(12).fill(0);
-    for (const t of d.tasks) if (t.completedAt && now - t.completedAt < 12 * 3600e3) buckets[11 - Math.floor((now - t.completedAt) / 3600e3)]++;
-    const max = Math.max(1, ...buckets);
-    r.querySelector('#spark').innerHTML = buckets.map((b) => `<i style="height:${(b / max) * 100}%" title="${b} tugas"></i>`).join('');
-    r.querySelector('#dfeed').innerHTML = d.events.slice(-60).reverse().map((e) => feedItem(e)).join('') || '<div class="empty">Belum ada aktivitas</div>';
+    r.querySelectorAll('[data-div]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.div))); }
+    r.querySelector('#dfeed').innerHTML = d.events.slice(-12).reverse().map((e) => feedItem(e)).join('') || '<div class="empty">Belum ada aktivitas</div>';
   },
 };
+// </pengelola>
 const descendants = (id) => { const out = []; const walk = (p) => { for (const t of D().tasks) if (t.parentId === p) { out.push(t); walk(t.id); } }; walk(id); return out; };
 const statusChip = (s) => { const c = TASK_COLS.find((c) => c.id === s || c.also?.includes(s)); return `<span class="chip" style="${s === 'blocked' ? 'color:var(--bad)' : s === 'review' ? 'color:var(--warn)' : s === 'done' ? 'color:var(--ok)' : ''}">${c?.icon || ''} ${s === 'blocked' ? 'Diblokir' : c?.label || s}</span>`; };
 
+// <pengelola>
 function approvalCard(a) {
   const r = emp(a.requesterId); const t = task(a.taskId);
   return `<div class="tcard" style="--c:var(--warn)" data-task="${a.taskId}"><div class="row">${avatar(r)}<div style="flex:1;min-width:0"><div class="tt">${esc(a.title)}</div><div class="small muted">${esc(r?.name)} · ${ago(a.createdAt)}${t?.revisions ? ` · revisi ${t.revisions}` : ''}</div></div></div>${a.summary ? `<div class="small muted">${esc(a.summary.slice(0, 180))}</div>` : ''}<div class="row"><button class="btn sm ok" data-approve="${a.id}">✓ Setujui</button><button class="btn sm" data-reject="${a.id}">✏️ Revisi</button><span style="flex:1"></span><button class="btn sm ghost" data-task="${a.taskId}">Lihat hasil →</button></div></div>`;
 }
+/** the quest contract of a task: what "done" means, who asked, when it is due, and the evidence the agent handed in */
+function contractBlock(t) {
+  if (!t) return '';
+  const late = t.dueAt && t.dueAt < Date.now() && !['done', 'cancelled'].includes(t.status);
+  const ev = t.evidence || [];
+  return `<div class="sec"><h4>Kontrak</h4><div class="small" style="display:grid;gap:5px">
+    ${t.expected ? `<div><b>Hasil yang diharapkan:</b> ${esc(t.expected)}</div>` : ''}
+    <div class="muted">Diminta ${esc(emp(t.createdBy)?.name || t.createdBy)} · dikerjakan ${esc(emp(t.assigneeId)?.name || '?')}${t.dueAt ? ` · tenggat ${new Date(t.dueAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}${t.stage ? ` · tahap ${t.stage}` : ''}${late ? ' · <b style="color:var(--warn)">⏰ lewat tenggat</b>' : ''}</div>
+    ${t.status === 'done' || t.status === 'review' || ev.length ? `<div><b>Bukti:</b> ${ev.length ? ev.map((x) => `<span class="chip" style="${x.ok ? 'color:var(--ok)' : 'opacity:.7'}" title="${x.ok ? 'terverifikasi' : 'tidak bisa dicek'}">${x.ok ? '✓' : '?'} ${esc(x.text.slice(0, 60))}</span>`).join(' ') : '<span class="muted">tidak ada</span>'}${t.unverified ? ' <b style="color:var(--warn)">⚠️ belum ada bukti yang bisa dicek, perlakukan sebagai asumsi</b>' : ''}</div>` : ''}
+    ${t.gaps ? `<div><b>Belum terpenuhi:</b> ${esc(t.gaps)}</div>` : ''}
+  </div></div>`;
+}
+// </pengelola>
 function bindApprovalButtons(root) {
-  root.querySelectorAll('[data-approve]').forEach((b) => (b.onclick = async (e) => { e.stopPropagation(); await api('POST', `/api/approvals/${b.dataset.approve}`, { decision: 'approve', userId: S.me }); toast('Disetujui ✅', 'ok'); }));
+  root.querySelectorAll('[data-approve]').forEach((b) => (b.onclick = async (e) => { e.stopPropagation(); await api('POST', `/api/approvals/${b.dataset.approve}`, { decision: 'approve', userId: S.me }); toast('Siap, dilanjutkan.', 'ok'); }));
   root.querySelectorAll('[data-reject]').forEach((b) => (b.onclick = (e) => { e.stopPropagation(); rejectModal(b.dataset.reject); }));
 }
 function rejectModal(id) {
-  modal('✏️ Minta revisi', `<label class="f">Apa yang perlu diperbaiki?<textarea class="input" name="fb" rows="4" placeholder="mis. Buat lebih singkat, tambahkan estimasi biaya, fokus ke segmen F&B"></textarea></label>`, {
-    actions: [{ label: 'Batal' }, { label: 'Kirim revisi', kind: 'primary', run: async (b) => { await api('POST', `/api/approvals/${id}`, { decision: 'reject', feedback: formData(b).fb, userId: S.me }); toast('Revisi dikirim ke agen', 'ok'); } }],
+  modal('Ubah sedikit', `<label class="f" for="rvfb">Apa yang perlu diubah?</label><textarea id="rvfb" class="input" name="fb" rows="4" placeholder="Contoh: buat lebih singkat, tambahkan perkiraan biaya"></textarea>`, {
+    actions: [{ label: 'Batal' }, { label: 'Kirim', kind: 'primary', run: async (b) => { await api('POST', `/api/approvals/${id}`, { decision: 'reject', feedback: formData(b).fb, userId: S.me }); toast('Permintaanmu sudah dikirim.', 'ok'); } }],
   });
 }
 
+// <pengelola>
 // ═════════════════════ TASKS (Kanban) ═════════════════════
 export const TasksView = {
   mount(root) {
     this.f = this.f || { q: '', div: '', who: '', top: false, lens: '', view: 'kanban', month: Date.now(), sort: 'due' };
-    root.innerHTML = `<div class="toolbar">
-        <input class="input" id="tq" placeholder="🔎 Cari tugas…" style="min-width:180px;flex:1;max-width:320px" value="${esc(this.f.q)}">
+    root.innerHTML = `<div class="page simple wide"><div class="toolbar">
+        <input class="input" id="tq" placeholder="Cari pekerjaan…" style="min-width:160px;flex:1;max-width:360px" value="${esc(this.f.q)}">
+        <div class="view-switch" id="tview">${[['kanban', 'Papan'], ['list', 'Daftar'], ['calendar', 'Kalender']].map(([v, l]) => `<button data-v="${v}" class="${this.f.view === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <span style="flex:1"></span>
+        <button class="btn primary" id="tnew">${icon('plus', 16)} Pekerjaan baru</button>
+      </div>
+      <details class="more" ${this.f.div || this.f.who || this.f.top ? 'open' : ''}><summary>Filter</summary><div class="toolbar" style="margin-top:8px">
         <select class="input" id="tdiv"><option value="">Semua divisi</option>${D().divisions.map((d) => opt(d.id, d.icon + ' ' + d.name, this.f.div)).join('')}</select>
         <select class="input" id="twho"><option value="">Semua orang</option>${opt('__me', '👤 Tugas saya', this.f.who)}${empOptions(this.f.who)}</select>
         <label class="row small muted" style="gap:6px"><input type="checkbox" id="ttop" ${this.f.top ? 'checked' : ''}> Hanya tugas utama</label>
-        <span style="flex:1"></span>
-        <div class="view-switch" id="tview">${[['kanban', '▥ Kanban'], ['calendar', '📅 Kalender'], ['timeline', '⏱ Timeline'], ['list', '☰ Daftar']].map(([v, l]) => `<button data-v="${v}" class="${this.f.view === v ? 'on' : ''}">${l}</button>`).join('')}</div>
-        <button class="btn" id="tgoal2">🎯 Goal</button>
-        <button class="btn primary" id="tnew">＋ Tugas</button>
-      </div><div class="insight" id="tins"></div><div class="kanban" id="kb"></div>`;
-    root.querySelector('#tgoal2').onclick = () => goalModal();
+      </div></details>
+      <div class="insight" id="tins"></div><div class="kanban" id="kb"></div></div>`;
     root.querySelectorAll('#tview [data-v]').forEach((b) => (b.onclick = () => { this.f.view = b.dataset.v; root.querySelectorAll('#tview [data-v]').forEach((x) => x.classList.toggle('on', x === b)); this.update(); }));
     const set = (k, v) => { this.f[k] = v; this.update(); };
     root.querySelector('#tq').oninput = (e) => set('q', e.target.value);
@@ -496,32 +1218,37 @@ export const TasksView = {
       review: ['🛑 Butuh keputusan', (t) => t.status === 'review'],
       high: ['🔥 Prioritas tinggi', (t) => t.priority === 'high' && t.status !== 'done'],
       today: ['✅ Selesai hari ini', (t) => t.status === 'done' && (t.completedAt || 0) >= day.getTime()],
-      ai: ['🤖 Inisiatif agen', (t) => emp(t.createdBy)?.type === 'ai' && !t.parentId],
+      ai: ['🤖 Inisiatif pembantu', (t) => emp(t.createdBy)?.type === 'ai' && !t.parentId],
     };
     const base = D().tasks.filter((t) => (!f.div || t.divisionId === f.div) && (!f.who || t.assigneeId === (f.who === '__me' ? S.me : f.who)) && (!f.top || !t.parentId) && (!q || `${t.title} ${t.description || ''} ${emp(t.assigneeId)?.name || ''}`.toLowerCase().includes(q)));
     const list = f.lens && LENS[f.lens] ? base.filter(LENS[f.lens][1]) : base;
     const done = base.filter((t) => t.status === 'done' && t.completedAt && t.createdAt);
     const cycle = done.length ? done.slice(-40).reduce((a, t) => a + (t.completedAt - t.createdAt), 0) / Math.min(40, done.length) / 60000 : 0;
     const cost = base.reduce((a, t) => a + (t.cost || 0), 0);
-    this.root.querySelector('#tins').innerHTML = Object.entries(LENS).map(([k, [l, fn]]) => `<button class="lens ${f.lens === k ? 'on' : ''}" data-lens="${k}"><b>${base.filter(fn).length}</b><span>${l}</span></button>`).join('') + `<div class="lens static"><b>${cycle ? (cycle < 60 ? cycle.toFixed(0) + ' mnt' : (cycle / 60).toFixed(1) + ' jam') : '–'}</b><span>⏱ Rata-rata selesai</span></div><div class="lens static"><b>${usd(cost)}</b><span>💰 Biaya AI</span></div>`;
+    // hanya yang ada isinya (atau sedang dipilih): tidak ada deretan "0" yang membingungkan
+    this.root.querySelector('#tins').innerHTML = Object.entries(LENS).filter(([k, [, fn]]) => f.lens === k || (k !== 'today' && k !== 'ai' && base.filter(fn).length)).map(([k, [l, fn]]) => `<button class="lens ${f.lens === k ? 'on' : ''}" data-lens="${k}"><b>${base.filter(fn).length}</b><span>${l}</span></button>`).join('');
     this.root.querySelectorAll('[data-lens]').forEach((b) => (b.onclick = () => { this.f.lens = this.f.lens === b.dataset.lens ? '' : b.dataset.lens; this.update(); }));
     const kb = this.root.querySelector('#kb');
     if (f.view !== 'kanban') { kb.className = { calendar: 'cal', timeline: 'tl', list: 'tlist' }[f.view]; return this[f.view](kb, list); }
     kb.className = 'kanban';
     const scrolls = [...kb.querySelectorAll('.col-b')].map((c) => c.scrollTop);
-    kb.innerHTML = TASK_COLS.map((c) => {
+    const colsShown = TASK_COLS.filter((c) => c.id === 'done' || list.some((t) => t.status === c.id || c.also?.includes(t.status)));
+    const noActive = !list.some((t) => t.status !== 'done' && t.status !== 'cancelled');
+    kb.innerHTML = (noActive ? '<div class="card calm"><div class="card-b" style="text-align:center"><div style="font-size:28px">🎉</div><b>Semua beres</b><div class="small muted">Tidak ada tugas berjalan. Mulai yang baru dari Beranda atau tombol “Pekerjaan baru”.</div></div></div>' : '') + colsShown.map((c) => {
       let items = list.filter((t) => t.status === c.id || c.also?.includes(t.status));
       items.sort((a, b) => (c.id === 'done' ? (b.completedAt || 0) - (a.completedAt || 0) : b.updatedAt - a.updatedAt));
-      const more = items.length > 80 ? items.length - 80 : 0; items = items.slice(0, 80);
-      return `<div class="col" data-col="${c.id}"><div class="col-h">${c.icon} ${c.label}<span class="badge soft">${list.filter((t) => t.status === c.id || c.also?.includes(t.status)).length}</span></div><div class="col-b">${items.map((t) => taskCard(t, running.has(t.id) || t.status === 'in_progress')).join('') || '<div class="empty small">Kosong</div>'}${more ? `<div class="muted small" style="text-align:center">+${more} lagi</div>` : ''}</div></div>`;
+      const cap = c.id === 'done' ? 8 : 40;
+      const more = items.length > cap ? items.length - cap : 0; items = items.slice(0, cap);
+      return `<div class="col" data-col="${c.id}"><div class="col-h">${c.icon} ${c.label}<span class="badge soft">${list.filter((t) => t.status === c.id || c.also?.includes(t.status)).length}</span></div><div class="col-b">${items.map((t) => taskCard(t, running.has(t.id) || t.status === 'in_progress')).join('') || '<div class="empty small">Kosong</div>'}${more ? `<button class="btn sm ghost" data-showall="${c.id}" style="justify-self:center">+${more} lagi · lihat di Daftar</button>` : ''}</div></div>`;
     }).join('');
+    kb.querySelectorAll('[data-showall]').forEach((b) => (b.onclick = () => { this.f.view = 'list'; this.root.querySelectorAll('#tview [data-v]').forEach((x) => x.classList.toggle('on', x.dataset.v === 'list')); this.update(); }));
     kb.querySelectorAll('.col-b').forEach((c, i) => (c.scrollTop = scrolls[i] || 0));
     // drag & drop status change
     kb.querySelectorAll('.tcard').forEach((el) => { el.draggable = true; el.ondragstart = (e) => e.dataTransfer.setData('text/plain', el.dataset.task); });
     kb.querySelectorAll('.col').forEach((col) => {
       col.ondragover = (e) => { e.preventDefault(); col.classList.add('drop'); };
       col.ondragleave = () => col.classList.remove('drop');
-      col.ondrop = async (e) => { e.preventDefault(); col.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (col.dataset.col === 'review') return toast('Review diisi otomatis saat agen meminta persetujuan', 'warn'); await api('PATCH', `/api/tasks/${id}`, { status: col.dataset.col, userId: S.me }); };
+      col.ondrop = async (e) => { e.preventDefault(); col.classList.remove('drop'); const id = e.dataTransfer.getData('text/plain'); if (col.dataset.col === 'review') return toast('Review diisi otomatis saat agen meminta konfirmasi', 'warn'); await api('PATCH', `/api/tasks/${id}`, { status: col.dataset.col, userId: S.me }); };
     });
   },
   /** Month calendar: tasks on their due date (or completion date), plus every scheduled cron routine run. */
@@ -546,7 +1273,7 @@ export const TasksView = {
         ? `<div class="cal-ev ${x.t.status === 'done' ? 'done' : ''}" style="--c:${div(x.t.divisionId)?.color}" data-task="${x.t.id}" title="${esc(x.t.title)} · ${esc(emp(x.t.assigneeId)?.name || '')}">${x.t.kind === 'goal' ? '🎯 ' : ''}${esc(x.t.title)}</div>`
         : `<div class="cal-ev routine" style="--c:${div(emp(x.r.employeeId)?.divisionId)?.color}" data-agent="${x.r.employeeId}" title="${esc(x.r.title)} · ${new Date(x.r.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}">🔁 ${new Date(x.r.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} ${esc(x.r.title)}</div>`).join('')}${items.length > 5 ? `<div class="cal-more">+${items.length - 5} lagi</div>` : ''}</div>`);
     }
-    el.innerHTML = `<div class="cal-h"><button class="btn sm" data-mo="-1">‹</button><b>${m.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</b><button class="btn sm" data-mo="1">›</button><button class="btn sm ghost" data-mo="0">Hari ini</button><span style="flex:1"></span><span class="small muted">📋 tugas (tenggat/selesai) · 🔁 jadwal cron agen</span></div>
+    el.innerHTML = `<div class="cal-h"><button class="btn sm" data-mo="-1">‹</button><b>${m.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</b><button class="btn sm" data-mo="1">›</button><button class="btn sm ghost" data-mo="0">Hari ini</button><span style="flex:1"></span><span class="small muted">📋 tugas (tenggat/selesai) · 🔁 jadwal rutin pembantu</span></div>
       <div class="cal-grid">${['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((x) => `<div class="cal-dow">${x}</div>`).join('')}${cells.join('')}</div>`;
     el.querySelectorAll('[data-mo]').forEach((b) => (b.onclick = () => { const v = +b.dataset.mo; const d = new Date(this.f.month); if (!v) this.f.month = Date.now(); else { d.setDate(1); d.setMonth(d.getMonth() + v); this.f.month = d.getTime(); } this.update(); }));
   },
@@ -559,7 +1286,7 @@ export const TasksView = {
     const lanes = D().divisions.map((d) => [d, list.filter((t) => t.divisionId === d.id && (t.completedAt || now) >= from && t.createdAt <= to)]).filter(([, l]) => l.length);
     el.innerHTML = `<div class="cal-h"><b>Timeline kerja</b><div class="view-switch">${[3, 7, 14, 30].map((s) => `<button data-span="${s}" class="${span === s ? 'on' : ''}">${s} hari</button>`).join('')}</div><span style="flex:1"></span><span class="small muted">Bar = dibuat → selesai · arsiran = masih berjalan · garis merah = sekarang</span></div>
       <div class="tl-wrap"><div class="tl-lane" style="min-height:0"><b></b><div class="tl-axis" style="grid-template-columns:repeat(${span},1fr)">${ticks.slice(0, -1).map((t) => `<span>${new Date(t).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}${span <= 3 ? ' ' + new Date(t).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}</span>`).join('')}</div></div>
-      ${lanes.map(([d, l]) => { const rows = []; for (const t of l.sort((a, b) => a.createdAt - b.createdAt)) { const s = x(t.createdAt), e2 = x(t.completedAt || Math.max(now, t.dueAt || now)); let r = rows.findIndex((end) => end < s - 0.5); if (r < 0) { rows.push(0); r = rows.length - 1; } rows[r] = e2; t._row = r; t._s = s; t._e = e2; }
+      ${lanes.map(([d, l]) => { const rows = []; for (const t of l.sort((a, b) => a.createdAt - b.createdAt)) { const s = x(t.createdAt), e2 = x(t.completedAt || Math.max(now, t.dueAt || now)); let r = rows.findIndex((end) => end < s - 0.5); if (r < 0) { if (rows.length < 8) { rows.push(0); r = rows.length - 1; } else { r = rows.indexOf(Math.min(...rows)); } } rows[r] = e2; t._row = r; t._s = s; t._e = e2; }
         return `<div class="tl-lane"><b><span style="color:${d.color}">${d.icon}</span>${esc(d.name)}</b><div class="tl-track" style="height:${Math.max(1, rows.length) * 26 + 10}px"><div class="tl-now" style="left:${x(now)}%"></div>${l.map((t) => `<div class="tl-bar ${t.status === 'done' ? '' : 'open'}" data-task="${t.id}" title="${esc(t.title)} · ${esc(emp(t.assigneeId)?.name || '')} · ${t.status}" style="left:${t._s}%;width:${Math.max(0.6, t._e - t._s)}%;top:${5 + t._row * 26}px;background:${d.color}">${esc(emp(t.assigneeId)?.name || '')}: ${esc(t.title)}</div>`).join('')}</div></div>`; }).join('') || '<div class="empty">Belum ada tugas pada rentang ini.</div>'}</div>`;
     el.querySelectorAll('[data-span]').forEach((b) => (b.onclick = () => { this.f.span = +b.dataset.span; this.update(); }));
   },
@@ -591,14 +1318,16 @@ export function newTaskModal(pre = {}) {
   });
 }
 export function goalModal() {
-  modal('🎯 Goal baru untuk perusahaan', `<label class="f">Goal<input class="input" name="title" placeholder="mis. Naikkan MRR 20% kuartal ini"></label><label class="f">Konteks<textarea class="input" name="description" rows="3"></textarea></label>`, {
-    actions: [{ label: 'Batal' }, { label: '🚀 Jalankan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; await api('POST', '/api/goals', { ...f, userId: S.me }); toast('Goal dikirim', 'ok'); } }],
+  modal('🎯 Pekerjaan baru untuk perusahaan', `<label class="f">Goal<input class="input" name="title" placeholder="mis. Naikkan MRR 20% kuartal ini"></label><label class="f">Konteks<textarea class="input" name="description" rows="3"></textarea></label>`, {
+    actions: [{ label: 'Batal' }, { label: '🚀 Jalankan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; await api('POST', '/api/goals', { ...f, userId: S.me }); toast('Pekerjaan dikirim', 'ok'); } }],
   });
 }
+// </pengelola>
 
+// <pengelola>
 // ═════════════════════ TASK DRAWER ═════════════════════
 const LOG_ICON = { created: '📥', started: '⚡', tool: '🔧', thought: '💭', delegate: '➡️', waiting: '⏳', resumed: '🔄', approval: '🛑', approved: '🎉', rejected: '✏️', done: '✅', error: '⚠️', comment: '💬', edit: '✎' };
-export function taskDrawer(id) {
+function taskDrawerPro(id) {
   drawer(() => {
     const t = task(id);
     if (!t) return null;
@@ -607,10 +1336,10 @@ export function taskDrawer(id) {
     const ap = D().approvals.find((x) => x.taskId === t.id && x.status === 'pending');
     const n = t.noteId && note(t.noteId);
     return {
-      head: `<div style="min-width:0"><div class="small muted">${d?.icon} ${esc(d?.name)} · ${t.kind === 'goal' ? '🎯 Goal' : t.kind === 'routine' ? '🔁 Rutinitas' : 'Tugas'} · <code>${t.id}</code></div><div style="font-weight:700;font-size:15px;line-height:1.3">${esc(t.title)}</div></div>`,
+      head: `<div style="min-width:0"><div class="small muted">${d?.icon} ${esc(d?.name)} · ${t.kind === 'goal' ? '🎯 Pekerjaan' : t.kind === 'routine' ? '🔁 Rutinitas' : 'Tugas'} · <code>${t.id}</code></div><div style="font-weight:700;font-size:15px;line-height:1.3">${esc(t.title)}</div></div>`,
       body: `
         <div class="row wrap">${statusChip(t.status)}<span class="chip prio-${t.priority}">${PRIO[t.priority]}</span>${t.revisions ? `<span class="chip">revisi ${t.revisions}</span>` : ''}<span class="chip">dibuat ${ago(t.createdAt)} oleh ${esc(emp(t.createdBy)?.name || t.createdBy)}</span></div>
-        ${ap ? `<div class="card" style="border-color:var(--warn)"><div class="card-b" style="display:grid;gap:8px"><b>🛑 ${esc(a?.name)} meminta persetujuan Anda</b><div class="row"><button class="btn ok" data-approve="${ap.id}">✓ Setujui</button><button class="btn" data-reject="${ap.id}">✏️ Minta revisi</button></div></div></div>` : ''}
+        ${ap ? `<div class="card" style="border-color:var(--warn)"><div class="card-b" style="display:grid;gap:8px"><b>🛑 ${esc(a?.name)} meminta konfirmasi Anda</b><div class="row"><button class="btn ok" data-approve="${ap.id}">✓ Setujui</button><button class="btn" data-reject="${ap.id}">✏️ Minta revisi</button></div></div></div>` : ''}
         ${a?.type === 'human' && t.status !== 'done' ? `<div class="card" style="border-color:var(--accent)"><div class="card-b" style="display:grid;gap:8px"><b>👤 Tugas untuk manusia (${esc(a.name)})</b><textarea class="input" id="hout" rows="3" placeholder="Tulis hasil / catatan penyelesaian">${esc(t.output || '')}</textarea><div class="row"><button class="btn primary" id="hdone">✓ Tandai selesai</button></div></div></div>` : ''}
         <div class="sec"><h4>Pelaksana</h4><div class="row">${avatar(a)}<div style="flex:1;min-width:0"><b data-agent="${a?.id}" style="cursor:pointer">${esc(a?.name)}</b><div class="small muted">${esc(a?.title)} · ${esc(a?.statusText || '')}</div></div><select class="input" id="reassign" style="width:auto;max-width:170px">${empOptions(t.assigneeId)}</select></div></div>
         <div class="row wrap">
@@ -622,7 +1351,8 @@ export function taskDrawer(id) {
         ${parent ? `<div class="sec"><h4>Tugas induk</h4><div class="bl" data-task="${parent.id}">⬆️ ${esc(parent.title)} ${statusChip(parent.status)}</div></div>` : ''}
         ${kids.length ? `<div class="sec"><h4>Subtugas (${kids.filter((k) => k.status === 'done').length}/${kids.length})</h4><div style="display:grid;gap:6px">${kids.map((k) => `<div class="bl row" data-task="${k.id}">${avatar(emp(k.assigneeId))}<span style="flex:1;min-width:0">${esc(k.title)}</span>${statusChip(k.status)}</div>`).join('')}</div></div>` : ''}
         ${t.description ? `<div class="sec"><h4>Brief</h4><div class="md small">${md(t.description)}</div></div>` : ''}
-        ${t.output ? `<div class="sec"><h4>Hasil kerja ${n ? `<a data-note="${n.id}" style="cursor:pointer;text-transform:none;letter-spacing:0">· buka di Brain →</a>` : ''}</h4><div class="output md">${md(t.output)}</div></div>` : ''}
+        ${contractBlock(t)}
+        ${t.output ? `<div class="sec"><h4>Hasil kerja ${n ? `<a data-note="${n.id}" style="cursor:pointer;text-transform:none;letter-spacing:0">· buka di Catatan →</a>` : ''}</h4><div class="output md">${md(t.output)}</div></div>` : ''}
         <div class="sec"><h4>Jejak kerja (observability)</h4><div class="trace">${(t.log || []).slice().reverse().map((l) => `<div class="trace-i ${l.type}"><div class="ico">${LOG_ICON[l.type] || '•'}</div><div><div class="txt">${l.type === 'thought' ? esc(l.text) : `<b>${esc(emp(l.actorId)?.name || l.actorId)}</b> ${esc(l.text)}`}</div><div class="when">${new Date(l.t).toLocaleString('id-ID')}</div></div></div>`).join('')}</div></div>
         <div class="sec"><h4>Komentar</h4><div class="row"><input class="input" id="tc" placeholder="Tambahkan arahan untuk agen…"><button class="btn" id="tcs">Kirim</button></div></div>`,
       mount(el) {
@@ -644,7 +1374,7 @@ export function taskDrawer(id) {
 }
 
 // ═════════════════════ AGENT DRAWER ═════════════════════
-export function agentDrawer(id) {
+function agentDrawerPro(id) {
   drawer(() => {
     const e = emp(id);
     if (!e) return null;
@@ -673,9 +1403,9 @@ export function agentDrawer(id) {
           <div class="card kpi" style="padding:10px"><div class="l">Biaya</div><div class="v" style="font-size:20px">${usd(e.stats.cost)}</div></div>
         </div>
         <div class="sec"><h4>Profil</h4><div class="md small"><p>${esc(e.persona)}</p></div><div class="row wrap" style="gap:5px">${e.skills.map((s) => `<span class="chip">${esc(s)}</span>`).join('')}</div>
-          <div class="small muted" style="margin-top:8px">${e.type === 'ai' ? `🤖 AI · model ${esc(e.model || (e.isLead ? D().settings.model : D().settings.workerModel))} · otonomi: ${e.autonomy === 'ask' ? 'minta persetujuan' : 'otomatis'}` : '👤 Manusia'}${boss ? ` · lapor ke <a data-agent="${boss.id}" style="cursor:pointer">${esc(boss.name)}</a>` : ''}</div>
+          <div class="small muted" style="margin-top:8px">${e.type === 'ai' ? `🤖 AI · model ${esc(e.model || (e.isLead ? D().settings.model : D().settings.workerModel))} · otonomi: ${e.autonomy === 'ask' ? 'minta konfirmasi' : 'otomatis'}` : '👤 Manusia'}${boss ? ` · lapor ke <a data-agent="${boss.id}" style="cursor:pointer">${esc(boss.name)}</a>` : ''}</div>
           ${reports.length ? `<div class="faces" style="margin-top:8px">${reports.map((r) => `<span data-agent="${r.id}" style="cursor:pointer">${avatar(r)}</span>`).join('')}</div>` : ''}</div>
-        ${e.type === 'ai' ? `<div class="sec"><h4>Konfigurasi agen</h4><div style="display:grid;gap:8px">
+        ${e.type === 'ai' ? `<div class="sec"><h4>Pengaturan pembantu</h4><div style="display:grid;gap:8px">
           <div class="row wrap" style="gap:5px">${(e.skillRefs || []).map((r) => { const sk = (D().skills || []).find((x) => x.id === r.id); return sk ? `<span class="chip" title="${esc(sk.description)}">◆ ${esc(sk.name)} · ${r.proficiency}/10</span>` : ''; }).join('') || '<span class="small muted">Belum ada skill dari library</span>'}</div>
           <div class="small muted mono">tools: ${(e.tools || []).join(' · ')}</div>
           <div class="small muted">Knowledge wajib: ${(e.knowledgeIds || []).map((id) => note(id)).filter(Boolean).map((n) => `<a data-note="${n.id}" style="cursor:pointer">${esc(n.title)}</a>`).join(', ') || '-'}</div>
@@ -698,7 +1428,7 @@ export function agentDrawer(id) {
   }, 'agent:' + id);
 }
 
-function divisionDrawer(id) {
+function divisionDrawerPro(id) {
   drawer(() => {
     const d = div(id); if (!d) return null;
     const members = D().employees.filter((e) => e.divisionId === id);
@@ -721,106 +1451,17 @@ function divisionDrawer(id) {
   }, 'div:' + id);
 }
 
-// ═════════════════════ CHAT ═════════════════════
-export const ChatView = {
-  mount(root) {
-    this.ch = S.params.ch || this.ch || 'general';
-    root.style.overflow = 'hidden';
-    root.innerHTML = `<div class="chat has-sel" id="chat"><div class="chat-list" id="cl"></div><div class="chat-main"><div class="chat-h" id="chh"></div><div class="msgs" id="msgs"></div>
-      <div class="quick" id="cquick">${[['@all ', '📣 Semua agen'], ['@kepala ', '👑 Semua kepala'], ['@staff ', '🤖 Semua staf'], ['/goal ', '🎯 Goal'], ['/tugas @', '📋 Tugas'], ['/rapat ', '👥 Rapat'], ['/cari ', '🔎 Cari Brain'], ['/status', '📊 Status']].map(([c, l]) => `<button class="chip" data-cmd="${c}">${l}</button>`).join('')}<span class="small faint hide-m" style="margin-left:auto">@all · @kepala · @staff · #divisi</span></div>
-      <div class="mention-pop" id="cpop" hidden></div>
-      <div class="composer"><textarea class="input" id="cin" rows="1" placeholder="Tulis pesan… gunakan @all, @kepala, @staff, #divisi, atau @nama"></textarea><button class="btn primary" id="csend">Kirim</button></div></div></div>`;
-    const send = async () => {
-      const i = root.querySelector('#cin'); const text = i.value.trim(); if (!text) return;
-      i.value = ''; i.style.height = ''; root.querySelector('#cpop').hidden = true;
-      if (text.startsWith('/') && await this.command(text)) return;
-      await api('POST', '/api/messages', { channelId: this.ch, text, userId: S.me });
-    };
-    root.querySelector('#csend').onclick = send;
-    const cin = root.querySelector('#cin');
-    const pop = root.querySelector('#cpop');
-    const pick = (el) => { const v = cin.value, at = v.lastIndexOf('@', cin.selectionStart - 1); cin.value = v.slice(0, at) + '@' + el.dataset.name + ' ' + v.slice(cin.selectionStart); pop.hidden = true; cin.focus(); };
-    cin.onkeydown = (e) => {
-      if (!pop.hidden && ['ArrowDown', 'ArrowUp', 'Tab', 'Enter'].includes(e.key)) {
-        const items = [...pop.querySelectorAll('.mi')]; let i = items.findIndex((x) => x.classList.contains('on'));
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); items[i]?.classList.remove('on'); i = (i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length; items[i].classList.add('on'); return; }
-        e.preventDefault(); const el = items[Math.max(0, i)];
-        if (el.dataset.cmd) { cin.value = el.dataset.cmd + ' '; pop.hidden = true; return; }
-        return pick(el);
-      }
-      if (e.key === 'Escape') pop.hidden = true;
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-    };
-    cin.oninput = () => {
-      cin.style.height = 'auto'; cin.style.height = Math.min(160, cin.scrollHeight) + 'px';
-      const before = cin.value.slice(0, cin.selectionStart); const m = before.match(/@([\w-]{0,20})$/);
-      if (m) {
-        const q = m[1].toLowerCase();
-        const special = [['all', '📣 Semua agen', `${D().employees.filter((x) => x.type === 'ai').length} agen · eksekusi bertahap`], ['kepala', '👑 Semua kepala', 'orkestrator setiap divisi'], ['staff', '🤖 Semua staf', 'melalui kepala divisi']].filter((x) => x[0].includes(q) || x[1].toLowerCase().includes(q));
-        const hits = D().employees.filter((x) => x.id !== S.me && (`${x.name} ${x.title} ${x.team || ''}`.toLowerCase().includes(q))).slice(0, Math.max(0, 7 - special.length));
-        pop.innerHTML = special.map((x, k) => `<div class="mi ${k ? '' : 'on'}" data-name="${x[0]}"><span class="ava">${x[1].slice(0, 2)}</span><div><b>${x[1]}</b><small>${x[2]}</small></div></div>`).join('') + hits.map((x, k) => `<div class="mi ${k || special.length ? '' : 'on'}" data-name="${esc(x.name)}">${avatar(x)}<div><b>${esc(x.name)}</b><small>${esc(x.title)}${x.team ? ' · ' + esc(x.team) : ''}</small></div><span class="status-dot st-${x.status}"></span></div>`).join('');
-        pop.hidden = !hits.length && !special.length; pop.querySelectorAll('[data-name]').forEach((el) => (el.onmousedown = (ev) => { ev.preventDefault(); pick(el); }));
-      } else if (/^\/\w*$/.test(cin.value)) {
-        pop.innerHTML = CMDS.map((c, k) => `<div class="mi ${k ? '' : 'on'}" data-cmd="${c[0]}"><span class="cmd">${c[0]}</span><div><b>${c[1]}</b><small>${c[2]}</small></div></div>`).join('');
-        pop.hidden = false; pop.querySelectorAll('[data-cmd]').forEach((el) => (el.onmousedown = (ev) => { ev.preventDefault(); cin.value = el.dataset.cmd + ' '; pop.hidden = true; cin.focus(); }));
-      } else pop.hidden = true;
-    };
-    root.querySelectorAll('#cquick [data-cmd]').forEach((b) => (b.onclick = () => { cin.value = b.dataset.cmd; cin.focus(); cin.dispatchEvent(new Event('input')); if (b.dataset.cmd === '/status') send(); }));
-    bindCommon(root);
-    this.root = root; this.lastCount = -1; this.listKey = ''; this.update();
-  },
-  update(colls = new Set(['*'])) {
-    const r = this.root; const d = D();
-    if (!['*', 'channels', 'messages', 'employees', 'chat', 'meetings'].some((c) => colls.has(c))) return;
-    const listChanged = ['*', 'channels', 'messages', 'chat', 'meetings'].some((c) => colls.has(c));
-    const myDMs = d.channels.filter((c) => c.kind === 'dm' && c.members.includes(S.me));
-    const last = (cid) => { for (let i = d.messages.length - 1; i >= 0; i--) if (d.messages[i].channelId === cid) return d.messages[i]; };
-    const sortedDMs = myDMs.sort((a, b) => (last(b.id)?.t || 0) - (last(a.id)?.t || 0));
-    const agentDMs = d.channels.filter((c) => c.kind === 'dm' && !c.members.includes(S.me)).slice(-15).reverse();
-    const meetings = d.channels.filter((c) => c.kind === 'meeting').slice(-12).reverse();
-    const listKey = [this.ch, ...d.channels.filter((c) => c.kind === 'channel').map((c) => c.id), ...sortedDMs.map((c) => c.id), ...agentDMs.map((c) => c.id), ...meetings.map((c) => c.id + (d.meetings?.find((m) => m.id === c.meetingId)?.status || ''))].join('|');
-    if (listChanged && listKey !== this.listKey) { this.listKey = listKey; r.querySelector('#cl').innerHTML = `<button class="btn sm" id="newdm" style="width:100%">＋ Chat dengan karyawan</button>
-      <h4>Channel</h4>${d.channels.filter((c) => c.kind === 'channel').map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>#</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</span></div>`).join('')}
-      <h4>Pesan langsung</h4>${sortedDMs.map((c) => { const o = emp(c.members.find((m) => m !== S.me)); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}">${avatar(o)}<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(o?.name)}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
-      <h4>Rapat</h4>${meetings.map((c) => { const m = d.meetings?.find((x) => x.id === c.meetingId); return `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>${m?.status === 'waiting_owner' ? '🎙️' : m?.status === 'running' ? '🔴' : '👥'}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name.replace(/^Rapat: /, ''))}</span></div>`; }).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}
-      <h4>Antar agen (pantau)</h4>${agentDMs.map((c) => `<div class="ch-item ${c.id === this.ch ? 'active' : ''}" data-ch="${c.id}"><span>👀</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" class="small">${esc(c.name)}</span></div>`).join('') || '<div class="small faint" style="padding:0 9px">Belum ada</div>'}`;
-    r.querySelectorAll('[data-ch]').forEach((x) => (x.onclick = () => { this.ch = x.dataset.ch; r.querySelector('#chat').classList.add('has-sel'); this.lastCount = -1; this.update(); }));
-    }
-    r.querySelector('#newdm').onclick = () => modal('Chat dengan siapa?', `<select class="input" name="w">${empOptions('', { aiOnly: false })}</select>`, { actions: [{ label: 'Batal' }, { label: 'Mulai chat', kind: 'primary', run: async (b) => { const res = await api('POST', '/api/dm', { with: formData(b).w, userId: S.me }); this.ch = res.id; this.lastCount = -1; setTimeout(() => this.update(), 50); } }] });
-    const ch = d.channels.find((c) => c.id === this.ch) || d.channels[0];
-    if (!ch) return;
-    const other = ch.kind === 'dm' ? emp(ch.members.find((m) => m !== S.me)) : null;
-    r.querySelector('#chh').innerHTML = `<button class="btn ghost icon" id="chback" title="Kembali">‹</button>${other ? `${avatar(other)}<div style="flex:1;min-width:0"><b data-agent="${other.id}" style="cursor:pointer">${esc(other.name)}</b><div class="small muted">${esc(other.title)} · ${esc(other.statusText || '')}</div></div>` : `<div style="flex:1;min-width:0"><b>${ch.kind === 'dm' ? '👀 ' + esc(ch.name) : ch.kind === 'meeting' ? '👥 ' + esc(ch.name) : '# ' + esc(ch.name)}</b><div class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ch.kind === 'meeting' ? (() => { const m = d.meetings?.find((x) => x.id === ch.meetingId); return `${m?.status === 'waiting_owner' ? '🎙️ peserta diam—kirim /selesai saat Anda selesai' : m?.status === 'running' ? '🔴 berlangsung' : m?.status === 'failed' ? 'gagal' : 'selesai'} · ${m?.representedParticipants?.length || m?.participants?.length || 0} peserta diwakili`; })() : esc(ch.topic || (ch.kind === 'dm' ? 'Percakapan antar agen' : ''))}</div></div>${ch.kind === 'meeting' && d.meetings?.find((x) => x.id === ch.meetingId)?.noteId ? `<button class="btn sm" data-note="${d.meetings.find((x) => x.id === ch.meetingId).noteId}">Notulen</button>` : ''}`}`;
-    r.querySelector('#chback').onclick = () => r.querySelector('#chat').classList.remove('has-sel');
-    const msgs = d.messages.filter((m) => m.channelId === ch.id).slice(-150);
-    if (msgs.length === this.lastCount && this.lastCh === ch.id) return;
-    const box = r.querySelector('#msgs');
-    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80 || this.lastCh !== ch.id;
-    this.lastCount = msgs.length; this.lastCh = ch.id;
-    box.innerHTML = msgs.map((m) => { const a = emp(m.authorId); return `<div class="msg">${avatar(a)}<div class="body"><div class="who"><span data-agent="${a?.id}" style="cursor:pointer;margin:0;font-size:13px;font-weight:650;color:var(--text)">${esc(a?.name || m.authorId)}</span><span>${a?.type === 'ai' ? '🤖 ' : ''}${clock(m.t)}</span></div><div class="md">${md(m.text)}</div>${m.broadcast ? `<span class="chip" style="color:var(--ok)">📣 diterima ${m.deliveredTo || 0} agen/koordinator</span>` : ''}${m.taskId ? `<button class="btn sm" data-task="${m.taskId}" style="margin-top:4px">📋 Lihat tugas</button>` : ''}</div></div>`; }).join('') || `<div class="empty">Mulai percakapan. ${other?.type === 'ai' ? `${esc(other.name)} akan membalas otomatis.` : '#general selalu dijawab PA; gunakan @all untuk seluruh perusahaan.'}</div>`;
-    if (atBottom) box.scrollTop = box.scrollHeight;
-  },
-  /** Slash commands act directly instead of posting a message. Returns true when handled. */
-  async command(text) {
-    const [cmd, ...rest] = text.split(' '); const arg = rest.join(' ').trim();
-    const mention = (t) => { const m = t.match(/@([\w-]+)/); return m && D().employees.find((x) => x.name.toLowerCase() === m[1].toLowerCase() || x.id === m[1].toLowerCase()); };
-    if (cmd === '/goal') { if (!arg) { goalModal(); return true; } await api('POST', '/api/goals', { title: arg, userId: S.me }); toast('🎯 Goal dikirim ke asisten pribadimu', 'ok'); return true; }
-    if (cmd === '/tugas') { const who = mention(arg); const title = arg.replace(/@[\w-]+/, '').trim(); if (!who || !title) { newTaskModal({ assigneeId: who?.id, title }); return true; } await api('POST', '/api/tasks', { title, assigneeId: who.id, userId: S.me }); toast(`📋 Tugas dibuat untuk ${who.name}`, 'ok'); return true; }
-    if (cmd === '/rapat') { meetingModal({ topic: arg }); return true; }
-    if (cmd === '/cari') { navigate('brain', {}); setTimeout(() => { const q = document.querySelector('#bq'); if (q) { q.value = arg; q.dispatchEvent(new Event('input')); } }, 150); return true; }
-    if (cmd === '/status') {
-      const d = D(); const open = d.tasks.filter((t) => !['done', 'cancelled'].includes(t.status));
-      const busy = d.employees.filter((e) => e.status === 'working' || e.status === 'meeting');
-      modal('📊 Status perusahaan', `<div class="stat-strip">${[['tugas aktif', open.length], ['agen bekerja', busy.length], ['persetujuan', d.approvals.filter((a) => a.status === 'pending').length], ['biaya hari ini', usd(d.usage.costToday)]].map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join('')}</div>${busy.slice(0, 12).map((e) => `<div class="member">${avatar(e)}<div style="flex:1;min-width:0"><div class="nm">${esc(e.name)}</div><div class="rl">${esc(e.statusText || '')}</div></div></div>`).join('') || '<div class="empty small">Semua agen sedang luang</div>'}`, { actions: [{ label: 'Tutup' }] });
-      return true;
-    }
-    return false;
-  },
-  unmount(root) { root.style.overflow = ''; },
-};
-const CMDS = [['/goal', 'Kirim goal', 'Asisten pribadimu memecahnya ke seluruh perusahaan'], ['/tugas', 'Buat tugas', '/tugas @nama judul tugas'], ['/rapat', 'Adakan rapat', 'Rapat multi-agen dengan notulen'], ['/cari', 'Cari di Brain', 'Buka Brain dengan pencarian'], ['/status', 'Status perusahaan', 'Siapa sedang mengerjakan apa']];
+// Obrolan dan rapat lama (ChatView) sudah dipindah ke halaman Pesan (pesan-view.js): satu tempat, satu mesin. #admin-chat dan #chat dialihkan ke #pesan.
 
+// </pengelola>
 // ═════════════════════ BRAIN (Obsidian-like) ═════════════════════
+/** 31 folder → 3 kelompok: inti perusahaan (langsung), per divisi, dan lainnya (terlipat) */
+function bucketize(tops, SYS, fn, searching, open) {
+  const dvNames = new Set(D().divisions.map((x) => x.name));
+  const core = tops.filter((t) => SYS.includes(t)); const divs = tops.filter((t) => dvNames.has(t)); const rest = tops.filter((t) => !SYS.includes(t) && !dvNames.has(t));
+  const grp = (key, title, list) => (list.length ? `<details class="folder grp" ${open.has(key) || searching ? 'open' : ''} data-f="${key}"><summary>${title} <span class="faint small" style="margin-left:auto">${list.length}</span></summary>${list.map(fn).join('')}</details>` : '');
+  return core.map(fn).join('') + grp('__div', 'Per divisi', divs) + grp('__rest', 'Pustaka dan lainnya', rest);
+}
 export const BrainView = {
   mount(root) {
     root.style.overflow = 'hidden';
@@ -828,11 +1469,11 @@ export const BrainView = {
     this.mode = S.params.graph ? 'graph' : this.mode === 'graph' ? 'graph' : 'note';
     this.edit = false; this.q = '';
     root.innerHTML = `<div class="brain" id="brain">
-      <div class="tree"><div class="row" style="margin-bottom:8px"><input class="input" id="bq" placeholder="🔎 Cari di Brain…"><button class="btn icon" id="bnew" title="Catatan baru">＋</button></div><div id="btree"></div></div>
+      <div class="tree"><div class="row" style="margin-bottom:8px"><label class="sr-only" for="bq">Cari di Catatan</label><input class="input" id="bq" placeholder="Cari di Catatan…"><button type="button" class="btn icon" id="bnew" title="Catatan baru" aria-label="Catatan baru">${icon('plus', 20)}</button></div><div id="btree"></div></div>
       <div class="editor"><div class="editor-h" id="beh"></div><div class="editor-b" id="beb" style="position:relative"></div></div>
       <div class="side-r"><div class="graph-box"><canvas id="lg"></canvas></div><div class="backlinks" id="bl"></div></div></div>`;
     root.querySelector('#bq').oninput = (e) => { this.q = e.target.value.toLowerCase(); this.renderTree(); };
-    root.querySelector('#bnew').onclick = () => modal('📝 Catatan baru', `<label class="f">Judul<input class="input" name="title"></label><label class="f">Folder<input class="input" name="folder" list="folders" value="Knowledge"><datalist id="folders">${[...new Set(D().notes.map((n) => n.folder))].map((f) => `<option value="${esc(f)}">`).join('')}</datalist></label>`, { actions: [{ label: 'Batal' }, { label: 'Buat', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; const n = await api('POST', '/api/notes', { ...f, userId: S.me }); this.sel = n.id; this.mode = 'note'; this.edit = true; setTimeout(() => this.update(new Set(['notes'])), 60); } }] });
+    root.querySelector('#bnew').onclick = () => modal('Catatan baru', `<label class="f">Judul<input class="input" name="title"></label><label class="f">Folder<input class="input" name="folder" list="folders" value="Knowledge"><datalist id="folders">${[...new Set(D().notes.map((n) => n.folder))].map((f) => `<option value="${esc(f)}">`).join('')}</datalist></label>`, { actions: [{ label: 'Batal' }, { label: 'Buat', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; const n = await api('POST', '/api/notes', { ...f, userId: S.me }); this.sel = n.id; this.mode = 'note'; this.edit = true; setTimeout(() => this.update(new Set(['notes'])), 60); } }] });
     this.root = root;
     this.local = createGraph(root.querySelector('#lg'), { onOpen: (id, t) => (id ? this.open(id) : openNoteByTitle(t)) });
     bindCommon(root);
@@ -852,21 +1493,33 @@ export const BrainView = {
   renderTree() {
     const q = this.q; const tree = this.root.querySelector('#btree');
     const notes = D().notes.filter((n) => !q || n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
-    const SYS = ['Company', 'SOP', 'Meetings', 'Playbooks', 'Memori', 'Archive'];
+    const SYS = ['Drive', 'Company', 'SOP', 'Sistem', 'Meetings', 'Playbooks', 'Memori', 'Archive'];   // Google Drive (the real company data) first
     const tops = [...new Set(notes.map((n) => n.folder.split('/')[0]))].sort((a, b) => (SYS.indexOf(a) + 1 || 99) - (SYS.indexOf(b) + 1 || 99) || a.localeCompare(b));
-    const open = this.openFolders || (this.openFolders = new Set(['Company']));
-    const loose = D().notes.filter((n) => ['Deliverables', 'Reports', 'Notes', 'Knowledge', 'Approvals'].includes(n.folder)).length;
+    const open = this.openFolders || (this.openFolders = new Set(['Company', 'Drive', 'Drive/Perusahaan']));
+    const loose = D().notes.filter((n) => ['Deliverables', 'Reports', 'Notes', 'Knowledge', 'Approvals'].includes(n.folder)).length;   /* kunci-data: nama folder di penyimpanan */
     const item = (n) => `<div class="note-item ${n.id === this.sel && this.mode === 'note' ? 'active' : ''}" data-open="${n.id}" title="${esc(n.title)}">${esc(n.title)}</div>`;
     const byRecent = (a, b) => b.updatedAt - a.updatedAt;
-    tree.innerHTML = `<div class="row" style="gap:6px;margin-bottom:6px"><div class="note-item ${this.mode === 'graph' ? 'active' : ''}" style="padding-left:8px;flex:1" id="bgraph">🕸️ Graph view</div><button class="btn sm" id="borg" title="Klasifikasikan & rapikan semua catatan">🗂️ Rapikan${loose ? ` <span class="badge">${loose}</span>` : ''}</button></div>
-      <div class="small faint" style="margin:0 6px 8px">${D().notes.length} catatan · ${tops.length} folder · disusun otomatis per Divisi/Jenis</div>` + tops.map((top) => {
+    tree.innerHTML = `<div class="row" style="gap:6px;margin-bottom:6px"><div class="note-item ${this.mode === 'graph' ? 'active' : ''}" style="padding-left:8px;flex:1" id="bgraph" role="button" tabindex="0">Peta hubungan</div><button type="button" class="btn sm" id="borg" title="Rapikan semua catatan">Rapikan${loose ? ` <span class="badge">${loose}</span>` : ''}</button></div>
+      <div class="small faint" style="margin:0 6px 8px">${D().notes.length} catatan · ${tops.length} folder · disusun otomatis per Divisi/Jenis</div>` + bucketize(tops, SYS, (top) => {
       const inTop = notes.filter((n) => n.folder.split('/')[0] === top);
-      const direct = inTop.filter((n) => !n.folder.includes('/')).sort(byRecent);
-      const subs = [...new Set(inTop.filter((n) => n.folder.includes('/')).map((n) => n.folder.split('/').slice(1).join('/')))].sort();
       const dv = D().divisions.find((x) => x.name === top);
-      return `<details class="folder" ${open.has(top) || q ? 'open' : ''} data-f="${esc(top)}"><summary><span style="color:${dv?.color || folderColor(top)}">${dv ? dv.icon : '●'}</span> ${esc(top)} <span class="faint small" style="margin-left:auto">${inTop.length}</span></summary>${direct.map(item).join('')}${subs.map((sub) => { const key = top + '/' + sub; const l = inTop.filter((n) => n.folder === key).sort(byRecent); return `<details class="folder sub" ${open.has(key) || q ? 'open' : ''} data-f="${esc(key)}"><summary>${esc(sub)} <span class="faint small" style="margin-left:auto">${l.length}</span></summary>${l.map(item).join('')}</details>`; }).join('')}</details>`;
-    }).join('');
-    tree.querySelector('#borg').onclick = async (ev) => { ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`🗂️ Brain dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
+      const TOP_LABEL = { Drive: 'Google Drive', Sistem: 'Sistem' };
+      /* a real folder tree (like Obsidian): sub-folders nest, folders before notes; a chain of folders with a single child is shown as one row ("04-deployment › business-units") */
+      const under = (path) => inTop.filter((n) => n.folder === path || n.folder.startsWith(path + '/'));
+      const node = (path, label, depth) => {
+        const list = under(path);
+        let p = path, lab = label;
+        for (;;) {   // collapse single-child chains
+          const direct = list.filter((n) => n.folder === p);
+          const kids = [...new Set(list.filter((n) => n.folder.startsWith(p + '/')).map((n) => n.folder.slice(p.length + 1).split('/')[0]))];
+          if (depth > 0 && !direct.length && kids.length === 1) { p = p + '/' + kids[0]; lab = lab + ' › ' + kids[0]; continue; }
+          const head = depth === 0 ? `<span style="color:${dv?.color || folderColor(top)}">${dv ? dv.icon : TOP_LABEL[top] ? '' : `<i class="titik" aria-hidden="true" style="background:currentColor"></i>`}</span> ${esc(TOP_LABEL[top] || top)}` : `${icon('folder', 14)} ${esc(lab)}`;
+          return `<details class="folder ${depth ? 'sub' : ''}" ${open.has(p) || q ? 'open' : ''} data-f="${esc(p)}"><summary>${head} <span class="faint small" style="margin-left:auto">${list.length}</span></summary>${kids.sort((a, b) => a.localeCompare(b, 'id', { numeric: true })).map((k) => node(p + '/' + k, k, depth + 1)).join('')}${direct.sort(byRecent).map(item).join('')}</details>`;
+        }
+      };
+      return node(top, top, 0);
+    }, !!q, open);
+    tree.querySelector('#borg').onclick = async (ev) => { if (!window.confirm('Rapikan catatan? Sebagian catatan akan dipindah ke folder lain dan judulnya diperbaiki.')) return; ev.currentTarget.disabled = true; const r = await api('POST', '/api/brain/organize', { userId: S.me }); toast(`Catatan dirapikan: ${r.moved} dipindah, ${r.renamed} judul diperbaiki`, 'ok'); };
     tree.querySelectorAll('details').forEach((dt) => (dt.ontoggle = () => (dt.open ? open.add(dt.dataset.f) : open.delete(dt.dataset.f))));
     tree.querySelectorAll('[data-open]').forEach((x) => (x.onclick = () => { this.open(x.dataset.open); this.root.querySelector('#brain').classList.remove('show-tree'); }));
     tree.querySelector('#bgraph').onclick = () => { this.mode = 'graph'; this.renderAll(); this.root.querySelector('#brain').classList.remove('show-tree'); };
@@ -874,9 +1527,9 @@ export const BrainView = {
   renderEditor() {
     const h = this.root.querySelector('#beh'); const b = this.root.querySelector('#beb');
     this.full?.dispose(); this.full = null;
-    const treeBtn = '<button class="btn icon ghost" id="btree-t" title="Daftar catatan">☰</button>';
+    const treeBtn = '<button type="button" class="btn icon ghost" id="btree-t" title="Daftar catatan" aria-label="Daftar catatan">☰</button>';
     if (this.mode === 'graph') {
-      h.innerHTML = `${treeBtn}<b style="flex:1">🕸️ Graph pengetahuan perusahaan</b><span class="small muted">${D().notes.length} catatan · klik node untuk membuka</span>`;
+      h.innerHTML = `${treeBtn}<b style="flex:1">Peta hubungan catatan perusahaan</b><span class="small muted">${D().notes.length} catatan · klik titik untuk membuka</span>`;
       b.innerHTML = '<div class="graph-full"><canvas id="fg"></canvas></div>';
       b.style.padding = '0';
       this.full = createGraph(b.querySelector('#fg'), { onOpen: (id, t) => (id ? this.open(id) : openNoteByTitle(t)) });
@@ -888,10 +1541,11 @@ export const BrainView = {
     if (!n) { h.innerHTML = treeBtn; b.innerHTML = '<div class="empty">Pilih catatan</div>'; this.bindTreeBtn(); return; }
     this.shownAt = n.updatedAt;
     const author = emp(n.authorId);
-    h.innerHTML = `${treeBtn}<input class="title" id="nt" value="${esc(n.title)}" ${this.edit ? '' : 'readonly'}>
-      <span class="chip" style="color:${folderColor(n.folder)}">${esc(n.folder)}</span>
-      <div class="tabs"><button class="${this.edit ? '' : 'active'}" data-m="0">👁 Baca</button><button class="${this.edit ? 'active' : ''}" data-m="1">✎ Edit</button></div>
-      <button class="btn icon ghost" id="nmore" title="Lainnya">⋯</button>`;
+    h.innerHTML = `${treeBtn}<input class="title" id="nt" aria-label="Judul catatan" value="${esc(n.title)}" ${this.edit ? '' : 'readonly'}>
+      <span class="chip"><i class="titik" aria-hidden="true" style="background:${folderColor(n.folder)}"></i> ${esc(n.folder)}</span>
+      <div class="tabs"><button class="${this.edit ? '' : 'active'}" data-m="0">Baca</button><button class="${this.edit ? 'active' : ''}" data-m="1">Ubah</button></div>
+      <button type="button" class="btn icon ghost" id="bside" title="Tautan terkait" aria-label="Tautan terkait">${icon('link', 20)}</button><button type="button" class="btn icon ghost" id="nmore" title="Lainnya" aria-label="Lainnya">${icon('more', 20)}</button>`;
+    h.querySelector('#bside').onclick = () => this.root.querySelector('#brain').classList.toggle('show-side');
     b.innerHTML = this.edit
       ? `<textarea id="nc" spellcheck="false">${esc(n.content)}</textarea>`
       : `<div class="small muted" style="margin-bottom:12px">${author ? `${avatar(author)} ` : ''}${esc(author?.name || '')} · diperbarui ${ago(n.updatedAt)}${n.lastEditorId && n.lastEditorId !== n.authorId ? ` oleh ${esc(emp(n.lastEditorId)?.name || '')}` : ''}</div><div class="md" style="max-width:820px">${md(n.content)}</div>`;
@@ -925,21 +1579,22 @@ export const BrainView = {
     this.local.setData(D().notes, { folderColors: this.colors(), focus: n.id });
     const back = D().notes.filter((x) => x.id !== n.id && linksOf(x.content).some((l) => l.toLowerCase() === n.title.toLowerCase()));
     const outl = [...new Set(linksOf(n.content))];
-    bl.innerHTML = `<h4>Backlinks (${back.length})</h4>${back.map((x) => `<div class="bl" data-open="${x.id}"><b>${esc(x.title)}</b><div class="small faint">${esc(x.folder)}</div></div>`).join('') || '<div class="small faint">Belum ada catatan yang menautkan ke sini</div>'}
-      <h4 style="margin-top:10px">Tautan keluar (${outl.length})</h4>${outl.map((t) => { const x = noteByTitle(t); return `<div class="bl" ${x ? `data-open="${x.id}"` : `data-ghost="${esc(t)}"`}>${x ? '' : '👻 '}${esc(t)}</div>`; }).join('') || '<div class="small faint">-</div>'}`;
+    bl.innerHTML = `<h4>Catatan yang menautkan ke sini (${back.length})</h4>${back.map((x) => `<div class="bl" data-open="${x.id}"><b>${esc(x.title)}</b><div class="small faint">${esc(x.folder)}</div></div>`).join('') || '<div class="small faint">Belum ada catatan yang menautkan ke sini</div>'}
+      <h4 style="margin-top:10px">Tautan keluar (${outl.length})</h4>${outl.map((t) => { const x = noteByTitle(t); return `<div class="bl" ${x ? `data-open="${x.id}"` : `data-ghost="${esc(t)}"`}>${x ? '' : '(belum ada) '}${esc(t)}</div>`; }).join('') || '<div class="small faint">-</div>'}`;
     bl.querySelectorAll('[data-open]').forEach((x) => (x.onclick = () => this.open(x.dataset.open)));
     bl.querySelectorAll('[data-ghost]').forEach((x) => (x.onclick = () => openNoteByTitle(x.dataset.ghost)));
   },
   unmount(root) { if (this.edit) this.save(); this.local?.dispose(); this.full?.dispose(); this.full = null; root.style.overflow = ''; },
 };
 
+// <pengelola>
 // ═════════════════════ TEAM ═════════════════════
 export const TeamView = {
   mount(root) {
-    root.innerHTML = `<div class="page"><div class="row wrap"><h2 style="margin:0;flex:1">👥 Organisasi</h2><button class="btn" id="ndiv">＋ Divisi</button><button class="btn" id="nhum">＋ Manusia</button><button class="btn primary" id="nai">＋ Rekrut karyawan AI</button></div>
-      <div class="card" id="hier"></div>
+    root.innerHTML = `<div class="page"><div class="row wrap"><h2 style="margin:0;flex:1">👥 Organisasi</h2><button class="btn" id="ndiv">＋ Divisi</button><button class="btn" id="nhum">＋ Manusia</button><button class="btn primary" id="nai">＋ Tambah pembantu baru</button></div>
+      <details class="card acc" id="hier"></details>
       <div class="org" id="org"></div>
-      <div class="card"><div class="card-h">🔁 Rutinitas otomatis<span style="flex:1"></span><button class="btn sm" id="nrt">＋ Rutinitas</button></div><div class="card-b" id="rts" style="display:grid;gap:8px"></div></div></div>`;
+      <details class="card acc"><summary class="card-h">🔁 Rutinitas otomatis <span class="muted small" id="rtn"></span></summary><div class="card-b" style="display:grid;gap:8px"><div class="row"><button class="btn sm" id="nrt">＋ Rutinitas</button></div><div id="rts" style="display:grid;gap:8px"></div></div></details></div>`;
     root.querySelector('#nai').onclick = () => navigate('studio', { emp: 'new', tab: 'agents' });
     root.querySelector('#nhum').onclick = () => employeeModal(null, { type: 'human' });
     root.querySelector('#ndiv').onclick = () => modal('＋ Divisi baru', `<div class="grid2"><label class="f">Nama<input class="input" name="name" placeholder="mis. Design"></label><label class="f">Ikon<input class="input" name="icon" value="🎨"></label></div><label class="f">Misi<input class="input" name="mission"></label><label class="f">Warna<input type="color" class="input" name="color" value="#7aa2ff" style="height:40px"></label>`, { actions: [{ label: 'Batal' }, { label: 'Buat', kind: 'primary', run: async (b) => { await api('POST', '/api/divisions', formData(b)); } }] });
@@ -952,7 +1607,7 @@ export const TeamView = {
     const humans = d.employees.filter((e) => e.type === 'human');
     const master = d.employees.find((e) => e.isMaster);
     const node = (e, extra = '') => e ? `<div class="hnode" data-agent="${e.id}">${avatar(e)}<div><b>${esc(e.name)}</b><div class="small muted">${esc(e.title)}${extra}</div></div></div>` : '';
-    this.root.querySelector('#hier').innerHTML = `<div class="card-h">hierarki komando<span style="flex:1"></span><span class="small" style="text-transform:none;letter-spacing:0">setiap manusia punya asisten AI pribadi yang menggerakkan seluruh perusahaan</span></div>
+    this.root.querySelector('#hier').innerHTML = `<summary class="card-h">🧭 Struktur komando</summary>
       <div class="card-b hier">
         <div class="hrow">${humans.map((h) => node(h, ' · manusia')).join('')}</div><div class="harrow">↓</div>
         <div class="hrow">${humans.map((h) => node(d.employees.find((e) => e.isPA && e.ownerId === h.id), ' · asisten pribadi')).join('')}</div><div class="harrow">↓</div>
@@ -966,14 +1621,18 @@ export const TeamView = {
       const teams = x.teams || [];
       const lead = members.filter((m) => m.isLead || !m.team || !teams.includes(m.team));
       const groups = teams.map((tn) => [tn, members.filter((m) => !m.isLead && m.team === tn)]).filter(([, l]) => l.length);
-      return `<div class="card" style="border-top:3px solid ${x.color}"><div class="card-h" style="cursor:pointer" data-divd="${x.id}">${x.icon} ${esc(x.name)}<span style="flex:1"></span><span class="chip">${teams.length} tim</span><span class="chip">${members.length}</span></div><div class="card-b" style="padding:6px">${lead.map(row).join('')}${groups.map(([tn, l]) => `<div class="team-h"><span style="background:${x.color}"></span>${esc(tn)}<em>${l.length}</em></div>${l.map(row).join('')}`).join('')}${members.length ? '' : '<div class="empty small">Belum ada anggota</div>'}</div></div>`;
+      return `<details class="card acc" style="border-top:3px solid ${x.color}"><summary class="card-h">${x.icon} ${esc(x.name)}<span style="flex:1"></span><span class="chip">${members.length} orang</span><button class="btn sm ghost" data-divd="${x.id}">Detail</button></summary><div class="card-b" style="padding:6px">${lead.map(row).join('')}${groups.map(([tn, l]) => `<div class="team-h"><span style="background:${x.color}"></span>${esc(tn)}<em>${l.length}</em></div>${l.map(row).join('')}`).join('')}${members.length ? '' : '<div class="empty small">Belum ada anggota</div>'}</div></details>`;
     }).join('');
-    this.root.querySelectorAll('[data-divd]').forEach((c) => (c.onclick = () => divisionDrawer(c.dataset.divd)));
+    this.root.querySelectorAll('[data-divd]').forEach((c) => (c.onclick = (e) => { e.preventDefault(); e.stopPropagation(); divisionDrawer(c.dataset.divd); }));
     const rts = this.root.querySelector('#rts');
-    rts.innerHTML = d.routines.map((r) => { const e = emp(r.employeeId); const cadence = r.cron ? `cron ${r.cron}` : `tiap ${r.everyMinutes || 60} menit`; return `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:10px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(r.title)}</b><div class="small muted">🎯 ${esc(routineTargetLabel(r))} · ${esc(cadence)} · terakhir ${ago(r.lastRunAt)}</div></div><button class="btn sm" data-run="${r.id}" title="Jalankan sekarang">▶</button><button class="btn sm ghost" data-edit="${r.id}">✎</button><label class="switch"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label></div>`; }).join('') || '<div class="muted small">Belum ada rutinitas</div>';
+    const rsort = [...d.routines].sort((a, b) => (b.enabled !== false) - (a.enabled !== false));
+    const rshow = this.rtAll ? rsort : rsort.slice(0, 10);
+    this.root.querySelector('#rtn').textContent = `· ${d.routines.filter((r) => r.enabled !== false).length} aktif dari ${d.routines.length}`;
+    rts.innerHTML = rshow.map((r) => { const e = emp(r.employeeId); const cadence = r.cron ? `cron ${r.cron}` : `tiap ${r.everyMinutes || 60} menit`; return `<div class="row" style="padding:8px;border:1px solid var(--line);border-radius:10px">${avatar(e)}<div style="flex:1;min-width:0"><b>${esc(r.title)}</b><div class="small muted">🎯 ${esc(routineTargetLabel(r))} · ${esc(cadence)} · terakhir ${ago(r.lastRunAt)}</div></div><button class="btn sm" data-run="${r.id}" title="Jalankan sekarang">▶</button><button class="btn sm ghost" data-edit="${r.id}">✎</button><label class="switch"><input type="checkbox" data-tog="${r.id}" ${r.enabled ? 'checked' : ''}><span></span></label></div>`; }).join('') || '<div class="muted small">Belum ada rutinitas</div>';
     rts.querySelectorAll('[data-tog]').forEach((c) => (c.onchange = () => api('PATCH', `/api/routines/${c.dataset.tog}`, { enabled: c.checked })));
     rts.querySelectorAll('[data-run]').forEach((c) => (c.onclick = async () => { await api('POST', `/api/routines/${c.dataset.run}/run`); toast('Rutinitas dijalankan', 'ok'); }));
     rts.querySelectorAll('[data-edit]').forEach((c) => (c.onclick = () => routineModal(d.routines.find((r) => r.id === c.dataset.edit))));
+    if (rsort.length > 10) { rts.insertAdjacentHTML('beforeend', '<button class="btn sm ghost" id="rtall">' + (this.rtAll ? 'Ringkas' : 'Tampilkan semua ' + rsort.length) + '</button>'); rts.querySelector('#rtall').onclick = () => { this.rtAll = !this.rtAll; this.update(); }; }
   },
 };
 
@@ -991,7 +1650,7 @@ const ROLE_TEMPLATES = [
 export function employeeModal(e, pre = {}) {
   const isNew = !e;
   e = e || { name: '', type: pre.type || 'ai', divisionId: pre.divisionId || 'mkt', title: '', persona: '', skills: [], isLead: false, avatar: 'bot', autonomy: 'auto', model: '' };
-  modal(isNew ? (e.type === 'human' ? '＋ Tambah anggota manusia' : '＋ Rekrut karyawan AI') : `✎ Edit ${esc(e.name)}`, `
+  modal(isNew ? (e.type === 'human' ? '＋ Tambah anggota manusia' : '＋ Tambah pembantu baru') : `✎ Edit ${esc(e.name)}`, `
     ${isNew && e.type === 'ai' ? `<label class="f">Template peran (opsional)<select class="input" id="tpl"><option value="">— Pilih template —</option>${ROLE_TEMPLATES.map((t, i) => opt(i, `${t[0]} (${div(t[1])?.short})`)).join('')}</select></label>` : ''}
     <div class="grid2"><label class="f">Nama<input class="input" name="name" value="${esc(e.name)}"></label><label class="f">Jabatan<input class="input" name="title" value="${esc(e.title)}"></label></div>
     <div class="grid2"><label class="f">Divisi<select class="input" name="divisionId">${D().divisions.map((d) => opt(d.id, d.icon + ' ' + d.name, e.divisionId)).join('')}</select></label>
@@ -999,7 +1658,7 @@ export function employeeModal(e, pre = {}) {
     <label class="f">Persona & cara kerja<textarea class="input" name="persona" rows="3" placeholder="Sifat, gaya komunikasi, standar kualitas…">${esc(e.persona)}</textarea></label>
     <label class="f">Keahlian (pisahkan koma)<input class="input" name="skills" value="${esc(e.skills.join(', '))}"></label>
     <div class="grid2"><label class="f">Avatar 3D<select class="input" name="avatar">${['bot', 'cat', 'bear', 'bunny', 'fox'].map((a) => opt(a, { bot: '🤖 Bot', cat: '🐱 Kucing', bear: '🐻 Beruang', bunny: '🐰 Kelinci', fox: '🦊 Rubah' }[a], e.avatar)).join('')}</select></label>
-      <label class="f">Otonomi<select class="input" name="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta persetujuan', e.autonomy)}</select></label></div>
+      <label class="f">Otonomi<select class="input" name="autonomy">${opt('auto', 'Otomatis penuh', e.autonomy)}${opt('ask', 'Selalu minta konfirmasi', e.autonomy)}</select></label></div>
     <div class="grid2"><label class="f">Model AI<select class="input" name="model">${opt('', 'Default (Pengaturan)', e.model)}${(D().models || []).map((m) => opt(m, m, e.model)).join('')}</select></label>
       <label class="f">Head divisi?<select class="input" name="isLead">${opt('false', 'Tidak', String(e.isLead))}${opt('true', 'Ya 👑', String(e.isLead))}</select></label></div>`, {
     onMount(b) {
@@ -1019,7 +1678,7 @@ export function employeeModal(e, pre = {}) {
 }
 function routineTargetLabel(r) {
   const type = r.targetType || 'employee';
-  if (type === 'all') return `Semua agen (${D().employees.filter((e) => e.type === 'ai').length})`;
+  if (type === 'all') return `Semua pembantu (${D().employees.filter((e) => e.type === 'ai').length})`;
   if (type === 'heads') return 'Semua kepala divisi';
   if (type === 'staff') return 'Semua staf';
   if (type === 'division') return `Divisi ${div(r.targetId)?.name || r.targetId}`;
@@ -1030,7 +1689,7 @@ function routineModal(r) {
   const isNew = !r;
   r = r || { title: '', description: '', employeeId: 'aria', targetType: 'employee', targetId: 'aria', targetTag: '', everyMinutes: 60, enabled: true };
   const current = (r.targetType || 'employee') === 'employee' ? `employee:${r.targetId || r.employeeId}` : (r.targetType === 'division' ? `division:${r.targetId}` : r.targetType || 'employee:aria');
-  const targetOpts = `<option value="all" ${current === 'all' ? 'selected' : ''}>📣 Semua agen (hemat: via head divisi)</option><option value="heads" ${current === 'heads' ? 'selected' : ''}>👑 Semua kepala divisi</option><option value="staff" ${current === 'staff' ? 'selected' : ''}>🤖 Semua staf (via head divisi)</option><option value="tag" ${current === 'tag' ? 'selected' : ''}># Hashtag / tim / keahlian</option>${D().divisions.map((d) => `<option value="division:${d.id}" ${current === `division:${d.id}` ? 'selected' : ''}>${d.icon} Divisi ${esc(d.name)}</option>`).join('')}${D().employees.filter((e) => e.type === 'ai').map((e) => `<option value="employee:${e.id}" ${current === `employee:${e.id}` ? 'selected' : ''}>${esc(e.name)} · ${esc(e.title)}</option>`).join('')}`;
+  const targetOpts = `<option value="all" ${current === 'all' ? 'selected' : ''}>📣 Semua pembantu (hemat: via head divisi)</option><option value="heads" ${current === 'heads' ? 'selected' : ''}>👑 Semua kepala divisi</option><option value="staff" ${current === 'staff' ? 'selected' : ''}>🤖 Semua staf (via head divisi)</option><option value="tag" ${current === 'tag' ? 'selected' : ''}># Hashtag / tim / keahlian</option>${D().divisions.map((d) => `<option value="division:${d.id}" ${current === `division:${d.id}` ? 'selected' : ''}>${d.icon} Divisi ${esc(d.name)}</option>`).join('')}${D().employees.filter((e) => e.type === 'ai').map((e) => `<option value="employee:${e.id}" ${current === `employee:${e.id}` ? 'selected' : ''}>${esc(e.name)} · ${esc(e.title)}</option>`).join('')}`;
   modal(isNew ? '＋ Rutinitas otomatis' : '✎ Edit rutinitas', `<label class="f">Judul<input class="input" name="title" value="${esc(r.title)}" placeholder="mis. Laporan penjualan harian"></label><label class="f">Instruksi<textarea class="input" name="description" rows="3">${esc(r.description)}</textarea></label><label class="f">Target<select class="input" name="targetSpec">${targetOpts}</select></label><label class="f">Hashtag / tim / keahlian (dipakai jika target Hashtag)<input class="input" name="targetTag" value="${esc(r.targetTag || '')}" placeholder="mis. seo, marketplace, Growth Team"></label><div class="grid2"><label class="f">Koordinator fallback<select class="input" name="employeeId">${empOptions(r.employeeId || 'aria', { aiOnly: true })}</select></label><label class="f">Setiap (menit)<input class="input" type="number" min="1" name="everyMinutes" value="${r.everyMinutes || 60}"></label></div><div class="small muted">Target massal dijalankan per koordinator divisi dan masuk antrean bertahap, bukan memanggil semua model sekaligus.</div>`, {
     actions: [...(!isNew ? [{ label: 'Hapus', kind: 'danger', run: () => api('DELETE', `/api/routines/${r.id}`) }] : []), { label: 'Batal' }, { label: 'Simpan', kind: 'primary', run: async (b) => { const f = formData(b); if (!f.title.trim()) return false; const [kind, id] = f.targetSpec.split(':'); f.targetType = kind; f.targetId = id || (kind === 'tag' ? f.targetTag : ''); delete f.targetSpec; if (kind === 'employee') f.employeeId = id; isNew ? await api('POST', '/api/routines', f) : await api('PATCH', `/api/routines/${r.id}`, f); } }],
   });
@@ -1038,18 +1697,79 @@ function routineModal(r) {
 
 // ═════════════════════ APPROVALS ═════════════════════
 export const ApprovalsView = {
-  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Persetujuan</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif: keputusan dicatat sebagai audit trail dan pekerjaan langsung berlanjut.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Persetujuan">Kebijakan Persetujuan</a></p><div id="ap" style="display:grid;gap:10px"></div><h3 style="margin:10px 0 0">Riwayat</h3><div id="aph" style="display:grid;gap:6px"></div></div>`; bindCommon(root); this.root = root; this.update(); },
+  mount(root) { root.innerHTML = `<div class="page" style="max-width:980px"><h2 style="margin:0">🛑 Konfirmasi</h2><p class="muted" style="margin:0">${D().settings.autoApprove !== false ? '⚡ Auto-approve aktif — semua langsung jalan, hanya dicatat.' : 'Human-in-the-loop aktif: agen menunggu keputusan berisiko sesuai kebijakan.'} <a class="wikilink" data-note="Kebijakan Konfirmasi">Kebijakan Konfirmasi</a></p><div id="ap" style="display:grid;gap:10px"></div><details class="card acc"><summary class="card-h">🕘 Riwayat keputusan</summary><div id="aph" class="card-b" style="display:grid;gap:6px"></div></details></div>`; bindCommon(root); this.root = root; this.update(); },
   update() {
     const aps = D().approvals;
     const pend = aps.filter((a) => a.status === 'pending').reverse();
     const r = this.root;
-    r.querySelector('#ap').innerHTML = pend.map((a) => { const t = task(a.taskId); return approvalCard(a) + (t?.output ? `<details class="card" style="margin-top:-6px"><summary class="card-h" style="cursor:pointer;font-weight:550">📄 Pratinjau hasil</summary><div class="card-b md">${md(t.output.slice(0, 5000))}</div></details>` : ''); }).join('') || '<div class="card empty">Tidak ada yang menunggu persetujuan 🎉</div>';
+    r.querySelector('#ap').innerHTML = pend.map((a) => { const t = task(a.taskId); return approvalCard(a) + (t?.output ? `<details class="card" style="margin-top:-6px"><summary class="card-h" style="cursor:pointer;font-weight:550">📄 Pratinjau hasil</summary><div class="card-b md">${md(t.output.slice(0, 5000))}</div></details>` : ''); }).join('') || '<div class="card empty">Tidak ada yang menunggu konfirmasi 🎉</div>';
     bindApprovalButtons(r.querySelector('#ap'));
-    r.querySelector('#aph').innerHTML = aps.filter((a) => a.status !== 'pending').slice(-30).reverse().map((a) => `<div class="bl row" data-task="${a.taskId}"><span>${a.status === 'approved' ? '✅' : '✏️'}</span><span style="flex:1;min-width:0">${esc(a.title)}</span><span class="small muted">${esc(emp(a.decidedBy)?.name || '')} · ${ago(a.decidedAt)}</span></div>`).join('') || '<div class="muted small">Belum ada</div>';
+    r.querySelector('#aph').innerHTML = aps.filter((a) => a.status !== 'pending').slice(-12).reverse().map((a) => `<div class="bl row" data-task="${a.taskId}"><span>${a.status === 'approved' ? '✅' : '✏️'}</span><span style="flex:1;min-width:0">${esc(a.title)}</span><span class="small muted">${esc(emp(a.decidedBy)?.name || '')} · ${ago(a.decidedAt)}</span></div>`).join('') || '<div class="muted small">Belum ada</div>';
   },
 };
 
 // ═════════════════════ SETTINGS ═════════════════════
+/** Account, workspaces (like Discord servers), members & invite links, and Google Drive (only in a workspace you own) */
+async function accountCard(box) {
+  if (!box) return;
+  let me, cfg;
+  try { [me, cfg] = await Promise.all([api('GET', '/api/auth/me'), api('GET', '/api/drive/config')]); } catch { box.innerHTML = '<div class="small muted">Tidak bisa memuat status akun.</div>'; return; }
+  if (!me.configured) { box.innerHTML = '<div class="small muted">Login Google belum dikonfigurasi. Isi <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>SESSION_SECRET</code>, <code>TOKEN_ENC_KEY</code> di <code>.env</code>, lalu restart server. Panduan: docs/GOOGLE-DRIVE-DAN-LOGIN.md</div>'; return; }
+  const u = me.user, ws = me.workspace || {}, role = ws.role, owner = role === 'owner', manage = owner || role === 'admin';
+  const ROLE = { owner: 'Owner', admin: 'Admin', member: 'Anggota' };
+  if (!u) { box.innerHTML = `<div class="small muted">Belum login. Setiap orang yang login otomatis mendapat <b>ruang kerja sendiri</b> dan bisa mengundang orang lain ke dalamnya.</div><div><a class="btn primary" href="/auth/google">Login dengan Google</a></div>`; return; }
+  box.innerHTML = `<div class="row">${u.picture ? `<img src="${esc(u.picture)}" alt="" width="34" height="34" style="border-radius:50%" referrerpolicy="no-referrer">` : ''}<div style="flex:1;min-width:0"><b>${esc(u.name || u.email)}</b><div class="small muted">${esc(u.email)}</div></div><a class="btn sm" href="/auth/logout">Keluar</a></div>
+    <div class="sec" style="margin:0"><h4>Ruang kerja</h4><div style="display:grid;gap:6px">${me.workspaces.map((w) => `<div class="row" style="padding:7px 9px;border:1px solid var(--line);border-radius:12px;${w.id === ws.id ? 'background:var(--gl-fill-2, #0000000a)' : ''}"><span style="flex:1;min-width:0"><b>${esc(w.name)}</b> <span class="small muted">${ROLE[w.role] || w.role}${w.personal ? ' · milik Anda' : ` · milik ${esc(w.ownerName)}`} · ${w.members} orang</span></span>${w.id === ws.id ? '<span class="chip">aktif</span>' : `<button class="btn sm" data-ws="${esc(w.id)}">Buka</button>`}</div>`).join('')}</div></div>
+    ${owner ? `<div class="row"><input class="input" id="wsname" value="${esc(ws.name || '')}" placeholder="Nama ruang kerja"><button class="btn" id="wsrename">Ganti nama</button></div>` : ''}
+    <div class="sec" style="margin:0"><h4>Anggota ruang kerja ini</h4><div id="wsmembers" class="small muted">Memuat…</div>
+      ${manage ? `<div class="row wrap" style="margin-top:8px"><select class="input" id="invrole" style="width:auto">${opt('member', 'sebagai Anggota', 'member')}${owner ? opt('admin', 'sebagai Admin', '') : ''}</select><button class="btn primary" id="invgo">🔗 Buat link undangan</button></div><div class="small" id="invout"></div>` : ''}</div>
+    <div class="sec" style="margin:0"><h4>Google Drive</h4>${!owner ? '<div class="small muted">Drive hanya bisa disambungkan di ruang kerja milik Anda sendiri, supaya isi Drive pribadi tidak masuk ke ruang kerja orang lain.</div>'
+      : `<div class="small">${u.drive ? `✅ Tersambung${cfg.root ? ` · <a href="https://drive.google.com/drive/folders/${esc(cfg.root)}" target="_blank" rel="noopener">buka folder RAIVERSE ↗</a>` : ''}` : '⚠️ Belum tersambung: <a href="/auth/google">login ulang dengan Google</a> dan centang izin Drive.'}</div>
+      ${u.drive ? `<div class="row wrap" style="margin-top:6px"><button class="btn" data-dr="setup">📁 Siapkan folder</button><button class="btn" data-dr="push">⬆ Kirim Catatan ke Drive</button><button class="btn" data-dr="pull">⬇ Ambil dari Drive</button><button class="btn" id="drpick" ${cfg.pickerKey ? '' : 'disabled title="GOOGLE_PICKER_API_KEY belum diisi"'}>📎 Pilih file dari Drive</button></div>
+      <div class="small muted">Folder <b>Perusahaan</b> = internal, <b>Publik</b> = boleh untuk agen layanan luar, <b>Pribadi</b> = tidak dibaca agen, <b>Hasil Pembantu</b> = draf pembantu. Isi Drive menjadi <b>fakta terverifikasi</b> di Catatan ruang kerja ini.</div><div class="small" id="drres"></div>` : ''}`}</div>`;
+  box.querySelectorAll('[data-ws]').forEach((b) => (b.onclick = async () => { await api('POST', '/api/ws/switch', { id: b.dataset.ws }); location.reload(); }));
+  box.querySelector('#wsrename')?.addEventListener('click', async () => { await api('POST', '/api/ws/rename', { name: box.querySelector('#wsname').value }); toast('Nama ruang kerja diganti', 'ok'); accountCard(box); });
+  const drawMembers = async () => {
+    const { members } = await api('GET', '/api/ws/members');
+    const el = box.querySelector('#wsmembers');
+    el.innerHTML = members.map((m) => `<div class="row" style="padding:3px 0"><span style="flex:1;min-width:0">${esc(m.name || m.email)} <span class="muted">${esc(m.email || '')}</span></span>${m.role === 'owner' || !manage || m.userId === u.id ? `<span class="chip">${ROLE[m.role] || m.role}</span>` : `${owner ? `<select class="input" data-mrole="${esc(m.userId)}" style="width:auto">${opt('member', 'Anggota', m.role)}${opt('admin', 'Admin', m.role)}</select>` : `<span class="chip">${ROLE[m.role]}</span>`}<button class="btn sm danger" data-mdel="${esc(m.userId)}">Keluarkan</button>`}</div>`).join('') || 'Belum ada';
+    el.querySelectorAll('[data-mrole]').forEach((s) => (s.onchange = async () => { await api('POST', '/api/ws/member', { accountId: s.dataset.mrole, role: s.value }); toast('Peran diperbarui', 'ok'); }));
+    el.querySelectorAll('[data-mdel]').forEach((b) => (b.onclick = async () => { await api('POST', '/api/ws/member', { accountId: b.dataset.mdel, role: 'remove' }); toast('Anggota dikeluarkan', 'ok'); drawMembers(); }));
+  };
+  drawMembers().catch(() => {});
+  box.querySelector('#invgo')?.addEventListener('click', async () => {
+    const r = await api('POST', '/api/ws/invite', { role: box.querySelector('#invrole').value });
+    const link = location.origin + r.path;
+    box.querySelector('#invout').innerHTML = `<div class="row" style="margin-top:6px"><input class="input mono" readonly value="${esc(link)}" style="flex:1"><button class="btn sm" id="invcopy">Salin</button></div><div class="muted">Berlaku 7 hari. Siapa pun yang membuka link ini dan login dengan Google akan masuk ke ruang kerja ini.</div>`;
+    box.querySelector('#invcopy').onclick = () => { navigator.clipboard?.writeText(link); toast('Link disalin', 'ok'); };
+  });
+  const res = box.querySelector('#drres');
+  const say = (t) => { if (res) res.textContent = t; };
+  box.querySelectorAll('[data-dr]').forEach((b) => (b.onclick = async () => {
+    b.disabled = true; say('Memproses…');
+    try {
+      let r = await api('POST', '/api/drive/' + b.dataset.dr);
+      if (b.dataset.dr === 'pull') {   /* big imports run in the background: show progress until done */
+        while (r.running) { say(`Mengambil dari Drive… ${r.done || 0}/${r.total || '?'} file`); await new Promise((ok) => setTimeout(ok, 2000)); r = await api('GET', '/api/drive/pull-status'); }
+        if (r.error) throw new Error(r.error);
+        r = { ...r.result, same: r.result?.same ?? 0 };
+      }
+      say(b.dataset.dr === 'setup' ? `Folder siap: ${Object.keys(r.folders).join(', ')}` : b.dataset.dr === 'push' ? `Terkirim: ${r.created} baru, ${r.updated} diperbarui, ${r.skipped} tidak berubah` : `Diambil: ${r.added} baru, ${r.changed} berubah, ${r.same} sama, ${r.skipped} dilewati (bukan teks)`);
+    } catch (err) { say('Gagal: ' + err.message); } finally { b.disabled = false; }
+  }));
+  box.querySelector('#drpick')?.addEventListener('click', () => openPicker(cfg).then((ids) => ids.length && api('POST', '/api/drive/picked', { ids }).then((r) => say(`Dari file terpilih: ${r.added} baru, ${r.changed} berubah, ${r.skipped} dilewati`))).catch((err) => say('Picker: ' + err.message)));
+}
+/** Google Picker: the user chooses existing Drive files; drive.file then lets the app read exactly those */
+function openPicker(cfg) {
+  const load = (src) => new Promise((ok, no) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('gagal memuat ' + src)); document.head.appendChild(s); });
+  return load('https://apis.google.com/js/api.js').then(() => new Promise((ok) => window.gapi.load('picker', ok))).then(() => api('GET', '/api/drive/token')).then(({ token }) => new Promise((ok) => {
+    const P = window.google.picker;
+    const view = new P.DocsView(P.ViewId.DOCS).setIncludeFolders(false).setSelectFolderEnabled(false).setMimeTypes('application/vnd.google-apps.document,application/vnd.google-apps.spreadsheet,text/plain,text/markdown,text/csv');
+    new P.PickerBuilder().setAppId(cfg.appId).setOAuthToken(token).setDeveloperKey(cfg.pickerKey).addView(view).enableFeature(P.Feature.MULTISELECT_ENABLED).setLocale('id')
+      .setCallback((d) => { if (d.action === P.Action.PICKED) ok(d.docs.map((x) => x.id)); else if (d.action === P.Action.CANCEL) ok([]); }).build().setVisible(true);
+  }));
+}
+
 export const SettingsView = {
   mount(root) {
     const s = D().settings; const c = D().company; const u = D().usage;
@@ -1061,14 +1781,17 @@ export const SettingsView = {
           <label class="f">Effort penalaran<select class="input" name="effort">${['low', 'medium', 'high'].map((x) => opt(x, x + (x === 'low' ? ' (hemat, cepat)' : ''), s.effort)).join('')}</select></label></div>
         <div class="grid2"><label class="f">Groq API key ${s.hasGroqKey ? '<span class="chip" style="color:var(--ok)">terpasang</span>' : ''}<input class="input" name="groqApiKey" type="password" autocomplete="off" placeholder="${s.hasGroqKey && !s.groqApiKey ? 'dari .env' : 'gsk_…'}" value="${esc(s.groqApiKey)}"></label>
           <label class="f">Anthropic API key ${s.hasApiKey ? '<span class="chip" style="color:var(--ok)">terpasang</span>' : ''}<input class="input" name="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(s.apiKey)}"></label></div>
+        <details class="more"><summary>Pengaturan lanjutan (model, paralel, budget)</summary><div style="display:grid;gap:12px;margin-top:10px">
         <div class="grid2"><label class="f">Groq · model Head/Lead<select class="input" name="groqModel">${(D().groqModels || []).map((m) => opt(m, m, s.groqModel)).join('')}</select></label>
           <label class="f">Groq · model staf<select class="input" name="groqWorkerModel">${(D().groqModels || []).map((m) => opt(m, m, s.groqWorkerModel)).join('')}</select></label></div>
+        <div class="small muted">${(D().groqModels || []).length} model chat aktif untuk akun Groq ini. Daftar disinkronkan otomatis; model audio, TTS, dan guard tidak ditampilkan karena tidak dapat menjalankan agen chat.</div>
         <div class="grid2"><label class="f">Claude · model Head/Lead<select class="input" name="model">${(D().claudeModels || []).map((m) => opt(m, m, s.model)).join('')}</select></label>
           <label class="f">Claude · model staf<select class="input" name="workerModel">${(D().claudeModels || []).map((m) => opt(m, m, s.workerModel)).join('')}</select></label></div>
         <div class="grid2"><label class="f">Agen live paralel (maks)<input class="input" type="number" min="1" max="20" name="maxConcurrent" value="${s.maxConcurrent}"></label>
           <label class="f">Budget harian (USD)<input class="input" type="number" min="0" step="0.5" name="dailyBudgetUSD" value="${s.dailyBudgetUSD}"></label></div>
+        </div></details>
         <div class="row small muted">Hari ini: ${usd(u.costToday)} · total ${usd(u.costTotal)} · ${num(u.tokensIn)} in / ${num(u.tokensOut)} out · ${u.calls} panggilan</div>
-        <div class="row"><button class="btn primary" id="saveai">Simpan</button><button class="btn" id="testkey">🔌 Tes koneksi</button></div>
+        <div class="row"><button class="btn primary" id="saveai">Simpan</button><button class="btn" id="testkey">🔌 Tes koneksi</button><button class="btn" id="refreshgroq">↻ Verifikasi semua model Groq</button></div>
       </div></div>
       <div class="card"><div class="card-h">⚡ Otonomi</div><div class="card-b" style="display:grid;gap:12px">
         <div class="row"><label class="switch"><input type="checkbox" id="auto" ${s.autonomy ? 'checked' : ''}><span></span></label><div><b>Kantor berjalan otomatis</b><div class="small muted">Agen mengambil tugas, mendelegasi, dan menjalankan rutinitas sendiri.</div></div></div>
@@ -1098,11 +1821,14 @@ export const SettingsView = {
         <div class="grid2"><input class="input" id="mcpn" placeholder="Nama, mis. github"><input class="input" id="mcpu" placeholder="https://…/mcp"></div>
         <div class="row"><input class="input" id="mcph" placeholder='Header opsional (JSON), mis. {"Authorization":"Bearer …"}'><button class="btn primary" id="mcpadd">＋ Tambah</button></div>
       </div></div>
+      <div class="card" id="acct"><div class="card-h">🔐 Akun & Google Drive</div><div class="card-b" style="display:grid;gap:10px"><div class="small muted">Memuat…</div></div></div>
       <div class="card"><div class="card-h">💾 Data</div><div class="card-b row wrap"><button class="btn" id="exp">⬇ Ekspor JSON</button><label class="btn">⬆ Impor JSON<input type="file" accept="application/json" id="imp" hidden></label><span style="flex:1"></span><button class="btn danger" id="reset">Reset ke awal</button></div></div>
     </div>`;
     const $ = (q) => root.querySelector(q);
+    accountCard(root.querySelector('#acct .card-b'));
     $('#saveai').onclick = async () => { const b = formData(root.querySelector('.card .card-b')); await api('PATCH', '/api/settings', b); toast('Pengaturan AI disimpan', 'ok'); setTimeout(() => this.mount(root), 300); };
     $('#testkey').onclick = async () => { $('#testkey').disabled = true; try { const r = await api('POST', '/api/test-key'); toast(`✅ Terhubung ke ${r.provider === "groq" ? "Groq" : "Claude"} (${esc(r.model)}): “${esc(r.reply.slice(0, 40))}”`, 'ok'); } finally { $('#testkey').disabled = false; } };
+    $('#refreshgroq').onclick = async () => { $('#refreshgroq').disabled = true; try { const r = await api('POST', '/api/groq-models/refresh'); const extra = r.unavailable.length ? ` · ${r.unavailable.length} diblokir organisasi` : ''; toast(`✅ ${r.models.length} model chat Groq dapat dipakai${extra}`, 'ok'); setTimeout(() => this.mount(root), 150); } finally { $('#refreshgroq').disabled = false; } };
     $('#auto').onchange = (e) => api('PATCH', '/api/settings', { autonomy: e.target.checked });
     $('#autoapprove').onchange = (e) => api('PATCH', '/api/settings', { autoApprove: e.target.checked });
     $('#tick').oninput = (e) => ($('#tickv').textContent = e.target.value + ' ms');
@@ -1127,20 +1853,85 @@ export const SettingsView = {
     $('#exp').onclick = async () => { const data = await api('GET', '/api/export'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })); a.download = `ray-office-${new Date().toISOString().slice(0, 10)}.json`; a.click(); };
     $('#imp').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; await api('POST', '/api/import', JSON.parse(await f.text())); };
     $('#reset').onclick = () => modal('Reset semua data?', '<p>Semua tugas, catatan buatan agen, chat, dan statistik akan dihapus dan kembali ke data awal. API key tetap disimpan.</p>', { actions: [{ label: 'Batal' }, { label: 'Reset', kind: 'danger', run: () => api('POST', '/api/reset') }] });
+    // four plain tabs instead of one long form; the choice is remembered
+    { const page = root.querySelector('.page.settings'); const cards = [...page.querySelectorAll(':scope > .card')];
+      const TABS = [['umum', 'Umum', /PERUSAHAAN|TAMPILAN/i], ['ai', 'AI', /MESIN AI|OTONOMI|PEMBELAJARAN/i], ['integrasi', 'Integrasi', /GOOGLE|MCP/i], ['data', 'Data', /DATA/i]];
+      const of = (c) => { const h = (c.querySelector('.card-h')?.textContent || '').trim(); return (TABS.find((t) => t[2].test(h)) || TABS[3])[0]; };
+      cards.forEach((c) => (c.dataset.stab = of(c)));
+      const bar = document.createElement('div'); bar.className = 'stabs';
+      bar.innerHTML = TABS.map(([id, label]) => `<button data-st="${id}">${label}</button>`).join('');
+      page.insertBefore(bar, cards[0]);
+      let cur = 'umum'; try { cur = localStorage.getItem('settings-tab') || 'umum'; } catch { /* storage unavailable */ }
+      const show = (id) => { cur = TABS.some((t) => t[0] === id) ? id : 'umum'; cards.forEach((c) => (c.hidden = c.dataset.stab !== cur)); bar.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.st === cur)); try { localStorage.setItem('settings-tab', cur); } catch { /* ignore */ } };
+      bar.querySelectorAll('button').forEach((b) => (b.onclick = () => show(b.dataset.st)));
+      show(cur);
+      // AI tab: the three things an owner decides up front; everything else folds under "Lanjutan"
+      const ai = cards.find((c) => /MESIN AI/i.test(c.querySelector('.card-h')?.textContent || ''));
+      if (ai) {
+        const b = ai.querySelector('.card-b'); const f = (n) => b.querySelector(`[name="${n}"]`)?.closest('label');
+        const L = Object.fromEntries(['provider', 'effort', 'groqApiKey', 'apiKey', 'groqModel', 'groqWorkerModel', 'model', 'workerModel', 'maxConcurrent', 'dailyBudgetUSD'].map((n) => [n, f(n)]));
+        const name = (el, t) => { if (el?.firstChild?.nodeType === 3) el.firstChild.nodeValue = t + ' '; };
+        name(L.provider, 'Otak AI'); name(L.dailyBudgetUSD, 'Batas biaya per hari (USD)'); name(L.groqApiKey, 'Kunci Groq'); name(L.apiKey, 'Kunci Claude (opsional)');
+        name(L.effort, 'Kedalaman berpikir'); name(L.maxConcurrent, 'Agen yang bekerja bersamaan'); name(L.groqModel, 'Groq · model kepala divisi'); name(L.groqWorkerModel, 'Groq · model staf'); name(L.model, 'Claude · model kepala divisi'); name(L.workerModel, 'Claude · model staf');
+        L.effort?.querySelectorAll('option').forEach((o) => (o.textContent = { low: 'Hemat & cepat', medium: 'Sedang', high: 'Mendalam (lebih mahal)' }[o.value] || o.value));
+        const intro = b.querySelector('p.small.muted'); if (intro) intro.textContent = 'Pilih otak untuk karyawan AI dan batas biayanya per hari.';
+        const note = [...b.children].find((x) => x.matches('div.small.muted') && !x.classList.contains('row'));
+        const grid = (...els) => { const d = document.createElement('div'); d.className = 'grid2'; d.append(...els.filter(Boolean)); return d; };
+        const adv = document.createElement('details'); adv.className = 'adv';
+        adv.innerHTML = '<summary>Lanjutan: model, kedalaman berpikir, kunci Claude</summary><div class="adv-b"></div>';
+        const basic = grid(L.provider, L.dailyBudgetUSD);
+        adv.lastElementChild.append(grid(L.effort, L.maxConcurrent), grid(L.groqModel, L.groqWorkerModel), grid(L.model, L.workerModel), ...[L.apiKey, note, b.querySelector('#refreshgroq')].filter(Boolean));
+        intro ? intro.after(basic) : b.prepend(basic); if (L.groqApiKey) basic.after(L.groqApiKey);
+        const usage = b.querySelector('.row.small.muted'); usage ? usage.before(adv) : b.append(adv);
+        [...b.querySelectorAll(':scope > .grid2')].forEach((x) => { if (!x.children.length) x.remove(); });
+      }
+      const tick = page.querySelector('#tick')?.closest('label');
+      if (tick) { const d = document.createElement('details'); d.className = 'adv'; d.innerHTML = '<summary>Lanjutan: kecepatan siklus</summary><div class="adv-b"></div>'; tick.before(d); d.lastElementChild.append(tick); } }
     this.root = root;
   },
   update(colls) { if (colls.has('usage') || colls.has('live')) { const el = this.root?.querySelector('.row.small.muted'); const u = D().usage; if (el) el.textContent = `Hari ini: ${usd(u.costToday)} · total ${usd(u.costTotal)} · ${num(u.tokensIn)} in / ${num(u.tokensOut)} out · ${u.calls} panggilan`; } },
 };
 
+// </pengelola>
+// ───── pembungkus: pengguna biasa melihat kartu ramah; owner/admin tetap mendapat laci teknis lama
+const pengelola = () => bisaKelola(D());
+export function taskDrawer(id) { return pengelola() ? taskDrawerPro(id) : navigate('tasks', { buka: id }); }
+export function agentDrawer(id) {
+  if (pengelola()) return agentDrawerPro(id);
+  const e = emp(id); if (!e) return;
+  modal(esc(e.name), `<div class="orang-grid">${kartuOrang(e, D().tasks, { besar: true })}</div>`, { onMount: (el, close) => el.querySelectorAll('[data-kasih]').forEach((b) => (b.onclick = () => { close(); navigate('dashboard', { untuk: b.dataset.kasih }); })) });
+}
+function divisionDrawer(id) { return pengelola() ? divisionDrawerPro(id) : navigate('team'); }
+
+/** Layar yang boleh dilihat pengguna biasa. admin:true = jalur pengelola (#admin), tidak ditautkan dari menu. */
 export const VIEWS = {
-  office: { title: 'Kantor 3D', icon: '🏢', view: OfficeView },
-  dashboard: { title: 'Dashboard', icon: '📊', view: DashboardView },
-  tasks: { title: 'Tugas', icon: '📋', view: TasksView },
-  chat: { title: 'Chat', icon: '💬', view: ChatView },
-  brain: { title: 'Brain', icon: '🧠', view: BrainView },
-  studio: { title: 'Agent Studio', icon: '✨', view: StudioView },
-  team: { title: 'Tim & Divisi', icon: '👥', view: TeamView },
-  approvals: { title: 'Persetujuan', icon: '🛑', view: ApprovalsView },
-  settings: { title: 'Pengaturan', icon: '⚙️', view: SettingsView },
+  office: { title: 'Kantor 3D', icon: 'office', view: OfficeView },
+  dashboard: { title: 'Obrolan', icon: 'dashboard', view: ObrolanView },   // satu obrolan seperti ChatGPT (menggantikan Beranda lama)
+  pesan: { title: 'Pesan', icon: 'chat', ic: 'chat', view: PesanView },   // daftar kontak (orang, divisi, grup) + utas per kontak; terpisah dari Obrolan
+  tasks: { title: 'Hasil Saya', short: 'Hasil', icon: 'tasks', view: HasilView },
+  brain: { title: 'Catatan', short: 'Catatan', icon: 'brain', view: BrainView },
+  team: { title: 'Tim Saya', short: 'Tim', icon: 'team', view: TimView },
+  settings: { title: 'Pengaturan', icon: 'settings', view: PengaturanView },
+  // <pengelola>
+  admin: { title: 'Konsol pengelola', icon: 'settings', view: AdminView, admin: true },
+  'admin-approvals': { title: 'Konfirmasi', icon: 'approvals', view: ApprovalsView, admin: true },
+  'admin-studio': { title: 'Rancang Pembantu', icon: 'studio', view: StudioView, admin: true },
+  'admin-knowledge': { title: 'Pusat Belajar', icon: 'knowledge', view: KnowledgeView, admin: true },
+  'admin-browser': { title: 'Penjelajah Web', icon: 'browser', ic: 'browser', view: BrowserView, admin: true },
+  'admin-tasks': { title: 'Pekerjaan (papan lama)', icon: 'tasks', view: TasksView, admin: true },
+  'admin-team': { title: 'Organisasi (struktur lama)', icon: 'team', view: TeamView, admin: true },
+  'admin-settings': { title: 'Pengaturan teknis', icon: 'settings', view: SettingsView, admin: true },
+  // </pengelola>
 };
+// nama lama tetap dikenali supaya tautan tersimpan dan kode lama tidak patah; pengguna biasa dialihkan ke Beranda
+export const LEGACY = { chat: 'pesan', 'admin-chat': 'pesan', approvals: 'admin-approvals', studio: 'admin-studio', knowledge: 'admin-knowledge', browser: 'admin-browser' };
+// <pengelola>
+AdminView.items = [
+  { id: 'pesan', title: 'Pesan, ruang, dan rapat', hint: 'Dipindah ke halaman Pesan' }, { id: 'admin-approvals', title: 'Konfirmasi', hint: 'Daftar keputusan' },
+  { id: 'admin-studio', title: 'Rancang Pembantu', hint: 'Studio pembantu' }, { id: 'admin-knowledge', title: 'Pusat Belajar', hint: 'Pelatihan dan dataset' },
+  { id: 'admin-browser', title: 'Penjelajah Web', hint: 'Browser mentah' }, { id: 'admin-tasks', title: 'Pekerjaan (papan lama)', hint: 'Papan, daftar, kalender' },
+  { id: 'admin-team', title: 'Organisasi (struktur lama)', hint: 'Divisi, persona, otonomi' }, { id: 'admin-settings', title: 'Pengaturan teknis', hint: 'Kunci AI, model, MCP, konektor' },
+];
+// </pengelola>
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && OfficeView.wins?.size && !/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName)) { const top = [...OfficeView.wins.values()].sort((a, b) => (+b.el.style.zIndex || 0) - (+a.el.style.zIndex || 0))[0]; if (top && !document.querySelector('.modal:not([hidden]), .drawer.open')) OfficeView.closeApp(top.id); } });
 export { drawerKey };

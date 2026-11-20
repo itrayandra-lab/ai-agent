@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-bandingkan-daftar",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Pembanding dua daftar",
+  "ringkas": "Bandingkan dua daftar: mana yang sama, mana yang hanya ada di daftar pertama, dan mana yang hanya ada di daftar kedua.",
+  "kataKunci": [
+    "bandingkan",
+    "daftar",
+    "selisih",
+    "cocokkan",
+    "rekonsiliasi"
+  ],
+  "inputs": [
+    {
+      "key": "a",
+      "type": "longtext",
+      "label": "Daftar pertama",
+      "required": true,
+      "contoh": "a"
+    },
+    {
+      "key": "b",
+      "type": "longtext",
+      "label": "Daftar kedua",
+      "required": true,
+      "contoh": "b"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Bandingkan",
+      "set": {
+        "la": "baris(input.a).map((x) => x.toLowerCase())",
+        "lb": "baris(input.b).map((x) => x.toLowerCase())",
+        "sama": "baris(input.a).filter((x) => v.lb.includes(x.toLowerCase()))",
+        "hanyaA": "baris(input.a).filter((x) => !v.lb.includes(x.toLowerCase()))",
+        "hanyaB": "baris(input.b).filter((x) => !v.la.includes(x.toLowerCase()))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Sama: ' + v.sama.length + '. Hanya di A: ' + v.hanyaA.length + '. Hanya di B: ' + v.hanyaB.length",
+    "teks": "'## Sama (' + v.sama.length + ')\\n' + (v.sama.map((x) => '- ' + x).join('\\n') || '-') + '\\n\\n## Hanya di A (' + v.hanyaA.length + ')\\n' + (v.hanyaA.map((x) => '- ' + x).join('\\n') || '-') + '\\n\\n## Hanya di B (' + v.hanyaB.length + ')\\n' + (v.hanyaB.map((x) => '- ' + x).join('\\n') || '-')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'perbandingan'",
+        "isi": "csv([['Status', 'Isi']].concat(v.sama.map((x) => ['Sama', x])).concat(v.hanyaA.map((x) => ['Hanya di A', x])).concat(v.hanyaB.map((x) => ['Hanya di B', x])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "a": "a\nb\nc",
+      "b": "b\nc\nd"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Sama: 2. Hanya di A: 1. Hanya di B: 1"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "cocokkan-bersihkan-data"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bandingkan",
+      "daftar",
+      "selisih",
+      "cocokkan",
+      "rekonsiliasi"
+    ],
+    "data": [
+      "daftar pertama",
+      "daftar kedua"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

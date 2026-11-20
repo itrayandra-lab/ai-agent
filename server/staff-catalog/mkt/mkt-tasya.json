@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-tasya",
+  "division": "mkt",
+  "employeeId": "tasya",
+  "title": "KOL & Influencer Manager",
+  "version": 1,
+  "name": "Penilai dan pembanding kreator (KOL)",
+  "ringkas": "Hitung perkiraan interaksi dan biaya per interaksi tiap kreator, beri tingkatannya, tandai yang mencurigakan, dan urutkan yang paling hemat.",
+  "kataKunci": [
+    "kol",
+    "influencer",
+    "tarif kreator",
+    "engagement",
+    "seleksi kreator"
+  ],
+  "inputs": [
+    {
+      "key": "kampanye",
+      "type": "text",
+      "label": "Nama kampanye",
+      "required": true,
+      "contoh": "Peluncuran Serum Ray"
+    },
+    {
+      "key": "kol",
+      "type": "longtext",
+      "label": "Kreator (satu baris: nama | pengikut | engagement % | tarif Rp)",
+      "required": true,
+      "contoh": "Dewi | 100000 | 3 | 3000000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Nilai kreator",
+      "set": {
+        "rows": "baris(input.kol).slice(0, 40).map((l) => { const p = l.split('|').map((s) => s.trim()); const f = num(p[1]); const e = num(p[2]); const tarif = num(p[3]); const inter = Math.round(f * e / 100); return { nama: p[0] || '-', f: f, e: e, tarif: tarif, inter: inter, cpe: inter ? Math.round(tarif / inter) : 0, tingkat: f < 10000 ? 'Nano' : f < 100000 ? 'Mikro' : f < 1000000 ? 'Makro' : 'Mega', catatan: e > 10 ? 'Engagement tidak biasa, periksa keaslian pengikut' : e < 1 ? 'Engagement rendah' : 'Wajar' }; }).sort((x, y) => (x.cpe || 1e12) - (y.cpe || 1e12))",
+        "total": "v.rows.reduce((a, b) => a + b.tarif, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Paling hemat: ' + v.rows[0].nama + ' (' + rp(v.rows[0].cpe) + ' per interaksi) dari ' + v.rows.length + ' kreator'",
+    "teks": "'# Seleksi kreator: ' + input.kampanye + '\\n\\n' + tabel(['Kreator', 'Tingkat', 'Pengikut', 'Engagement %', 'Interaksi', 'Tarif', 'Biaya per interaksi', 'Catatan'], v.rows.map((r) => [r.nama, r.tingkat, r.f, r.e, r.inter, rp(r.tarif), rp(r.cpe), r.catatan])) + '\\n\\nJika memakai semua kreator: ' + rp(v.total)",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'seleksi-kreator-' + input.kampanye",
+        "isi": "csv([['Kreator', 'Tingkat', 'Pengikut', 'Engagement', 'Interaksi', 'Tarif', 'Biaya per interaksi', 'Catatan']].concat(v.rows.map((r) => [r.nama, r.tingkat, r.f, r.e, r.inter, r.tarif, r.cpe, r.catatan])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Influencer",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "kampanye": "Peluncuran Serum Ray",
+      "kol": "Dewi | 100000 | 3 | 3000000\nEko | 50000 | 6 | 1500000\nFani | 500000 | 1 | 5000000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Paling hemat: Eko",
+        "Rp 500 per interaksi",
+        "Makro"
+      ]
+    }
+  },
+  "kemampuan": [
+    "nilai-skor"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kol",
+      "influencer",
+      "tarif kreator",
+      "engagement",
+      "seleksi kreator"
+    ],
+    "data": [
+      "nama kampanye",
+      "kreator (satu baris: nama | pengikut | engagement % | tarif "
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

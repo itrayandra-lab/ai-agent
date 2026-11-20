@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-pembuat-utm",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Pembuat tautan pelacak kampanye",
+  "ringkas": "Buat banyak tautan berlabel (UTM) sekaligus dari satu alamat dasar, siap dipakai di iklan dan postingan.",
+  "kataKunci": [
+    "utm",
+    "tautan",
+    "kampanye",
+    "pelacakan",
+    "link"
+  ],
+  "inputs": [
+    {
+      "key": "url",
+      "type": "url",
+      "label": "Alamat tujuan",
+      "required": true,
+      "contoh": "https://tokoku.com/promo"
+    },
+    {
+      "key": "daftar",
+      "type": "longtext",
+      "label": "Satu baris satu tautan: sumber | media | kampanye",
+      "required": true,
+      "contoh": "instagram | social | promo_gajian"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Susun tautan",
+      "set": {
+        "rows": "baris(input.daftar).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const q = 'utm_source=' + encodeURIComponent(p[0] || '') + '&utm_medium=' + encodeURIComponent(p[1] || '') + '&utm_campaign=' + encodeURIComponent(p[2] || ''); return { sumber: p[0], media: p[1], kampanye: p[2], tautan: input.url + (input.url.includes('?') ? '&' : '?') + q }; })"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' tautan pelacak dibuat'",
+    "teks": "v.rows.map((r) => '- ' + r.tautan).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tautan-utm'",
+        "isi": "csv([['Sumber', 'Media', 'Kampanye', 'Tautan']].concat(v.rows.map((r) => [r.sumber, r.media, r.kampanye, r.tautan])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "url": "https://tokoku.com/promo",
+      "daftar": "instagram | social | promo_gajian\nnewsletter | email | promo_gajian"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "https://tokoku.com/promo?utm_source=instagram&utm_medium=social&utm_campaign=promo_gajian",
+        "2 tautan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "rancang-struktur"
+  ],
+  "keahlian": {
+    "istilah": [
+      "utm",
+      "tautan",
+      "kampanye",
+      "pelacakan",
+      "link"
+    ],
+    "data": [
+      "alamat tujuan",
+      "satu baris satu tautan: sumber | media | kampanye"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

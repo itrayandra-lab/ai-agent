@@ -1,0 +1,401 @@
+/* Kantor 3D: tata letak berbasis wilayah (grid). Dimuat paling akhir, jadi menimpa aturan posisi lama di app.css / glass.css / identity.css.
+   Aturan dasar: setiap panel tinggal di satu wilayah grid, jadi tidak mungkin saling menimpa; panel yang terlalu tinggi menggulir di dalam dirinya.
+   Wilayah desktop:   tl  tc  tr        tl = status singkat, ruangan, jam   tc = tab Kantor 3D | Obrolan   tr = toolbar
+                      lm  .   rm        lm = daftar ruangan (terlipat)       rm = menu, keadaan tim, bantuan, percakapan
+                      .   dk  br        dk = kolom ketik asisten             br = tombol percakapan
+   HP (<= 900px): toolbar di kanan atas, panel jadi lembar bawah tepat di atas kolom ketik, satu panel terbuka sekali waktu. */
+.office-ov { position: absolute; inset: 0; z-index: 2; pointer-events: none; --cl: 300px; --colr: 340px; --pad: 12px; display: grid; gap: 12px; padding: var(--pad); grid-template-columns: var(--cl) minmax(0, 1fr) var(--colr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "tl tc tr" "lm . rm" ". dk br"; }
+.office-ov > .ovz { min-width: 0; min-height: 0; display: flex; pointer-events: none; }
+.office-ov > .ovz > * { pointer-events: auto; }
+.office-ov > :not(.ovz):not(.pie):not(.owins):not(.pmobile):not(.lower3):not(.tele3):not(.phud):not(.phint):not(.tod-chip) { pointer-events: auto; }
+.office-ov [hidden] { display: none !important; }
+.ovz.tl { grid-area: tl; flex-direction: column; align-items: flex-start; gap: 8px; }
+.ovz.tc { grid-area: tc; justify-content: center; align-items: flex-start; }
+.ovz.tr { grid-area: tr; justify-content: flex-end; align-items: flex-start; position: static; display: flex; }
+.ovz.lm { grid-area: lm; align-items: flex-start; justify-content: flex-start; }
+.ovz.rm { grid-area: rm; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 12px; overflow: hidden; }
+.ovz.dk { grid-area: dk; justify-content: center; align-items: flex-end; }
+.ovz.br { grid-area: br; justify-content: flex-end; align-items: flex-end; }
+.office-ov .mob-only { display: none; }
+/* wilayah kiri atas: chip status + tombol Ruangan + jam, tanpa menimpa apa pun */
+.office-ov .kpis { border-radius: 999px; width: max-content; max-width: 100%; }
+.office-ov .kpis .kpi-mini { white-space: nowrap; }
+.office-ov .ov-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 999px; cursor: pointer; color: var(--text); font: inherit; font-size: 16px; font-weight: 600; max-width: 100%; }
+.office-ov .ov-pill b { font-weight: 650; }
+.office-ov .ov-pill:hover, .office-ov .ov-pill[aria-expanded="true"] { border-color: var(--gold, var(--accent)); }
+.ovz.tl .tod-clock { position: relative; }
+.ovz.tl .tod-clock small { display: none; }
+.ovz.tl .tod-clock .tod-pop { position: static; margin: 0; padding: 8px 12px 12px; }
+.ovz.tl .tod-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* tab Kantor 3D | Obrolan */
+.office-ov .ov-tabs { display: inline-flex; padding: 4px; gap: 4px; border-radius: 999px; }
+.office-ov .ov-tabs button { min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.office-ov .ov-tabs button.on { background: var(--slate); color: var(--text); }
+.office-ov .ov-tabs button:not(.on):hover { color: var(--text); }
+/* toolbar kanan atas */
+.office-ov .cam-btns { display: flex; flex-wrap: nowrap; gap: 8px; max-width: 100%; }
+.office-ov .cam-btns .btn { position: relative; flex: none; }
+.office-ov .cam-btns .btn.primary-play { width: auto; padding: 0 16px; gap: 8px; }
+.office-ov .dotbadge { position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold, #e0c9a6); border: 2px solid var(--navy, var(--ink)); }
+/* panel-panel: gaya seragam, berada di dalam wilayahnya, menggulir sendiri */
+.office-ov .rooms, .office-ov .cam-menu, .office-ov .hud, .office-ov .help-panel, .office-ov .oapps, .office-ov .ov-feed, .office-ov .follow-card { position: static; inset: auto; transform: none; width: 100%; max-width: 100%; margin: 0; min-width: 0; min-height: 0; z-index: auto; animation: none; border-radius: 22px; overflow: auto; flex: 0 1 auto; box-sizing: border-box; }
+.office-ov .rooms { display: flex; flex-direction: column; gap: 8px; padding: 12px; max-height: 100%; width: 100%; overflow: hidden; }
+.office-ov .rooms::before, .office-ov .rooms::after { display: none; }
+.office-ov .rm-h { display: flex; align-items: center; gap: 8px; }
+.office-ov .rm-h b { font-size: 17px; }
+.office-ov .rm-h .faint { font-size: 14px; color: var(--muted); }
+.office-ov .rm-q { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line2, var(--line)); background: transparent; color: var(--text); font: inherit; font-size: 16px; outline: none; }
+.office-ov .rm-q:focus { border-color: var(--gold, var(--accent)); }
+.office-ov .rm-list { overflow-y: auto; min-height: 0; flex: 1 1 auto; display: grid; gap: 4px; align-content: start; scrollbar-width: thin; }
+.office-ov .rm-g h4 { margin: 8px 6px 2px; font-size: 14px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.office-ov .rooms .room { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 12px; border: 0; border-radius: 14px; background: transparent; color: var(--text); font: inherit; font-size: 16px; text-align: left; cursor: pointer; }
+.office-ov .rooms .room.static { cursor: default; color: var(--muted); }
+.office-ov .rooms .room:not(.static):hover { background: rgba(130, 140, 230, .14); }
+.office-ov .rooms .room i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.office-ov .rooms .room span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.office-ov .rooms .room b { font-weight: 650; }
+.office-ov .cam-menu { display: flex; flex-direction: column; gap: 2px; padding: 8px; }
+.office-ov .cam-menu .cm-i { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; }
+.office-ov .hud { padding: 14px 16px; width: 100%; font-size: 16px; }
+.office-ov .help-panel { padding: 14px; }
+.office-ov .oapps { padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.office-ov .ov-feed { display: flex; flex-direction: column; padding: 0; margin-top: auto; max-height: 100%; }
+.office-ov .ov-feed .card-h { padding: 8px 10px; gap: 6px; flex: none; }
+.office-ov .ov-feed .tabs { padding: 2px; }
+.office-ov .ov-feed .feed { overflow-y: auto; min-height: 0; flex: 1 1 auto; max-height: none; padding: 4px 8px 8px; }
+.office-ov .follow-card { padding: 12px 14px; }
+/* kolom ketik asisten: satu baris di bawah tengah; percakapan terbuka hanya bila diminta atau saat ada balasan */
+.office-ov .odock { position: static; inset: auto; transform: none; z-index: auto; width: min(720px, 100%); min-height: 0; max-height: min(46dvh, 480px); display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 28px; box-sizing: border-box; overflow: hidden; }
+.office-ov .odock .od-top { display: flex; flex-direction: column; gap: 6px; min-height: 0; flex: 1 1 auto; overflow: auto; padding: 4px 6px 0; }
+.office-ov .odock.collapsed .od-top { display: none; }
+.office-ov .odock .od-body { flex: 1 1 auto; min-height: 0; }
+.office-ov .odock .od-msgs { max-height: none; min-height: 0; }
+.office-ov .odock .od-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.office-ov .odock .od-imgs:empty { display: none; }
+.office-ov .odock .cmdbar { position: static; transform: none; width: 100%; box-sizing: border-box; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 999px; background: var(--gl-fill-2, rgba(255,255,255,.1)); border: 1px solid var(--gl-stroke, rgba(255,255,255,.16)); box-shadow: none; }
+.office-ov .odock .cmdbar input { flex: 1 1 auto; min-width: 0; width: auto; background: transparent; border: 0; border-radius: 0; padding: 0 6px; min-height: 48px; font-size: 16px; box-shadow: none; outline: none; }
+.office-ov .odock .cmdbar:focus-within { border-color: var(--gold, var(--accent)); }
+.office-ov .odock .cmdbar .btn { flex: none; }
+.office-ov .odock #goalgo { width: auto; min-width: 48px; height: 48px; padding: 0 18px; border-radius: 999px; font-size: 16px; font-weight: 650; }
+.office-ov .odock #goalgo::before { content: none; }
+.office-ov .odock .od-foot { display: flex; align-items: center; gap: 6px; padding: 0 4px; min-height: 0; flex-wrap: wrap; }
+.office-ov .odock .od-foot .btn.sm { min-height: 44px; }
+.office-ov .odock .od-perm { display: inline-flex; align-items: center; min-width: 0; }
+.office-ov #odmic.on { background: var(--gold, var(--accent)); color: var(--navy, var(--ink)); }
+/* kartu agen terpilih dan jendela lain yang sementara */
+.office-ov .tod-chip { top: 176px; }
+.office-ov.playing .tc { opacity: .25; pointer-events: none; }
+.office-ov.scene-loading::after { content: "Memuat kantor 3D…"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 22px; border-radius: 999px; background: var(--navy, var(--ink)); color: var(--ivory, var(--ivory)); font-size: 16px; pointer-events: none; }
+/* layar sedang: kolom samping lebih sempit */
+@media (max-width: 1100px) {
+  .office-ov { --cl: 250px; --colr: 280px; }
+  .office-ov .ov-tabs button { padding: 0 14px; }
+}
+/* HP dan tablet kecil: lembar bawah, satu panel sekali waktu */
+@media (max-width: 900px) {
+  .office-ov { --pad: 8px; gap: 8px; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto auto auto; grid-template-areas: "tl tr" "sp sp" "lm lm" "rm rm" "dk dk"; }
+  .office-ov .dk-only { display: none !important; }
+  .office-ov .mob-only { display: inline-flex; }
+  .ovz.tc, .ovz.br, .ovz.tl .tod-clock { display: none; }
+  .ovz.tr { justify-self: end; }
+  .ovz.rm, .ovz.lm { justify-content: flex-end; }
+  .ovz.rm { overflow: visible; }
+  .office-ov .rooms, .office-ov .cam-menu, .office-ov .hud, .office-ov .help-panel, .office-ov .oapps, .office-ov .ov-feed, .office-ov .follow-card { max-height: 46dvh; border-radius: 22px; }
+  .office-ov .ov-feed { margin-top: 0; }
+  .office-ov .odock { width: 100%; max-height: 42dvh; }
+  .office-ov .cam-btns .pl-lbl { display: none; }
+  .office-ov .cam-btns .btn.primary-play { padding: 0; width: 48px; }
+  .office-ov .kpis .kpi-mini { overflow: hidden; text-overflow: ellipsis; }
+  .ovz.tl { overflow: hidden; }
+  .office-ov .odock .od-foot .btn.sm { padding-inline: 12px; }
+}
+/* kontras: panel dan tombol Kantor selalu terbaca di atas langit atau lantai apa pun */
+.office-ov .glass { background: rgba(33,33,33, .9); color: var(--ivory); border-color: rgba(236,236,236, .16); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.office-ov .glass .muted, .office-ov .glass .faint, .office-ov .glass small { color: rgba(236,236,236, .72); }
+:root[data-theme="light"] .office-ov .glass { background: rgba(255, 255, 255, .92); color: #0d0d0d; border-color: rgba(0,0,0, .14); }
+:root[data-theme="light"] .office-ov .glass .muted, :root[data-theme="light"] .office-ov .glass .faint, :root[data-theme="light"] .office-ov .glass small { color: #5d5d5d; }
+.office-ov .cam-btns .btn.glass { background: var(--ink); color: var(--ivory); border-color: rgba(236,236,236, .2); }
+:root[data-theme="light"] .office-ov .ov-pill, :root[data-theme="light"] .office-ov .rooms .room, :root[data-theme="light"] .office-ov .rm-q, :root[data-theme="light"] .office-ov .cam-menu .cm-i { color: #0d0d0d; }
+:root[data-theme="light"] .office-ov .odock .cmdbar { background: rgba(0,0,0, .06); border-color: rgba(0,0,0, .14); }
+.office-ov .kpis .l-sm { display: none; }
+@media (max-width: 600px) {
+  .office-ov .kpis .l-lg { display: none; }
+  .office-ov .kpis .l-sm { display: inline; }
+}
+.office-ov #orooms:not([hidden]) { display: flex; }
+/* satu permukaan chat: kepingan peserta di atas kolom ketik, tujuan "Ke: ..." di bawahnya, riwayat di dalam utas */
+.office-ov .odock .od-to { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; padding: 0 6px; flex: none; order: 0; scrollbar-width: none; }
+.office-ov .odock .od-to:empty { display: none; }
+.office-ov .odock .od-who { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.office-ov .odock .od-hist { max-height: 200px; overflow: auto; }
+.office-ov .od-keyhint { font-size: 14px; color: rgba(236,236,236, .72); padding: 0 8px; }
+:root[data-theme="light"] .office-ov .od-keyhint { color: #5d5d5d; }
+/* petunjuk karakter dan kartu sementara punya wilayah sendiri di atas, tidak menimpa kolom ketik */
+.office-ov .phint { top: 68px; bottom: auto; }
+.office-ov .lower3 { top: 124px; }
+.office-ov .od-izin { min-height: 44px; width: auto; padding: 0 10px; border-radius: 999px; font-size: 16px; }
+/* HP: lembar bawah berada di baris lentur di atas kolom ketik, tingginya dibatasi oleh barisnya sendiri (tidak pernah menimpa kolom ketik) */
+@media (max-width: 900px) {
+  .office-ov { grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "tl tr" "sh sh" "dk dk"; }
+  .ovz.lm, .ovz.rm { grid-area: sh; align-items: flex-end; justify-content: flex-end; min-height: 0; overflow: hidden; }
+  .office-ov .rooms, .office-ov .cam-menu, .office-ov .hud, .office-ov .help-panel, .office-ov .oapps, .office-ov .ov-feed { max-height: 100%; }
+  .office-ov .follow-card { display: none; }
+}
+:root[data-theme] .office-ov { --cl: 420px; --colr: 300px; gap: 10px; font-size: 14px; line-height: 1.5; font-weight: 400; }
+:root[data-theme] .office-ov .btn, :root[data-theme] .office-ov .od-chip, :root[data-theme] .office-ov .cm-i, :root[data-theme] .office-ov .oapp, :root[data-theme] .office-ov .pie-i { min-height: 36px; font-size: 14px; }
+:root[data-theme] .office-ov .btn.icon, :root[data-theme] .office-ov .cam-btns .btn { min-width: 36px; width: auto; height: 36px; min-height: 36px; padding: 0 10px; }
+:root[data-theme] .office-ov .btn.icon { width: 36px; }
+:root[data-theme] .office-ov .btn.sm, :root[data-theme] .office-ov .od-h .btn.sm, :root[data-theme] .office-ov .odock .od-foot .btn.sm { min-height: 32px; min-width: 0; padding: 0 10px; font-size: 13px; }
+:root[data-theme] .office-ov .ov-pill { min-height: 36px; padding: 0 12px; font-size: 14px; font-weight: 500; gap: 6px; }
+:root[data-theme] .office-ov .kpi-mini b { font-size: 14px; }
+:root[data-theme] .office-ov .kpi-mini span { font-size: 13px; }
+:root[data-theme] .office-ov .kpi-mini { min-height: 36px; padding: 6px 12px; }
+:root[data-theme] .office-ov .tod-clock > button { min-height: 34px; font-size: 14px; padding: 0 12px; height: 34px; gap: 6px; color: inherit; background: transparent; border: 0; display: inline-flex; align-items: center; }
+:root[data-theme] .office-ov .tod-clock b, :root[data-theme] .office-ov .tod-clock small { font-size: 14px; }
+:root[data-theme] .office-ov .ov-tabs button { min-height: 32px; padding: 0 14px; font-size: 14px; font-weight: 500; }
+:root[data-theme] .office-ov .ov-tabs { padding: 3px; }
+:root[data-theme] .office-ov .cam-btns .btn img.gi, :root[data-theme] .office-ov .cam-btns .btn svg { width: 18px; height: 18px; }
+:root[data-theme] .office-ov .cm-i { min-height: 36px; font-size: 14px; gap: 10px; padding: 0 10px; }
+:root[data-theme] .office-ov .cm-i i img, :root[data-theme] .office-ov .cm-i i svg { width: 18px; height: 18px; }
+:root[data-theme="light"] .cam-menu .cm-i i { width: 24px; height: 24px; }
+:root[data-theme] .office-ov .cam-menu .cm-t, :root[data-theme] .office-ov .rm-g h4 { font-size: 12px; }
+:root[data-theme] .office-ov .rm-h b, :root[data-theme] .office-ov .od-h > b { font-size: 15px; font-weight: 600; }
+:root[data-theme] .office-ov .rm-q, :root[data-theme] .office-ov .od-pick input { min-height: 36px; font-size: 14px; }
+:root[data-theme] .office-ov .rooms .room { min-height: 36px; font-size: 14px; padding: 0 10px; border-radius: 10px; }
+:root[data-theme] .office-ov .hud { font-size: 14px; padding: 12px; }
+:root[data-theme] .office-ov .hud-adv summary { min-height: 36px; }
+:root[data-theme] .office-ov .hud-adv .kv { font-size: 13px; }
+:root[data-theme] .office-ov .glass, :root[data-theme] .office-ov .rooms, :root[data-theme] .office-ov .cam-menu { border-radius: 16px; }
+:root[data-theme] .office-ov .help-panel, :root[data-theme] .office-ov .phud { font-size: 14px; }
+:root[data-theme] .badge, :root[data-theme] .badge.soft, :root[data-theme] .office-ov .od-n { font-size: 12px; min-width: 20px; height: 20px; }
+/* panel chat KACA di kiri bawah: blur berlapis, tepi tipis halus, teks jelas */
+:root[data-theme] .office-ov .ovz.dk { justify-content: flex-start; }
+/* dock frosted ala Sintra: kaca buram kuat, tepi putih tipis, bayangan lembut */
+:root[data-theme] .office-ov .odock { width: 100%; max-width: 440px; padding: 6px 8px; border-radius: 26px; background: rgba(18, 20, 28, .42); -webkit-backdrop-filter: blur(26px) saturate(1.6); backdrop-filter: blur(26px) saturate(1.6); border: 1px solid rgba(255, 255, 255, .24); box-shadow: 0 12px 40px -14px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .18); max-height: min(60dvh, 560px); gap: 2px; }
+:root[data-theme="light"] .office-ov .odock { background: rgba(255, 255, 255, .5); border-color: rgba(255, 255, 255, .85); box-shadow: 0 12px 36px -16px rgba(40, 60, 100, .4), inset 0 1px 0 rgba(255, 255, 255, .9); }
+:root[data-theme] .office-ov .odock .cmdbar { padding: 0; background: transparent; border: 0; gap: 4px; }
+:root[data-theme] .office-ov .odock .cmdbar input { min-height: 36px; font-size: 13.5px; padding: 0 6px; }
+:root[data-theme] .office-ov .odock #goalgo { min-width: 32px; height: 32px; padding: 0; font-size: 14px; width: 32px; min-height: 32px; border-radius: 50%; display: inline-grid; place-items: center; }
+:root[data-theme] .office-ov .odock .od-msgs { font-size: 14px; }
+.office-ov .odock .od-m, .office-ov .odock .od-b .md { font-size: 14px; }
+/* izin: dropdown ikon kecil (perisai); daftar pilihan tetap terbaca */
+:root[data-theme] .office-ov .od-izin { min-height: 24px; font-size: 13px; appearance: none; -webkit-appearance: none; width: 26px; min-width: 26px; height: 24px !important; padding: 0; border: 0; border-radius: 999px; color: transparent; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa4b5' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6Z'/%3E%3Cpath d='m8.5 12 2.5 2.5 4.5-5'/%3E%3C/svg%3E") center / 15px no-repeat; cursor: pointer; }
+:root[data-theme] .office-ov .od-keyhint, :root[data-theme] .office-ov .od-w, :root[data-theme] .office-ov .od-wl { font-size: 12px; }
+/* Ruangan di kolom kiri tinggal di atas panel chat: lebar sama, gulir sendiri */
+:root[data-theme] .office-ov .rooms { max-width: 440px; }
+@media (max-width: 1100px) {
+  :root[data-theme] .office-ov { --cl: 360px; --colr: 260px; }
+}
+@media (max-width: 900px) {
+  :root[data-theme] .office-ov .odock { max-width: none; }
+}
+/* tombol kembali bulat saat percakapan terbuka (Esc juga menutup) */
+.office-ov .od-back { display: none; }
+.office-ov .odock:not(.collapsed) .od-back { display: inline-flex; }
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov { grid-template-areas: "tl tc tr" "lm . rm" "dk . br"; }
+}
+:root[data-theme] .office-ov .odock .od-h .btn, :root[data-theme] .office-ov .odock .od-foot .btn { height: 32px !important; min-height: 32px !important; padding: 0 10px !important; font-size: 13px !important; width: auto; min-width: 0 !important; }
+:root[data-theme] .office-ov .odock .od-h .btn.icon { width: 32px; padding: 0 !important; }
+:root[data-theme] .office-ov .odock .od-h { flex-wrap: nowrap; gap: 4px; overflow: hidden; }
+:root[data-theme] .office-ov .odock .od-h > b { margin-right: auto; white-space: nowrap; }
+:root[data-theme] .office-ov .odock .od-h #odinfo { display: none; }
+:root[data-theme] .office-ov .odock #odimg { width: 34px; height: 34px; min-width: 34px; min-height: 34px; }
+:root[data-theme] .office-ov .odock .od-izin { height: 32px; }
+.office-ov .od-back svg { transform: rotate(180deg); }
+@media (max-width: 600px) {
+  :root[data-theme] .office-ov .odock .od-h { flex-wrap: wrap; overflow: visible; }
+}
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov { --lw: 440px; --colr: 340px; padding-left: 104px; grid-template-columns: var(--lw) minmax(0, 1fr) var(--colr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "lp . tr" "lp . tl" "lp . rm" "lp . br"; }
+  :root[data-theme] .office-ov .ovz.dk { grid-area: lp; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 10px; }
+  :root[data-theme] .office-ov .ovz.tl { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 8px; }
+  :root[data-theme] .office-ov .ovz.tl .tod-clock { flex-direction: column; }
+  :root[data-theme] .office-ov .ovz.tl .tod-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 6; width: 260px; }
+  :root[data-theme] .office-ov .ovz.rm { justify-content: flex-start; }
+  :root[data-theme] .office-ov .odock { max-width: none; width: 100%; }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+  :root[data-theme] .office-ov { --lw: 380px; --colr: 300px; }
+}
+:root[data-theme] .office-ov .odock:not(.collapsed) { flex: 1 1 auto; max-height: none; min-height: 0; }
+/* halaman di panel kiri */
+.office-ov .lpage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; width: 100%; box-sizing: border-box; -webkit-backdrop-filter: blur(30px) saturate(1.5); backdrop-filter: blur(30px) saturate(1.5); box-shadow: 0 16px 50px -18px rgba(0, 0, 0, .5); }
+/* kaca nyaman dibaca: lapisan hampir solid, blur, tepi halus */
+/* panel kiri: FROSTED transparan, kantor 3D tetap terlihat di belakang */
+:root[data-theme="dark"] .office-ov .lpage { background: rgba(18, 20, 26, .62); border-color: rgba(255, 255, 255, .2); }
+:root[data-theme="light"] .office-ov .lpage { background: rgba(255, 255, 255, .6); border-color: rgba(255, 255, 255, .9); }
+.office-ov .lp-h { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--glass-edge, var(--line)); flex: none; }
+.office-ov .lp-h b { font-family: var(--serif); font-weight: 500; font-size: 16px; }
+/* dua kolom atau lebih bila panel cukup lebar (container query pada isi panel) */
+.office-ov .lp-b { flex: 1 1 auto; min-height: 0; overflow: auto; position: relative; container-type: inline-size; container-name: lp; }
+.office-ov .lp-b .page, :root[data-theme] .office-ov .lp-b .page { max-width: none; padding: 10px 14px 16px; margin: 0; width: auto; }
+:root[data-theme] .lp-b .page.pengaturan, :root[data-theme] .lp-b .page.hasil, :root[data-theme] .lp-b .page.tim { display: block; }
+:root[data-theme] .lp-b .set-nav { display: flex; flex-direction: row; gap: 6px; overflow-x: auto; position: static; padding-bottom: 6px; }
+:root[data-theme] .lp-b .set-nav a { white-space: nowrap; border: 1px solid var(--glass-edge); }
+:root[data-theme] .lp-b .brain { grid-template-columns: 1fr; height: auto; min-height: 100%; padding: 8px; }
+:root[data-theme] .lp-b .brain .side-r { display: none; }
+:root[data-theme] .lp-b #timBody { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+:root[data-theme] .lp-b .set-k .card-b, :root[data-theme] .lp-b .card-b { padding: 12px; }
+/* tampilan bersih */
+.office-ov #cleanback { position: absolute; left: 16px; top: 16px; z-index: 6; }
+body.mode-bersih .sidebar, body.mode-bersih #bottomnav { display: none !important; }
+body.mode-bersih .office-ov > .ovz { display: none !important; }
+body.mode-bersih .office-ov { padding-left: 12px; }
+/* HP: panel kiri jadi lembar dari bawah */
+@media (max-width: 900px) {
+  .office-ov .ovz.dk { flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 8px; }
+  .office-ov .lpage { max-height: 72dvh; flex: 0 1 auto; height: 72dvh; }
+  :root[data-theme] .office-ov .odock:not(.collapsed) { max-height: 60dvh; }
+}
+:root[data-theme] .lp-b .page.pengaturan > .set-nav { grid-column: auto; grid-row: auto; position: static; flex-direction: row; }
+:root[data-theme] .lp-b .page.pengaturan > section { grid-column: auto; margin-bottom: 10px; }
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov { --lw: clamp(380px, 46vw, 520px); --colr: 300px; padding-left: 80px; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "lp . tr" "lp . rm" "lp . br"; }
+  :root[data-theme] .office-ov .ovz.rm { justify-content: flex-end; }
+  :root[data-theme] .office-ov .ovz.rm .cam-menu, :root[data-theme] .office-ov .ovz.rm #ohud { margin-bottom: auto; }
+  :root[data-theme] .office-ov .odock.collapsed { max-width: 480px; }
+}
+@media (min-width: 1280px) {
+  :root[data-theme] .office-ov { --lw: clamp(520px, 50vw, 900px); }
+}
+/* jam: satu gaya dengan tombol toolbar (tinggi 36, bulat) */
+:root[data-theme] .office-ov .cam-btns { align-items: center; }
+:root[data-theme] .office-ov .tod-clock { position: relative; height: 36px; border-radius: 999px; background: var(--ink); color: var(--ivory); border: 1px solid rgba(236, 236, 236, .2); display: inline-flex; align-items: center; }
+:root[data-theme="light"] .office-ov .tod-clock { border-color: rgba(0, 0, 0, .12); }
+:root[data-theme] .office-ov .tod-clock small { display: none; }
+:root[data-theme] .office-ov .tod-clock .tod-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 7; width: 260px; padding: 10px 12px 12px; border-radius: 16px; background: var(--ink); border: 1px solid var(--line2); }
+/* kelompok kanan bawah: ikon saja, nama muncul saat hover */
+.office-ov .ov-infobar { display: flex; align-items: center; gap: 2px; padding: 3px; border-radius: 999px; overflow: visible; }
+:root[data-theme] .office-ov .ov-infobar > * { padding: 0; border: 0; }
+.office-ov .ov-infobar .ib-ai { display: flex; align-items: center; }
+.office-ov .ib-ai-i { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border-radius: 999px; font-size: 14px; cursor: default; outline-offset: -2px; }
+.office-ov .ib-ai-i b { font-weight: 650; }
+.office-ov .ib-ai-i i { font-style: normal; font-size: 12px; color: var(--muted); }
+.office-ov .ib-btn { position: relative; width: 36px; height: 36px; min-width: 36px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; display: inline-grid; place-items: center; cursor: pointer; }
+.office-ov .ib-btn:hover, .office-ov .ib-btn[aria-expanded="true"] { background: var(--accent-bg); }
+.office-ov .ib-btn img.gi, .office-ov .ib-btn svg { width: 18px; height: 18px; }
+.office-ov .ib-btn .badge { position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 11px; line-height: 16px; }
+.office-ov .ib-btn.warn { color: var(--warn); }
+/* semua kontrol Kantor: tinggi 36, radius pil, ikon 18 */
+:root[data-theme] .office-ov .cam-btns .btn, :root[data-theme] .office-ov .cam-btns .tod-clock { height: 36px; min-height: 36px; border-radius: 999px; }
+/* posisi dock: tengah bawah saat belum ada panel kiri; di panel kiri saat terbuka */
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov:not(.has-left) { grid-template-columns: 0px minmax(0, 1fr) var(--colr); grid-template-areas: ". . tr" ". . rm" ". dk br"; }
+  :root[data-theme] .office-ov:not(.has-left) .ovz.dk { grid-area: dk; justify-content: center; align-items: flex-end; }
+  :root[data-theme] .office-ov:not(.has-left) .odock { width: min(540px, 100%); max-width: 540px; }
+}
+:root[data-theme] .office-ov .odock #odimg, :root[data-theme] .office-ov .odock #odmic { width: 32px; height: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 50%; }
+:root[data-theme] .office-ov .odock #odimg svg, :root[data-theme] .office-ov .odock #odmic svg { width: 18px; height: 18px; }
+:root[data-theme] .office-ov .odock #goalgo svg { width: 18px; height: 18px; }
+/* baris kecil di bawah komposer: satu baris, 11-12 px */
+:root[data-theme] .office-ov .odock .od-foot { flex-wrap: nowrap; gap: 2px; padding: 0 4px 2px; min-height: 0; font-size: 11.5px; overflow: hidden; }
+:root[data-theme] .office-ov .odock .od-foot .btn, :root[data-theme] .office-ov .odock .od-foot .btn.sm { height: 24px !important; min-height: 24px !important; padding: 0 8px !important; font-size: 11.5px !important; border: 0; background: transparent; color: var(--muted); gap: 4px; flex: none; }
+:root[data-theme] .office-ov .odock .od-foot .btn:hover { background: var(--accent-bg); color: var(--text); }
+:root[data-theme] .office-ov .odock .od-foot .od-who { max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+:root[data-theme] .office-ov .odock .od-foot .od-n { font-size: 10px; min-width: 16px; height: 16px; margin-left: 3px; }
+:root[data-theme] .office-ov .odock .od-keyhint { font-size: 11.5px; color: var(--muted); padding: 0 4px; white-space: nowrap; }
+:root[data-theme] .office-ov .od-izin:hover { background-color: var(--accent-bg); }
+:root[data-theme] .office-ov .od-izin option { color: #14181f; background: #fff; font-size: 13px; }
+/* petunjuk tombol: kartu kompak dua kolom */
+.office-ov .keyhint { width: 100%; max-width: 360px; margin-left: auto; padding: 10px 12px; font-size: 12.5px; line-height: 1.4; border-radius: 16px; transition: opacity .6s ease; }
+.office-ov .keyhint.pudar { opacity: 0; }
+.office-ov .kh-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.office-ov .kh-h b { font-size: 14px; }
+.office-ov .kh-h .btn { width: 28px; height: 28px; min-width: 28px; min-height: 28px; padding: 0; }
+.office-ov .kh-g { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+.office-ov .kh-g span { display: flex; flex-direction: column; gap: 1px; min-width: 0; color: var(--muted); }
+.office-ov .kh-g kbd { align-self: flex-start; font: 600 11px/1.5 var(--font); padding: 0 6px; border-radius: 6px; background: var(--accent-bg); border: 1px solid var(--line2); color: var(--text); white-space: nowrap; }
+:root[data-theme] .office-ov .lp-h { border-bottom-color: rgba(128, 128, 140, .25); }
+@container lp (min-width: 560px) {
+  .page.pengaturan { display: grid !important; grid-template-columns: 150px minmax(0, 1fr); gap: 10px 16px; align-items: start; }
+  .page.pengaturan > header { grid-column: 1 / -1; }
+  .page.pengaturan > .set-nav { grid-column: 1; grid-row: 2 / span 12; position: sticky; top: 0; flex-direction: column !important; overflow: visible !important; }
+  .page.pengaturan > section { grid-column: 2; margin: 0 !important; }
+  .page.hasil:not(.dua) #hbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .brain { grid-template-columns: 190px minmax(0, 1fr) !important; }
+  .brain .tree { display: block !important; }
+}
+@container lp (min-width: 780px) {
+  .page.hasil:not(.dua) #hbody { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* petunjuk tombol di ATAS kolom kanan (di bawah baris tombol), bukan di bawah */
+:root[data-theme] .office-ov .ovz.rm #phud { margin-bottom: auto; }
+.office-ov .tod-chip, .office-ov .phint { transition: opacity .6s ease; }
+.office-ov .tod-chip.pudar, .office-ov .phint.pudar { opacity: 0; }
+/* perbesar halaman sampai ujung kanan (menyisakan bilah navigasi kiri) */
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov.has-left.lp-penuh { grid-template-columns: minmax(0, 1fr) 0px 0px; grid-template-areas: "lp lp lp" "lp lp lp" "lp lp lp"; }
+  :root[data-theme] .office-ov.lp-penuh .ovz.tr, :root[data-theme] .office-ov.lp-penuh .ovz.rm, :root[data-theme] .office-ov.lp-penuh .ovz.br { display: none; }
+}
+/* Hasil Saya: daftar kompak di kiri, isi hasil di kanan */
+.page.hasil.dua { display: grid !important; grid-template-columns: minmax(300px, 2fr) minmax(0, 3fr); grid-template-rows: auto auto auto 1fr; gap: 8px 14px; align-items: start; height: 100%; box-sizing: border-box; }
+.page.hasil.dua > header, .page.hasil.dua > .hasil-bar, .page.hasil.dua > .hasil-massal { grid-column: 1 / -1; }
+.page.hasil.dua #hbody { grid-column: 1; display: block !important; overflow: auto; max-height: 100%; min-height: 0; }
+.page.hasil.dua .hasil-detail { grid-column: 2; position: sticky; top: 0; align-self: stretch; overflow: auto; border-radius: 18px; padding: 4px; min-height: 0; background: var(--glass); border: 1px solid var(--glass-edge); }
+.page.hasil.dua .hasil-g { margin-bottom: 8px; }
+.page.hasil.dua #hbody .hasil-k { cursor: pointer; }
+.page.hasil.dua #hbody .hasil-k.aktif { outline: 2px solid var(--accent); outline-offset: -2px; }
+.page.hasil.dua #hbody .hasil-a, .page.hasil.dua #hbody .hasil-isi { display: none; }
+.page.hasil:not(.dua) .hasil-detail { display: none; }
+.page.hasil.dua .hasil-detail .hasil-k { border: 0; background: transparent; box-shadow: none; }
+.page.hasil.dua .hasil-detail [data-lihat] { display: none; }
+/* Catatan lebih lega pada panel lebar */
+@container lp (min-width: 820px) {
+  .brain { grid-template-columns: 240px minmax(0, 1fr) !important; }
+}
+:root[data-theme] .lp-b .page-head h2 { display: none; }
+/* judul sudah ada di kepala panel */
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov:not(.has-left) .ovz.dk { align-items: flex-start; justify-content: flex-end; }
+}
+/* baris kontrol: membungkus rapi (tidak ada teks terpotong), 11-12 px */
+:root[data-theme] .office-ov .od-foot { flex-wrap: wrap !important; overflow: visible !important; row-gap: 2px; align-items: center; }
+:root[data-theme] .office-ov .od-foot .btn, :root[data-theme] .office-ov .od-foot .btn.sm { white-space: nowrap; }
+:root[data-theme] .office-ov .od-foot .od-who { max-width: 100%; }
+/* indikator jatah: hanya kata + bilah kecil */
+:root[data-theme] .office-ov .od-foot #pmFoot { display: inline-flex; align-items: center; min-height: 0 !important; padding: 0 6px; font-size: 0 !important; color: var(--muted); white-space: nowrap; }
+:root[data-theme] .office-ov .od-foot #pmFoot .bar { width: 36px; display: inline-block; vertical-align: middle; margin-left: 4px; }
+/* di dalam panel Obrolan: baris kontrol menyatu dengan kaki panel (frosted), "+ Tambah" lama disembunyikan (fungsinya di tombol tujuan) */
+:root[data-theme] .office-ov .lp-b .pm-dock > .od-foot { padding: 0 6px 2px; }
+:root[data-theme] .office-ov .lp-b .ob-ajak { display: none !important; }
+:root[data-theme] .office-ov .lp-b .pm-compose .ctl-plus { width: 32px; min-width: 32px; height: 32px; padding: 0; border-radius: 50%; flex: none; }
+/* di dalam panel Obrolan komponen itu sudah punya baris "Ke / izin / status" sendiri: baris kontrol dock hanya menambah yang belum ada (Menunggu, Riwayat, jatah), tanpa dobel */
+:root[data-theme] .office-ov .lp-b .pm-dock > .od-foot #odwho, :root[data-theme] .office-ov .lp-b .pm-dock > .od-foot #odperm, :root[data-theme] .office-ov .lp-b .pm-dock > .od-foot #odtog { display: none !important; }
+/* izin di panel memakai dropdown ikon kecil yang sama dengan dock */
+:root[data-theme] .office-ov .lp-b #obIzin { appearance: none; -webkit-appearance: none; width: 26px; min-width: 26px; height: 24px !important; min-height: 24px !important; padding: 0 !important; border: 0 !important; border-radius: 999px; color: transparent; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa4b5' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6Z'/%3E%3Cpath d='m8.5 12 2.5 2.5 4.5-5'/%3E%3C/svg%3E") center / 15px no-repeat !important; cursor: pointer; flex: none; }
+:root[data-theme] .office-ov .lp-b #obIzin option { color: #14181f; background: #fff; font-size: 13px; }
+:root[data-theme] .office-ov .lp-b .ob-kontrol { flex-wrap: wrap !important; overflow: visible !important; row-gap: 2px; }
+/* MODE SINEMA: navigasi kiri, bilah bawah, bilah atas HP, toast, dan panel memudar halus bersama UI lain (mekanisme sama: keadaan intro); muncul lagi saat selesai atau dilewati */
+.sidebar, .bottomnav, .topbar, #toasts { transition: opacity .5s ease; }
+body.sinema .sidebar, body.sinema .bottomnav, body.sinema .topbar, body.sinema #toasts, body.sinema .fpanel { opacity: 0 !important; pointer-events: none !important; }
+.office-ov .od-foot .ob-only { display: none !important; }
+.office-ov .lp-b .od-foot .ob-only { display: inline-flex !important; }
+@media (min-width: 901px) {
+  :root[data-theme] .office-ov.lp-ob { --lw: 540px; }
+  :root[data-theme] .office-ov.lp-ob .ovz.dk { align-items: flex-start; justify-content: flex-end; }
+  :root[data-theme] .office-ov .lpage.lp-dock { flex: 0 1 auto; width: min(540px, 100%); max-height: 70dvh; background: transparent !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border-radius: 0; overflow: visible; }
+  :root[data-theme] .office-ov .lpage.lp-dock .lp-h { display: none; }
+  :root[data-theme] .office-ov .lpage.lp-dock .lp-b { overflow: visible; max-height: 70dvh; display: flex; flex-direction: column; justify-content: flex-end; }
+  :root[data-theme] .office-ov .lpage.lp-dock .page.ob { height: auto; max-height: 70dvh; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 0; background: transparent; }
+  :root[data-theme] .office-ov .lpage.lp-dock .ob-kepala, :root[data-theme] .office-ov .lpage.lp-dock #pmHome, :root[data-theme] .office-ov .lpage.lp-dock #obSrc[hidden] { display: none !important; }
+  :root[data-theme] .office-ov .lpage.lp-dock #pmThread { flex: 0 1 auto; overflow-y: auto; max-height: calc(70dvh - 150px); padding: 0 6px 8px; scrollbar-width: thin; }
+  :root[data-theme] .office-ov .lpage.lp-dock .pm-dock { position: static; padding: 0 !important; }
+  /* latar utas */
+  :root[data-theme] .office-ov .lpage.lp-dock.lat-trans .pm-bubble.guide { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+  :root[data-theme] .office-ov .lpage.lp-dock.lat-trans .pm-bubble.me { background: rgba(255, 255, 255, .16) !important; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, .28) !important; }
+  :root[data-theme="dark"] .office-ov .lpage.lp-dock.lat-trans #pmThread { color: #f4f4f4; text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 10px rgba(0, 0, 0, .6); }
+  :root[data-theme="light"] .office-ov .lpage.lp-dock.lat-trans #pmThread { color: #0d0d0d; text-shadow: 0 0 3px rgba(255, 255, 255, .95), 0 0 10px rgba(255, 255, 255, .85); }
+  :root[data-theme="light"] .office-ov .lpage.lp-dock.lat-trans .pm-bubble.me { background: rgba(255, 255, 255, .55) !important; }
+  :root[data-theme] .office-ov .lpage.lp-dock.lat-kaca #pmThread { background: rgba(18, 20, 28, .5); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); border: 1px solid rgba(255, 255, 255, .2); border-radius: 20px; padding: 8px 10px; margin-bottom: 6px; }
+  :root[data-theme="light"] .office-ov .lpage.lp-dock.lat-kaca #pmThread { background: rgba(255, 255, 255, .55); border-color: rgba(255, 255, 255, .9); }
+  :root[data-theme] .office-ov .lpage.lp-dock.lat-solid #pmThread { background: var(--panel); border: 1px solid var(--line2); border-radius: 20px; padding: 8px 10px; margin-bottom: 6px; }
+}
+:root[data-theme] .office-ov .lpage.lp-dock .ob-bar { display: none !important; }
+:root[data-theme] .office-ov .od-foot #odsum, :root[data-theme] .office-ov .od-foot #odtog { display: none !important; }
+:root[data-theme] .office-ov .od-foot .btn.sm { min-width: 28px; justify-content: center; }
+:root[data-theme] .office-ov .od-foot #pmFoot .pm-quota { font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; }
+:root[data-theme] .office-ov .od-foot #pmFoot .pm-quota b { font-size: 11.5px; }
+/* chip penerima ("Ke: ...") satu-satunya pemilih penerima di panel: tampak seperti chip yang bisa diklik */
+:root[data-theme] .office-ov .lp-b #obKe { flex: 0 1 auto; cursor: pointer; padding: 1px 10px; border-radius: 999px; background: var(--accent-bg); border: 1px solid var(--line2); color: var(--text); max-width: 60%; }
+:root[data-theme] .office-ov .lp-b #obKe:hover { border-color: var(--accent); }

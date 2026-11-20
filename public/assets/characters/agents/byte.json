@@ -1,0 +1,159 @@
+{
+  "id": "byte",
+  "name": "Byte",
+  "height": 1.304,
+  "hips": 0.24,
+  "knee": 0.155,
+  "ankle": 0.075,
+  "seatHip": 0.378,
+  "palmL": [
+    0.294,
+    0.45,
+    -0.0
+  ],
+  "palmR": [
+    -0.294,
+    0.45,
+    -0.0
+  ],
+  "propL": [
+    0.31,
+    0.404,
+    -0.0
+  ],
+  "propR": [
+    -0.31,
+    0.404,
+    -0.0
+  ],
+  "walkStride": 0.33,
+  "clips": [
+    "CH_Standing",
+    "CH_Idle",
+    "CH_Walk",
+    "CH_Run",
+    "CH_Sitting",
+    "CH_SitDown",
+    "CH_StandUp",
+    "CH_Type",
+    "CH_Read",
+    "CH_HoldR",
+    "CH_Carry",
+    "CH_Drink",
+    "CH_Phone",
+    "CH_Talk",
+    "CH_Nod",
+    "CH_Shrug",
+    "CH_Wave",
+    "CH_Clapping",
+    "CH_Cheer",
+    "CH_Think"
+  ],
+  "expressions": [
+    "neutral",
+    "blink",
+    "smile",
+    "laugh",
+    "wow",
+    "love",
+    "angry",
+    "sad",
+    "cry",
+    "sleepy",
+    "wink",
+    "think",
+    "talk1",
+    "talk2",
+    "focus",
+    "error"
+  ],
+  "tris": {
+    "lod0": 3688,
+    "lod1": 1236
+  },
+  "files": {
+    "lod0": "byte.glb",
+    "lod1": "lod/byte.glb",
+    "face": "byte.face.png"
+  },
+  "faceStyle": "screen",
+  "faceTint": "#ffdb51",
+  "springs": [
+    "Spring1",
+    "Spring2"
+  ],
+  "materials": {
+    "role_top|Suit": "main shell colour",
+    "role_bottom|Under": "accent parts",
+    "role_skin|Skin": "skin (clay figures)",
+    "Eye": "dark screen behind the Face glass",
+    "Face": "expression glass, UV 0..1"
+  },
+  "designColors": {
+    "role_top|Suit": [
+      0.075,
+      0.075,
+      0.085
+    ],
+    "role_bottom|Under": [
+      0.3,
+      0.31,
+      0.33
+    ],
+    "role_skin|Skin": [
+      0.075,
+      0.075,
+      0.085
+    ],
+    "role_hair|Hair": [
+      0.2,
+      0.15,
+      0.1
+    ],
+    "Frame": [
+      0.36,
+      0.37,
+      0.39
+    ],
+    "Eye": [
+      0.01,
+      0.01,
+      0.012
+    ],
+    "Trim": [
+      0.9,
+      0.9,
+      0.9
+    ],
+    "Glove": [
+      0.95,
+      0.95,
+      0.95
+    ],
+    "Belt": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "role_glow|Glow": [
+      1,
+      0.85,
+      0.3
+    ],
+    "Face": [
+      1,
+      1,
+      1
+    ]
+  },
+  "seat": {
+    "hipHeight": 0.378,
+    "thighLow": 0.255,
+    "feetFlat": false
+  },
+  "notes": [
+    "Proportions follow the reference design: hips 0.24, knee 0.155, ankle 0.075 (measured from the exported GLB).",
+    "Legs are too short to reach the floor from a 0.255 m seat: in CH_Sitting the feet dangle (thighs horizontal, knees 90 deg).",
+    "Short legs: walk stride 0.33 m per cycle (cycle 0.54 s); scale walk speed to stride/0.54 m/s so the feet do not slide."
+  ]
+}

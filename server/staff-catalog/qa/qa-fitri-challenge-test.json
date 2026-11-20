@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-fitri-challenge-test",
+  "division": "qa",
+  "employeeId": "fitri",
+  "title": "Microbiologist",
+  "version": 1,
+  "name": "Penghitung hasil uji tantang pengawet",
+  "ringkas": "Hitung penurunan mikroba (dalam log) pada hari ke-7, 14, dan 28 dan nilai apakah pengawet memenuhi kriteria yang dipilih.",
+  "kataKunci": [
+    "challenge test",
+    "pengawet",
+    "log reduksi",
+    "efektivitas pengawet",
+    "mikrobiologi"
+  ],
+  "inputs": [
+    {
+      "key": "organisme",
+      "type": "text",
+      "label": "Nama mikroba uji",
+      "required": true,
+      "contoh": "Staphylococcus aureus"
+    },
+    {
+      "key": "awal",
+      "type": "number",
+      "label": "Jumlah mikroba awal (koloni/g)",
+      "required": true,
+      "contoh": "1000000"
+    },
+    {
+      "key": "h7",
+      "type": "number",
+      "label": "Jumlah di hari ke-7 (koloni/g)",
+      "required": true,
+      "contoh": "10000"
+    },
+    {
+      "key": "h14",
+      "type": "number",
+      "label": "Jumlah di hari ke-14 (koloni/g)",
+      "required": true,
+      "contoh": "100"
+    },
+    {
+      "key": "h28",
+      "type": "number",
+      "label": "Jumlah di hari ke-28 (koloni/g)",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "kriteria",
+      "type": "choice",
+      "label": "Kriteria yang dipakai",
+      "required": true,
+      "default": "a",
+      "choices": [
+        {
+          "v": "a",
+          "t": "Turun minimal 2 log di hari ke-14 dan tidak naik lagi"
+        },
+        {
+          "v": "b",
+          "t": "Turun minimal 3 log di hari ke-7 dan tidak naik lagi"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung penurunan",
+      "set": {
+        "l7": "Math.round(Math.log10(Math.max(1, num(input.awal)) / Math.max(1, num(input.h7))) * 100) / 100",
+        "l14": "Math.round(Math.log10(Math.max(1, num(input.awal)) / Math.max(1, num(input.h14))) * 100) / 100",
+        "l28": "Math.round(Math.log10(Math.max(1, num(input.awal)) / Math.max(1, num(input.h28))) * 100) / 100",
+        "tidakNaik": "num(input.h14) <= num(input.h7) && num(input.h28) <= num(input.h14)",
+        "lolos": "input.kriteria === 'a' ? (v.l14 >= 2 && num(input.h28) <= num(input.h14)) : (v.l7 >= 3 && v.tidakNaik)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.organisme + ': penurunan ' + v.l7 + ' log (hari 7), ' + v.l14 + ' log (hari 14), ' + v.l28 + ' log (hari 28) → ' + (v.lolos ? 'MEMENUHI' : 'TIDAK MEMENUHI') + ' kriteria ' + input.kriteria",
+    "teks": "'# Uji tantang pengawet: ' + input.organisme + '\\n\\n' + tabel(['Hari', 'Jumlah (koloni/g)', 'Penurunan (log)'], [['0', num(input.awal), '-'], ['7', num(input.h7), v.l7], ['14', num(input.h14), v.l14], ['28', num(input.h28), v.l28]]) + '\\n\\nKriteria ' + input.kriteria + ': ' + (input.kriteria === 'a' ? 'turun minimal 2 log di hari ke-14 dan tidak naik lagi sampai hari ke-28' : 'turun minimal 3 log di hari ke-7 dan tidak naik lagi') + '\\n\\n**Hasil: ' + (v.lolos ? 'MEMENUHI' : 'TIDAK MEMENUHI') + '**\\n\\n_Hasil 0 dihitung sebagai 1 koloni/g. Pastikan kriteria sesuai pedoman resmi yang dipakai perusahaan._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'uji-tantang-pengawet'",
+        "isi": "csv([['Hari', 'Jumlah koloni per g', 'Penurunan log'], [0, num(input.awal), ''], [7, num(input.h7), v.l7], [14, num(input.h14), v.l14], [28, num(input.h28), v.l28], ['Hasil', v.lolos ? 'MEMENUHI' : 'TIDAK MEMENUHI', 'Kriteria ' + input.kriteria]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "organisme": "Staphylococcus aureus",
+      "awal": "1000000",
+      "h7": "10000",
+      "h14": "100",
+      "h28": "10",
+      "kriteria": "a"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 log (hari 7), 4 log (hari 14), 5 log (hari 28)",
+        "MEMENUHI kriteria a"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-hasil-uji"
+  ],
+  "keahlian": {
+    "istilah": [
+      "challenge test",
+      "pengawet",
+      "log reduksi",
+      "efektivitas pengawet",
+      "mikrobiologi"
+    ],
+    "data": [
+      "nama mikroba uji",
+      "jumlah mikroba awal (koloni/g)",
+      "jumlah di hari ke-7 (koloni/g)",
+      "jumlah di hari ke-14 (koloni/g)"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

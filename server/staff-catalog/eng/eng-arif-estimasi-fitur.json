@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "eng-arif-estimasi-fitur",
+  "division": "eng",
+  "employeeId": "arif",
+  "title": "Fullstack Engineer",
+  "version": 1,
+  "name": "Penghitung estimasi pekerjaan fitur",
+  "ringkas": "Hitung perkiraan lama pengerjaan dari tiga angka (tercepat, biasa, terlama) dan tanggal selesai tanpa akhir pekan.",
+  "kataKunci": [
+    "estimasi",
+    "pert",
+    "jadwal fitur",
+    "tanggal selesai",
+    "buffer"
+  ],
+  "inputs": [
+    {
+      "key": "tugas",
+      "type": "longtext",
+      "label": "Daftar pekerjaan (satu baris: nama | hari tercepat | hari biasanya | hari terlama)",
+      "required": true,
+      "contoh": "Halaman login | 1 | 2 | 4"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "buffer",
+      "type": "choice",
+      "label": "Tambahan waktu cadangan",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa tambahan"
+        },
+        {
+          "v": "10",
+          "t": "Tambah 10%"
+        },
+        {
+          "v": "20",
+          "t": "Tambah 20%"
+        },
+        {
+          "v": "30",
+          "t": "Tambah 30%"
+        }
+      ]
+    },
+    {
+      "key": "orang",
+      "type": "number",
+      "label": "Berapa orang mengerjakan bersamaan?",
+      "required": true,
+      "contoh": "1",
+      "default": 1
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung estimasi",
+      "set": {
+        "rows": "baris(input.tugas).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const o = num(p[1]); const m = num(p[2]); const t = num(p[3]); return { nama: p[0] || '-', o: o, m: m, t: t, e: Math.round((o + 4 * m + t) / 6 * 10) / 10, sd: Math.round((t - o) / 6 * 10) / 10 }; })",
+        "total": "Math.round(v.rows.reduce((a, r) => a + r.e, 0) * 10) / 10",
+        "hari": "Math.max(1, Math.ceil(v.total * (1 + num(input.buffer) / 100) / Math.max(1, num(input.orang))))",
+        "selesai": "(() => { const d0 = new Date(Date.parse(input.mulai)); let k = (d0.getUTCDay() + 6) % 7; let geser = 0; if (k >= 5) { geser = 7 - k; k = 0; } const p = k + v.hari - 1; const off = geser + Math.floor(p / 5) * 7 + (p % 5) - k; return new Date(d0.getTime() + off * 864e5).toISOString().slice(0, 10); })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Perkiraan ' + v.total + ' hari kerja (dengan cadangan ' + v.hari + ' hari), selesai sekitar ' + tgl(v.selesai)",
+    "teks": "'# Estimasi pekerjaan\\n\\n' + tabel(['Pekerjaan', 'Tercepat', 'Biasa', 'Terlama', 'Perkiraan', 'Ketidakpastian'], v.rows.map((r) => [r.nama, r.o, r.m, r.t, r.e, '±' + r.sd])) + '\\n\\n- Total perkiraan: ' + v.total + ' hari kerja\\n- Dengan cadangan ' + input.buffer + '% dan ' + num(input.orang) + ' orang: ' + v.hari + ' hari kerja\\n- Selesai (tanpa Sabtu dan Minggu): **' + v.selesai + '**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'estimasi-fitur'",
+        "isi": "csv([['Pekerjaan', 'Tercepat', 'Biasa', 'Terlama', 'Perkiraan hari']].concat(v.rows.map((r) => [r.nama, r.o, r.m, r.t, r.e])).concat([['Total', '', '', '', v.total], ['Hari kerja dengan cadangan', '', '', '', v.hari], ['Tanggal selesai', '', '', '', v.selesai]]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "tugas": "Halaman login | 1 | 2 | 4\nPembayaran | 3 | 5 | 10",
+      "mulai": "2026-12-01",
+      "buffer": "20",
+      "orang": "1"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2026-12-14",
+        "7.7 hari kerja"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-teknis"
+  ],
+  "keahlian": {
+    "istilah": [
+      "estimasi",
+      "pert",
+      "jadwal fitur",
+      "tanggal selesai",
+      "buffer"
+    ],
+    "data": [
+      "daftar pekerjaan (satu baris: nama | hari tercepat | hari bi",
+      "mulai tanggal",
+      "tambahan waktu cadangan",
+      "berapa orang mengerjakan bersamaan?"
+    ],
+    "gaya": "runtut dan konkret, sebut penyebab paling mungkin",
+    "contoh": {
+      "baik": "Waktu respons naik di jam sibuk; periksa kueri tabel pesanan lebih dulu.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Estimasi adalah perkiraan, bukan janji."
+    ]
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-bunga-pengenceran",
+  "division": "qa",
+  "employeeId": "bunga",
+  "title": "QC Laboratory Analyst",
+  "version": 1,
+  "name": "Penghitung pengenceran larutan",
+  "ringkas": "Hitung berapa larutan stok dan pelarut yang diambil, atau berapa konsentrasi akhir setelah diencerkan.",
+  "kataKunci": [
+    "pengenceran",
+    "larutan",
+    "konsentrasi",
+    "laboratorium",
+    "stok"
+  ],
+  "inputs": [
+    {
+      "key": "mode",
+      "type": "choice",
+      "label": "Mau menghitung apa?",
+      "required": true,
+      "default": "stok",
+      "choices": [
+        {
+          "v": "stok",
+          "t": "Berapa stok yang diambil untuk konsentrasi tertentu"
+        },
+        {
+          "v": "akhir",
+          "t": "Berapa konsentrasi akhir dari stok yang diambil"
+        }
+      ]
+    },
+    {
+      "key": "c1",
+      "type": "number",
+      "label": "Konsentrasi larutan stok",
+      "required": true,
+      "contoh": "70"
+    },
+    {
+      "key": "c2",
+      "type": "number",
+      "label": "Konsentrasi yang diinginkan (untuk mode pertama)",
+      "required": false,
+      "contoh": "5"
+    },
+    {
+      "key": "v1",
+      "type": "number",
+      "label": "Volume stok yang diambil dalam mL (untuk mode kedua)",
+      "required": false,
+      "contoh": "0"
+    },
+    {
+      "key": "v2",
+      "type": "number",
+      "label": "Volume akhir dalam mL",
+      "required": true,
+      "contoh": "500"
+    },
+    {
+      "key": "satuan",
+      "type": "choice",
+      "label": "Satuan konsentrasi",
+      "required": true,
+      "default": "%",
+      "choices": [
+        {
+          "v": "%",
+          "t": "Persen (%)"
+        },
+        {
+          "v": "ppm",
+          "t": "ppm"
+        },
+        {
+          "v": "mg/mL",
+          "t": "mg per mL"
+        },
+        {
+          "v": "M",
+          "t": "Molar (M)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung pengenceran",
+      "set": {
+        "salah": "num(input.c1) <= 0 || num(input.v2) <= 0 ? 'Konsentrasi stok dan volume akhir harus lebih dari nol.' : input.mode === 'stok' && (num(input.c2) <= 0 || num(input.c2) > num(input.c1)) ? 'Konsentrasi yang diinginkan harus lebih dari nol dan tidak boleh melebihi konsentrasi stok.' : input.mode === 'akhir' && (num(input.v1) <= 0 || num(input.v1) > num(input.v2)) ? 'Volume stok yang diambil harus lebih dari nol dan tidak boleh melebihi volume akhir.' : ''",
+        "ambil": "v.salah ? 0 : input.mode === 'stok' ? Math.round(num(input.c2) * num(input.v2) / num(input.c1) * 100) / 100 : num(input.v1)",
+        "akhir": "v.salah ? 0 : input.mode === 'stok' ? num(input.c2) : Math.round(num(input.c1) * num(input.v1) / num(input.v2) * 1000) / 1000",
+        "pelarut": "v.salah ? 0 : Math.round((num(input.v2) - v.ambil) * 100) / 100",
+        "faktor": "v.salah || !v.akhir ? 0 : Math.round(num(input.c1) / v.akhir * 100) / 100"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.salah ? 'Tidak bisa dihitung: ' + v.salah : 'Ambil ' + v.ambil + ' mL stok ' + num(input.c1) + ' ' + input.satuan + ', tambah pelarut hingga ' + num(input.v2) + ' mL (konsentrasi akhir ' + v.akhir + ' ' + input.satuan + ')'",
+    "teks": "v.salah ? '**Periksa isian:** ' + v.salah : '# Pengenceran\\n\\n' + tabel(['Hal', 'Nilai'], [['Konsentrasi stok', num(input.c1) + ' ' + input.satuan], ['Volume stok diambil', v.ambil + ' mL'], ['Pelarut ditambahkan', v.pelarut + ' mL'], ['Volume akhir', num(input.v2) + ' mL'], ['Konsentrasi akhir', v.akhir + ' ' + input.satuan], ['Faktor pengenceran', v.faktor + ' kali']]) + '\\n\\nRumus C1 × V1 = C2 × V2. Pastikan satuan konsentrasi stok dan hasil sama, dan catat perhitungan ini di buku kerja.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pengenceran'",
+        "isi": "csv([['Hal', 'Nilai'], ['Konsentrasi stok', num(input.c1)], ['Volume stok mL', v.ambil], ['Pelarut mL', v.pelarut], ['Volume akhir mL', num(input.v2)], ['Konsentrasi akhir', v.akhir], ['Satuan', input.satuan], ['Catatan', v.salah]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "mode": "stok",
+      "c1": "70",
+      "c2": "5",
+      "v1": "0",
+      "v2": "500",
+      "satuan": "%"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Ambil 35.71 mL stok 70 %",
+        "Pelarut ditambahkan | 464.29 mL"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-teknis"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pengenceran",
+      "larutan",
+      "konsentrasi",
+      "laboratorium",
+      "stok"
+    ],
+    "data": [
+      "mau menghitung apa?",
+      "konsentrasi larutan stok",
+      "konsentrasi yang diinginkan (untuk mode pertama)",
+      "volume stok yang diambil dalam ml (untuk mode kedua)"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

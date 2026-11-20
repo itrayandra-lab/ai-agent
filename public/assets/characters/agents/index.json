@@ -1,0 +1,34 @@
+{
+  "ids": [
+    "kiko",
+    "kiko_ocean",
+    "kiko_coral",
+    "azure",
+    "azure_ocean",
+    "azure_coral",
+    "charcoal",
+    "charcoal_ocean",
+    "charcoal_coral",
+    "branch",
+    "branch_ocean",
+    "branch_coral"
+  ],
+  "retired": [
+    "nova",
+    "byte",
+    "neko",
+    "orbi",
+    "bean",
+    "clay",
+    "puff",
+    "indigo",
+    "bunny",
+    "pickle",
+    "terra",
+    "mallow",
+    "blueprint",
+    "sprout",
+    "clover",
+    "sage"
+  ]
+}

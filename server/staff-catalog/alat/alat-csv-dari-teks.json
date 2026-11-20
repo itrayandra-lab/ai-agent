@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-csv-dari-teks",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Pembuat berkas CSV dari teks",
+  "ringkas": "Ubah daftar teks (satu baris satu data) menjadi berkas CSV rapi dan tabel yang siap dibuka di Excel atau Sheets.",
+  "kataKunci": [
+    "csv",
+    "tabel",
+    "excel",
+    "sheets",
+    "daftar"
+  ],
+  "inputs": [
+    {
+      "key": "teks",
+      "type": "longtext",
+      "label": "Isi daftar (baris pertama = judul kolom)",
+      "required": true,
+      "contoh": "Nama | Kota"
+    },
+    {
+      "key": "pemisah",
+      "type": "choice",
+      "label": "Kolom dipisah dengan",
+      "required": true,
+      "default": "pipa",
+      "choices": [
+        {
+          "v": "pipa",
+          "t": "Garis tegak ( | )"
+        },
+        {
+          "v": "koma",
+          "t": "Koma ( , )"
+        },
+        {
+          "v": "titik",
+          "t": "Titik koma ( ; )"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Pecah kolom",
+      "set": {
+        "baris": "baris(input.teks).slice(0, 500).map((l) => l.split(({ pipa: '|', koma: ',', titik: ';' })[input.pemisah]).map((c) => c.trim()))",
+        "lebar": "Math.max(...v.baris.map((r) => r.length))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.baris.length + ' baris dan ' + v.lebar + ' kolom diubah menjadi CSV'",
+    "teks": "tabel(v.baris[0], v.baris.slice(1).map((r) => v.baris[0].map((x, i) => r[i] || '')))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'data'",
+        "isi": "csv(v.baris)"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "teks": "Nama | Kota\nAni | Bandung\nBudi | Jakarta",
+      "pemisah": "pipa"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Bandung",
+        "3 baris dan 2 kolom"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "cocokkan-bersihkan-data"
+  ],
+  "keahlian": {
+    "istilah": [
+      "csv",
+      "tabel",
+      "excel",
+      "sheets",
+      "daftar"
+    ],
+    "data": [
+      "isi daftar (baris pertama = judul kolom)",
+      "kolom dipisah dengan"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

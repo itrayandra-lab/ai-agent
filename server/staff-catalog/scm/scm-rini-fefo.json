@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-rini-fefo",
+  "division": "scm",
+  "employeeId": "rini",
+  "title": "Warehouse & Inventory Specialist",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Penyusun urutan keluar barang menurut kedaluwarsa",
+  "ringkas": "Urutkan batch barang dari yang paling cepat kedaluwarsa dan tandai yang sudah lewat atau hampir habis masa berlakunya.",
+  "kataKunci": [
+    "fefo",
+    "kedaluwarsa",
+    "batch",
+    "expired",
+    "urutan keluar"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "ambang",
+      "type": "choice",
+      "label": "Dianggap segera habis bila kurang dari",
+      "required": true,
+      "default": "60",
+      "choices": [
+        {
+          "v": "30",
+          "t": "1 bulan"
+        },
+        {
+          "v": "60",
+          "t": "2 bulan"
+        },
+        {
+          "v": "90",
+          "t": "3 bulan"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Stok (barang | batch | tanggal kedaluwarsa | jumlah)",
+      "required": true,
+      "contoh": "Serum | B01 | 2027-05-01 | 100"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Urutkan batch",
+      "set": {
+        "rows": "baris(input.data).slice(0, 500).map((l) => { const p = l.split('|').map((s) => s.trim()); const sisa = Math.floor((Date.parse(p[2]) - Date.parse(input.acuan)) / 864e5); return { barang: p[0] || '-', batch: p[1] || '-', exp: p[2], jumlah: num(p[3]), sisa: sisa, status: sisa < 0 ? 'Kedaluwarsa' : sisa <= num(input.ambang) ? 'Segera habis' : 'Aman' }; }).sort((x, y) => x.sisa - y.sisa)",
+        "risiko": "v.rows.filter((r) => r.status !== 'Aman').reduce((a, b) => a + b.jumlah, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.risiko + ' unit berisiko (kedaluwarsa atau segera habis) dari ' + v.rows.length + ' batch'",
+    "teks": "'# Urutan keluar (yang paling cepat habis masa berlakunya lebih dulu)\\n\\n' + tabel(['Urutan', 'Barang', 'Batch', 'Kedaluwarsa', 'Sisa hari', 'Jumlah', 'Status'], v.rows.map((r, i) => [i + 1, r.barang, r.batch, r.exp, r.sisa, r.jumlah, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'urutan-fefo-' + input.acuan",
+        "isi": "csv([['Urutan', 'Barang', 'Batch', 'Kedaluwarsa', 'Sisa hari', 'Jumlah', 'Status']].concat(v.rows.map((r, i) => [i + 1, r.barang, r.batch, r.exp, r.sisa, r.jumlah, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "ambang": "60",
+      "data": "Serum | B01 | 2027-05-01 | 100\nToner | B07 | 2026-12-01 | 40\nKrim | B03 | 2026-10-30 | 15"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "55 unit berisiko",
+        "Kedaluwarsa",
+        "Segera habis"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "fefo",
+      "kedaluwarsa",
+      "batch",
+      "expired",
+      "urutan keluar"
+    ],
+    "data": [
+      "hitung per tanggal",
+      "dianggap segera habis bila kurang dari",
+      "stok (barang | batch | tanggal kedaluwarsa | jumlah)"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

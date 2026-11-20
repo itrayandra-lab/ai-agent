@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "it-doni-lisensi",
+  "division": "it",
+  "employeeId": "doni",
+  "title": "IT Support Specialist",
+  "version": 1,
+  "name": "Pemeriksa lisensi dan kursi menganggur",
+  "ringkas": "Tandai lisensi yang akan habis dan hitung biaya kursi yang tidak terpakai tiap bulan.",
+  "kataKunci": [
+    "lisensi",
+    "kursi",
+    "perpanjangan",
+    "aset",
+    "langganan"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Hitung per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "lisensi",
+      "type": "longtext",
+      "label": "Lisensi (nama | habis YYYY-MM-DD | jumlah kursi | terpakai | biaya per kursi per bulan)",
+      "required": true,
+      "contoh": "Editor desain | 2026-12-01 | 20 | 12 | 150000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa lisensi",
+      "set": {
+        "rows": "baris(input.lisensi).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const sisa = Math.floor((Date.parse(p[1]) - Date.parse(input.acuan)) / 864e5); const kursi = num(p[2]); const pakai = num(p[3]); const idle = Math.max(0, kursi - pakai); return { nama: p[0] || '-', habis: p[1] || '-', sisa: Number.isNaN(sisa) ? 0 : sisa, kursi: kursi, pakai: pakai, idle: idle, rugi: idle * num(p[4]), status: sisa < 0 ? 'Sudah kadaluarsa' : sisa <= 30 ? 'Segera habis' : sisa <= 90 ? 'Perlu diperpanjang' : 'Aman' }; }).sort((a, b) => a.sisa - b.sisa)",
+        "rugi": "v.rows.reduce((a, r) => a + r.rugi, 0)",
+        "perhatian": "v.rows.filter((r) => r.status !== 'Aman').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.perhatian + ' dari ' + v.rows.length + ' lisensi perlu perhatian; kursi menganggur menghabiskan ' + rp(v.rugi) + ' per bulan'",
+    "teks": "'# Pemeriksaan lisensi\\n\\n' + tabel(['Lisensi', 'Habis', 'Sisa hari', 'Kursi', 'Terpakai', 'Menganggur', 'Biaya sia-sia/bulan', 'Status'], v.rows.map((r) => [r.nama, r.habis, r.sisa, r.kursi, r.pakai, r.idle, rp(r.rugi), r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pemeriksaan-lisensi'",
+        "isi": "csv([['Lisensi', 'Habis', 'Sisa hari', 'Kursi', 'Terpakai', 'Menganggur', 'Biaya sia-sia per bulan', 'Status']].concat(v.rows.map((r) => [r.nama, r.habis, r.sisa, r.kursi, r.pakai, r.idle, r.rugi, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "lisensi": "Editor desain | 2026-12-01 | 20 | 12 | 150000\nAntivirus | 2027-06-30 | 100 | 98 | 20000\nSistem lama | 2026-10-01 | 5 | 5 | 50000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 dari 3 lisensi perlu perhatian",
+        "Rp 1.240.000",
+        "Sudah kadaluarsa"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "lisensi",
+      "kursi",
+      "perpanjangan",
+      "aset",
+      "langganan"
+    ],
+    "data": [
+      "hitung per tanggal",
+      "lisensi (nama | habis yyyy-mm-dd | jumlah kursi | terpakai |"
+    ],
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar",
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan meminta atau menyebut kata sandi asli."
+    ]
+  }
+}

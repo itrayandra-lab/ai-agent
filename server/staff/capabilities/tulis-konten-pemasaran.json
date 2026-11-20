@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-tulis-konten-pemasaran",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menulis konten pemasaran",
+  "version": 1,
+  "name": "Tulis konten pemasaran",
+  "ringkas": "Susun kerangka dan draf caption, deskripsi produk, siaran pers, iklan lowongan, posisi brand, atau slogan, lengkap dengan pemeriksaan kata berlebihan.",
+  "kataKunci": ["konten", "pemasaran", "caption", "slogan", "deskripsi produk", "siaran pers", "lowongan"],
+  "kemampuan": {
+    "id": "tulis-konten-pemasaran",
+    "kelompok": "menulis",
+    "tujuanAwam": "Membuat tulisan promosi yang jelas dan jujur, dengan panjang yang pas dan tanpa klaim berlebihan."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Tulisan apa yang dibutuhkan?", "required": true, "default": "caption", "choices": [{ "v": "caption", "t": "Caption media sosial" }, { "v": "produk", "t": "Judul dan deskripsi produk" }, { "v": "siaran", "t": "Siaran pers" }, { "v": "lowongan", "t": "Iklan lowongan kerja" }, { "v": "posisi", "t": "Kerangka posisi brand" }, { "v": "slogan", "t": "Slogan" }] },
+    { "key": "topik", "type": "text", "label": "Apa yang dipromosikan?", "required": true, "contoh": "Kopi susu gula aren botol 250 ml" },
+    { "key": "poin", "type": "longtext", "label": "Poin penting (satu hal per baris)", "required": true, "contoh": "Dibuat dari kopi lokal\nTanpa pengawet\nHarga 18 ribu" },
+    { "key": "nada", "type": "choice", "label": "Bagaimana nada tulisannya?", "required": true, "default": "ramah", "choices": [{ "v": "ramah", "t": "Ramah" }, { "v": "santai", "t": "Santai" }, { "v": "resmi", "t": "Resmi" }, { "v": "meyakinkan", "t": "Meyakinkan" }] },
+    { "key": "batas", "type": "number", "label": "Maksimal jumlah kata (kosongkan bila ikut saran)", "required": false, "contoh": "80" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun kerangka dan periksa",
+      "set": {
+        "gab": "(String(input.topik || '') + ' ' + String(input.poin || '')).toLowerCase()",
+        "poin": "baris(input.poin || '').map((t) => t.replace(/^[-*0-9. ]+/, '')).filter((t) => t !== '').slice(0, 12)",
+        "namaJenis": "({ caption: 'Caption media sosial', produk: 'Deskripsi produk', siaran: 'Siaran pers', lowongan: 'Iklan lowongan kerja', posisi: 'Kerangka posisi brand', slogan: 'Slogan' })[input.jenis] || 'Tulisan pemasaran'",
+        "saran": "({ caption: 60, produk: 150, siaran: 350, lowongan: 300, posisi: 120, slogan: 12 })[input.jenis] || 100",
+        "batas": "Number(input.batas) > 0 ? Math.min(Math.round(Number(input.batas)), 2000) : v.saran",
+        "bagian": "({ caption: ['Pembuka yang menarik perhatian', 'Manfaat utama', 'Ajakan bertindak'], produk: ['Judul singkat', 'Manfaat utama', 'Rincian isi dan ukuran', 'Ajakan membeli'], siaran: ['Judul berita', 'Paragraf inti: apa, siapa, kapan, di mana', 'Kutipan pihak berwenang', 'Latar belakang', 'Kontak media'], lowongan: ['Nama posisi', 'Tentang perusahaan', 'Tugas utama', 'Syarat', 'Cara melamar dan batas waktu'], posisi: ['Untuk siapa', 'Masalah yang dipecahkan', 'Pembeda dari yang lain', 'Bukti yang mendukung', 'Pernyataan posisi satu kalimat'], slogan: ['Satu gagasan inti', 'Tiga pilihan kalimat pendek'] })[input.jenis] || ['Pembuka', 'Isi', 'Ajakan']",
+        "terlarang": "['terbaik sedunia', 'menyembuhkan', '100% aman', 'dijamin untung', 'nomor satu', 'tanpa efek samping', 'pasti berhasil', 'satu-satunya'].filter((w) => v.gab.indexOf(w) >= 0)",
+        "kataPoin": "v.poin.join(' ').split(' ').filter((t) => t !== '').length",
+        "menit": "Math.max(1, Math.round(v.batas / 200 * 60))",
+        "peringatan": "[].concat(v.terlarang.length ? ['Ada klaim berlebihan: ' + v.terlarang.join(', ') + '. Ganti dengan fakta yang bisa dibuktikan.'] : [], v.poin.length < 2 ? ['Poin penting baru ' + v.poin.length + '. Tambahkan minimal dua agar tulisan tidak kosong.'] : [], v.kataPoin > v.batas ? ['Poin sudah lebih panjang dari batas kata; pilih yang terpenting.'] : [])",
+        "status": "v.peringatan.length ? 'perlu diperbaiki' : 'siap ditulis'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.namaJenis + ': ' + v.bagian.length + ' bagian, maksimal ' + v.batas + ' kata, ' + v.terlarang.length + ' klaim berlebihan, ' + v.status",
+    "teks": "'# ' + v.namaJenis + ': ' + input.topik + '\\n\\n' + tabel(['Pemeriksaan', 'Hasil'], [['Nada', input.nada], ['Jumlah poin penting', v.poin.length], ['Batas kata', v.batas], ['Perkiraan waktu baca (detik)', v.menit], ['Klaim berlebihan', v.terlarang.length ? v.terlarang.join(', ') : 'tidak ada'], ['Status', v.status]]) + '\\n\\n## Kerangka\\n\\n' + tabel(['No', 'Bagian', 'Isi dari poin Anda'], v.bagian.map((b, i) => [i + 1, b, v.poin[i] || '(lengkapi sendiri)'])) + (v.peringatan.length ? '\\n\\n## Perlu diperhatikan\\n\\n' + v.peringatan.map((p) => '- ' + p).join('\\n') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'kerangka-' + cut(String(input.jenis), 20)", "isi": "csv([['no', 'bagian', 'isi']].concat(v.bagian.map((b, i) => [i + 1, b, v.poin[i] || ''])))" },
+      { "jenis": "md", "nama": "'draf-' + cut(String(input.topik).toLowerCase(), 30)", "isi": "'# ' + v.namaJenis + '\\n\\nTopik: ' + input.topik + '\\nNada: ' + input.nada + '\\nBatas: ' + v.batas + ' kata\\n\\n' + v.bagian.map((b, i) => '## ' + (i + 1) + '. ' + b + '\\n' + (v.poin[i] || '')).join('\\n\\n')" }
+    ],
+    "data": "({ bagian: v.bagian.length, batas: v.batas, poin: v.poin.length, terlarang: v.terlarang.length, menit: v.menit })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "caption", "topik": "Kopi susu gula aren", "poin": "Dibuat dari kopi lokal\nTanpa pengawet\nHarga 18 ribu", "nada": "ramah" }, "expect": { "berkas": 2, "mengandung": ["3 bagian", "maksimal 60 kata"] } },
+  "otakProfil": {
+    "peran": "penulis konten pemasaran yang jujur dan rapi",
+    "tujuan": "Tulis draf sesuai jenis dan nada, memakai hanya poin yang diberikan, dengan ajakan yang jelas dan tanpa klaim berlebihan.",
+    "gaya": "hangat, ringkas, konkret, kalimat pendek",
+    "pedoman": ["Pakai hanya fakta dari poin pengguna; jangan mengarang angka atau penghargaan.", "Hindari klaim mutlak seperti terbaik sedunia, menyembuhkan, atau 100% aman.", "Patuhi batas jumlah kata dan akhiri dengan satu ajakan yang jelas."],
+    "skema": { "pembahasan": "teks", "varian": "daftar", "saran": "daftar" },
+    "contoh": { "baik": "Pagi lebih ringan dengan kopi susu gula aren dari kopi lokal, tanpa pengawet. Coba satu botol hari ini.", "buruk": "Kopi terbaik sedunia, pasti bikin Anda sukses!" },
+    "batas": { "pembahasan": 900, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["kopi"], "minPanjang": 30, "maksPanjang": 900 },
+    "contohAI": "{\"pembahasan\":\"Pagi lebih ringan dengan kopi susu gula aren dari kopi lokal, tanpa pengawet. Coba satu botol hari ini.\",\"varian\":[\"Satu botol, satu pagi yang manis.\",\"Kopi lokal yang pas di lidah.\"],\"saran\":[\"Tambahkan foto produk\",\"Sebutkan tempat membeli\"]}"
+  },
+  "evaluasi": [
+    { "nama": "caption produk makanan", "input": { "jenis": "caption", "topik": "Kopi susu gula aren", "poin": "Dibuat dari kopi lokal\nTanpa pengawet\nHarga 18 ribu", "nada": "ramah" }, "ai": "{\"pembahasan\":\"Pagi lebih ringan dengan kopi susu gula aren dari kopi lokal, tanpa pengawet. Coba satu botol hari ini.\",\"varian\":[\"Satu botol, satu pagi yang manis.\"],\"saran\":[\"Tambahkan foto produk\"]}", "kriteria": { "mengandung": ["kopi", "3 bagian"], "mengandungAturan": ["siap ditulis", "Ajakan bertindak"], "panjangMin": 120, "panjangMaks": 2500, "nilai": [{ "path": "data.bagian", "min": 3, "max": 3 }, { "path": "data.batas", "min": 60, "max": 60 }, { "path": "data.terlarang", "min": 0, "max": 0 }] } },
+    { "nama": "klaim berlebihan terdeteksi", "input": { "jenis": "produk", "topik": "Madu hutan", "poin": "Madu terbaik sedunia\nMenyembuhkan segala penyakit", "nada": "meyakinkan" }, "ai": "{\"pembahasan\":\"Madu hutan murni dalam botol kaca 250 gram, cocok untuk teh pagi Anda.\",\"varian\":[\"Manis alami dari hutan.\"],\"saran\":[\"Hapus klaim kesehatan\"]}", "kriteria": { "mengandung": ["madu", "klaim berlebihan"], "mengandungAturan": ["terbaik sedunia", "menyembuhkan"], "panjangMin": 120, "panjangMaks": 2500, "nilai": [{ "path": "data.terlarang", "min": 2, "max": 2 }, { "path": "data.bagian", "min": 4, "max": 4 }] } },
+    { "nama": "slogan dengan poin bernomor dan batas sendiri", "input": { "jenis": "slogan", "topik": "Jasa antar sayur", "poin": "1. Segar dari kebun\n2) Sampai sebelum jam 9\n- Murah", "nada": "santai", "batas": "8" }, "ai": "{\"pembahasan\":\"Segar dari kebun, sampai sebelum sarapan.\",\"varian\":[\"Sayur segar, pintu Anda.\",\"Kebun ke dapur, tanpa repot.\"],\"saran\":[\"Pilih satu yang paling mudah diingat\"]}", "kriteria": { "mengandung": ["sayur", "slogan"], "mengandungAturan": ["Slogan", "maksimal 8 kata"], "panjangMin": 100, "panjangMaks": 2500, "nilai": [{ "path": "data.batas", "min": 8, "max": 8 }, { "path": "data.poin", "min": 3, "max": 3 }] } }
+  ]
+}

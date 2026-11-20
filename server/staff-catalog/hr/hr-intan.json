@@ -1,0 +1,173 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "hr-intan",
+  "division": "hr",
+  "employeeId": "intan",
+  "title": "Learning & Development",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penyusun rencana pelatihan karyawan baru",
+  "ringkas": "Bagi topik pelatihan ke dalam minggu-minggu, lengkap dengan cara belajar dan penilaian di tiap minggu.",
+  "kataKunci": [
+    "pelatihan",
+    "onboarding",
+    "kurikulum",
+    "karyawan baru",
+    "training"
+  ],
+  "inputs": [
+    {
+      "key": "peran",
+      "type": "text",
+      "label": "Untuk peran apa?",
+      "required": true,
+      "contoh": "Admin Penjualan"
+    },
+    {
+      "key": "tingkat",
+      "type": "choice",
+      "label": "Tingkat pengalaman peserta",
+      "required": true,
+      "default": "pemula",
+      "choices": [
+        {
+          "v": "pemula",
+          "t": "Pemula"
+        },
+        {
+          "v": "menengah",
+          "t": "Menengah"
+        },
+        {
+          "v": "lanjut",
+          "t": "Sudah berpengalaman"
+        }
+      ]
+    },
+    {
+      "key": "minggu",
+      "type": "choice",
+      "label": "Lama program",
+      "required": true,
+      "default": "4",
+      "choices": [
+        {
+          "v": "4",
+          "t": "4 minggu"
+        },
+        {
+          "v": "8",
+          "t": "8 minggu"
+        },
+        {
+          "v": "12",
+          "t": "12 minggu"
+        }
+      ]
+    },
+    {
+      "key": "topik",
+      "type": "longtext",
+      "label": "Topik yang diajarkan (satu per baris)",
+      "required": true,
+      "contoh": "Pengenalan produk"
+    },
+    {
+      "key": "nilai",
+      "type": "choice",
+      "label": "Cara menilai di akhir minggu",
+      "required": true,
+      "default": "kuis",
+      "choices": [
+        {
+          "v": "kuis",
+          "t": "Kuis singkat"
+        },
+        {
+          "v": "praktik",
+          "t": "Praktik langsung"
+        },
+        {
+          "v": "diskusi",
+          "t": "Diskusi dengan atasan"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "susun",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "tp": "baris(input.topik).slice(0, 24)",
+        "per": "Math.max(1, Math.ceil(v.tp.length / num(input.minggu)))",
+        "jadwal": "v.tp.map((t, i) => ({ minggu: Math.min(num(input.minggu), Math.floor(i / v.per) + 1), topik: t, cara: ['Materi singkat', 'Latihan langsung', 'Diskusi kelompok', 'Studi kasus'][i % 4], dampingi: input.tingkat === 'pemula' ? 'Ada pendamping' : '-', nilai: (i + 1) % v.per === 0 || i === v.tp.length - 1 ? ({ kuis: 'Kuis singkat', praktik: 'Praktik langsung', diskusi: 'Diskusi dengan atasan' })[input.nilai] : '-' }))",
+        "dipakai": "Math.max.apply(null, v.jadwal.map((j) => j.minggu))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rencana pelatihan ' + input.peran + ': ' + v.jadwal.length + ' topik dalam ' + v.dipakai + ' minggu'",
+    "teks": "'# Rencana pelatihan: ' + input.peran + '\\n\\n' + tabel(['Minggu', 'Topik', 'Cara belajar', 'Pendamping', 'Penilaian'], v.jadwal.map((j) => ['Minggu ' + j.minggu, j.topik, j.cara, j.dampingi, j.nilai]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-pelatihan-' + input.peran",
+        "isi": "csv([['Minggu', 'Topik', 'Cara belajar', 'Pendamping', 'Penilaian']].concat(v.jadwal.map((j) => [j.minggu, j.topik, j.cara, j.dampingi, j.nilai])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "peran": "Admin Penjualan",
+      "tingkat": "pemula",
+      "minggu": "4",
+      "topik": "Pengenalan produk\nSistem pesanan\nLayanan pelanggan\nPenanganan keluhan\nLaporan harian\nEtika kerja",
+      "nilai": "kuis"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "6 topik dalam 3 minggu",
+        "Ada pendamping",
+        "Kuis singkat"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pelatihan",
+      "onboarding",
+      "kurikulum",
+      "karyawan baru",
+      "training"
+    ],
+    "data": [
+      "untuk peran apa?",
+      "tingkat pengalaman peserta",
+      "lama program",
+      "topik yang diajarkan (satu per baris)"
+    ],
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
+  }
+}

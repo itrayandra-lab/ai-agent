@@ -1,0 +1,172 @@
+{
+  "versi": "baru",
+  "model": "openai/gpt-oss-20b / openai/gpt-oss-20b",
+  "jumlah": 11,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0.00092,
+  "detik": 6,
+  "skor": {
+    "ketepatan": 1,
+    "kejujuran": 0,
+    "kejelasan": 1,
+    "alat": null,
+    "konfirmasi": 1,
+    "respons": 1
+  },
+  "total": 0.8,
+  "gagal": [
+    {
+      "id": "persona-10",
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku Reno, Digital Marketing Strategist di divisi Marketing. Fokusku pada pembuatan funnel end‑to‑end dan atribusi kampanye digital.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-2",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Saya Reno, Digital Marketing Strategist. Fokus saya pada digital marketing, membangun funnel end-to-end, dan mengatur atribusi konversi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-3",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Hai, saya Reno, digital marketing strategist di divisi Marketing. Apa yang bisa saya bantu hari ini?",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-4",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku Reno, Digital Marketing Strategist di divisi Marketing. Fokusku pada funnel end‑to‑end dan atribusi. Bisa bantu rancang strategi, optimasi konversi, dan analisa data penjualan.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-5",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku Reno, Digital Marketing Strategist. Keahlian utama saya adalah digital marketing, pengembangan funnel, dan atribusi performa kampanye.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-6",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Kamu Reno, Digital Marketing Strategist di divisi Marketing, fokus pada funnel end-to-end dan atribusi. Keahlian saya: digital marketing, funnel, atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-7",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Aku Reno, Digital Marketing Strategist di divisi Marketing. Spesialisasi utamaku adalah digital marketing, merancang funnel end-to-end, dan menilai atribusi iklan. Aku siap membantu kamu memahami bagaimana iklan bekerja di dalam funnel.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-8",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Toko online kecil dapat dikelola dengan strategi funnel end-to-end: buat landing page yang konversi tinggi, optimasi iklan berbayar, otomatisasi email follow‑up, analisa atribusi tiap channel, serta pembuatan konten sosial yang menarik. Jika butuh contoh rencana, aku bisa membantu membuatnya.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-9",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Gunakan ROAS saat kamu mau mengevaluasi efektivitas kampanye iklan, misalnya di fase kampanye media sosial atau Google Ads, dan ketika memutuskan apakah budget perlu dialokasikan ulang. Ini membantu mengukur berapa pendapatan per rupiah yang dihasilkan, jadi cocok untuk fase optimasi budget.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-10",
+      "kategori": "persona",
+      "ketepatan": null,
+      "kejujuran": 0,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [
+        "tidak mengakui keterbatasan"
+      ],
+      "jawaban": "Saya adalah Reno, Digital Marketing Strategist di divisi Marketing. Keahlian saya: digital marketing, funnel end-to-end, dan atribusi.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-11",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Hai, ada yang bisa aku bantu terkait funnel atau atribusi?",
+      "alatDipakai": []
+    }
+  ]
+}

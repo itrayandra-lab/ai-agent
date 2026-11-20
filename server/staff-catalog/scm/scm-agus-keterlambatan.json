@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-agus-keterlambatan",
+  "division": "scm",
+  "employeeId": "agus",
+  "title": "Logistics & Fulfillment Coordinator",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Perangkum keterlambatan dan retur pengiriman",
+  "ringkas": "Hitung persentase telat dan retur tiap kurir dari catatan pengiriman, supaya terlihat kurir mana yang bermasalah.",
+  "kataKunci": [
+    "keterlambatan",
+    "retur",
+    "resi",
+    "kinerja kurir",
+    "pengiriman telat"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Catatan pengiriman (no resi | kurir | janji hari | aktual hari | ok atau retur)",
+      "required": true,
+      "contoh": "R1 | JNE | 3 | 3 | ok"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung per kurir",
+      "set": {
+        "rows": "baris(input.data).slice(0, 2000).map((l) => { const p = l.split('|').map((s) => s.trim()); return { kurir: p[0 + 1] || '-', telat: num(p[3]) > num(p[2]), retur: String(p[4] || '').toLowerCase().indexOf('retur') === 0 }; })",
+        "kurir": "[...new Set(v.rows.map((r) => r.kurir))].map((k) => { const s = v.rows.filter((r) => r.kurir === k); return { kurir: k, n: s.length, telat: s.filter((r) => r.telat).length, retur: s.filter((r) => r.retur).length, pTelat: Math.round(s.filter((r) => r.telat).length / s.length * 1000) / 10, pRetur: Math.round(s.filter((r) => r.retur).length / s.length * 1000) / 10 }; }).sort((a, b) => b.pTelat - a.pTelat)",
+        "pAll": "v.rows.length ? Math.round(v.rows.filter((r) => r.telat).length / v.rows.length * 100) : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' paket: ' + v.pAll + '% terlambat; paling bermasalah ' + (v.kurir[0] ? v.kurir[0].kurir : '-')",
+    "teks": "'# Keterlambatan dan retur per kurir\\n\\n' + tabel(['Kurir', 'Paket', 'Terlambat', 'Terlambat %', 'Retur', 'Retur %'], v.kurir.map((k) => [k.kurir, k.n, k.telat, k.pTelat + '%', k.retur, k.pRetur + '%']))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'keterlambatan-kurir'",
+        "isi": "csv([['Kurir', 'Paket', 'Terlambat', 'Terlambat %', 'Retur', 'Retur %']].concat(v.kurir.map((k) => [k.kurir, k.n, k.telat, k.pTelat, k.retur, k.pRetur])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "R1 | JNE | 3 | 3 | ok\nR2 | JNE | 3 | 5 | ok\nR3 | SiCepat | 2 | 2 | retur\nR4 | SiCepat | 2 | 4 | ok\nR5 | JNE | 3 | 4 | retur"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "66.7%",
+        "60% terlambat",
+        "paling bermasalah JNE"
+      ]
+    }
+  },
+  "kemampuan": [
+    "ringkas-umpan-balik"
+  ],
+  "keahlian": {
+    "istilah": [
+      "keterlambatan",
+      "retur",
+      "resi",
+      "kinerja kurir",
+      "pengiriman telat"
+    ],
+    "data": [
+      "catatan pengiriman (no resi | kurir | janji hari | aktual ha"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

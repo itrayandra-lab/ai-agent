@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-sekar-bandingkan",
+  "division": "kms",
+  "employeeId": "sekar",
+  "title": "AI Evaluation Analyst",
+  "version": 1,
+  "name": "Pembanding mutu dan biaya antar pilihan",
+  "ringkas": "Bandingkan beberapa model atau cara kerja dari mutu, biaya, dan waktu, lalu urutkan yang paling hemat.",
+  "kataKunci": [
+    "bandingkan model",
+    "biaya vs mutu",
+    "efisiensi",
+    "peringkat",
+    "benchmark"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data (satu baris: nama | skor mutu 0-100 | biaya per tugas Rp | detik)",
+      "required": true,
+      "contoh": "Model A | 90 | 500 | 20\nModel B | 80 | 100 | 10"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Urutkan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const biaya = num(p[2]); return { nama: p[0], mutu: num(p[1]), biaya: biaya, detik: num(p[3]), nilai: biaya ? Math.round(num(p[1]) / biaya * 1000) / 1000 : 0 }; }).sort((x, y) => y.nilai - x.nilai)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Terbaik per biaya (paling hemat): ' + v.rows[0].nama + ' dari ' + v.rows.length + ' pilihan'",
+    "teks": "'# Peringkat mutu per biaya\\n\\n' + tabel(['Peringkat', 'Nama', 'Mutu', 'Biaya', 'Detik', 'Mutu per Rp'], v.rows.map((r, i) => [i + 1, r.nama, r.mutu, rp(r.biaya), r.detik, r.nilai])) + '\\n\\nMutu per Rp makin besar berarti makin hemat. Pertimbangkan juga kebutuhan mutu minimum.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'peringkat-mutu-biaya'",
+        "isi": "csv([['Peringkat', 'Nama', 'Mutu', 'Biaya', 'Detik', 'Mutu per Rp']].concat(v.rows.map((r, i) => [i + 1, r.nama, r.mutu, r.biaya, r.detik, r.nilai])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "data": "Model A | 90 | 500 | 20\nModel B | 80 | 100 | 10"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "paling hemat): Model B",
+        "0.8"
+      ]
+    }
+  },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bandingkan model",
+      "biaya vs mutu",
+      "efisiensi",
+      "peringkat",
+      "benchmark"
+    ],
+    "data": [
+      "data (satu baris: nama | skor mutu 0-100 | biaya per tugas r"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

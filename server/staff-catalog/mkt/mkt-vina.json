@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-vina",
+  "division": "mkt",
+  "employeeId": "vina",
+  "title": "CRM & Email Specialist",
+  "version": 1,
+  "name": "Penyusun urutan pesan ke pelanggan",
+  "ringkas": "Buat rangkaian empat pesan (email atau WhatsApp) lengkap dengan jadwal dan naskah untuk menyambut, mendorong beli, mengaktifkan kembali, atau meminta ulasan.",
+  "kataKunci": [
+    "email",
+    "whatsapp",
+    "crm",
+    "urutan pesan",
+    "pelanggan lama"
+  ],
+  "inputs": [
+    {
+      "key": "brand",
+      "type": "text",
+      "label": "Nama brand",
+      "required": true,
+      "contoh": "Ray Beauty"
+    },
+    {
+      "key": "tujuan",
+      "type": "choice",
+      "label": "Tujuan pesan",
+      "required": true,
+      "default": "aktif",
+      "choices": [
+        {
+          "v": "sambut",
+          "t": "Menyambut pelanggan baru"
+        },
+        {
+          "v": "beli",
+          "t": "Mendorong pembelian pertama"
+        },
+        {
+          "v": "aktif",
+          "t": "Mengaktifkan pelanggan yang lama tidak beli"
+        },
+        {
+          "v": "ulasan",
+          "t": "Meminta ulasan setelah beli"
+        }
+      ]
+    },
+    {
+      "key": "kanal",
+      "type": "choice",
+      "label": "Lewat mana?",
+      "required": true,
+      "default": "wa",
+      "choices": [
+        {
+          "v": "email",
+          "t": "Email"
+        },
+        {
+          "v": "wa",
+          "t": "WhatsApp"
+        }
+      ]
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai kirim tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "tawaran",
+      "type": "text",
+      "label": "Penawaran khusus (boleh kosong)",
+      "required": false,
+      "contoh": "diskon 15% sampai akhir bulan"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun urutan",
+      "set": {
+        "tawar": "input.tawaran || 'penawaran spesial'",
+        "seri": "({ sambut: [[0, 'Selamat datang di ' + input.brand, 'Halo [nama], terima kasih sudah bergabung dengan ' + input.brand + '. Kami senang kamu di sini.'], [2, 'Kenali produk andalan kami', 'Halo [nama], ini produk yang paling sering dipilih pelanggan baru kami.'], [5, 'Tips memakai dengan benar', 'Halo [nama], berikut cara pakai agar hasilnya maksimal.'], [10, 'Ada yang bisa kami bantu?', 'Halo [nama], kalau ada pertanyaan, balas pesan ini ya.']], beli: [[0, 'Masih ragu mencoba?', 'Halo [nama], kami siapkan ' + (input.tawaran || 'penawaran spesial') + ' untuk pembelian pertamamu.'], [2, 'Cerita pelanggan kami', 'Halo [nama], baca pengalaman pelanggan yang sudah mencoba.'], [5, 'Penawaran segera berakhir', 'Halo [nama], ' + (input.tawaran || 'penawaran spesial') + ' tinggal sebentar lagi.'], [7, 'Kesempatan terakhir', 'Halo [nama], hari ini hari terakhir penawaranmu.']], aktif: [[0, 'Kami kangen kamu', 'Halo [nama], sudah lama kamu tidak mampir ke ' + input.brand + '. Apa kabar?'], [3, 'Ada yang baru untukmu', 'Halo [nama], kami punya produk dan kabar baru yang mungkin kamu suka.'], [7, 'Spesial untuk kamu', 'Halo [nama], ada ' + (input.tawaran || 'penawaran spesial') + ' khusus untukmu.'], [14, 'Pesan terakhir dari kami', 'Halo [nama], kalau kamu tidak ingin menerima kabar lagi, balas BERHENTI. Terima kasih sudah bersama ' + input.brand + '.']], ulasan: [[3, 'Bagaimana produknya?', 'Halo [nama], bagaimana pengalamanmu memakai produk kami?'], [7, 'Boleh minta ulasanmu?', 'Halo [nama], ulasanmu sangat membantu pelanggan lain.'], [14, 'Terima kasih atas ulasanmu', 'Halo [nama], terima kasih. Sebagai tanda terima kasih ada kejutan untuk pembelian berikutnya.'], [21, 'Waktunya isi ulang?', 'Halo [nama], mungkin produkmu hampir habis. Mau isi ulang?']] })[input.tujuan]",
+        "pesan": "v.seri.map((s) => ({ hari: s[0], tanggal: new Date(Date.parse(input.mulai) + s[0] * 864e5).toISOString().slice(0, 10), judul: s[1], isi: input.kanal === 'email' ? 'Subjek: ' + s[1] + '\\n\\n' + s[2] + '\\n\\nSalam hangat,\\nTim ' + input.brand : cut(s[2], 300) }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.pesan.length + ' pesan ' + (input.kanal === 'email' ? 'email' : 'WhatsApp') + ' terjadwal, pesan terakhir Hari ke-' + v.pesan[v.pesan.length - 1].hari",
+    "teks": "'# Urutan pesan: ' + input.brand + '\\n\\n' + v.pesan.map((p, i) => '## Pesan ' + (i + 1) + ' - Hari ke-' + p.hari + ' (' + p.tanggal + ')\\n' + p.isi).join('\\n\\n') + '\\n\\n_Ganti [nama] dengan nama pelanggan. Kirim hanya ke pelanggan yang sudah setuju menerima pesan._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'urutan-pesan-' + input.tujuan",
+        "isi": "csv([['Pesan', 'Hari ke', 'Tanggal', 'Judul', 'Isi']].concat(v.pesan.map((p, i) => [i + 1, p.hari, p.tanggal, p.judul, p.isi])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "CRM",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "brand": "Ray Beauty",
+      "tujuan": "aktif",
+      "kanal": "wa",
+      "mulai": "2026-12-01",
+      "tawaran": "diskon 15% sampai akhir bulan"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Hari ke-14",
+        "diskon 15% sampai akhir bulan",
+        "4 pesan WhatsApp"
+      ]
+    }
+  },
+  "kemampuan": [
+    "tulis-pesan-pelanggan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "email",
+      "whatsapp",
+      "crm",
+      "urutan pesan",
+      "pelanggan lama"
+    ],
+    "data": [
+      "nama brand",
+      "tujuan pesan",
+      "lewat mana?",
+      "mulai kirim tanggal"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

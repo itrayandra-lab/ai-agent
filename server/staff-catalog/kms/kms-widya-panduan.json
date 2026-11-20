@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-widya-panduan",
+  "division": "kms",
+  "employeeId": "widya",
+  "title": "Knowledge Writer & Synthesizer",
+  "version": 1,
+  "name": "Penyusun panduan kerja abadi",
+  "ringkas": "Ubah catatan bahan mentah menjadi panduan kerja lengkap: tujuan, langkah bernomor, kesalahan umum, dan daftar cek.",
+  "kataKunci": [
+    "panduan",
+    "evergreen",
+    "sop",
+    "langkah kerja",
+    "dokumentasi"
+  ],
+  "inputs": [
+    {
+      "key": "topik",
+      "type": "text",
+      "label": "Topik panduan",
+      "required": true,
+      "contoh": "Cara mengajukan cuti"
+    },
+    {
+      "key": "audiens",
+      "type": "choice",
+      "label": "Untuk siapa?",
+      "required": true,
+      "default": "pemula",
+      "choices": [
+        {
+          "v": "pemula",
+          "t": "Karyawan baru"
+        },
+        {
+          "v": "tim",
+          "t": "Seluruh tim"
+        },
+        {
+          "v": "manajer",
+          "t": "Manajer"
+        }
+      ]
+    },
+    {
+      "key": "bahan",
+      "type": "longtext",
+      "label": "Bahan (satu langkah atau catatan per baris; awali \"Jangan\" untuk kesalahan umum)",
+      "required": true,
+      "contoh": "Buka formulir cuti\nIsi tanggal dan alasan\nJangan lupa minta persetujuan atasan\nKirim formulir"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun panduan",
+      "set": {
+        "semua": "baris(input.bahan).slice(0, 40)",
+        "salah": "v.semua.filter((l) => /^jangan/i.test(l))",
+        "langkah": "v.semua.filter((l) => !/^jangan/i.test(l))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Panduan \"' + input.topik + '\" siap: ' + v.langkah.length + ' langkah, ' + v.salah.length + ' peringatan'",
+    "teks": "'# ' + input.topik + '\\n\\n**Untuk:** ' + ({ pemula: 'karyawan baru', tim: 'seluruh tim', manajer: 'manajer' })[input.audiens] + '\\n\\n## Langkah\\n' + v.langkah.map((l, i) => (i + 1) + '. ' + l).join('\\n') + '\\n\\n## Kesalahan umum\\n' + (v.salah.length ? v.salah.map((l) => '- ' + l).join('\\n') : '- (belum ada, tambahkan dari pengalaman)') + '\\n\\n## Cek akhir\\n' + v.langkah.map((l) => '- [ ] ' + l).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'panduan-kerja'",
+        "isi": "'# ' + input.topik + '\\n\\n## Langkah\\n' + v.langkah.map((l, i) => (i + 1) + '. ' + l).join('\\n') + '\\n\\n## Kesalahan umum\\n' + v.salah.map((l) => '- ' + l).join('\\n') + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Knowledge",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "topik": "Cara mengajukan cuti",
+      "audiens": "pemula",
+      "bahan": "Buka formulir cuti\nIsi tanggal dan alasan\nJangan lupa minta persetujuan atasan\nKirim formulir"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1. Buka formulir cuti",
+        "Jangan lupa minta persetujuan atasan",
+        "3 langkah, 1 peringatan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "kelola-pengetahuan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "panduan",
+      "evergreen",
+      "sop",
+      "langkah kerja",
+      "dokumentasi"
+    ],
+    "data": [
+      "topik panduan",
+      "untuk siapa?",
+      "bahan (satu langkah atau catatan per baris; awali \"jangan\" u"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

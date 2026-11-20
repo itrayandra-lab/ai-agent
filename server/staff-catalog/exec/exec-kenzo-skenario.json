@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "exec-kenzo-skenario",
+  "division": "exec",
+  "employeeId": "kenzo",
+  "title": "Strategy Analyst",
+  "version": 1,
+  "name": "Penghitung tiga skenario pertumbuhan",
+  "ringkas": "Hitung pendapatan dan laba dalam tiga skenario (hati-hati, dasar, optimis) dari pendapatan sekarang dan laju tumbuh.",
+  "kataKunci": [
+    "skenario",
+    "proyeksi",
+    "pertumbuhan",
+    "forecast",
+    "pendapatan"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Yang diproyeksikan",
+      "required": true,
+      "contoh": "Penjualan toko online"
+    },
+    {
+      "key": "pendapatan",
+      "type": "number",
+      "label": "Pendapatan bulan ini (Rp)",
+      "required": true,
+      "contoh": "100000000"
+    },
+    {
+      "key": "tumbuh",
+      "type": "number",
+      "label": "Pertumbuhan per bulan skenario dasar (%)",
+      "required": true,
+      "contoh": "5"
+    },
+    {
+      "key": "bulan",
+      "type": "choice",
+      "label": "Berapa bulan ke depan?",
+      "required": true,
+      "default": "6",
+      "choices": [
+        {
+          "v": "6",
+          "t": "6 bulan"
+        },
+        {
+          "v": "12",
+          "t": "12 bulan"
+        },
+        {
+          "v": "24",
+          "t": "24 bulan"
+        }
+      ]
+    },
+    {
+      "key": "margin",
+      "type": "choice",
+      "label": "Perkiraan margin laba",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skenario",
+      "set": {
+        "sk": "[['Hati-hati', 0.5], ['Dasar', 1], ['Optimis', 1.5]].map((s) => { const g = num(input.tumbuh) * s[1] / 100; const idx = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24].filter((i) => i <= num(input.bulan)); const total = idx.reduce((a, i) => a + num(input.pendapatan) * Math.pow(1 + g, i), 0); const akhir = num(input.pendapatan) * Math.pow(1 + g, num(input.bulan)); return { nama: s[0], tumbuh: Math.round(g * 1000) / 10, akhir: Math.round(akhir), total: Math.round(total), laba: Math.round(total * num(input.margin) / 100) }; })"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'3 skenario ' + input.bulan + ' bulan: laba hati-hati ' + rp(v.sk[0].laba) + ', dasar ' + rp(v.sk[1].laba) + ', optimis ' + rp(v.sk[2].laba)",
+    "teks": "'# Tiga skenario: ' + input.nama + '\\n\\n' + tabel(['Skenario', 'Tumbuh/bulan', 'Pendapatan bulan terakhir', 'Total pendapatan', 'Laba'], v.sk.map((s) => [s.nama, s.tumbuh + '%', rp(s.akhir), rp(s.total), rp(s.laba)])) + '\\n\\nHanya proyeksi dari asumsi laju tumbuh tetap; uji ulang tiap bulan dengan data nyata.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tiga-skenario'",
+        "isi": "csv([['Skenario', 'Tumbuh persen', 'Pendapatan akhir', 'Total pendapatan', 'Laba']].concat(v.sk.map((s) => [s.nama, s.tumbuh, s.akhir, s.total, s.laba])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Strategy",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Penjualan toko online",
+      "pendapatan": "100000000",
+      "tumbuh": "5",
+      "bulan": "6",
+      "margin": "20"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 skenario 6 bulan",
+        "Optimis",
+        "Rp 142.8"
+      ]
+    }
+  },
+  "kemampuan": [
+    "prioritas-keputusan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "skenario",
+      "proyeksi",
+      "pertumbuhan",
+      "forecast",
+      "pendapatan"
+    ],
+    "data": [
+      "yang diproyeksikan",
+      "pendapatan bulan ini (rp)",
+      "pertumbuhan per bulan skenario dasar (%)",
+      "berapa bulan ke depan?"
+    ],
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan",
+    "contoh": {
+      "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan akhir ada pada pemimpin."
+    ]
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-agus",
+  "division": "scm",
+  "employeeId": "agus",
+  "title": "Logistics & Fulfillment Coordinator",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "name": "Pembanding biaya dan mutu kurir",
+  "ringkas": "Bandingkan beberapa kurir dari biaya kirim, lama sampai, dan tingkat keterlambatan sesuai prioritas Anda.",
+  "kataKunci": [
+    "kurir",
+    "ongkir",
+    "pengiriman",
+    "ekspedisi",
+    "biaya kirim"
+  ],
+  "inputs": [
+    {
+      "key": "berat",
+      "type": "number",
+      "label": "Berat tiap paket (kg)",
+      "required": true,
+      "contoh": "1.5"
+    },
+    {
+      "key": "paket",
+      "type": "number",
+      "label": "Jumlah paket",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "prioritas",
+      "type": "choice",
+      "label": "Yang paling penting",
+      "required": true,
+      "default": "murah",
+      "choices": [
+        {
+          "v": "murah",
+          "t": "Biaya murah"
+        },
+        {
+          "v": "cepat",
+          "t": "Cepat sampai"
+        },
+        {
+          "v": "andal",
+          "t": "Jarang terlambat"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Kurir (nama | tarif per kg | minimal kg | lama hari | terlambat %)",
+      "required": true,
+      "contoh": "JNE | 12000 | 1 | 3 | 5"
+    }
+  ],
+  "steps": [
+    {
+      "id": "nilai",
+      "use": "hitung",
+      "label": "Nilai kurir",
+      "set": {
+        "rows": "baris(input.data).slice(0, 20).map((l) => { const p = l.split('|').map((s) => s.trim()); return { kurir: p[0] || '-', biaya: Math.round(num(p[1]) * Math.max(num(input.berat), num(p[2])) * num(input.paket)), hari: Math.max(1, num(p[3])), telat: num(p[4]) }; })",
+        "hasil": "(() => { const w = ({ murah: [0.6, 0.2, 0.2], cepat: [0.2, 0.6, 0.2], andal: [0.2, 0.2, 0.6] })[input.prioritas]; const mb = Math.min.apply(null, v.rows.map((r) => r.biaya || 1e12)); const mh = Math.min.apply(null, v.rows.map((r) => r.hari)); return v.rows.map((r) => ({ kurir: r.kurir, biaya: r.biaya, hari: r.hari, telat: r.telat, skor: Math.round(w[0] * (r.biaya ? mb / r.biaya * 100 : 0) + w[1] * (mh / r.hari * 100) + w[2] * (100 - Math.min(100, r.telat))) })).sort((x, y) => y.skor - x.skor); })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Pilihan terbaik: ' + v.hasil[0].kurir + ' (skor ' + v.hasil[0].skor + ', biaya ' + rp(v.hasil[0].biaya) + ')'",
+    "teks": "'# Perbandingan kurir (' + input.paket + ' paket x ' + input.berat + ' kg)\\n\\n' + tabel(['Peringkat', 'Kurir', 'Total biaya', 'Lama (hari)', 'Terlambat %', 'Skor'], v.hasil.map((r, i) => [i + 1, r.kurir, rp(r.biaya), r.hari, r.telat, r.skor]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'banding-kurir'",
+        "isi": "csv([['Peringkat', 'Kurir', 'Total biaya', 'Lama hari', 'Terlambat %', 'Skor']].concat(v.hasil.map((r, i) => [i + 1, r.kurir, r.biaya, r.hari, r.telat, r.skor])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "berat": "1.5",
+      "paket": "10",
+      "prioritas": "murah",
+      "data": "JNE | 12000 | 1 | 3 | 5\nSiCepat | 11000 | 1 | 2 | 8\nAnteraja | 10000 | 2 | 4 | 3"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Pilihan terbaik: SiCepat",
+        "Rp 165.000",
+        "JNE"
+      ]
+    }
+  },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kurir",
+      "ongkir",
+      "pengiriman",
+      "ekspedisi",
+      "biaya kirim"
+    ],
+    "data": [
+      "berat tiap paket (kg)",
+      "jumlah paket",
+      "yang paling penting",
+      "kurir (nama | tarif per kg | minimal kg | lama hari | terlam"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

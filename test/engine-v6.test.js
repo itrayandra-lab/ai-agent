@@ -96,6 +96,19 @@ test('v8 refuses to claim Google execution without a configured receipt connecto
   await assert.rejects(() => collab.googleWorkspaceCall('drive.create', { name: 'x', content: 'y' }), /Konektor Google belum aktif/);
 });
 
+test('live meeting: Owner messages are queued for the room, only an explicit closing ends it', () => {
+  const m = store.upsert('meetings', { id: 'mtg-live-test', ownerId: 'owner', status: 'waiting_owner', participants: ['aria'], transcript: [] });
+  assert.equal(collab.isMeetingEnd('apakah tugas kemarin sudah selesai dikerjakan?'), false);
+  assert.equal(collab.isMeetingEnd('belum selesai'), false);
+  assert.equal(collab.isMeetingEnd('selesai'), true);
+  assert.equal(collab.isMeetingEnd('tutup rapat'), true);
+  assert.equal(collab.ownerSpeaks(m.id, 'kira kira agenda kita apa aja', 'owner'), true);
+  assert.equal(m.pending.length, 1);
+  assert.equal(m.ownerFinishedAt, undefined);
+  assert.equal(collab.ownerSpeaks(m.id, 'selesai', 'owner'), true);
+  assert.ok(m.ownerFinishedAt);
+});
+
 test.after(async () => {
   await new Promise((resolve) => setTimeout(resolve, 700));
   fs.rmSync(dataDir, { recursive: true, force: true });

@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-ega-profil-aroma",
+  "division": "rnd",
+  "employeeId": "ega",
+  "title": "Fragrance & Sensory Specialist",
+  "version": 1,
+  "name": "Penyusun profil aroma awal",
+  "ringkas": "Susun piramida aroma (awal, tengah, dasar) dari keluarga aroma dan kesan yang diinginkan, plus panduan kadar awal untuk dibicarakan dengan pemasok.",
+  "kataKunci": [
+    "profil aroma",
+    "pewangi",
+    "fragrance",
+    "piramida aroma",
+    "brief aroma"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah"
+    },
+    {
+      "key": "keluarga",
+      "type": "choice",
+      "label": "Keluarga aroma",
+      "required": true,
+      "default": "floral",
+      "choices": [
+        {
+          "v": "floral",
+          "t": "Bunga"
+        },
+        {
+          "v": "segar",
+          "t": "Segar dan hijau"
+        },
+        {
+          "v": "kayu",
+          "t": "Kayu dan hangat"
+        },
+        {
+          "v": "manis",
+          "t": "Manis dan lembut"
+        }
+      ]
+    },
+    {
+      "key": "kesan",
+      "type": "choice",
+      "label": "Kesan yang diinginkan",
+      "required": true,
+      "default": "lembut",
+      "choices": [
+        {
+          "v": "lembut",
+          "t": "Lembut dan menenangkan"
+        },
+        {
+          "v": "mewah",
+          "t": "Mewah"
+        },
+        {
+          "v": "energik",
+          "t": "Segar dan bersemangat"
+        }
+      ]
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Dipakai di mana?",
+      "required": true,
+      "default": "wajah",
+      "choices": [
+        {
+          "v": "wajah",
+          "t": "Wajah"
+        },
+        {
+          "v": "tubuh",
+          "t": "Tubuh"
+        },
+        {
+          "v": "rambut",
+          "t": "Rambut"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun profil",
+      "set": {
+        "nada": "({ floral: { awal: ['Bergamot', 'Pir'], tengah: ['Melati', 'Mawar'], dasar: ['Musk putih', 'Kayu cedar'] }, segar: { awal: ['Lemon', 'Mint'], tengah: ['Teh hijau', 'Lavender'], dasar: ['Musk', 'Kayu ringan'] }, kayu: { awal: ['Jeruk bali', 'Lada merah muda'], tengah: ['Cedar', 'Iris'], dasar: ['Sandalwood', 'Vetiver'] }, manis: { awal: ['Mandarin', 'Apel'], tengah: ['Peony', 'Heliotrop'], dasar: ['Vanila', 'Tonka'] } })[input.keluarga]",
+        "kadar": "({ wajah: '0.05 sampai 0.1 persen (atau pertimbangkan tanpa pewangi untuk kulit sensitif)', tubuh: '0.2 sampai 0.5 persen', rambut: '0.3 sampai 0.7 persen' })[input.jenis]",
+        "kesanCatatan": "({ lembut: 'Utamakan nada tengah yang bulat dan dasar yang hangat; hindari awal yang tajam.', mewah: 'Perkuat dasar yang tahan lama dan tambahkan satu bahan langka sebagai ciri khas.', energik: 'Perkuat nada awal yang segar dan kurangi dasar yang berat.' })[input.kesan]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Profil aroma ' + input.keluarga + ' bernuansa ' + input.kesan + ' untuk ' + input.produk + ': ' + v.nada.tengah.join(' dan ') + ' sebagai nada tengah'",
+    "teks": "'# Profil aroma: ' + input.produk + '\\n\\n- Nada awal: ' + v.nada.awal.join(', ') + '\\n- Nada tengah: ' + v.nada.tengah.join(', ') + '\\n- Nada dasar: ' + v.nada.dasar.join(', ') + '\\n\\nCatatan kesan: ' + v.kesanCatatan + '\\n\\nKadar awal untuk dibicarakan: ' + v.kadar + '.\\n\\n_Ini panduan awal. Kadar dan bahan wajib dicocokkan dengan dokumen pemasok dan aturan yang berlaku._'",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'profil-aroma-' + input.produk",
+        "isi": "'# Profil aroma ' + input.produk + '\\n\\nAwal: ' + v.nada.awal.join(', ') + '\\nTengah: ' + v.nada.tengah.join(', ') + '\\nDasar: ' + v.nada.dasar.join(', ') + '\\nKadar awal: ' + v.kadar + '\\nCatatan: ' + v.kesanCatatan + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Sensory",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah",
+      "keluarga": "floral",
+      "kesan": "lembut",
+      "jenis": "wajah"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Melati",
+        "0.05 sampai 0.1 persen"
+      ]
+    }
+  },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "profil aroma",
+      "pewangi",
+      "fragrance",
+      "piramida aroma",
+      "brief aroma"
+    ],
+    "data": [
+      "nama produk",
+      "keluarga aroma",
+      "kesan yang diinginkan",
+      "dipakai di mana?"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
+  }
+}

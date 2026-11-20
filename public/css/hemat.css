@@ -1,0 +1,13 @@
+/* Hemat GPU. Dimuat paling akhir.
+   1) SELALU: panel besar yang sudah hampir buram (.lpage 88-92%) dan tombol kecil tidak perlu memburamkan latar. Blur di atas kanvas WebGL yang terus digambar
+      memaksa GPU memburamkan ulang tiap bingkai (di halaman Kantor ada ±60 elemen dengan backdrop-filter aktif).
+   2) html[data-hemat="1"] (mode Hemat, otomatis atau pilihan): tidak ada blur sama sekali; latar kaca diganti semi-solid supaya tetap terbaca. */
+.office-ov .lpage, .btn, #view .btn, .modal-card .btn, .drawer .btn { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html[data-hemat="1"] *, html[data-hemat="1"] *::before, html[data-hemat="1"] *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html[data-hemat="1"] { --fl-glass: rgba(28, 28, 30, .94); --glass: rgba(34, 36, 42, .9); --gl-fill: rgba(24, 28, 54, .9); --gl-fill-2: rgba(32, 36, 66, .92); --gl-fill-strong: rgba(18, 22, 44, .95); }
+html[data-hemat="1"][data-theme="light"] { --fl-glass: rgba(255, 255, 255, .96); --glass: rgba(255, 255, 255, .94); --gl-fill: rgba(255, 255, 255, .92); --gl-fill-2: rgba(248, 249, 252, .95); --gl-fill-strong: rgba(255, 255, 255, .97); }
+html[data-hemat="1"] .office-ov .odock { background: rgba(20, 22, 30, .9) !important; }
+html[data-hemat="1"] .office-ov .lp-b .pm-compose, html[data-hemat="1"] .office-ov .lpage.lp-dock .pm-bubble.me, html[data-hemat="1"] .office-ov .lpage.lp-dock #pmThread { background: rgba(20, 22, 30, .88) !important; }
+html[data-hemat="1"] .glass, html[data-hemat="1"] .tele3, html[data-hemat="1"] .lower3 { background: rgba(20, 24, 44, .92); }
+html[data-hemat="1"] .modal, html[data-hemat="1"] .palette, html[data-hemat="1"] .scrim { background: rgba(8, 10, 24, .72); }
+html[data-hemat="1"] .office-dof { display: none !important; }

@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-hafiz",
+  "division": "kms",
+  "employeeId": "hafiz",
+  "title": "Prompt & Skill Engineer",
+  "version": 1,
+  "name": "Penyusun panduan keahlian (skill)",
+  "ringkas": "Susun satu keahlian kerja lengkap dari tujuan, waktu pakai, langkah, dan kesalahan umum, beserta skor mutunya.",
+  "kataKunci": [
+    "skill",
+    "keahlian",
+    "panduan kerja",
+    "metode",
+    "playbook"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama keahlian",
+      "required": true,
+      "contoh": "Meringkas rapat"
+    },
+    {
+      "key": "tujuan",
+      "type": "text",
+      "label": "Tujuan keahlian ini",
+      "required": true,
+      "contoh": "Membuat ringkasan rapat yang langsung bisa dipakai"
+    },
+    {
+      "key": "kapan",
+      "type": "text",
+      "label": "Kapan dipakai?",
+      "required": true,
+      "contoh": "Setelah rapat selesai"
+    },
+    {
+      "key": "langkah",
+      "type": "longtext",
+      "label": "Langkah-langkah (satu per baris)",
+      "required": true,
+      "contoh": "Baca catatan rapat\nTulis keputusan\nTulis tugas dan penanggung jawab\nKirim ke peserta"
+    },
+    {
+      "key": "salah",
+      "type": "longtext",
+      "label": "Kesalahan umum (satu per baris, boleh kosong)",
+      "required": false,
+      "contoh": "Lupa mencantumkan tenggat"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun dan nilai",
+      "set": {
+        "langkah": "baris(input.langkah).slice(0, 20)",
+        "salah": "baris(input.salah)",
+        "skor": "(v.langkah.length >= 3 ? 25 : 0) + (String(input.kapan).length >= 10 ? 25 : 0) + (v.salah.length >= 1 ? 25 : 0) + (String(input.tujuan).length >= 15 ? 25 : 0)",
+        "kurang": "[v.langkah.length >= 3 ? '' : 'Tambah langkah (minimal 3)', String(input.kapan).length >= 10 ? '' : 'Jelaskan kapan dipakai lebih rinci', v.salah.length >= 1 ? '' : 'Tulis minimal satu kesalahan umum', String(input.tujuan).length >= 15 ? '' : 'Perjelas tujuan'].filter(Boolean)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Keahlian \"' + input.nama + '\" siap, skor mutu ' + v.skor + ' dari 100'",
+    "teks": "'# ' + input.nama + '\\n\\n**Tujuan:** ' + input.tujuan + '  \\n**Kapan dipakai:** ' + input.kapan + '\\n\\n## Langkah\\n' + v.langkah.map((l, i) => (i + 1) + '. ' + l).join('\\n') + '\\n\\n## Kesalahan umum\\n' + (v.salah.length ? v.salah.map((l) => '- ' + l).join('\\n') : '- (belum ada)') + '\\n\\n**Skor mutu ' + v.skor + '**' + (v.kurang.length ? '\\nPerlu: ' + v.kurang.join('; ') : '')",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'keahlian'",
+        "isi": "'# ' + input.nama + '\\n\\nTujuan: ' + input.tujuan + '\\nKapan dipakai: ' + input.kapan + '\\n\\n## Langkah\\n' + v.langkah.map((l, i) => (i + 1) + '. ' + l).join('\\n') + '\\n\\n## Kesalahan umum\\n' + v.salah.map((l) => '- ' + l).join('\\n') + '\\n'"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Knowledge",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Meringkas rapat",
+      "tujuan": "Membuat ringkasan rapat yang langsung bisa dipakai",
+      "kapan": "Setelah rapat selesai",
+      "langkah": "Baca catatan rapat\nTulis keputusan\nTulis tugas dan penanggung jawab\nKirim ke peserta",
+      "salah": "Lupa mencantumkan tenggat"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "skor mutu 100",
+        "## Langkah"
+      ]
+    }
+  },
+  "kemampuan": [
+    "kelola-pengetahuan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "skill",
+      "keahlian",
+      "panduan kerja",
+      "metode",
+      "playbook"
+    ],
+    "data": [
+      "nama keahlian",
+      "tujuan keahlian ini",
+      "kapan dipakai?",
+      "langkah-langkah (satu per baris)"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

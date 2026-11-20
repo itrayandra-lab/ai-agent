@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-sarah-gmv",
+  "division": "ecom",
+  "employeeId": "sarah",
+  "title": "E-commerce Analyst",
+  "version": 1,
+  "name": "Ringkasan penjualan, pesanan, dan konversi per toko",
+  "ringkas": "Hitung penjualan total, rata-rata nilai pesanan, dan persen pengunjung yang membeli untuk tiap toko online.",
+  "kataKunci": [
+    "gmv",
+    "aov",
+    "konversi toko",
+    "pengunjung",
+    "laporan penjualan"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Data toko (satu baris: toko | pengunjung | pesanan | penjualan Rp)",
+      "required": true,
+      "contoh": "Shopee | 12000 | 360 | 30600000"
+    },
+    {
+      "key": "target",
+      "type": "choice",
+      "label": "Target konversi",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "2",
+          "t": "2%"
+        },
+        {
+          "v": "3",
+          "t": "3%"
+        },
+        {
+          "v": "4",
+          "t": "4%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung ringkasan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); const u = num(p[1]); const o = num(p[2]); const g = num(p[3]); const cr = u ? Math.round(o / u * 10000) / 100 : 0; return { toko: p[0] || '-', u: u, o: o, g: g, aov: o ? Math.round(g / o) : 0, cr: cr, status: cr >= num(input.target) ? 'Mencapai target' : 'Di bawah target' }; }).sort((a, b) => b.g - a.g)",
+        "gmv": "v.rows.reduce((a, b) => a + b.g, 0)",
+        "pesanan": "v.rows.reduce((a, b) => a + b.o, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Penjualan total ' + rp(v.gmv) + ' dari ' + v.pesanan + ' pesanan; rata-rata ' + rp(v.pesanan ? Math.round(v.gmv / v.pesanan) : 0) + ' per pesanan'",
+    "teks": "'# Ringkasan toko\\n\\n' + tabel(['Toko', 'Pengunjung', 'Pesanan', 'Penjualan', 'Nilai per pesanan', 'Konversi %', 'Status'], v.rows.map((r) => [r.toko, r.u, r.o, rp(r.g), rp(r.aov), r.cr, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'ringkasan-toko'",
+        "isi": "csv([['Toko', 'Pengunjung', 'Pesanan', 'Penjualan', 'Nilai per pesanan', 'Konversi %', 'Status']].concat(v.rows.map((r) => [r.toko, r.u, r.o, r.g, r.aov, r.cr, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Shopee | 12000 | 360 | 30600000\nTikTok Shop | 8000 | 160 | 12000000",
+      "target": "3"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 42.600.000 dari 520 pesanan",
+        "Mencapai target",
+        "Di bawah target"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "gmv",
+      "aov",
+      "konversi toko",
+      "pengunjung",
+      "laporan penjualan"
+    ],
+    "data": [
+      "data toko (satu baris: toko | pengunjung | pesanan | penjual",
+      "target konversi"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}

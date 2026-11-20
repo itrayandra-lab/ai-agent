@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-statistik-angka",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Statistik dari daftar angka",
+  "ringkas": "Hitung jumlah, rata-rata, nilai tengah, terkecil, terbesar, dan sebaran dari sekumpulan angka.",
+  "kataKunci": [
+    "statistik",
+    "rata-rata",
+    "median",
+    "angka",
+    "sebaran"
+  ],
+  "inputs": [
+    {
+      "key": "angka",
+      "type": "longtext",
+      "label": "Daftar angka (pisahkan dengan spasi, koma, atau baris baru)",
+      "required": true,
+      "contoh": "10 20 30 40 50"
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung statistik",
+      "set": {
+        "a": "String(input.angka).split(/[\\s;]+/).filter((x) => x !== '').map((x) => num(x)).slice(0, 5000).sort((p, q) => p - q)",
+        "n": "v.a.length",
+        "jumlah": "v.a.reduce((p, q) => p + q, 0)",
+        "rata": "v.n ? v.jumlah / v.n : 0",
+        "median": "v.n ? (v.n % 2 ? v.a[(v.n - 1) / 2] : (v.a[v.n / 2 - 1] + v.a[v.n / 2]) / 2) : 0",
+        "simpang": "v.n ? Math.sqrt(v.a.reduce((p, q) => p + Math.pow(q - v.rata, 2), 0) / v.n) : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Jumlah data: ' + v.n + ', rata-rata: ' + Math.round(v.rata * 100) / 100 + ', nilai tengah: ' + v.median",
+    "teks": "tabel(['Ukuran', 'Nilai'], [['Jumlah data', v.n], ['Total', v.jumlah], ['Rata-rata', Math.round(v.rata * 100) / 100], ['Nilai tengah', v.median], ['Terkecil', v.a[0]], ['Terbesar', v.a[v.n - 1]], ['Simpangan baku', Math.round(v.simpang * 100) / 100]])"
+  },
+  "sample": {
+    "input": {
+      "angka": "10 20 30 40 50"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Jumlah data: 5",
+        "rata-rata: 30",
+        "nilai tengah: 30",
+        "14.14"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "analisis-angka"
+  ],
+  "keahlian": {
+    "istilah": [
+      "statistik",
+      "rata-rata",
+      "median",
+      "angka",
+      "sebaran"
+    ],
+    "data": [
+      "daftar angka (pisahkan dengan spasi, koma, atau baris baru)"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

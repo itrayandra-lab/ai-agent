@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ops-nisa-po",
+  "division": "ops",
+  "employeeId": "nisa",
+  "title": "Procurement Officer",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Pembuat draf pesanan pembelian",
+  "ringkas": "Susun pesanan pembelian rapi dari daftar barang, lengkap dengan pajak, total, dan tanggal jatuh tempo pembayaran.",
+  "kataKunci": [
+    "pesanan pembelian",
+    "purchase order",
+    "po",
+    "pengadaan",
+    "pembelian"
+  ],
+  "inputs": [
+    {
+      "key": "vendor",
+      "type": "text",
+      "label": "Nama vendor",
+      "required": true,
+      "contoh": "CV Kemasan Jaya"
+    },
+    {
+      "key": "nomor",
+      "type": "text",
+      "label": "Nomor pesanan",
+      "required": true,
+      "contoh": "PO-2026-014"
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal pesanan",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "items",
+      "type": "longtext",
+      "label": "Barang (nama | jumlah | harga satuan)",
+      "required": true,
+      "contoh": "Kardus | 100 | 2500"
+    },
+    {
+      "key": "ppn",
+      "type": "choice",
+      "label": "Kena PPN?",
+      "required": true,
+      "default": "11",
+      "choices": [
+        {
+          "v": "11",
+          "t": "Ya, 11%"
+        },
+        {
+          "v": "0",
+          "t": "Tidak"
+        }
+      ]
+    },
+    {
+      "key": "termin",
+      "type": "choice",
+      "label": "Pembayaran",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tunai"
+        },
+        {
+          "v": "14",
+          "t": "14 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        },
+        {
+          "v": "45",
+          "t": "45 hari"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung pesanan",
+      "set": {
+        "rows": "baris(input.items).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); const q = num(p[1]); const h = num(p[2]); return { nama: p[0] || '-', q: q, h: h, jumlah: Math.round(q * h) }; })",
+        "sub": "v.rows.reduce((a, b) => a + b.jumlah, 0)",
+        "pajak": "Math.round(v.sub * num(input.ppn) / 100)",
+        "total": "v.sub + v.pajak",
+        "tempo": "new Date(Date.parse(input.tanggal) + num(input.termin) * 864e5).toISOString().slice(0, 10)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Pesanan ' + input.nomor + ' ke ' + input.vendor + ': total ' + rp(v.total) + ', jatuh tempo ' + v.tempo",
+    "teks": "'# Pesanan pembelian ' + input.nomor + '\\n\\nVendor: ' + input.vendor + '  \\nTanggal: ' + tgl(input.tanggal) + '  \\nJatuh tempo: ' + v.tempo + '\\n\\n' + tabel(['Barang', 'Jumlah', 'Harga', 'Subtotal'], v.rows.map((r) => [r.nama, r.q, rp(r.h), rp(r.jumlah)])) + '\\n\\n**Subtotal:** ' + rp(v.sub) + '  \\n**PPN ' + input.ppn + '%:** ' + rp(v.pajak) + '  \\n**Total:** ' + rp(v.total) + '\\n\\n_Draf: periksa kembali sebelum dikirim ke vendor._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'po-' + input.nomor",
+        "isi": "csv([['Barang', 'Jumlah', 'Harga', 'Subtotal']].concat(v.rows.map((r) => [r.nama, r.q, r.h, r.jumlah])).concat([['', '', 'Subtotal', v.sub], ['', '', 'PPN', v.pajak], ['', '', 'Total', v.total]]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "vendor": "CV Kemasan Jaya",
+      "nomor": "PO-2026-014",
+      "tanggal": "2026-11-18",
+      "items": "Kardus | 100 | 2500\nLakban | 20 | 12000",
+      "ppn": "11",
+      "termin": "30"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 543.900",
+        "2026-12-18"
+      ]
+    }
+  },
+  "kemampuan": [
+    "tulis-dokumen-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pesanan pembelian",
+      "purchase order",
+      "po",
+      "pengadaan",
+      "pembelian"
+    ],
+    "data": [
+      "nama vendor",
+      "nomor pesanan",
+      "tanggal pesanan",
+      "barang (nama | jumlah | harga satuan)"
+    ],
+    "gaya": "praktis, fokus tenggat dan penanggung jawab",
+    "contoh": {
+      "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan anggaran tetap di manajer."
+    ]
+  }
+}

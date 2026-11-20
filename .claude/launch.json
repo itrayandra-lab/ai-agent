@@ -4,8 +4,18 @@
     {
       "name": "ray-office",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["server/index.js"],
+      "runtimeArgs": [
+        "server/index.js"
+      ],
       "port": 4317
+    },
+    {
+      "name": "ray-office-uji",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/RAYMAI~1/AppData/Local/Temp/claude/a71b5b6116a9fa90/aa0943b1-394c-4000-a97f-fb9558cfce35/scratchpad/uji-server.mjs"
+      ],
+      "port": 4391
     }
   ]
 }

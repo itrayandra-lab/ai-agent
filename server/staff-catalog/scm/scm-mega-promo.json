@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-mega-promo",
+  "division": "scm",
+  "employeeId": "mega",
+  "title": "Demand Planner",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Plan",
+    "simpan": true
+  },
+  "name": "Penghitung kebutuhan stok untuk promo",
+  "ringkas": "Perkirakan lonjakan penjualan saat promo, hitung kebutuhan stok beserta cadangannya, dan berapa yang harus ditambah.",
+  "kataKunci": [
+    "promo",
+    "kebutuhan stok",
+    "diskon",
+    "kampanye",
+    "lonjakan penjualan"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum 30ml"
+    },
+    {
+      "key": "dasar",
+      "type": "number",
+      "label": "Penjualan normal per minggu (unit)",
+      "required": true,
+      "contoh": "150"
+    },
+    {
+      "key": "diskon",
+      "type": "choice",
+      "label": "Besar diskon",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "10",
+          "t": "10%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        },
+        {
+          "v": "50",
+          "t": "50%"
+        }
+      ]
+    },
+    {
+      "key": "durasi",
+      "type": "choice",
+      "label": "Lama promo",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 minggu"
+        },
+        {
+          "v": "2",
+          "t": "2 minggu"
+        },
+        {
+          "v": "4",
+          "t": "4 minggu"
+        }
+      ]
+    },
+    {
+      "key": "stok",
+      "type": "number",
+      "label": "Stok sekarang (unit)",
+      "required": true,
+      "contoh": "400"
+    },
+    {
+      "key": "pengali",
+      "type": "number",
+      "label": "Pengali dari promo sebelumnya (boleh kosong)",
+      "required": false,
+      "contoh": "2"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung kebutuhan",
+      "set": {
+        "kali": "num(input.pengali) > 0 ? num(input.pengali) : ({ 10: 1.3, 20: 1.6, 30: 2, 50: 3 })[input.diskon]",
+        "perlu": "Math.round(num(input.dasar) * v.kali * num(input.durasi))",
+        "aman": "Math.ceil(v.perlu * 1.1)",
+        "kurang": "Math.max(0, v.aman - num(input.stok))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.produk + ': kebutuhan ' + v.aman + ' unit (termasuk cadangan 10%), kurang ' + v.kurang + ' unit'",
+    "teks": "'# Kebutuhan stok promo: ' + input.produk + '\\n\\n- Promo ' + input.diskon + '% selama ' + input.durasi + ' minggu\\n- Pengali penjualan: ' + v.kali + ' kali (' + (num(input.pengali) > 0 ? 'dari isian Anda' : 'perkiraan awal; ganti dengan data promo sebelumnya') + ')\\n- Perkiraan terjual: ' + v.perlu + ' unit\\n- Dengan cadangan 10%: **' + v.aman + ' unit**\\n- Stok sekarang: ' + num(input.stok) + ' unit\\n- **Perlu ditambah: ' + v.kurang + ' unit**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'stok-promo-' + input.produk",
+        "isi": "csv([['Produk', 'Diskon %', 'Minggu', 'Pengali', 'Perkiraan terjual', 'Dengan cadangan', 'Stok', 'Perlu ditambah'], [input.produk, input.diskon, input.durasi, v.kali, v.perlu, v.aman, num(input.stok), v.kurang]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum 30ml",
+      "dasar": "150",
+      "diskon": "30",
+      "durasi": "2",
+      "stok": "400",
+      "pengali": "2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "kebutuhan 660 unit",
+        "kurang 260 unit"
+      ]
+    }
+  },
+  "kemampuan": [
+    "perkiraan-stok-kapasitas"
+  ],
+  "keahlian": {
+    "istilah": [
+      "promo",
+      "kebutuhan stok",
+      "diskon",
+      "kampanye",
+      "lonjakan penjualan"
+    ],
+    "data": [
+      "nama produk",
+      "penjualan normal per minggu (unit)",
+      "besar diskon",
+      "lama promo"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

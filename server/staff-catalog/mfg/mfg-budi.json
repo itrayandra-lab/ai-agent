@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mfg-budi",
+  "division": "mfg",
+  "employeeId": "budi",
+  "title": "Filling & Packing Line Lead",
+  "version": 1,
+  "name": "Laporan harian jalur filling dan packing",
+  "ringkas": "Ubah angka produksi harian menjadi capaian target, persen reject, kecepatan per jam, dan penilaian.",
+  "kataKunci": [
+    "laporan harian",
+    "filling",
+    "packing",
+    "output",
+    "reject"
+  ],
+  "inputs": [
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "lini",
+      "type": "text",
+      "label": "Nama jalur",
+      "required": true,
+      "contoh": "Jalur Filling 1"
+    },
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Target hari ini (unit)",
+      "required": true,
+      "contoh": "10000"
+    },
+    {
+      "key": "baik",
+      "type": "number",
+      "label": "Hasil baik (unit)",
+      "required": true,
+      "contoh": "9200"
+    },
+    {
+      "key": "reject",
+      "type": "number",
+      "label": "Reject (unit)",
+      "required": true,
+      "contoh": "150"
+    },
+    {
+      "key": "jam_jalan",
+      "type": "number",
+      "label": "Jam mesin berjalan",
+      "required": true,
+      "contoh": "7"
+    },
+    {
+      "key": "jam_henti",
+      "type": "number",
+      "label": "Jam mesin berhenti",
+      "required": true,
+      "contoh": "1"
+    },
+    {
+      "key": "alasan",
+      "type": "longtext",
+      "label": "Alasan berhenti (boleh kosong)",
+      "required": false,
+      "contoh": "Ganti botol"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung capaian",
+      "set": {
+        "capaian": "Math.round(Number(input.baik) / Math.max(1, Number(input.target)) * 1000) / 10",
+        "rejectPct": "Math.round(Number(input.reject) / Math.max(1, Number(input.baik) + Number(input.reject)) * 1000) / 10",
+        "perJam": "Math.round(Number(input.baik) / Math.max(1, Number(input.jam_jalan)))",
+        "waktuAktif": "Math.round(Number(input.jam_jalan) / Math.max(1, Number(input.jam_jalan) + Number(input.jam_henti)) * 100)",
+        "nilai": "v.capaian >= 95 ? 'Baik sekali' : v.capaian >= 85 ? 'Baik' : 'Di bawah target'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.lini + ': capaian ' + v.capaian + '% dari target, reject ' + v.rejectPct + '%, ' + v.perJam + ' unit per jam. ' + v.nilai",
+    "teks": "'# Laporan harian ' + input.lini + '\\n\\nTanggal: ' + tgl(input.tanggal) + '\\n\\n- Capaian target: ' + v.capaian + '%\\n- Hasil baik: ' + input.baik + ' dari target ' + input.target + '\\n- Reject: ' + input.reject + ' unit (' + v.rejectPct + '%)\\n- Kecepatan: ' + v.perJam + ' unit per jam\\n- Mesin aktif: ' + v.waktuAktif + '% dari waktu kerja\\n- Penilaian: **' + v.nilai + '**\\n- Alasan berhenti: ' + (input.alasan || '-')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'laporan-harian-' + input.tanggal",
+        "isi": "csv([['Tanggal', 'Jalur', 'Target', 'Hasil baik', 'Reject', 'Capaian %', 'Reject %', 'Unit per jam', 'Penilaian'], [input.tanggal, input.lini, input.target, input.baik, input.reject, v.capaian, v.rejectPct, v.perJam, v.nilai]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Production",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "tanggal": "2026-11-18",
+      "lini": "Jalur Filling 1",
+      "target": 10000,
+      "baik": 9200,
+      "reject": 150,
+      "jam_jalan": 7,
+      "jam_henti": 1,
+      "alasan": "Ganti botol"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "92%",
+        "1.6%",
+        "1314 unit per jam"
+      ]
+    }
+  },
+  "kemampuan": [
+    "laporan-ringkasan-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "laporan harian",
+      "filling",
+      "packing",
+      "output",
+      "reject"
+    ],
+    "data": [
+      "tanggal",
+      "nama jalur",
+      "target hari ini (unit)",
+      "hasil baik (unit)"
+    ],
+    "gaya": "disiplin proses, utamakan keselamatan dan kebersihan",
+    "contoh": {
+      "baik": "Rendemen 88 persen di bawah target 92; cek takaran bahan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keselamatan kerja selalu didahulukan dari target."
+    ]
+  }
+}

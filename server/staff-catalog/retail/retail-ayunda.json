@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "retail-ayunda",
+  "division": "retail",
+  "employeeId": "ayunda",
+  "title": "Retail Beauty Advisor",
+  "version": 1,
+  "name": "Penyusun rutinitas perawatan kulit untuk pelanggan",
+  "ringkas": "Susun urutan perawatan pagi dan malam yang sesuai jenis kulit dan keluhan pelanggan, lengkap dengan catatan aman memakainya.",
+  "kataKunci": [
+    "rutinitas",
+    "perawatan kulit",
+    "konsultasi",
+    "jenis kulit",
+    "skincare"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama pelanggan",
+      "required": true,
+      "contoh": "Bu Rina"
+    },
+    {
+      "key": "kulit",
+      "type": "choice",
+      "label": "Jenis kulit",
+      "required": true,
+      "default": "berminyak",
+      "choices": [
+        {
+          "v": "berminyak",
+          "t": "Berminyak"
+        },
+        {
+          "v": "kering",
+          "t": "Kering"
+        },
+        {
+          "v": "kombinasi",
+          "t": "Kombinasi"
+        },
+        {
+          "v": "sensitif",
+          "t": "Sensitif"
+        }
+      ]
+    },
+    {
+      "key": "masalah",
+      "type": "choice",
+      "label": "Keluhan utama",
+      "required": true,
+      "default": "jerawat",
+      "choices": [
+        {
+          "v": "jerawat",
+          "t": "Jerawat"
+        },
+        {
+          "v": "kusam",
+          "t": "Kusam"
+        },
+        {
+          "v": "kering",
+          "t": "Kulit terasa kering"
+        },
+        {
+          "v": "penuaan",
+          "t": "Garis halus dan penuaan"
+        }
+      ]
+    },
+    {
+      "key": "paket",
+      "type": "choice",
+      "label": "Jumlah langkah",
+      "required": true,
+      "default": "lengkap",
+      "choices": [
+        {
+          "v": "dasar",
+          "t": "3 langkah (sederhana)"
+        },
+        {
+          "v": "lengkap",
+          "t": "5 langkah (lengkap)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun rutinitas",
+      "set": {
+        "bersih": "({ berminyak: 'pembersih wajah gel atau berbusa lembut', kering: 'pembersih krim tanpa pewangi', kombinasi: 'pembersih gel lembut', sensitif: 'pembersih tanpa pewangi dan tanpa alkohol' })[input.kulit]",
+        "serum": "input.kulit === 'sensitif' && input.masalah === 'penuaan' ? 'serum pelembap dengan hyaluronic acid (hindari bahan keras)' : ({ jerawat: 'serum dengan niacinamide atau salicylic acid kadar rendah', kusam: 'serum dengan vitamin C atau niacinamide', kering: 'serum dengan hyaluronic acid', penuaan: 'serum dengan retinol kadar rendah, malam hari saja, mulai 2 kali seminggu' })[input.masalah]",
+        "pelembap": "({ berminyak: 'pelembap gel ringan', kering: 'pelembap krim kaya', kombinasi: 'pelembap losion ringan', sensitif: 'pelembap menenangkan tanpa pewangi' })[input.kulit]",
+        "pagi": "['Cuci muka dengan ' + v.bersih].concat(input.paket === 'lengkap' ? ['Toner penyeimbang, tepuk lembut', 'Oleskan ' + v.serum.replace(', malam hari saja, mulai 2 kali seminggu', '')] : []).concat(['Oleskan ' + v.pelembap, 'Tabir surya SPF 30 ke atas, ulangi tiap 3 sampai 4 jam bila di luar ruangan'])",
+        "malam": "['Bersihkan riasan atau tabir surya, lalu cuci muka dengan ' + v.bersih].concat(input.paket === 'lengkap' ? ['Toner penyeimbang', 'Oleskan ' + v.serum] : []).concat(['Oleskan ' + v.pelembap])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rutinitas ' + input.kulit + ' untuk ' + input.nama + ': ' + v.pagi.length + ' langkah pagi, ' + v.malam.length + ' langkah malam'",
+    "teks": "'# Rutinitas untuk ' + input.nama + '\\n\\nKulit ' + input.kulit + ', keluhan ' + input.masalah + '.\\n\\n## Pagi\\n' + v.pagi.map((p, i) => (i + 1) + '. ' + p).join('\\n') + '\\n\\n## Malam\\n' + v.malam.map((p, i) => (i + 1) + '. ' + p).join('\\n') + '\\n\\n## Catatan\\n- Lakukan uji tempel di belakang telinga 24 jam sebelum memakai produk baru.\\n- Kenalkan satu produk baru tiap 1 sampai 2 minggu.\\n- Bila kulit perih atau merah berkepanjangan, hentikan dan konsultasi ke dokter kulit.'",
+    "berkas": [
+      {
+        "jenis": "md",
+        "nama": "'rutinitas-' + input.nama",
+        "isi": "'# Rutinitas ' + input.nama + '\\n\\nPagi:\\n' + v.pagi.map((p, i) => (i + 1) + '. ' + p).join('\\n') + '\\n\\nMalam:\\n' + v.malam.map((p, i) => (i + 1) + '. ' + p).join('\\n') + '\\n'"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "nama": "Bu Rina",
+      "kulit": "berminyak",
+      "masalah": "jerawat",
+      "paket": "lengkap"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 langkah pagi, 4 langkah malam",
+        "niacinamide atau salicylic acid",
+        "uji tempel"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "susun-rencana-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "rutinitas",
+      "perawatan kulit",
+      "konsultasi",
+      "jenis kulit",
+      "skincare"
+    ],
+    "data": [
+      "nama pelanggan",
+      "jenis kulit",
+      "keluhan utama",
+      "jumlah langkah"
+    ],
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "cs-dika",
+  "division": "cs",
+  "employeeId": "dika",
+  "title": "Onboarding Specialist",
+  "version": 1,
+  "name": "Penyusun rencana onboarding 30 hari",
+  "ringkas": "Buat jadwal 30 hari menyambut pelanggan baru lengkap dengan tanggal, tugas, dan penanggung jawab.",
+  "kataKunci": [
+    "onboarding",
+    "pelanggan baru",
+    "jadwal",
+    "pelatihan",
+    "checklist"
+  ],
+  "inputs": [
+    {
+      "key": "klien",
+      "type": "text",
+      "label": "Nama pelanggan baru",
+      "required": true,
+      "contoh": "PT Maju Jaya"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "paket",
+      "type": "choice",
+      "label": "Paket yang dibeli",
+      "required": true,
+      "default": "pro",
+      "choices": [
+        {
+          "v": "basic",
+          "t": "Dasar"
+        },
+        {
+          "v": "pro",
+          "t": "Menengah"
+        },
+        {
+          "v": "enterprise",
+          "t": "Perusahaan besar"
+        }
+      ]
+    },
+    {
+      "key": "pengguna",
+      "type": "number",
+      "label": "Berapa orang yang akan memakai?",
+      "required": true,
+      "contoh": "12"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "jadwal": "[[0, 'Kirim email selamat datang dan akses akun', 'Onboarding'], [1, 'Panggilan perkenalan 30 menit', 'Onboarding'], [3, 'Pastikan akun admin dan pengguna aktif', 'Onboarding'], [7, 'Pelatihan dasar untuk ' + num(input.pengguna) + ' pengguna', 'Onboarding'], [14, 'Cek kemajuan: fitur inti sudah dipakai?', 'Customer Success'], [21, 'Kumpulkan umpan balik awal', 'Customer Success'], [30, 'Tinjauan 30 hari dan rencana lanjutan', 'Customer Success']].concat(input.paket === 'enterprise' ? [[5, 'Sambungkan data dan akses masuk perusahaan', 'Teknis'], [10, 'Pelatihan khusus admin', 'Onboarding']] : []).concat(num(input.pengguna) > 10 ? [[11, 'Pelatihan susulan untuk tim besar', 'Onboarding']] : []).sort((x, y) => x[0] - y[0]).map((t) => ({ hari: t[0], tanggal: new Date(Date.parse(input.mulai) + t[0] * 864e5).toISOString().slice(0, 10), tugas: t[1], pemilik: t[2] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rencana onboarding ' + input.klien + ': ' + v.jadwal.length + ' langkah, selesai ' + tgl(v.jadwal[v.jadwal.length - 1].tanggal)",
+    "teks": "'# Onboarding ' + input.klien + '\\n\\n' + v.jadwal.map((j) => '- [ ] ' + j.tanggal + ' — ' + j.tugas + ' (' + j.pemilik + ')').join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'onboarding-' + input.klien",
+        "isi": "csv([['Tanggal', 'Hari ke', 'Tugas', 'Penanggung jawab']].concat(v.jadwal.map((j) => [j.tanggal, j.hari, j.tugas, j.pemilik])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "klien": "PT Maju Jaya",
+      "mulai": "2026-12-01",
+      "paket": "enterprise",
+      "pengguna": "12"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Pelatihan khusus admin",
+        "2026-12-31"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "onboarding",
+      "pelanggan baru",
+      "jadwal",
+      "pelatihan",
+      "checklist"
+    ],
+    "data": [
+      "nama pelanggan baru",
+      "mulai tanggal",
+      "paket yang dibeli",
+      "berapa orang yang akan memakai?"
+    ],
+    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan",
+    "contoh": {
+      "baik": "Mohon maaf atas keterlambatan; kami cek pesanan Anda dan kabari dalam 2 jam.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menjanjikan ganti rugi tanpa persetujuan."
+    ]
+  }
+}

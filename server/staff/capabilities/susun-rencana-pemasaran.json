@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-susun-rencana-pemasaran",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menyusun rencana pemasaran",
+  "version": 1,
+  "name": "Susun rencana pemasaran",
+  "ringkas": "Susun rencana kampanye, peluncuran, tantangan, sesi foto atau video, atau rundown siaran lengkap dengan anggaran kasar, kanal, dan ukuran sukses.",
+  "kataKunci": ["pemasaran", "kampanye", "peluncuran", "anggaran", "kanal", "rundown"],
+  "kemampuan": {
+    "id": "susun-rencana-pemasaran",
+    "kelompok": "perencanaan",
+    "tujuanAwam": "Membuat rencana promosi yang jelas: tujuan, pembagian anggaran ke tiap kanal, tahap waktu, dan angka yang menandakan berhasil."
+  },
+  "inputs": [
+    { "key": "produk", "type": "text", "label": "Apa yang dipromosikan?", "required": true, "contoh": "Kopi susu botol" },
+    { "key": "jenis", "type": "choice", "label": "Bentuk kegiatannya?", "required": true, "default": "kampanye", "choices": [{ "v": "kampanye", "t": "Kampanye" }, { "v": "peluncuran", "t": "Peluncuran" }, { "v": "tantangan", "t": "Tantangan atau lomba" }, { "v": "sesi", "t": "Sesi foto atau video" }, { "v": "siaran", "t": "Siaran langsung" }] },
+    { "key": "tujuan", "type": "choice", "label": "Apa tujuan utamanya?", "required": true, "default": "penjualan", "choices": [{ "v": "dikenal", "t": "Lebih dikenal" }, { "v": "penjualan", "t": "Menaikkan penjualan" }, { "v": "pendaftar", "t": "Mengumpulkan pendaftar" }, { "v": "interaksi", "t": "Ramai interaksi" }] },
+    { "key": "anggaran", "type": "number", "label": "Anggaran total (rupiah)", "required": true, "default": 0, "contoh": "5000000" },
+    { "key": "durasi", "type": "number", "label": "Berapa hari berlangsung? (1 sampai 180)", "required": true, "default": 14, "contoh": "14" },
+    { "key": "kanal", "type": "longtext", "label": "Tempat promosi, satu per baris: nama | bagian (boleh nama saja)", "required": false, "contoh": "Instagram | 50\nTikTok | 30\nIklan berbayar | 20" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung anggaran dan sasaran",
+      "set": {
+        "dur": "Math.min(180, Math.max(1, Math.round(Number(input.durasi)) || 14))",
+        "ang": "Math.max(0, Math.round(Number(input.anggaran)) || 0)",
+        "cad": "Math.round(v.ang * 0.1)",
+        "pakai": "v.ang - v.cad",
+        "kanal": "(() => { const a = baris(input.kanal).map((l) => l.split('|').map((t) => String(t).trim())).filter((r) => r[0] !== '').slice(0, 10).map((r) => ({ n: r[0], b: Math.max(0.1, Math.min(100, num(r[1]) || 1)) })); const k = a.length ? a : ['Media sosial', 'Pesan langsung', 'Iklan berbayar'].map((t) => ({ n: t, b: 1 })); const tot = k.reduce((s, x) => s + x.b, 0); return k.map((x) => [x.n, Math.round(x.b / tot * 100), Math.round(v.pakai * x.b / tot)]); })()",
+        "sasaran": "Math.floor(input.tujuan === 'dikenal' ? v.pakai / 15 : input.tujuan === 'penjualan' ? v.pakai * 4 : input.tujuan === 'pendaftar' ? v.pakai / 15000 : v.pakai / 500)",
+        "satuan": "input.tujuan === 'dikenal' ? 'tampilan' : input.tujuan === 'penjualan' ? 'rupiah omzet' : input.tujuan === 'pendaftar' ? 'pendaftar' : 'interaksi'",
+        "fase": "(() => { const p = Math.max(1, Math.round(v.dur * 0.2)); const e = Math.max(1, Math.round(v.dur * 0.2)); const t = Math.max(1, v.dur - p - e); const isi = { kampanye: ['Siapkan pesan dan materi', 'Tayangkan di semua tempat promosi', 'Hitung hasil dan catat pelajaran'], peluncuran: ['Siapkan produk, kabar awal, dan pengingat', 'Hari peluncuran dan dorongan setelahnya', 'Kumpulkan tanggapan dan perbaiki'], tantangan: ['Susun aturan, hadiah, dan ajakan', 'Jalankan tantangan dan sorot peserta', 'Umumkan pemenang dan hitung hasil'], sesi: ['Siapkan lokasi, daftar gambar, dan peralatan', 'Pelaksanaan pengambilan gambar', 'Pilih hasil, rapikan, dan simpan'], siaran: ['Susun urutan acara dan uji perangkat', 'Siaran berjalan sesuai urutan', 'Tinjau rekaman dan tanggapan penonton'] }[input.jenis] || ['Persiapan', 'Pelaksanaan', 'Evaluasi']; return [['Persiapan', p + ' hari', isi[0]], ['Pelaksanaan', t + ' hari', isi[1]], ['Evaluasi', e + ' hari', isi[2]]]; })()",
+        "catatan": "[v.ang === 0 ? 'Anggaran belum diisi, angka sasaran belum bisa dihitung' : '', v.ang > 0 && v.ang < 500000 ? 'Anggaran kecil, pusatkan pada satu atau dua tempat promosi' : '', v.kanal.length > 5 ? 'Tempat promosi terlalu banyak, tenaga akan terpecah' : '', v.dur < 5 ? 'Waktu sangat singkat, tahap persiapan dan evaluasi dipadatkan' : ''].filter((t) => t !== '')",
+        "ukuran": "v.ang === 0 ? 'Isi anggaran untuk mendapat angka sasaran' : 'Sasaran kasar ' + v.sasaran + ' ' + v.satuan + ' dalam ' + v.dur + ' hari'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rencana ' + input.jenis + ' ' + cut(String(input.produk), 50) + ': ' + (v.ang ? 'anggaran ' + rp(v.ang) + ', ' : '') + v.kanal.length + ' tempat promosi, ' + v.ukuran",
+    "teks": "'# Rencana ' + input.jenis + ': ' + input.produk + '\\n\\nTujuan: ' + input.tujuan + '. Lama: ' + v.dur + ' hari. Anggaran: ' + rp(v.ang) + ' (cadangan ' + rp(v.cad) + ', dipakai ' + rp(v.pakai) + ').\\n\\n## Pembagian anggaran\\n\\n' + tabel(['Tempat promosi', 'Bagian (persen)', 'Anggaran'], v.kanal.map((k) => [k[0], k[1], rp(k[2])])) + '\\n\\n## Tahap waktu\\n\\n' + tabel(['Tahap', 'Lama', 'Isi'], v.fase) + '\\n\\n## Ukuran sukses\\n\\n' + v.ukuran + '. Angka ini perkiraan kasar dan perlu dicocokkan dengan hasil nyata.' + (v.catatan.length ? '\\n\\n## Catatan\\n\\n' + v.catatan.map((t) => '- ' + t).join('\\n') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'anggaran-' + cut(String(input.jenis).toLowerCase(), 20)", "isi": "csv([['tempat promosi', 'persen', 'anggaran']].concat(v.kanal))" },
+      { "jenis": "md", "nama": "'rencana-' + cut(String(input.jenis).toLowerCase(), 20)", "isi": "'# ' + input.produk + '\\n\\n' + v.ukuran + '\\n\\n' + tabel(['Tahap', 'Lama', 'Isi'], v.fase)" }
+    ],
+    "data": "({ anggaran: v.ang, cadangan: v.cad, kanal: v.kanal.length, sasaran: v.sasaran, durasi: v.dur, catatan: v.catatan.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "produk": "Kopi susu botol", "jenis": "kampanye", "tujuan": "penjualan", "anggaran": 5000000, "durasi": 14, "kanal": "Instagram | 50\nTikTok | 30\nIklan berbayar | 20" }, "expect": { "berkas": 2, "mengandung": ["Kopi susu botol", "3 tempat promosi", "18000000 rupiah omzet"] } },
+  "otakProfil": {
+    "peran": "perencana pemasaran yang menjelaskan rencana promosi kepada pemilik usaha awam",
+    "tujuan": "Beri penilaian singkat atas rencana yang sudah disusun: apakah pembagian anggaran masuk akal, apa risikonya, dan apa langkah pertamanya.",
+    "gaya": "jelas, jujur soal perkiraan, tidak menjanjikan hasil pasti",
+    "pedoman": ["Pakai hanya angka anggaran dan sasaran dari rencana; sebut bahwa sasaran adalah perkiraan kasar.", "Soroti anggaran yang terlalu kecil atau tempat promosi yang terlalu banyak.", "Beri satu langkah pertama yang konkret."],
+    "skema": { "pembahasan": "teks", "risiko": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Separuh anggaran ke satu tempat promosi sudah wajar; sasaran omzet masih perkiraan dan perlu dicek di minggu pertama.", "buruk": "Rencana ini pasti sukses." },
+    "batas": { "pembahasan": 500, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["rencana"], "minPanjang": 40, "maksPanjang": 600 },
+    "contohAI": "{\"pembahasan\":\"Rencana ini membagi anggaran dengan wajar, tetapi sasaran hanya perkiraan kasar sehingga hasil minggu pertama harus dicek.\",\"risiko\":[\"Sasaran belum teruji\"],\"langkah\":[\"Mulai dengan tempat promosi terbesar\"]}"
+  },
+  "evaluasi": [
+    { "nama": "kampanye penjualan dengan bagian jelas", "input": { "produk": "Kopi susu botol", "jenis": "kampanye", "tujuan": "penjualan", "anggaran": 5000000, "durasi": 14, "kanal": "Instagram | 50\nTikTok | 30\nIklan berbayar | 20" }, "ai": "{\"pembahasan\":\"Rencana ini menaruh separuh anggaran di Instagram, wajar untuk produk minuman, tetapi sasaran omzet hanyalah perkiraan kasar.\",\"risiko\":[\"Sasaran belum teruji\"],\"langkah\":[\"Cek hasil minggu pertama\"]}", "kriteria": { "mengandung": ["Instagram", "perkiraan kasar"], "mengandungAturan": ["Pembagian anggaran", "Rp"], "panjangMin": 150, "panjangMaks": 5000, "nilai": [{ "path": "data.sasaran", "min": 18000000, "max": 18000000 }, { "path": "data.cadangan", "min": 500000, "max": 500000 }, { "path": "data.kanal", "min": 3, "max": 3 }] } },
+    { "nama": "tantangan interaksi tanpa daftar tempat", "input": { "produk": "Aplikasi belajar", "jenis": "tantangan", "tujuan": "interaksi", "anggaran": 1000000, "durasi": 7, "kanal": "" }, "ai": "{\"pembahasan\":\"Rencana tantangan tujuh hari memakai tiga tempat promosi bawaan, jadi pilih dulu mana yang paling dekat dengan peserta.\",\"risiko\":[\"Tenaga terpecah\"],\"langkah\":[\"Pilih satu tempat utama\"]}", "kriteria": { "mengandung": ["tujuh hari", "tempat promosi"], "mengandungAturan": ["Media sosial", "1800 interaksi"], "panjangMin": 150, "panjangMaks": 5000, "nilai": [{ "path": "data.sasaran", "min": 1800, "max": 1800 }, { "path": "data.kanal", "min": 3, "max": 3 }] } },
+    { "nama": "anggaran kosong dan isian aneh", "input": { "produk": "Kedai baru", "jenis": "siaran", "tujuan": "dikenal", "anggaran": "abc", "durasi": 0, "kanal": "Radio | x\n   \n" }, "ai": "{\"pembahasan\":\"Anggaran belum diisi sehingga rencana belum bisa dinilai angkanya; isi dulu anggaran lalu hitung ulang.\",\"risiko\":[\"Anggaran belum ada\"],\"langkah\":[\"Isi anggaran\"]}", "kriteria": { "mengandung": ["Anggaran belum diisi", "hitung ulang"], "mengandungAturan": ["Anggaran belum diisi", "Radio"], "panjangMin": 100, "panjangMaks": 5000, "nilai": [{ "path": "data.sasaran", "min": 0, "max": 0 }, { "path": "data.durasi", "min": 14, "max": 14 }, { "path": "data.kanal", "min": 1, "max": 1 }] } }
+  ]
+}

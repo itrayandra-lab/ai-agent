@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "retail-danu-target",
+  "division": "retail",
+  "employeeId": "danu",
+  "title": "Store Manager",
+  "version": 1,
+  "name": "Pemantau target penjualan harian toko",
+  "ringkas": "Bandingkan penjualan sejauh ini dengan target bulan, perkirakan hasil akhir bulan, dan hitung berapa yang harus dicapai tiap hari sisanya.",
+  "kataKunci": [
+    "target harian",
+    "target bulanan",
+    "pencapaian",
+    "briefing pagi",
+    "toko"
+  ],
+  "inputs": [
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Target penjualan bulan ini (Rp)",
+      "required": true,
+      "contoh": "150000000"
+    },
+    {
+      "key": "hari_buka",
+      "type": "choice",
+      "label": "Jumlah hari buka bulan ini",
+      "required": true,
+      "default": "26",
+      "choices": [
+        {
+          "v": "26",
+          "t": "26 hari"
+        },
+        {
+          "v": "28",
+          "t": "28 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        }
+      ]
+    },
+    {
+      "key": "hari_ke",
+      "type": "number",
+      "label": "Hari buka ke berapa sekarang (sudah selesai)",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "sejauh",
+      "type": "number",
+      "label": "Penjualan sampai hari itu (Rp)",
+      "required": true,
+      "contoh": "50000000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung capaian",
+      "set": {
+        "harian": "Math.round(num(input.target) / num(input.hari_buka))",
+        "seharusnya": "Math.round(num(input.target) * num(input.hari_ke) / num(input.hari_buka))",
+        "selisih": "num(input.sejauh) - v.seharusnya",
+        "proyeksi": "num(input.hari_ke) ? Math.round(num(input.sejauh) / num(input.hari_ke) * num(input.hari_buka)) : 0",
+        "sisaHari": "Math.max(0, num(input.hari_buka) - num(input.hari_ke))",
+        "sisaPerHari": "v.sisaHari ? Math.max(0, Math.round((num(input.target) - num(input.sejauh)) / v.sisaHari)) : 0",
+        "status": "v.selisih >= 0 ? 'Di atas jalur target' : v.proyeksi >= num(input.target) * 0.9 ? 'Sedikit tertinggal' : 'Tertinggal, perlu dorongan'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.status + ': perkiraan akhir bulan ' + rp(v.proyeksi) + ' dari target ' + rp(input.target)",
+    "teks": "'# Capaian target toko\\n\\n' + tabel(['Ukuran', 'Nilai'], [['Target harian', rp(v.harian)], ['Seharusnya sampai hari ke-' + input.hari_ke, rp(v.seharusnya)], ['Penjualan nyata', rp(input.sejauh)], ['Selisih', rp(v.selisih)], ['Perkiraan akhir bulan', rp(v.proyeksi)], ['Perlu per hari untuk sisa ' + v.sisaHari + ' hari', rp(v.sisaPerHari)]]) + '\\n\\n**' + v.status + '.**' + (v.selisih < 0 ? '\\n\\nSaran briefing: fokus pada produk terlaris, tawarkan paket, dan tambah sapaan di pintu.' : '')",
+    "data": "({ proyeksi: v.proyeksi, status: v.status })"
+  },
+  "sample": {
+    "input": {
+      "target": "150000000",
+      "hari_buka": "26",
+      "hari_ke": "10",
+      "sejauh": "50000000"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Tertinggal, perlu dorongan",
+        "Rp 130.000.000",
+        "Rp 6.250.000"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "target harian",
+      "target bulanan",
+      "pencapaian",
+      "briefing pagi",
+      "toko"
+    ],
+    "data": [
+      "target penjualan bulan ini (rp)",
+      "jumlah hari buka bulan ini",
+      "hari buka ke berapa sekarang (sudah selesai)",
+      "penjualan sampai hari itu (rp)"
+    ],
+    "gaya": "dekat dengan lantai toko, singkat, fokus tindakan hari ini",
+    "contoh": {
+      "baik": "Pindahkan tester ke rak depan; jumlah coba pelanggan biasanya naik.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Sesuaikan dengan kondisi toko sebenarnya."
+    ]
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-ringkas-umpan-balik",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan merangkum umpan balik",
+  "version": 1,
+  "name": "Rangkum komentar dan umpan balik",
+  "ringkas": "Rangkum banyak komentar, jawaban survei, ulasan, atau liputan menjadi tema, jumlah, nada, dan saran tindakan.",
+  "kataKunci": ["umpan balik", "komentar", "survei", "ulasan", "liputan", "tema", "rangkuman"],
+  "kemampuan": {
+    "id": "ringkas-umpan-balik",
+    "kelompok": "analisis",
+    "tujuanAwam": "Membaca puluhan komentar sekaligus dan menunjukkan apa yang paling sering dibicarakan, apakah nadanya baik atau buruk, dan apa yang perlu dilakukan."
+  },
+  "inputs": [
+    { "key": "sumber", "type": "choice", "label": "Dari mana komentar ini?", "required": true, "default": "komentar", "choices": [{ "v": "komentar", "t": "Komentar media sosial" }, { "v": "survei", "t": "Jawaban survei" }, { "v": "ulasan", "t": "Ulasan pembeli" }, { "v": "liputan", "t": "Liputan atau berita" }, { "v": "pesan", "t": "Pesan pelanggan" }] },
+    { "key": "fokus", "type": "choice", "label": "Mau fokus ke mana?", "required": true, "default": "semua", "choices": [{ "v": "semua", "t": "Semuanya" }, { "v": "keluhan", "t": "Keluhan saja" }, { "v": "pujian", "t": "Pujian saja" }, { "v": "saran", "t": "Saran saja" }] },
+    { "key": "topik", "type": "text", "label": "Komentar ini tentang apa?", "required": true, "contoh": "Layanan antar makanan" },
+    { "key": "komentar", "type": "longtext", "label": "Daftar komentar (satu komentar per baris)", "required": true, "contoh": "Pengirimannya cepat dan ramah\nHarganya agak mahal\nAplikasinya bingung dipakai" }
+  ],
+  "steps": [
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca dan nilai tiap komentar",
+      "set": {
+        "pos": "['bagus', 'suka', 'puas', 'mantap', 'cepat', 'ramah', 'terbaik', 'senang', 'keren', 'membantu', 'murah', 'mudah']",
+        "neg": "['jelek', 'lambat', 'kecewa', 'mahal', 'rusak', 'buruk', 'lama', 'susah', 'bingung', 'mengecewakan', 'tidak puas', 'komplain', 'ribet', 'telat']",
+        "sar": "['sebaiknya', 'tolong', 'semoga', 'tambah', 'usul', 'mohon', 'harap', 'saran']",
+        "semua": "baris(input.komentar || '').slice(0, 500).map((t) => ({ asli: t, low: t.toLowerCase() }))",
+        "nilai": "v.semua.map((c) => ({ asli: c.asli, low: c.low, skor: v.pos.filter((w) => c.low.indexOf(w) >= 0).length - v.neg.filter((w) => c.low.indexOf(w) >= 0).length, saran: v.sar.some((w) => c.low.indexOf(w) >= 0) }))",
+        "k": "v.nilai.filter((c) => input.fokus === 'keluhan' ? c.skor < 0 : input.fokus === 'pujian' ? c.skor > 0 : input.fokus === 'saran' ? c.saran : true)",
+        "jumlah": "v.k.length",
+        "positif": "v.k.filter((c) => c.skor > 0).length",
+        "negatif": "v.k.filter((c) => c.skor < 0).length",
+        "netral": "v.jumlah - v.positif - v.negatif",
+        "nada": "v.jumlah === 0 ? 'tidak ada data' : v.positif > v.negatif * 1.5 ? 'cenderung baik' : v.negatif > v.positif * 1.5 ? 'cenderung buruk' : 'campuran'"
+      }
+    },
+    {
+      "id": "tema",
+      "use": "hitung",
+      "label": "Kelompokkan menjadi tema",
+      "set": {
+        "daftarTema": "[['Harga', ['harga', 'mahal', 'murah', 'biaya']], ['Layanan dan keramahan', ['layanan', 'admin', 'ramah', 'respon', 'balas', 'pelayanan']], ['Kecepatan', ['cepat', 'lambat', 'lama', 'pengiriman', 'kirim', 'telat']], ['Mutu produk', ['kualitas', 'rusak', 'awet', 'jelek', 'produk', 'rasa']], ['Kemudahan pemakaian', ['mudah', 'susah', 'bingung', 'aplikasi', 'ribet', 'situs']]]",
+        "tema": "v.daftarTema.map((t) => ({ nama: t[0], cocok: v.k.filter((c) => t[1].some((w) => c.low.indexOf(w) >= 0)) })).map((t) => ({ nama: t.nama, n: t.cocok.length, pos: t.cocok.filter((c) => c.skor > 0).length, neg: t.cocok.filter((c) => c.skor < 0).length, contoh: t.cocok.length ? cut(t.cocok[0].asli, 80) : '-' })).filter((t) => t.n > 0).sort((a, b) => b.n - a.n)",
+        "temaUtama": "v.tema.length ? v.tema[0].nama : 'belum ada tema jelas'",
+        "temaMasalah": "v.tema.slice().sort((a, b) => b.neg - a.neg)[0]",
+        "saranTindakan": "[].concat(v.temaMasalah && v.temaMasalah.neg > 0 ? ['Perbaiki dulu: ' + v.temaMasalah.nama + ' (' + v.temaMasalah.neg + ' keluhan)'] : ['Belum ada keluhan yang menonjol'], v.positif > 0 ? ['Pertahankan hal yang dipuji dan bagikan sebagai bukti'] : [], v.jumlah < 5 ? ['Komentar masih sedikit (' + v.jumlah + '); kumpulkan lebih banyak sebelum mengambil keputusan'] : [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.jumlah ? v.jumlah + ' komentar ' + input.topik + ': nada ' + v.nada + ', ' + v.positif + ' positif, ' + v.negatif + ' negatif, tema utama ' + v.temaUtama : 'Tidak ada komentar yang cocok dengan fokus yang dipilih'",
+    "teks": "'# Rangkuman umpan balik: ' + input.topik + '\\n\\n' + tabel(['Ukuran', 'Nilai'], [['Jumlah komentar', v.jumlah], ['Positif', v.positif], ['Negatif', v.negatif], ['Netral', v.netral], ['Nada keseluruhan', v.nada], ['Tema paling sering', v.temaUtama]]) + '\\n\\n## Tema\\n\\n' + (v.tema.length ? tabel(['Tema', 'Jumlah', 'Positif', 'Negatif', 'Contoh'], v.tema.map((t) => [t.nama, t.n, t.pos, t.neg, t.contoh])) : 'Belum ada tema yang menonjol.') + '\\n\\n## Saran\\n\\n' + v.saranTindakan.map((s) => '- ' + s).join('\\n')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'tema-' + cut(String(input.topik).toLowerCase(), 30)", "isi": "csv([['tema', 'jumlah', 'positif', 'negatif', 'contoh']].concat(v.tema.map((t) => [t.nama, t.n, t.pos, t.neg, t.contoh])))" },
+      { "jenis": "csv", "nama": "'komentar-dinilai'", "isi": "csv([['komentar', 'nilai']].concat(v.k.map((c) => [c.asli, c.skor > 0 ? 'positif' : c.skor < 0 ? 'negatif' : 'netral'])))" }
+    ],
+    "data": "({ jumlah: v.jumlah, positif: v.positif, negatif: v.negatif, netral: v.netral, tema: v.tema.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "sumber": "ulasan", "fokus": "semua", "topik": "Layanan antar makanan", "komentar": "Pengirimannya cepat dan ramah\nHarganya agak mahal\nAplikasinya bingung dipakai\nMakanannya enak dan puas" }, "expect": { "berkas": 2, "mengandung": ["4 komentar", "Harga"] } },
+  "otakProfil": {
+    "peran": "pembaca umpan balik yang teliti dan adil",
+    "tujuan": "Jelaskan arti tema dan nada komentar, soroti yang paling penting, dan beri langkah perbaikan yang masuk akal.",
+    "gaya": "netral, sebut jumlah apa adanya, tidak melebih-lebihkan satu komentar",
+    "pedoman": ["Pakai hanya jumlah dan komentar yang diberikan; jangan menambah angka.", "Bedakan keluhan yang sering muncul dari satu komentar yang unik.", "Bila komentar kurang dari 5, katakan kesimpulannya masih lemah."],
+    "skema": { "pembahasan": "teks", "penting": "daftar", "saran": "daftar", "nada": "pilihan:baik|campuran|buruk" },
+    "contoh": { "baik": "Keluhan terbanyak soal harga dan aplikasi yang membingungkan, sementara kecepatan antar banyak dipuji.", "buruk": "Pelanggan senang." },
+    "batas": { "pembahasan": 600, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["harga"], "minPanjang": 40, "maksPanjang": 800 },
+    "contohAI": "{\"pembahasan\":\"Keluhan terbanyak soal harga dan aplikasi yang membingungkan, sementara kecepatan antar banyak dipuji.\",\"penting\":[\"Harga\",\"Kemudahan aplikasi\"],\"saran\":[\"Jelaskan alasan harga\",\"Sederhanakan layar pemesanan\"],\"nada\":\"campuran\"}"
+  },
+  "evaluasi": [
+    { "nama": "ulasan campuran", "input": { "sumber": "ulasan", "fokus": "semua", "topik": "Layanan antar makanan", "komentar": "Pengirimannya cepat dan ramah\nHarganya agak mahal\nAplikasinya bingung dipakai\nMakanannya enak dan puas" }, "ai": "{\"pembahasan\":\"Keluhan soal harga dan aplikasi yang membingungkan, sementara kecepatan dan keramahan dipuji.\",\"penting\":[\"Harga\",\"Aplikasi\"],\"saran\":[\"Sederhanakan layar pemesanan\"],\"nada\":\"campuran\"}", "kriteria": { "mengandung": ["harga", "4 komentar"], "mengandungAturan": ["Harga", "Kemudahan pemakaian", "campuran"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.jumlah", "min": 4, "max": 4 }, { "path": "data.positif", "min": 2, "max": 2 }, { "path": "data.negatif", "min": 2, "max": 2 }] } },
+    { "nama": "fokus keluhan saja", "input": { "sumber": "komentar", "fokus": "keluhan", "topik": "Toko online", "komentar": "Barang rusak dan lambat sampai\nPelayanannya ramah banget\nHarga mahal, kecewa\nBagus sih" }, "ai": "{\"pembahasan\":\"Keluhan berkisar pada barang rusak, pengiriman lambat, dan harga yang dirasa mahal oleh dua pembeli.\",\"penting\":[\"Mutu produk\",\"Kecepatan\"],\"saran\":[\"Periksa pengemasan\"],\"nada\":\"buruk\"}", "kriteria": { "mengandung": ["keluhan", "2 komentar"], "mengandungAturan": ["cenderung buruk", "Mutu produk"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.jumlah", "min": 2, "max": 2 }, { "path": "data.negatif", "min": 2, "max": 2 }, { "path": "data.positif", "min": 0, "max": 0 }] } },
+    { "nama": "komentar kosong dan tidak jelas", "input": { "sumber": "pesan", "fokus": "pujian", "topik": "Pesan masuk", "komentar": "???\n\n   \n......" }, "ai": "{\"pembahasan\":\"Tidak ada pujian yang dapat dibaca dari pesan ini, isinya hanya tanda baca sehingga tidak ada tema yang bisa ditarik.\",\"penting\":[\"Tidak ada\"],\"saran\":[\"Kumpulkan komentar yang lebih jelas\"],\"nada\":\"campuran\"}", "kriteria": { "mengandung": ["pesan", "tidak ada"], "mengandungAturan": ["Tidak ada komentar", "tidak ada data"], "panjangMin": 80, "panjangMaks": 4000, "nilai": [{ "path": "data.jumlah", "min": 0, "max": 0 }, { "path": "data.tema", "min": 0, "max": 0 }] } }
+  ]
+}

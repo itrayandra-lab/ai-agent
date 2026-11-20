@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "it-doni",
+  "division": "it",
+  "employeeId": "doni",
+  "title": "IT Support Specialist",
+  "version": 1,
+  "name": "Pemilah laporan masalah IT",
+  "ringkas": "Baca laporan karyawan, tentukan jenis masalah dan tingkat mendesaknya, lalu beri langkah pertama yang bisa dicoba.",
+  "kataKunci": [
+    "tiket it",
+    "helpdesk",
+    "laporan masalah",
+    "wifi",
+    "akun"
+  ],
+  "inputs": [
+    {
+      "key": "pesan",
+      "type": "longtext",
+      "label": "Isi laporan dari karyawan",
+      "required": true,
+      "contoh": "Wifi di lantai 2 putus terus, semua tim tidak bisa bekerja"
+    },
+    {
+      "key": "pelapor",
+      "type": "text",
+      "label": "Nama pelapor",
+      "required": false,
+      "contoh": "Bu Sari"
+    },
+    {
+      "key": "lokasi",
+      "type": "choice",
+      "label": "Pelapor bekerja dari mana?",
+      "required": true,
+      "default": "kantor",
+      "choices": [
+        {
+          "v": "kantor",
+          "t": "Di kantor"
+        },
+        {
+          "v": "rumah",
+          "t": "Dari rumah"
+        },
+        {
+          "v": "lapangan",
+          "t": "Di lapangan"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Baca laporan",
+      "set": {
+        "t": "String(input.pesan).toLowerCase()",
+        "aman": "/virus|diretas|dibobol|phishing|ransomware|bocor|dicuri|akun dipakai orang|kode aneh/.test(v.t)",
+        "kategori": "v.aman ? 'Insiden keamanan' : /lupa|reset|terkunci|login|kata sandi|password|akun/.test(v.t) ? 'Akun dan akses' : /wifi|internet|vpn|jaringan|koneksi|lambat|putus/.test(v.t) ? 'Jaringan' : /printer|print|scan|tinta|kertas/.test(v.t) ? 'Printer' : /email|surel|outlook|gmail|spam/.test(v.t) ? 'Email' : /laptop|layar|keyboard|baterai|mati|hang|ponsel|charger/.test(v.t) ? 'Perangkat' : /aplikasi|install|error|crash|update|lisensi|program/.test(v.t) ? 'Aplikasi' : 'Lainnya'",
+        "banyak": "/semua|satu tim|seluruh|kantor|server|tidak bisa bekerja|rapat|klien|mendesak|segera/.test(v.t)",
+        "prioritas": "v.aman ? 'Darurat' : v.banyak ? 'Tinggi' : 'Normal'",
+        "sla": "({ Darurat: 1, Tinggi: 2, Normal: 8 })[v.prioritas]",
+        "langkah": "({ 'Insiden keamanan': 'Putuskan perangkat dari jaringan, jangan matikan, ganti kata sandi dari perangkat lain, dan segera hubungi tim keamanan.', 'Akun dan akses': 'Pastikan nama pengguna benar, coba atur ulang kata sandi lewat menu lupa kata sandi, lalu verifikasi identitas pelapor sebelum membuka kunci akun.', 'Jaringan': 'Cek apakah masalah hanya di satu perangkat atau banyak. Nyalakan ulang router atau titik akses, lalu cek kabel dan sinyal.', 'Printer': 'Cek kertas, tinta, dan kabel atau sambungan jaringan printer, lalu hapus antrean cetak dan nyalakan ulang.', 'Email': 'Cek kapasitas kotak surat, coba lewat peramban lain, dan periksa folder spam sebelum mengatur ulang akses.', 'Perangkat': 'Nyalakan ulang, cek pengisi daya dan baterai, lalu catat kode galat bila ada sebelum dibawa ke meja IT.', 'Aplikasi': 'Catat nama aplikasi dan pesan galat, pastikan versi terbaru, lalu coba pasang ulang atau cek lisensi.', 'Lainnya': 'Minta penjelasan lebih rinci: apa yang dilakukan, apa yang terjadi, sejak kapan.' })[v.kategori]",
+        "jawab": "'Halo ' + (input.pelapor || 'Kak') + ', laporanmu soal ' + v.kategori.toLowerCase() + ' sudah kami catat dengan prioritas ' + v.prioritas.toLowerCase() + '. ' + v.langkah + ' Kami usahakan menanggapi dalam ' + v.sla + ' jam.'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Masalah ' + v.kategori + ', prioritas ' + v.prioritas + ', tanggapi dalam ' + v.sla + ' jam'",
+    "teks": "'## Hasil pemilahan\\n- Jenis: ' + v.kategori + '\\n- Prioritas: ' + v.prioritas + '\\n- Batas waktu tanggapan: ' + v.sla + ' jam\\n- Lokasi pelapor: ' + input.lokasi + '\\n\\n## Langkah pertama\\n' + v.langkah + '\\n\\n## Draf balasan (belum terkirim)\\n' + v.jawab",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'tiket-it'",
+        "isi": "csv([['Pelapor', 'Jenis', 'Prioritas', 'Batas jam', 'Lokasi', 'Ringkasan'], [input.pelapor || '-', v.kategori, v.prioritas, v.sla, input.lokasi, cut(input.pesan, 200)]])"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "pesan": "Wifi di lantai 2 putus terus, semua tim tidak bisa bekerja",
+      "pelapor": "Bu Sari",
+      "lokasi": "kantor"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Masalah Jaringan, prioritas Tinggi, tanggapi dalam 2 jam",
+        "Nyalakan ulang router"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "klasifikasi-pilah"
+  ],
+  "keahlian": {
+    "istilah": [
+      "tiket it",
+      "helpdesk",
+      "laporan masalah",
+      "wifi",
+      "akun"
+    ],
+    "data": [
+      "isi laporan dari karyawan",
+      "nama pelapor",
+      "pelapor bekerja dari mana?"
+    ],
+    "gaya": "teknis tapi mudah dipahami, urutkan dari risiko terbesar",
+    "contoh": {
+      "baik": "Dua kata sandi dipakai ulang; ganti dan nyalakan verifikasi dua langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan meminta atau menyebut kata sandi asli."
+    ]
+  }
+}

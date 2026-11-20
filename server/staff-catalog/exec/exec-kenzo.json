@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "exec-kenzo",
+  "division": "exec",
+  "employeeId": "kenzo",
+  "title": "Strategy Analyst",
+  "version": 1,
+  "name": "Analisis SWOT berbobot",
+  "ringkas": "Nilai kekuatan, kelemahan, peluang, dan ancaman dengan bobot, lalu tentukan arah strategi yang disarankan.",
+  "kataKunci": [
+    "swot",
+    "strategi",
+    "kekuatan",
+    "peluang",
+    "analisis"
+  ],
+  "inputs": [
+    {
+      "key": "topik",
+      "type": "text",
+      "label": "Yang dianalisis",
+      "required": true,
+      "contoh": "Ekspansi ke toko online"
+    },
+    {
+      "key": "kekuatan",
+      "type": "longtext",
+      "label": "Kekuatan (satu baris: poin | bobot 1-5)",
+      "required": true,
+      "contoh": "Merek dikenal | 5\nTim solid | 4"
+    },
+    {
+      "key": "kelemahan",
+      "type": "longtext",
+      "label": "Kelemahan (poin | bobot)",
+      "required": true,
+      "contoh": "Modal terbatas | 4"
+    },
+    {
+      "key": "peluang",
+      "type": "longtext",
+      "label": "Peluang (poin | bobot)",
+      "required": true,
+      "contoh": "Pasar online tumbuh | 5"
+    },
+    {
+      "key": "ancaman",
+      "type": "longtext",
+      "label": "Ancaman (poin | bobot)",
+      "required": true,
+      "contoh": "Pesaing besar | 3\nPerubahan aturan | 2"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "m": "(() => { const p = (t) => baris(t).slice(0, 10).map((l) => { const x = l.split('|').map((s) => s.trim()); return { poin: x[0], bobot: Math.min(5, Math.max(1, num(x[1] || 3))) }; }); return { S: p(input.kekuatan), W: p(input.kelemahan), O: p(input.peluang), T: p(input.ancaman) }; })()",
+        "sS": "v.m.S.reduce((a, b) => a + b.bobot, 0)",
+        "sW": "v.m.W.reduce((a, b) => a + b.bobot, 0)",
+        "sO": "v.m.O.reduce((a, b) => a + b.bobot, 0)",
+        "sT": "v.m.T.reduce((a, b) => a + b.bobot, 0)",
+        "dalam": "v.sS - v.sW",
+        "luar": "v.sO - v.sT",
+        "strategi": "v.dalam >= 0 && v.luar >= 0 ? 'Tumbuh agresif (SO)' : v.dalam < 0 && v.luar >= 0 ? 'Perbaiki dulu lalu ambil peluang (WO)' : v.dalam >= 0 && v.luar < 0 ? 'Pakai kekuatan untuk menghadapi ancaman (ST)' : 'Bertahan dan rampingkan (WT)'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Strategi untuk ' + input.topik + ': ' + v.strategi + ' (dalam ' + v.dalam + ', luar ' + v.luar + ')'",
+    "teks": "'# SWOT: ' + input.topik + '\\n\\n' + tabel(['Kelompok', 'Skor', 'Poin utama'], [['Kekuatan', v.sS, v.m.S.map((x) => x.poin).join('; ')], ['Kelemahan', v.sW, v.m.W.map((x) => x.poin).join('; ')], ['Peluang', v.sO, v.m.O.map((x) => x.poin).join('; ')], ['Ancaman', v.sT, v.m.T.map((x) => x.poin).join('; ')]]) + '\\n\\nSkor dalam (kekuatan - kelemahan): **' + v.dalam + '**  \\nSkor luar (peluang - ancaman): **' + v.luar + '**\\n\\n**Arah: ' + v.strategi + '**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'swot-berbobot'",
+        "isi": "csv([['Kelompok', 'Poin', 'Bobot']].concat(v.m.S.map((x) => ['Kekuatan', x.poin, x.bobot])).concat(v.m.W.map((x) => ['Kelemahan', x.poin, x.bobot])).concat(v.m.O.map((x) => ['Peluang', x.poin, x.bobot])).concat(v.m.T.map((x) => ['Ancaman', x.poin, x.bobot])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Strategy",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "topik": "Ekspansi ke toko online",
+      "kekuatan": "Merek dikenal | 5\nTim solid | 4",
+      "kelemahan": "Modal terbatas | 4",
+      "peluang": "Pasar online tumbuh | 5",
+      "ancaman": "Pesaing besar | 3\nPerubahan aturan | 2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Tumbuh agresif (SO)",
+        "dalam 5, luar 0"
+      ]
+    }
+  },
+  "kemampuan": [
+    "prioritas-keputusan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "swot",
+      "strategi",
+      "kekuatan",
+      "peluang",
+      "analisis"
+    ],
+    "data": [
+      "yang dianalisis",
+      "kekuatan (satu baris: poin | bobot 1-5)",
+      "kelemahan (poin | bobot)",
+      "peluang (poin | bobot)"
+    ],
+    "gaya": "singkat untuk pemimpin, mulai dari kesimpulan",
+    "contoh": {
+      "baik": "Kesimpulan: tunda peluncuran dua minggu; butuh keputusan Anda hari Kamis.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan akhir ada pada pemimpin."
+    ]
+  }
+}

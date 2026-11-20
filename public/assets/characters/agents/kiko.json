@@ -1,0 +1,156 @@
+{
+  "id": "kiko",
+  "name": "Kiko",
+  "height": 1.3,
+  "hips": 0.28,
+  "knee": 0.166,
+  "ankle": 0.069,
+  "seatHip": 0.355,
+  "palmL": [
+    0.46,
+    0.587,
+    -0.0
+  ],
+  "palmR": [
+    -0.46,
+    0.587,
+    -0.0
+  ],
+  "propL": [
+    0.481,
+    0.527,
+    -0.0
+  ],
+  "propR": [
+    -0.481,
+    0.527,
+    -0.0
+  ],
+  "walkStride": 0.421,
+  "clips": [
+    "CH_Standing",
+    "CH_Idle",
+    "CH_Walk",
+    "CH_Run",
+    "CH_Sitting",
+    "CH_SitDown",
+    "CH_StandUp",
+    "CH_Type",
+    "CH_Read",
+    "CH_HoldR",
+    "CH_Carry",
+    "CH_Drink",
+    "CH_Phone",
+    "CH_Talk",
+    "CH_Nod",
+    "CH_Shrug",
+    "CH_Wave",
+    "CH_Clapping",
+    "CH_Cheer",
+    "CH_Think"
+  ],
+  "expressions": [
+    "neutral",
+    "blink",
+    "smile",
+    "laugh",
+    "wow",
+    "love",
+    "angry",
+    "sad",
+    "cry",
+    "sleepy",
+    "wink",
+    "think",
+    "talk1",
+    "talk2",
+    "focus",
+    "error"
+  ],
+  "tris": {
+    "lod0": 7578,
+    "lod1": 3779
+  },
+  "files": {
+    "lod0": "kiko.glb",
+    "lod1": "lod/kiko.glb",
+    "face": "kiko.face.png"
+  },
+  "faceStyle": "screen",
+  "faceTint": "#64eb30",
+  "springs": [],
+  "materials": {
+    "role_top|Suit": "main shell colour",
+    "role_bottom|Under": "accent parts",
+    "role_skin|Skin": "skin (clay figures)",
+    "Eye": "dark screen behind the Face glass",
+    "Face": "expression glass, UV 0..1"
+  },
+  "designColors": {
+    "role_top|Suit": [
+      0.8714,
+      0.8796,
+      0.8308
+    ],
+    "role_bottom|Under": [
+      0.0802,
+      0.4851,
+      0.0262
+    ],
+    "role_skin|Skin": [
+      0.8714,
+      0.8796,
+      0.8308
+    ],
+    "role_hair|Hair": [
+      0.2,
+      0.15,
+      0.1
+    ],
+    "Frame": [
+      0.6038,
+      0.6445,
+      0.6172
+    ],
+    "Eye": [
+      0.0018,
+      0.0052,
+      0.0065
+    ],
+    "Trim": [
+      0.6038,
+      0.6445,
+      0.6172
+    ],
+    "Glove": [
+      0.0086,
+      0.0242,
+      0.0648
+    ],
+    "Belt": [
+      0.0802,
+      0.4851,
+      0.0262
+    ],
+    "role_glow|Glow": [
+      0.1301,
+      0.8308,
+      0.0307
+    ],
+    "Face": [
+      1,
+      1,
+      1
+    ]
+  },
+  "seat": {
+    "hipHeight": 0.355,
+    "thighLow": 0.256,
+    "feetFlat": false
+  },
+  "notes": [
+    "Proportions follow the reference design: hips 0.28, knee 0.166, ankle 0.069 (measured from the exported GLB).",
+    "Legs are too short to reach the floor from a 0.255 m seat: in CH_Sitting the feet dangle (thighs horizontal, knees 90 deg).",
+    "Short legs: walk stride 0.42 m per cycle (cycle 0.54 s); scale walk speed to stride/0.54 m/s so the feet do not slide."
+  ]
+}

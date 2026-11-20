@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-tulis-pesan-pelanggan",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan menulis pesan untuk pelanggan",
+  "version": 1,
+  "name": "Tulis pesan untuk pelanggan",
+  "ringkas": "Susun kerangka email, balasan komunitas, jawaban atas keberatan, rangkaian pesan bertahap, jawaban cepat, atau surat penawaran dengan nada sopan.",
+  "kataKunci": ["pesan", "pelanggan", "email", "balasan", "keberatan", "penawaran", "komunitas"],
+  "kemampuan": {
+    "id": "tulis-pesan-pelanggan",
+    "kelompok": "menulis",
+    "tujuanAwam": "Membantu menulis pesan yang sopan, jelas, dan sesuai suasana hati pelanggan, termasuk saat pelanggan kesal."
+  },
+  "inputs": [
+    { "key": "jenis", "type": "choice", "label": "Pesan apa yang akan ditulis?", "required": true, "default": "email", "choices": [{ "v": "email", "t": "Email" }, { "v": "komunitas", "t": "Balasan di komunitas" }, { "v": "keberatan", "t": "Jawaban atas keberatan" }, { "v": "bertahap", "t": "Rangkaian pesan bertahap" }, { "v": "cepat", "t": "Jawaban cepat untuk penonton" }, { "v": "penawaran", "t": "Surat penawaran" }] },
+    { "key": "nada", "type": "choice", "label": "Bagaimana nadanya?", "required": true, "default": "hangat", "choices": [{ "v": "hangat", "t": "Hangat" }, { "v": "resmi", "t": "Resmi" }, { "v": "singkat", "t": "Singkat dan padat" }] },
+    { "key": "situasi", "type": "longtext", "label": "Apa yang ditulis atau diminta pelanggan?", "required": true, "contoh": "Barang saya belum sampai sudah seminggu, saya kecewa" },
+    { "key": "tujuan", "type": "text", "label": "Hasil yang Anda inginkan dari pesan ini", "required": true, "contoh": "Pelanggan tenang dan tahu kapan barang sampai" },
+    { "key": "nama", "type": "text", "label": "Nama penerima (boleh kosong)", "required": false, "contoh": "Bu Sari" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Baca suasana dan susun kerangka",
+      "set": {
+        "teks": "String(input.situasi || '').toLowerCase()",
+        "kata": "baris(input.situasi || '').join(' ').split(' ').filter((t) => t !== '').length",
+        "kesal": "['kecewa', 'marah', 'penipuan', 'lambat', 'rusak', 'refund', 'batal', 'komplain', 'parah', 'mengecewakan', 'belum sampai', 'tidak puas'].filter((w) => v.teks.indexOf(w) >= 0)",
+        "suasana": "v.kesal.length >= 2 ? 'kesal' : v.kesal.length === 1 ? 'kurang puas' : 'biasa'",
+        "namaJenis": "({ email: 'Email', komunitas: 'Balasan komunitas', keberatan: 'Jawaban atas keberatan', bertahap: 'Rangkaian pesan bertahap', cepat: 'Jawaban cepat', penawaran: 'Surat penawaran' })[input.jenis] || 'Pesan'",
+        "jumlahPesan": "input.jenis === 'bertahap' ? 3 : 1",
+        "batasKata": "({ email: 180, komunitas: 80, keberatan: 120, bertahap: 90, cepat: 30, penawaran: 220 })[input.jenis] || 120",
+        "sapaan": "String(input.nama || '').trim() ? (input.nada === 'resmi' ? 'Yth. ' : 'Halo ') + String(input.nama).trim() : (input.nada === 'resmi' ? 'Yth. Bapak/Ibu' : 'Halo Kak')",
+        "bagian": "({ email: ['Sapaan', 'Terima kasih dan pengakuan atas masalah', 'Jawaban atau penyelesaian', 'Langkah berikutnya', 'Penutup'], komunitas: ['Sapaan singkat', 'Jawaban langsung', 'Ajakan bertanya lagi'], keberatan: ['Akui kekhawatiran', 'Jawab dengan fakta', 'Tawarkan jalan keluar', 'Ajakan lembut'], bertahap: ['Pesan 1: perkenalan dan manfaat', 'Pesan 2: bukti atau contoh', 'Pesan 3: ajakan dan batas waktu'], cepat: ['Jawaban satu kalimat', 'Tautan atau langkah lanjut'], penawaran: ['Sapaan resmi', 'Ringkasan kebutuhan pelanggan', 'Rincian penawaran dan harga', 'Syarat dan masa berlaku', 'Ajakan menanggapi', 'Penutup'] })[input.jenis] || ['Sapaan', 'Isi', 'Penutup']",
+        "terlarang": "['bodoh', 'salah anda', 'salah kamu', 'dijamin', 'pasti beres', 'tidak mungkin', 'bukan urusan'].filter((w) => String(input.tujuan || '').toLowerCase().indexOf(w) >= 0)",
+        "catatan": "[].concat(v.suasana === 'kesal' ? ['Pelanggan tampak kesal: mulai dengan permintaan maaf dan pengakuan, baru jawaban.'] : [], v.kata < 4 ? ['Keterangan pelanggan sangat singkat; tanyakan rincian bila perlu.'] : [], v.terlarang.length ? ['Hindari kata: ' + v.terlarang.join(', ') + '. Janji harus bisa ditepati.'] : [], input.nada === 'singkat' ? ['Nada singkat: batas ' + Math.round(v.batasKata / 2) + ' kata.'] : [])",
+        "batas": "input.nada === 'singkat' ? Math.round(v.batasKata / 2) : v.batasKata"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.namaJenis + ' untuk pelanggan ' + v.suasana + ': ' + v.bagian.length + ' bagian, ' + v.jumlahPesan + ' pesan, maksimal ' + v.batas + ' kata per pesan'",
+    "teks": "'# ' + v.namaJenis + '\\n\\n' + tabel(['Pemeriksaan', 'Hasil'], [['Suasana pelanggan', v.suasana], ['Tanda kesal', v.kesal.length ? v.kesal.join(', ') : 'tidak ada'], ['Jumlah pesan', v.jumlahPesan], ['Maksimal kata per pesan', v.batas], ['Nada', input.nada], ['Tujuan', cut(String(input.tujuan), 100)]]) + '\\n\\n## Kerangka\\n\\n' + tabel(['No', 'Bagian'], v.bagian.map((b, i) => [i + 1, b])) + '\\n\\nSapaan pembuka: ' + v.sapaan + '\\n\\n## Catatan\\n\\n' + (v.catatan.length ? v.catatan.map((c) => '- ' + c).join('\\n') : '- Tidak ada catatan khusus.')",
+    "berkas": [
+      { "jenis": "md", "nama": "'pesan-' + cut(String(input.jenis), 20)", "isi": "'# ' + v.namaJenis + '\\n\\n' + v.sapaan + ',\\n\\n' + v.bagian.map((b, i) => '[' + (i + 1) + '] ' + b + ': ...').join('\\n\\n') + '\\n\\nTujuan: ' + input.tujuan" },
+      { "jenis": "csv", "nama": "'kerangka-pesan'", "isi": "csv([['no', 'bagian', 'maks kata']].concat(v.bagian.map((b, i) => [i + 1, b, v.batas])))" }
+    ],
+    "data": "({ bagian: v.bagian.length, pesan: v.jumlahPesan, batas: v.batas, kesal: v.kesal.length, kata: v.kata })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "jenis": "email", "nada": "hangat", "situasi": "Barang saya belum sampai sudah seminggu, saya kecewa", "tujuan": "Pelanggan tenang dan tahu kapan barang sampai", "nama": "Bu Sari" }, "expect": { "berkas": 2, "mengandung": ["5 bagian", "Halo Bu Sari"] } },
+  "otakProfil": {
+    "peran": "penulis pesan pelanggan yang sopan dan empatik",
+    "tujuan": "Tulis pesan siap kirim sesuai kerangka: mengakui perasaan pelanggan, menjawab dengan fakta, dan menutup dengan langkah berikutnya yang jelas.",
+    "gaya": "sopan, tenang, tidak membela diri, kalimat pendek",
+    "pedoman": ["Akui masalah pelanggan lebih dulu sebelum menjelaskan.", "Jangan berjanji hal yang belum pasti; sebut hal yang pasti saja.", "Satu pesan berisi satu langkah berikutnya yang jelas."],
+    "skema": { "pembahasan": "teks", "pesan": "daftar", "saran": "daftar" },
+    "contoh": { "baik": "Mohon maaf atas keterlambatannya, Bu Sari. Pesanan sedang dicek dan kami kabari hari ini sebelum pukul 17.00.", "buruk": "Itu bukan salah kami, tunggu saja." },
+    "batas": { "pembahasan": 700, "butir": 6 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["maaf"], "minPanjang": 30, "maksPanjang": 900 },
+    "contohAI": "{\"pembahasan\":\"Mohon maaf atas keterlambatannya. Pesanan sedang dicek dan kami kabari hari ini sebelum pukul 17.00 agar Ibu tenang.\",\"pesan\":[\"Halo Bu Sari, mohon maaf atas keterlambatan pesanan.\",\"Kami cek ke kurir dan kabari hari ini.\",\"Terima kasih atas kesabarannya.\"],\"saran\":[\"Sertakan nomor pesanan\"]}"
+  },
+  "evaluasi": [
+    { "nama": "email untuk pelanggan kesal", "input": { "jenis": "email", "nada": "hangat", "situasi": "Barang saya belum sampai sudah seminggu, saya kecewa", "tujuan": "Pelanggan tenang dan tahu kapan barang sampai", "nama": "Bu Sari" }, "ai": "{\"pembahasan\":\"Mohon maaf atas keterlambatannya. Pesanan sedang dicek dan kami kabari hari ini sebelum pukul 17.00.\",\"pesan\":[\"Halo Bu Sari, mohon maaf atas keterlambatan pesanan.\"],\"saran\":[\"Sertakan nomor pesanan\"]}", "kriteria": { "mengandung": ["maaf", "5 bagian"], "mengandungAturan": ["kesal", "Halo Bu Sari", "permintaan maaf"], "panjangMin": 150, "panjangMaks": 3000, "nilai": [{ "path": "data.bagian", "min": 5, "max": 5 }, { "path": "data.kesal", "min": 2, "max": 2 }, { "path": "data.batas", "min": 180, "max": 180 }] } },
+    { "nama": "rangkaian tiga pesan resmi tanpa nama", "input": { "jenis": "bertahap", "nada": "resmi", "situasi": "Calon pelanggan menanyakan paket katering kantor untuk 50 orang", "tujuan": "Calon pelanggan memesan paket uji coba", "nama": "" }, "ai": "{\"pembahasan\":\"Tiga pesan bertahap: perkenalan paket katering, contoh menu dari pelanggan lain, lalu ajakan memesan uji coba.\",\"pesan\":[\"Perkenalan paket katering kantor\",\"Contoh menu dan ulasan\",\"Ajakan uji coba\"],\"saran\":[\"Beri jeda dua hari antar pesan\"]}", "kriteria": { "mengandung": ["katering", "3 bagian"], "mengandungAturan": ["Yth. Bapak/Ibu", "Pesan 3"], "panjangMin": 150, "panjangMaks": 3000, "nilai": [{ "path": "data.pesan", "min": 3, "max": 3 }, { "path": "data.bagian", "min": 3, "max": 3 }, { "path": "data.kesal", "min": 0, "max": 0 }] } },
+    { "nama": "jawaban cepat dengan keterangan sangat singkat dan kata terlarang", "input": { "jenis": "cepat", "nada": "singkat", "situasi": "harga?", "tujuan": "Dijamin murah, pasti beres" }, "ai": "{\"pembahasan\":\"Harga mulai 25 ribu, daftar lengkap ada di tautan profil. Terima kasih sudah bertanya.\",\"pesan\":[\"Harga mulai 25 ribu, daftar lengkap di profil.\"],\"saran\":[\"Tambahkan tautan daftar harga\"]}", "kriteria": { "mengandung": ["harga", "2 bagian"], "mengandungAturan": ["dijamin", "pasti beres", "sangat singkat"], "panjangMin": 100, "panjangMaks": 3000, "nilai": [{ "path": "data.batas", "min": 15, "max": 15 }, { "path": "data.kata", "min": 1, "max": 1 }] } }
+  ]
+}

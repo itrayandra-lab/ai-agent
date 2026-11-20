@@ -1,0 +1,181 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-laras-bant",
+  "division": "sales",
+  "employeeId": "laras",
+  "title": "Sales Development Rep",
+  "version": 1,
+  "name": "Penilai kelayakan calon pelanggan (BANT)",
+  "ringkas": "Nilai calon pelanggan dari anggaran, wewenang, kebutuhan, dan waktu; hasilnya skor, tingkat prospek, dan langkah berikutnya.",
+  "kataKunci": [
+    "bant",
+    "kualifikasi",
+    "prospek",
+    "skor lead",
+    "kelayakan"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama calon pelanggan",
+      "required": true,
+      "contoh": "Bu Rina"
+    },
+    {
+      "key": "anggaran",
+      "type": "choice",
+      "label": "Anggaran",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Sudah ada dan cukup"
+        },
+        {
+          "v": "1",
+          "t": "Belum pasti"
+        },
+        {
+          "v": "0",
+          "t": "Tidak ada"
+        }
+      ]
+    },
+    {
+      "key": "wewenang",
+      "type": "choice",
+      "label": "Yang diajak bicara",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Pengambil keputusan"
+        },
+        {
+          "v": "1",
+          "t": "Perantara"
+        },
+        {
+          "v": "0",
+          "t": "Belum tahu"
+        }
+      ]
+    },
+    {
+      "key": "kebutuhan",
+      "type": "choice",
+      "label": "Kebutuhan",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Mendesak dan jelas"
+        },
+        {
+          "v": "1",
+          "t": "Ada tapi belum jelas"
+        },
+        {
+          "v": "0",
+          "t": "Belum terlihat"
+        }
+      ]
+    },
+    {
+      "key": "waktu",
+      "type": "choice",
+      "label": "Kapan ingin mulai",
+      "required": true,
+      "default": "2",
+      "choices": [
+        {
+          "v": "2",
+          "t": "Bulan ini"
+        },
+        {
+          "v": "1",
+          "t": "1 sampai 3 bulan"
+        },
+        {
+          "v": "0",
+          "t": "Belum ada rencana"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung skor",
+      "set": {
+        "skor": "Math.round((num(input.anggaran) + num(input.wewenang) + num(input.kebutuhan) + num(input.waktu)) / 8 * 100)",
+        "tingkat": "v.skor >= 75 ? 'Panas' : v.skor >= 50 ? 'Hangat' : 'Dingin'",
+        "langkah": "v.skor >= 75 ? 'Jadwalkan demo minggu ini dan siapkan penawaran.' : v.skor >= 50 ? 'Kirim materi singkat dan telepon lagi dalam 3 hari.' : 'Masukkan ke daftar pantau dan hubungi lagi bulan depan.'",
+        "lemah": "[['Anggaran', input.anggaran], ['Wewenang', input.wewenang], ['Kebutuhan', input.kebutuhan], ['Waktu', input.waktu]].filter((x) => num(x[1]) < 2).map((x) => x[0])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ': skor ' + v.skor + ' dari 100, prospek ' + v.tingkat",
+    "teks": "'# Kelayakan ' + input.nama + '\\n\\n- Skor: **' + v.skor + '/100** (' + v.tingkat + ')\\n- Perlu diperkuat: ' + (v.lemah.join(', ') || 'tidak ada') + '\\n- Langkah berikutnya: ' + v.langkah",
+    "data": "({ skor: v.skor, tingkat: v.tingkat })"
+  },
+  "sample": {
+    "input": {
+      "nama": "Bu Rina",
+      "anggaran": "2",
+      "wewenang": "1",
+      "kebutuhan": "2",
+      "waktu": "1"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "75/100",
+        "Panas",
+        "Wewenang, Waktu"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "nilai-skor"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bant",
+      "kualifikasi",
+      "prospek",
+      "skor lead",
+      "kelayakan"
+    ],
+    "data": [
+      "nama calon pelanggan",
+      "anggaran",
+      "yang diajak bicara",
+      "kebutuhan"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

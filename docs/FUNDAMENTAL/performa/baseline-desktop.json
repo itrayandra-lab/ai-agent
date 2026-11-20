@@ -1,0 +1,182 @@
+{
+ "port": "4551",
+ "hash": "#office",
+ "viewport": "1440x900",
+ "dingin": {
+  "uiTampilMs": 6212,
+  "d3TampilMs": 57258,
+  "fpsIdle": 0,
+  "domContentLoaded": 3870,
+  "load": 5472,
+  "fcp": 7072,
+  "lcp": 7072,
+  "req": 143,
+  "perJenis": {
+   "font": {
+    "n": 1,
+    "transfer": 0,
+    "encoded": 0,
+    "decoded": 0
+   },
+   "css": {
+    "n": 9,
+    "transfer": 256047,
+    "encoded": 253347,
+    "decoded": 253347
+   },
+   "js": {
+    "n": 58,
+    "transfer": 3601481,
+    "encoded": 3584081,
+    "decoded": 3584081
+   },
+   "api": {
+    "n": 4,
+    "transfer": 19583810,
+    "encoded": 19582610,
+    "decoded": 19582610
+   },
+   "img": {
+    "n": 35,
+    "transfer": 251391,
+    "encoded": 240891,
+    "decoded": 240891
+   },
+   "glb": {
+    "n": 24,
+    "transfer": 11191212,
+    "encoded": 11184012,
+    "decoded": 11184012
+   },
+   "lain": {
+    "n": 12,
+    "transfer": 36668,
+    "encoded": 33068,
+    "decoded": 33068
+   }
+  },
+  "totalTransferKB": 34102,
+  "totalDecodedKB": 34061,
+  "apiState": {
+   "transferKB": 9562,
+   "decodedKB": 9562,
+   "selesaiMs": 5492
+  },
+  "longTasks": [
+   284,
+   301,
+   92,
+   193,
+   104,
+   71,
+   144,
+   208,
+   109,
+   88,
+   75,
+   91,
+   92,
+   55,
+   91,
+   104,
+   51,
+   14146,
+   9629,
+   195,
+   13227,
+   4521
+  ],
+  "longTaskTotalMs": 43871,
+  "longTaskMax": 14146,
+  "memMB": 218,
+  "ada3d": true,
+  "loadingMasihAda": false,
+  "navTampil": true
+ },
+ "hangat": {
+  "uiTampilMs": 23759,
+  "d3TampilMs": 61732,
+  "fpsIdle": 0,
+  "domContentLoaded": 19004,
+  "load": 20921,
+  "fcp": 22108,
+  "lcp": 22108,
+  "req": 142,
+  "perJenis": {
+   "font": {
+    "n": 1,
+    "transfer": 0,
+    "encoded": 0,
+    "decoded": 0
+   },
+   "css": {
+    "n": 9,
+    "transfer": 256047,
+    "encoded": 253347,
+    "decoded": 253347
+   },
+   "js": {
+    "n": 58,
+    "transfer": 1183972,
+    "encoded": 3584081,
+    "decoded": 3584081
+   },
+   "api": {
+    "n": 4,
+    "transfer": 19583810,
+    "encoded": 19582610,
+    "decoded": 19582610
+   },
+   "img": {
+    "n": 34,
+    "transfer": 249935,
+    "encoded": 239735,
+    "decoded": 239735
+   },
+   "glb": {
+    "n": 24,
+    "transfer": 11191212,
+    "encoded": 11184012,
+    "decoded": 11184012
+   },
+   "lain": {
+    "n": 12,
+    "transfer": 36668,
+    "encoded": 33068,
+    "decoded": 33068
+   }
+  },
+  "totalTransferKB": 31740,
+  "totalDecodedKB": 34059,
+  "apiState": {
+   "transferKB": 9562,
+   "decodedKB": 9562,
+   "selesaiMs": 21289
+  },
+  "longTasks": [
+   294,
+   309,
+   105,
+   192,
+   52,
+   139,
+   82,
+   57,
+   70,
+   74,
+   77,
+   53,
+   107,
+   18698,
+   11946,
+   256
+  ],
+  "longTaskTotalMs": 32511,
+  "longTaskMax": 18698,
+  "memMB": 180,
+  "ada3d": true,
+  "loadingMasihAda": false,
+  "navTampil": true
+ },
+ "galat": []
+}

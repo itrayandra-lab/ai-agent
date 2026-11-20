@@ -1,0 +1,18 @@
+{
+  "id": "mfg",
+  "nama": "Manufacturing",
+  "misi": "Memproduksi kosmetik sesuai CPKB dengan biaya efisien dan tepat waktu.",
+  "manajer": {
+    "id": "wahyu",
+    "nama": "Wahyu",
+    "jabatan": "Plant Manager"
+  },
+  "staf": [
+    "mfg-dodi",
+    "mfg-sigit",
+    "mfg-ilham",
+    "mfg-budi",
+    "mfg-surya"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

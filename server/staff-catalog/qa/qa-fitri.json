@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-fitri",
+  "division": "qa",
+  "employeeId": "fitri",
+  "title": "Microbiologist",
+  "version": 1,
+  "name": "Penilai hasil uji cemaran mikroba",
+  "ringkas": "Bandingkan hasil hitung mikroba tiap sampel dengan batas dari spesifikasi Anda dan tandai yang tidak memenuhi.",
+  "kataKunci": [
+    "mikroba",
+    "cemaran",
+    "alt",
+    "kapang khamir",
+    "patogen"
+  ],
+  "inputs": [
+    {
+      "key": "sampel",
+      "type": "longtext",
+      "label": "Hasil (sampel | angka lempeng total koloni/g | kapang khamir koloni/g | patogen ada atau tidak)",
+      "required": true,
+      "contoh": "Serum B1 | 120 | 10 | tidak"
+    },
+    {
+      "key": "batas_alt",
+      "type": "number",
+      "label": "Batas angka lempeng total di spesifikasi (koloni/g)",
+      "required": true,
+      "contoh": "1000"
+    },
+    {
+      "key": "batas_kk",
+      "type": "number",
+      "label": "Batas kapang dan khamir di spesifikasi (koloni/g)",
+      "required": true,
+      "contoh": "100"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Nilai tiap sampel",
+      "set": {
+        "rows": "baris(input.sampel).slice(0, 100).map((l) => { const p = l.split('|').map((s) => s.trim()); const alt = num(p[1]); const kk = num(p[2]); const pat = /^(ada|positif|ya)/i.test(p[3] || ''); const masalah = [alt > num(input.batas_alt) ? 'angka lempeng total melebihi batas' : '', kk > num(input.batas_kk) ? 'kapang khamir melebihi batas' : '', pat ? 'patogen terdeteksi' : ''].filter(Boolean); return { nama: p[0] || '-', alt: alt, kk: kk, pat: pat ? 'Ada' : 'Tidak ada', status: masalah.length ? 'Tidak memenuhi' : 'Memenuhi', alasan: masalah.join('; ') || '-' }; })",
+        "ok": "v.rows.filter((r) => r.status === 'Memenuhi').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.ok + ' dari ' + v.rows.length + ' sampel memenuhi batas mikroba' + (v.ok < v.rows.length ? '; yang tidak memenuhi perlu investigasi' : '')",
+    "teks": "'# Hasil uji mikroba\\n\\nBatas: angka lempeng total ≤ ' + num(input.batas_alt) + ' koloni/g, kapang khamir ≤ ' + num(input.batas_kk) + ' koloni/g, patogen tidak ada.\\n\\n' + tabel(['Sampel', 'Angka lempeng total', 'Kapang khamir', 'Patogen', 'Status', 'Alasan'], v.rows.map((r) => [r.nama, r.alt, r.kk, r.pat, r.status, r.alasan])) + '\\n\\n_Batas berasal dari spesifikasi yang Anda isi. Hasil tidak memenuhi harus diuji ulang dan diinvestigasi sesuai prosedur, bukan langsung diulang._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-uji-mikroba'",
+        "isi": "csv([['Sampel', 'Angka lempeng total', 'Kapang khamir', 'Patogen', 'Status', 'Alasan']].concat(v.rows.map((r) => [r.nama, r.alt, r.kk, r.pat, r.status, r.alasan])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "sampel": "Serum B1 | 120 | 10 | tidak\nKrim B2 | 2500 | 5 | tidak\nToner B3 | 30 | 0 | ada",
+      "batas_alt": "1000",
+      "batas_kk": "100"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 dari 3 sampel memenuhi",
+        "patogen terdeteksi",
+        "angka lempeng total melebihi batas"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-hasil-uji"
+  ],
+  "keahlian": {
+    "istilah": [
+      "mikroba",
+      "cemaran",
+      "alt",
+      "kapang khamir",
+      "patogen"
+    ],
+    "data": [
+      "hasil (sampel | angka lempeng total koloni/g | kapang khamir",
+      "batas angka lempeng total di spesifikasi (koloni/g)",
+      "batas kapang dan khamir di spesifikasi (koloni/g)"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

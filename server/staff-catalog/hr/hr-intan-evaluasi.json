@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "hr-intan-evaluasi",
+  "division": "hr",
+  "employeeId": "intan",
+  "title": "Learning & Development",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Penghitung efektivitas pelatihan",
+  "ringkas": "Bandingkan nilai sebelum dan sesudah pelatihan, hitung kenaikan dan yang lulus, lalu beri penilaian singkat.",
+  "kataKunci": [
+    "evaluasi pelatihan",
+    "efektivitas",
+    "nilai sebelum sesudah",
+    "lulus",
+    "peserta"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Nilai peserta (nama | nilai sebelum | nilai sesudah)",
+      "required": true,
+      "contoh": "Ani | 60 | 80"
+    },
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Nilai minimal agar lulus",
+      "required": true,
+      "contoh": "75",
+      "default": "75"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung kenaikan",
+      "set": {
+        "rows": "baris(input.data).slice(0, 300).map((l) => { const p = l.split('|').map((s) => s.trim()); const a = num(p[1]); const b = num(p[2]); return { nama: p[0] || '-', sebelum: a, sesudah: b, naik: b - a, lulus: b >= num(input.target) }; })",
+        "n": "Math.max(1, v.rows.length)",
+        "rataA": "Math.round(v.rows.reduce((x, y) => x + y.sebelum, 0) / v.n * 100) / 100",
+        "rataB": "Math.round(v.rows.reduce((x, y) => x + y.sesudah, 0) / v.n * 100) / 100",
+        "naikRata": "Math.round((v.rataB - v.rataA) * 10) / 10",
+        "pLulus": "Math.round(v.rows.filter((r) => r.lulus).length / v.n * 100)",
+        "pNaik": "Math.round(v.rows.filter((r) => r.naik > 0).length / v.n * 100)",
+        "putusan": "v.pLulus >= 80 && v.naikRata >= 10 ? 'Efektif' : v.naikRata > 0 ? 'Cukup, perlu penguatan' : 'Belum efektif'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Penilaian: ' + v.putusan + '. Rata-rata naik ' + v.naikRata + ' poin, ' + v.pLulus + '% lulus'",
+    "teks": "'# Efektivitas pelatihan\\n\\n- Rata-rata sebelum: ' + v.rataA + '\\n- Rata-rata sesudah: ' + v.rataB + '\\n- Kenaikan rata-rata: ' + v.naikRata + ' poin\\n- Peserta yang naik: ' + v.pNaik + '%\\n- Peserta lulus (nilai ' + num(input.target) + ' ke atas): ' + v.pLulus + '%\\n- **Penilaian: ' + v.putusan + '**\\n\\n' + tabel(['Peserta', 'Sebelum', 'Sesudah', 'Naik', 'Lulus'], v.rows.map((r) => [r.nama, r.sebelum, r.sesudah, r.naik, r.lulus ? 'Ya' : 'Belum']))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'efektivitas-pelatihan'",
+        "isi": "csv([['Peserta', 'Sebelum', 'Sesudah', 'Naik', 'Lulus']].concat(v.rows.map((r) => [r.nama, r.sebelum, r.sesudah, r.naik, r.lulus ? 'Ya' : 'Belum'])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "A | 60 | 80\nB | 70 | 90\nC | 50 | 65\nD | 80 | 78",
+      "target": "75"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Cukup, perlu penguatan",
+        "78.25",
+        "75%",
+        "naik 13.3 poin"
+      ]
+    }
+  },
+  "kemampuan": [
+    "hitung-sdm"
+  ],
+  "keahlian": {
+    "istilah": [
+      "evaluasi pelatihan",
+      "efektivitas",
+      "nilai sebelum sesudah",
+      "lulus",
+      "peserta"
+    ],
+    "data": [
+      "nilai peserta (nama | nilai sebelum | nilai sesudah)",
+      "nilai minimal agar lulus"
+    ],
+    "gaya": "adil, hormat, jaga kerahasiaan, fokus perilaku bukan pribadi",
+    "contoh": {
+      "baik": "Beban kerja tim logistik tinggi; bahas pembagian tugas bersama atasan.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Data pribadi karyawan bersifat rahasia."
+    ]
+  }
+}

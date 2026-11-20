@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-hafiz-uji-arahan",
+  "division": "kms",
+  "employeeId": "hafiz",
+  "title": "Prompt & Skill Engineer",
+  "version": 1,
+  "name": "Pemeriksa mutu arahan untuk AI",
+  "ringkas": "Periksa arahan untuk AI dengan enam pertanyaan (peran, tujuan, format, batasan, contoh, panjang) dan beri saran perbaikan.",
+  "kataKunci": [
+    "arahan ai",
+    "instruksi",
+    "mutu arahan",
+    "peran",
+    "format keluaran"
+  ],
+  "inputs": [
+    {
+      "key": "arahan",
+      "type": "longtext",
+      "label": "Teks arahan yang diperiksa",
+      "required": true,
+      "contoh": "Kamu adalah analis keuangan. Ringkas laporan bulanan menjadi poin. Jangan mengarang angka. Contoh: Pendapatan naik 5%."
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa",
+      "set": {
+        "cek": "[['Ada peran yang jelas', /kamu adalah|anda adalah|bertindak sebagai|sebagai seorang/i.test(input.arahan), 'Awali dengan \"Kamu adalah ...\"'], ['Tujuan cukup jelas', String(input.arahan).length >= 40, 'Tulis tujuan dengan kalimat lengkap'], ['Format keluaran disebut', /format|tabel|poin|daftar|markdown|paragraf/i.test(input.arahan), 'Sebutkan bentuk hasil (poin, tabel, paragraf)'], ['Ada batasan', /jangan|maksimal|hindari|wajib|harus/i.test(input.arahan), 'Tambahkan batasan, mis. \"Jangan mengarang angka\"'], ['Ada contoh', /contoh|misalnya/i.test(input.arahan), 'Tambahkan satu contoh hasil yang diinginkan'], ['Panjang wajar', String(input.arahan).length <= 1500, 'Ringkas; arahan terlalu panjang membingungkan']].map((c) => ({ nama: c[0], lulus: c[1], saran: c[2] }))",
+        "lulus": "v.cek.filter((c) => c.lulus).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.lulus + ' dari 6 pemeriksaan lulus'",
+    "teks": "'# Mutu arahan\\n\\n' + tabel(['Pemeriksaan', 'Hasil', 'Saran'], v.cek.map((c) => [c.nama, c.lulus ? 'Lulus' : 'Belum', c.lulus ? '' : c.saran]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'mutu-arahan'",
+        "isi": "csv([['Pemeriksaan', 'Hasil', 'Saran']].concat(v.cek.map((c) => [c.nama, c.lulus ? 'Lulus' : 'Belum', c.lulus ? '' : c.saran])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Knowledge",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "arahan": "Kamu adalah analis keuangan. Ringkas laporan bulanan menjadi poin. Jangan mengarang angka. Contoh: Pendapatan naik 5%."
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "6 dari 6 pemeriksaan lulus"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-mutu-teks"
+  ],
+  "keahlian": {
+    "istilah": [
+      "arahan ai",
+      "instruksi",
+      "mutu arahan",
+      "peran",
+      "format keluaran"
+    ],
+    "data": [
+      "teks arahan yang diperiksa"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

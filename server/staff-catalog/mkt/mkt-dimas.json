@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-dimas",
+  "division": "mkt",
+  "employeeId": "dimas",
+  "title": "SEO & Performance Ads Specialist",
+  "version": 1,
+  "name": "Pemeriksa SEO halaman web",
+  "ringkas": "Buka satu halaman web publik dan periksa judul, deskripsi, gambar, dan hal dasar lain agar mudah ditemukan di pencarian.",
+  "kataKunci": [
+    "seo",
+    "halaman web",
+    "audit",
+    "judul",
+    "pencarian"
+  ],
+  "inputs": [
+    {
+      "key": "url",
+      "type": "url",
+      "label": "Alamat halaman yang diperiksa",
+      "required": true,
+      "contoh": "https://contoh.com/produk"
+    }
+  ],
+  "steps": [
+    {
+      "id": "buka",
+      "use": "ambil_web",
+      "label": "Buka halaman",
+      "dari": "url",
+      "simpan": "web"
+    },
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Periksa isi halaman",
+      "set": {
+        "judul": "ambil(v.web.html, 'title')",
+        "deskripsi": "meta(v.web.html, 'description')",
+        "h1": "hitungTag(v.web.html, 'h1')",
+        "gambar": "hitungTag(v.web.html, 'img')",
+        "tanpaAlt": "(v.web.html.match(/<img\\b(?![^>]*\\balt=)[^>]*>/gi) || []).length",
+        "kata": "plain(v.web.html).split(' ').filter(Boolean).length",
+        "kanonik": "/<link[^>]+rel=[\"']canonical[\"']/i.test(v.web.html)",
+        "viewport": "/<meta[^>]+name=[\"']viewport[\"']/i.test(v.web.html)"
+      }
+    },
+    {
+      "id": "cek",
+      "use": "hitung",
+      "label": "Nilai hasil",
+      "set": {
+        "cek": "[['Judul halaman', v.judul.length >= 15 && v.judul.length <= 65, 'Ideal 15 sampai 65 huruf (sekarang ' + v.judul.length + ')'], ['Deskripsi singkat', v.deskripsi.length >= 70 && v.deskripsi.length <= 160, 'Ideal 70 sampai 160 huruf (sekarang ' + v.deskripsi.length + ')'], ['Satu judul utama', v.h1 === 1, 'Jumlah judul utama: ' + v.h1], ['Gambar punya teks pengganti', v.tanpaAlt === 0, v.tanpaAlt + ' dari ' + v.gambar + ' gambar belum punya'], ['Nyaman dibuka di HP', v.viewport, v.viewport ? 'Sudah diatur' : 'Belum diatur'], ['Alamat utama ditandai', v.kanonik, v.kanonik ? 'Sudah ada' : 'Belum ada'], ['Isi cukup panjang', v.kata >= 300, v.kata + ' kata (ideal 300 ke atas)']].map((c) => ({ nama: c[0], lulus: !!c[1], catatan: c[2] }))",
+        "skor": "Math.round(v.cek.filter((c) => c.lulus).length / v.cek.length * 100)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Skor SEO dasar ' + v.skor + ' dari 100 untuk ' + input.url",
+    "teks": "'# Pemeriksaan SEO\\n\\nHalaman: ' + input.url + '  \\nJawaban situs: ' + v.web.status + (v.web.status !== 200 ? ' (halaman tidak terbuka normal)' : '') + '  \\nJudul: ' + (v.judul || '(kosong)') + '\\n\\n' + tabel(['Periksa', 'Lulus?', 'Catatan'], v.cek.map((c) => [c.nama, c.lulus ? 'Ya' : 'Belum', c.catatan])) + '\\n\\n**Skor: ' + v.skor + '/100**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'seo-periksa'",
+        "isi": "csv([['Periksa', 'Lulus', 'Catatan']].concat(v.cek.map((c) => [c.nama, c.lulus ? 'Ya' : 'Belum', c.catatan])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "url": "https://example.com/"
+    },
+    "web": {
+      "web": "<html><head><title>Toko Kopi Nusantara - Biji Pilihan</title><meta name=\"description\" content=\"Biji kopi pilihan dari petani lokal\"><meta name=\"viewport\" content=\"width=device-width\"></head><body><h1>Kopi Nusantara</h1><img src=\"a.jpg\"><img src=\"b.jpg\" alt=\"biji kopi\"><p>Kopi enak setiap hari.</p></body></html>"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Skor SEO dasar",
+        "Judul halaman"
+      ]
+    }
+  },
+  "kemampuan": [
+    "riset-halaman-web"
+  ],
+  "keahlian": {
+    "istilah": [
+      "seo",
+      "halaman web",
+      "audit",
+      "judul",
+      "pencarian"
+    ],
+    "data": [
+      "alamat halaman yang diperiksa"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

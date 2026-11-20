@@ -1,0 +1,16 @@
+{
+  "id": "it",
+  "nama": "IT & Security",
+  "misi": "Menjaga sistem, akses, dan data perusahaan tetap aman serta tersedia.",
+  "manajer": {
+    "id": "bagas",
+    "nama": "Bagas",
+    "jabatan": "Head of IT & Security"
+  },
+  "staf": [
+    "it-salsa",
+    "it-doni",
+    "it-rangga"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

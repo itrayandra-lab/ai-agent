@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-statistik-teks",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penghitung kata dan waktu baca",
+  "ringkas": "Hitung jumlah kata, kalimat, perkiraan waktu baca, dan kata yang paling sering muncul dalam sebuah tulisan.",
+  "kataKunci": [
+    "kata",
+    "teks",
+    "waktu baca",
+    "tulisan",
+    "kalimat"
+  ],
+  "inputs": [
+    {
+      "key": "teks",
+      "type": "longtext",
+      "label": "Tulisan yang dihitung",
+      "required": true,
+      "contoh": "Kopi susu gula aren enak sekali."
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "kata": "String(input.teks).split(/\\s+/).filter(Boolean)",
+        "jumlah": "v.kata.length",
+        "kalimat": "String(input.teks).split(/[.!?]+/).filter((s) => s.trim() !== '').length",
+        "menit": "Math.max(1, Math.round(v.jumlah / 200))",
+        "top": "Object.entries(v.kata.map((k) => k.toLowerCase().replace(/[^\\p{L}\\p{N}]/gu, '')).filter((k) => k.length >= 4).reduce((m, k) => Object.assign(m, { [k]: (m[k] || 0) + 1 }), {})).sort((p, q) => q[1] - p[1]).slice(0, 5)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.jumlah + ' kata, ' + v.kalimat + ' kalimat, sekitar ' + v.menit + ' menit baca'",
+    "teks": "'- Kata: ' + v.jumlah + '\\n- Kalimat: ' + v.kalimat + '\\n- Huruf (tanpa spasi): ' + String(input.teks).replace(/\\s/g, '').length + '\\n- Waktu baca: sekitar ' + v.menit + ' menit\\n\\nKata paling sering:\\n' + (v.top.map((t) => '- ' + t[0] + ': ' + t[1] + 'x').join('\\n') || '-')"
+  },
+  "sample": {
+    "input": {
+      "teks": "Kopi susu gula aren enak sekali. Kopi ini dibuat dari biji pilihan."
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "12 kata, 2 kalimat",
+        "kopi: 2x"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "analisis-angka"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kata",
+      "teks",
+      "waktu baca",
+      "tulisan",
+      "kalimat"
+    ],
+    "data": [
+      "tulisan yang dihitung"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

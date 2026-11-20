@@ -1,0 +1,161 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "sales-hana",
+  "division": "sales",
+  "employeeId": "hana",
+  "title": "Key Account Manager — Modern Trade",
+  "version": 1,
+  "name": "Penyusun rencana akun toko modern",
+  "ringkas": "Susun target per kuartal, syarat dagang, dan anggaran promo untuk satu jaringan toko, lengkap dengan hasil bersih yang kita terima.",
+  "kataKunci": [
+    "account plan",
+    "modern trade",
+    "target penjualan",
+    "syarat dagang",
+    "jaringan toko"
+  ],
+  "inputs": [
+    {
+      "key": "retailer",
+      "type": "text",
+      "label": "Nama jaringan toko",
+      "required": true,
+      "contoh": "Drugstore Sehat"
+    },
+    {
+      "key": "target",
+      "type": "number",
+      "label": "Target penjualan setahun (Rp)",
+      "required": true,
+      "contoh": "1200000000"
+    },
+    {
+      "key": "margin",
+      "type": "choice",
+      "label": "Margin yang diminta toko",
+      "required": true,
+      "default": "30",
+      "choices": [
+        {
+          "v": "25",
+          "t": "25%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        },
+        {
+          "v": "35",
+          "t": "35%"
+        }
+      ]
+    },
+    {
+      "key": "promo",
+      "type": "choice",
+      "label": "Anggaran promo dari penjualan",
+      "required": true,
+      "default": "5",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3%"
+        },
+        {
+          "v": "5",
+          "t": "5%"
+        },
+        {
+          "v": "8",
+          "t": "8%"
+        }
+      ]
+    },
+    {
+      "key": "listing",
+      "type": "number",
+      "label": "Biaya listing atau pembukaan (Rp)",
+      "required": false,
+      "contoh": "15000000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun rencana",
+      "set": {
+        "bobot": "[22, 24, 25, 29]",
+        "kuartal": "v.bobot.map((b, i) => ({ nama: 'Kuartal ' + (i + 1), target: Math.round(num(input.target) * b / 100), promo: Math.round(num(input.target) * b / 100 * num(input.promo) / 100) }))",
+        "marginRp": "Math.round(num(input.target) * num(input.margin) / 100)",
+        "promoRp": "Math.round(num(input.target) * num(input.promo) / 100)",
+        "bersih": "num(input.target) - v.marginRp - v.promoRp - num(input.listing)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Rencana ' + input.retailer + ': target ' + rp(input.target) + ', hasil bersih untuk kita ' + rp(v.bersih) + ' (' + Math.round(v.bersih / Math.max(1, num(input.target)) * 1000) / 10 + '%)'",
+    "teks": "'# Rencana akun ' + input.retailer + '\\n\\n' + tabel(['Kuartal', 'Target penjualan', 'Anggaran promo'], v.kuartal.map((k) => [k.nama, rp(k.target), rp(k.promo)])) + '\\n\\n## Syarat dagang\\n- Margin toko: ' + input.margin + '% (' + rp(v.marginRp) + ')\\n- Promo: ' + input.promo + '% (' + rp(v.promoRp) + ')\\n- Biaya listing: ' + rp(num(input.listing)) + '\\n- **Hasil bersih untuk kita:** ' + rp(v.bersih) + '\\n\\n## Langkah awal\\n- [ ] Kirim proposal syarat dagang\\n- [ ] Sepakati jadwal promo kuartal 1\\n- [ ] Tetapkan laporan penjualan mingguan'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-akun-' + input.retailer",
+        "isi": "csv([['Kuartal', 'Target', 'Promo']].concat(v.kuartal.map((k) => [k.nama, k.target, k.promo])).concat([['Margin toko', v.marginRp, ''], ['Biaya listing', num(input.listing), ''], ['Hasil bersih', v.bersih, '']]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "retailer": "Drugstore Sehat",
+      "target": "1200000000",
+      "margin": "30",
+      "promo": "5",
+      "listing": "15000000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 264.000.000",
+        "Rp 765.000.000",
+        "Kuartal 4"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "account plan",
+      "modern trade",
+      "target penjualan",
+      "syarat dagang",
+      "jaringan toko"
+    ],
+    "data": [
+      "nama jaringan toko",
+      "target penjualan setahun (rp)",
+      "margin yang diminta toko",
+      "anggaran promo dari penjualan"
+    ],
+    "gaya": "sopan, fokus kebutuhan calon pelanggan",
+    "contoh": {
+      "baik": "Tawarkan demo 15 menit minggu ini karena mereka menambah cabang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menekan pelanggan atau menjanjikan diskon di luar batas."
+    ]
+  }
+}

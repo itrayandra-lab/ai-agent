@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-jaya-pareto",
+  "division": "qa",
+  "employeeId": "jaya",
+  "title": "Deviation & CAPA Specialist",
+  "version": 1,
+  "name": "Pembuat diagram Pareto keluhan",
+  "ringkas": "Urutkan jenis keluhan atau penyimpangan dari yang terbanyak dan temukan sedikit jenis yang menyumbang sebagian besar masalah.",
+  "kataKunci": [
+    "pareto",
+    "keluhan",
+    "prioritas masalah",
+    "80/20",
+    "penyimpangan"
+  ],
+  "inputs": [
+    {
+      "key": "periode",
+      "type": "text",
+      "label": "Periode data",
+      "required": true,
+      "contoh": "Oktober 2026"
+    },
+    {
+      "key": "jenis",
+      "type": "longtext",
+      "label": "Jenis masalah (jenis | jumlah)",
+      "required": true,
+      "contoh": "Kemasan bocor | 42"
+    },
+    {
+      "key": "batas",
+      "type": "choice",
+      "label": "Batas \"sebagian besar\"",
+      "required": true,
+      "default": "80",
+      "choices": [
+        {
+          "v": "70",
+          "t": "70%"
+        },
+        {
+          "v": "80",
+          "t": "80% (umum)"
+        },
+        {
+          "v": "90",
+          "t": "90%"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Urutkan dan hitung",
+      "set": {
+        "rows": "baris(input.jenis).slice(0, 60).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: p[0] || '-', n: num(p[1]) }; }).sort((a, b) => b.n - a.n)",
+        "total": "v.rows.reduce((a, r) => a + r.n, 0)",
+        "kum": "v.rows.map((r, i) => Object.assign({}, r, { persen: v.total ? Math.round(r.n / v.total * 1000) / 10 : 0, kumulatif: v.total ? Math.round(v.rows.slice(0, i + 1).reduce((a, x) => a + x.n, 0) / v.total * 1000) / 10 : 0 }))",
+        "penting": "(() => { const idx = v.kum.findIndex((r) => r.kumulatif >= num(input.batas)); return idx < 0 ? v.kum.length : idx + 1; })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.penting + ' jenis masalah menyumbang ' + (v.kum[v.penting - 1] || { kumulatif: 0 }).kumulatif + '% dari total ' + v.total + ' kejadian pada ' + input.periode",
+    "teks": "'# Pareto masalah ' + input.periode + '\\n\\n' + tabel(['Urutan', 'Jenis', 'Jumlah', '%', '% kumulatif', 'Prioritas'], v.kum.map((r, i) => [i + 1, r.nama, r.n, r.persen, r.kumulatif, i < v.penting ? 'Fokus utama' : 'Pantau'])) + '\\n\\nFokuskan perbaikan pada: ' + v.kum.slice(0, v.penting).map((r) => r.nama).join(', ') + '.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pareto-masalah'",
+        "isi": "csv([['Urutan', 'Jenis', 'Jumlah', 'Persen', 'Persen kumulatif', 'Prioritas']].concat(v.kum.map((r, i) => [i + 1, r.nama, r.n, r.persen, r.kumulatif, i < v.penting ? 'Fokus utama' : 'Pantau'])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "periode": "Oktober 2026",
+      "jenis": "Kemasan bocor | 42\nWarna berubah | 25\nAroma | 15\nLabel | 10\nLainnya | 8",
+      "batas": "80"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 jenis masalah menyumbang 82% dari total 100 kejadian",
+        "Fokus utama"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-angka"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pareto",
+      "keluhan",
+      "prioritas masalah",
+      "80/20",
+      "penyimpangan"
+    ],
+    "data": [
+      "periode data",
+      "jenis masalah (jenis | jumlah)",
+      "batas \"sebagian besar\""
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

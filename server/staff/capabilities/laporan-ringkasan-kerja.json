@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-laporan-ringkasan-kerja",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan laporan ringkasan kerja",
+  "version": 1,
+  "name": "Laporan ringkasan kerja",
+  "ringkas": "Ubah catatan kerja per baris menjadi laporan harian, mingguan, atau bulanan dengan total, capaian terhadap target, dan catatan penting.",
+  "kataKunci": ["laporan", "harian", "mingguan", "capaian", "target", "produksi", "penjualan", "tugas"],
+  "kemampuan": {
+    "id": "laporan-ringkasan-kerja",
+    "kelompok": "pelaporan",
+    "tujuanAwam": "Mengubah catatan kerja yang berserakan menjadi laporan singkat yang menunjukkan total, apakah target tercapai, dan hal yang perlu dicatat."
+  },
+  "inputs": [
+    { "key": "periode", "type": "choice", "label": "Laporan untuk periode apa?", "required": true, "default": "harian", "choices": [{ "v": "harian", "t": "Harian" }, { "v": "mingguan", "t": "Mingguan" }, { "v": "bulanan", "t": "Bulanan" }] },
+    { "key": "jenis", "type": "choice", "label": "Yang dilaporkan berupa apa?", "required": true, "default": "tugas", "choices": [{ "v": "produksi", "t": "Hasil produksi (jumlah barang)" }, { "v": "penjualan", "t": "Penjualan (rupiah)" }, { "v": "tugas", "t": "Tugas yang selesai" }] },
+    { "key": "nama", "type": "text", "label": "Nama tim atau pekerjaan", "required": true, "contoh": "Tim toko cabang kota" },
+    { "key": "catatan", "type": "longtext", "label": "Catatan kerja: kegiatan | jumlah | catatan (satu baris per kegiatan)", "required": true, "contoh": "Kue brownies | 40 | habis jam 3\nKue lapis | 25 | bahan telat\nRoti | 60" },
+    { "key": "target", "type": "number", "label": "Target untuk periode ini (boleh kosong)", "required": false, "contoh": "150" }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Urai catatan dan hitung total",
+      "set": {
+        "satuan": "({ produksi: 'unit', penjualan: 'rupiah', tugas: 'tugas' })[input.jenis] || 'unit'",
+        "mentah": "baris(input.catatan || '').slice(0, 300).map((t) => t.split('|').map((p) => p.trim()))",
+        "item": "v.mentah.map((p) => ({ nama: p[0] || '(tanpa nama)', jumlah: p.length > 1 && /[0-9]/.test(p[1]) ? num(p[1]) : (input.jenis === 'tugas' && (p.length < 2 || p[1] === '') ? 1 : NaN), catatan: p.slice(2).join(' ') }))",
+        "sah": "v.item.filter((x) => Number.isFinite(x.jumlah) && x.jumlah >= 0)",
+        "salah": "v.item.length - v.sah.length",
+        "total": "Math.round(v.sah.reduce((a, b) => a + b.jumlah, 0) * 100) / 100",
+        "rata": "v.sah.length ? Math.round(v.total / v.sah.length * 100) / 100 : 0",
+        "terbesar": "v.sah.slice().sort((a, b) => b.jumlah - a.jumlah)[0]",
+        "target": "Number(input.target) > 0 ? Number(input.target) : 0",
+        "capaian": "v.target > 0 ? Math.round(v.total / v.target * 100) : 0",
+        "status": "v.target <= 0 ? 'tanpa target' : v.capaian >= 100 ? 'tercapai' : v.capaian >= 80 ? 'hampir tercapai' : 'belum tercapai'",
+        "kurang": "v.target > 0 && v.total < v.target ? Math.round((v.target - v.total) * 100) / 100 : 0"
+      }
+    },
+    {
+      "id": "susun",
+      "use": "hitung",
+      "label": "Susun catatan penting",
+      "set": {
+        "catatanPenting": "v.sah.filter((x) => x.catatan !== '')",
+        "peringatan": "[].concat(v.salah ? [v.salah + ' baris tidak punya jumlah yang bisa dibaca dan tidak dihitung'] : [], !v.sah.length ? ['Belum ada jumlah yang valid'] : [], v.status === 'belum tercapai' ? ['Capaian di bawah 80%; periksa penyebab dalam catatan'] : [])",
+        "tampilTotal": "input.jenis === 'penjualan' ? rp(v.total) : String(v.total) + ' ' + v.satuan",
+        "tampilTarget": "v.target > 0 ? (input.jenis === 'penjualan' ? rp(v.target) : String(v.target) + ' ' + v.satuan) : 'tidak ditentukan'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Laporan ' + input.periode + ' ' + input.nama + ': total ' + v.tampilTotal + ' dari ' + v.sah.length + ' kegiatan, capaian ' + (v.target > 0 ? v.capaian + '% (' + v.status + ')' : 'tanpa target')",
+    "teks": "'# Laporan ' + input.periode + ': ' + input.nama + '\\n\\n' + tabel(['Ukuran', 'Nilai'], [['Jumlah kegiatan', v.sah.length], ['Total', v.tampilTotal], ['Rata-rata per kegiatan', v.rata], ['Target', v.tampilTarget], ['Capaian', v.target > 0 ? v.capaian + '%' : '-'], ['Status', v.status], ['Kekurangan dari target', v.kurang]]) + '\\n\\n## Rincian\\n\\n' + tabel(['Kegiatan', 'Jumlah', 'Catatan'], v.item.map((x) => [x.nama, Number.isFinite(x.jumlah) ? x.jumlah : 'tidak terbaca', x.catatan || '-'])) + '\\n\\n## Catatan penting\\n\\n' + (v.catatanPenting.length ? v.catatanPenting.map((x) => '- ' + x.nama + ': ' + x.catatan).join('\\n') : '- Tidak ada catatan khusus.') + (v.peringatan.length ? '\\n\\n## Perlu diperhatikan\\n\\n' + v.peringatan.map((p) => '- ' + p).join('\\n') : '')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'laporan-' + cut(String(input.periode), 10) + '-' + cut(String(input.nama).toLowerCase(), 25)", "isi": "csv([['kegiatan', 'jumlah', 'catatan']].concat(v.item.map((x) => [x.nama, Number.isFinite(x.jumlah) ? x.jumlah : '', x.catatan])).concat([['TOTAL', v.total, v.status]]))" },
+      { "jenis": "md", "nama": "'ringkasan-' + cut(String(input.periode), 10)", "isi": "'# Laporan ' + input.periode + ': ' + input.nama + '\\n\\nTotal ' + v.tampilTotal + ', target ' + v.tampilTarget + ', status ' + v.status + '.\\n\\n' + v.catatanPenting.map((x) => '- ' + x.nama + ': ' + x.catatan).join('\\n')" }
+    ],
+    "data": "({ kegiatan: v.sah.length, total: v.total, rata: v.rata, target: v.target, capaian: v.capaian, salah: v.salah })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": { "input": { "periode": "harian", "jenis": "produksi", "nama": "Tim dapur", "catatan": "Kue brownies | 40 | habis jam 3\nKue lapis | 25 | bahan telat\nRoti | 60", "target": 150 }, "expect": { "berkas": 2, "mengandung": ["total 125 unit", "83%"] } },
+  "otakProfil": {
+    "peran": "penyusun laporan kerja yang ringkas dan jujur",
+    "tujuan": "Tulis narasi laporan singkat dari angka yang sudah dihitung: apa yang tercapai, apa yang meleset, dan langkah berikutnya.",
+    "gaya": "ringkas, faktual, mudah dibaca atasan dalam satu menit",
+    "pedoman": ["Pakai hanya angka dari hasil hitung; jangan menambah angka baru.", "Sebut penyebab hanya bila ada di catatan.", "Akhiri dengan satu sampai tiga langkah berikutnya."],
+    "skema": { "pembahasan": "teks", "sorotan": "daftar", "langkah": "daftar" },
+    "contoh": { "baik": "Produksi 125 dari target 150 (83%); kekurangan terutama karena bahan telat untuk kue lapis.", "buruk": "Kerja tim sangat luar biasa." },
+    "batas": { "pembahasan": 600, "butir": 4 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["target"], "minPanjang": 40, "maksPanjang": 800 },
+    "contohAI": "{\"pembahasan\":\"Produksi mencapai 125 dari target 150 atau 83 persen. Kekurangan terutama karena bahan telat untuk kue lapis.\",\"sorotan\":[\"Brownies habis jam 3\",\"Bahan telat\"],\"langkah\":[\"Pesan bahan lebih awal\",\"Tambah stok brownies\"]}"
+  },
+  "evaluasi": [
+    { "nama": "produksi harian dengan target", "input": { "periode": "harian", "jenis": "produksi", "nama": "Tim dapur", "catatan": "Kue brownies | 40 | habis jam 3\nKue lapis | 25 | bahan telat\nRoti | 60", "target": 150 }, "ai": "{\"pembahasan\":\"Produksi mencapai 125 dari target 150 atau 83 persen. Kekurangan terutama karena bahan telat untuk kue lapis.\",\"sorotan\":[\"Brownies habis jam 3\"],\"langkah\":[\"Pesan bahan lebih awal\"]}", "kriteria": { "mengandung": ["target", "125"], "mengandungAturan": ["hampir tercapai", "bahan telat", "83%"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.total", "min": 125, "max": 125 }, { "path": "data.capaian", "min": 83, "max": 83 }, { "path": "data.kegiatan", "min": 3, "max": 3 }] } },
+    { "nama": "penjualan angka format Indonesia", "input": { "periode": "mingguan", "jenis": "penjualan", "nama": "Toko online", "catatan": "Senin | 1.500.000\nSelasa | Rp 2.000.000 | ada promo\nRabu | 500.000", "target": "3000000" }, "ai": "{\"pembahasan\":\"Penjualan mingguan mencapai 4 juta dari target 3 juta sehingga target terlampaui, dibantu promo hari Selasa.\",\"sorotan\":[\"Promo hari Selasa\"],\"langkah\":[\"Ulangi promo\"]}", "kriteria": { "mengandung": ["promo", "target"], "mengandungAturan": ["tercapai", "Rp"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.total", "min": 4000000, "max": 4000000 }, { "path": "data.capaian", "min": 133, "max": 134 }] } },
+    { "nama": "tugas tanpa jumlah dan baris tidak terbaca", "input": { "periode": "bulanan", "jenis": "tugas", "nama": "Tim admin", "catatan": "Rekap stok\nBalas pesan | banyak | ditunda\nCetak faktur | 3", "target": "" }, "ai": "{\"pembahasan\":\"Tim menyelesaikan tugas rutin; satu baris jumlahnya tidak terbaca sehingga laporan perlu dilengkapi ulang oleh tim.\",\"sorotan\":[\"Satu baris tidak terbaca\"],\"langkah\":[\"Lengkapi jumlah\"]}", "kriteria": { "mengandung": ["tugas", "tim admin"], "mengandungAturan": ["tanpa target", "tidak punya jumlah"], "panjangMin": 200, "panjangMaks": 4000, "nilai": [{ "path": "data.total", "min": 4, "max": 4 }, { "path": "data.salah", "min": 1, "max": 1 }, { "path": "data.kegiatan", "min": 2, "max": 2 }] } }
+  ]
+}

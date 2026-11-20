@@ -1,12 +1,21 @@
 // Autonomous work engine: schedules tasks, runs agents (Claude or simulation), delegation, approvals, routines, chat.
-import * as store from './store.js';
-import * as brain from './brain.js';
-import * as llm from './llm.js';
-import { CAPABILITIES, CAP_IDS, autoActivate } from './catalog.js';
-import * as lib from './librarian.js';
+import * as config from './config.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import * as store from './penyimpanan/store.js';
+import * as brain from './pengetahuan/brain.js';
+import * as llm from './otak/llm.js';
+import { CAPABILITIES, CAP_IDS, autoActivate, coreToolIds, groupsFor, groupOfTool, roleAllows, roleOf, TOOL_GROUPS, ROLE_BASE } from './otak/catalog.js';
+import * as lib from './pengetahuan/librarian.js';
 import * as collab from './collab.js';
+import * as browser from './integrasi/browser.js';
+import * as otomasi from './integrasi/n8n.js';
+import * as staff from './staff/index.js';   // staf = alur n8n + karakter 3D; manajer divisi memakai satu tool "staf" (docs/ARSITEKTUR-STAF-N8N.md)
 import * as gov from './governor.js';
-import * as org from './org.js';
+import * as approvals from './approvals.js';   // satu-satunya pintu kartu persetujuan
+import { mapStatus } from './staff/status-map.js';
+import * as org from './organisasi/org.js';
+import * as learn from './pengetahuan/skills-learn.js';   // belajar mandiri: skill buatan agen, memori kecil, tinjauan pasca-tugas
 llm.setTaskCostHook(gov.addCost);
 
 const { uid } = store;
@@ -19,7 +28,7 @@ const OPEN = new Set(['todo', 'in_progress', 'waiting', 'review', 'blocked']);
 
 const jobs = new Map(); // taskId -> { empId, mode, steps, i }
 let timer = null;
-let budgetWarned = false;
+const budgetWarnedWs = new Set();   // per workspace
 
 // ───────────────────────── primitives ─────────────────────────
 export function event(type, actorId, text, refs = {}) {
@@ -27,6 +36,7 @@ export function event(type, actorId, text, refs = {}) {
 }
 
 export function setStatus(e, status, statusText, currentTaskId = e.currentTaskId) {
+  status = mapStatus(status);   // lima nilai 3D saja (working, meeting, chatting, idle, offline); pemetaan tertutup di staff/status-map.js
   // while a meeting is in progress the person stays in the Conference Hall, even if a background task reports progress
   if (e.meetingUntil && e.meetingUntil > Date.now() && status !== 'meeting' && status !== 'offline') status = 'meeting';
   Object.assign(e, { status, statusText, currentTaskId });
@@ -50,19 +60,30 @@ export function postMessage(channelId, authorId, text, extra = {}) {
 
 const depthOf = (t) => { let d = 0; let p = t; while (p?.parentId && d < 10) { p = task(p.parentId); d++; } return d; };
 
-export function createTask({ title, description = '', assigneeId, createdBy = 'owner', parentId = null, priority = 'medium', kind = 'task', routineId = null, dueAt = null }) {
-  gov.checkCreate({ title, createdBy, parentId, kind });
+/** Quest contract: every task says what "done" looks like. Agents that do not say it get a sensible default per kind, so nothing is open-ended. */
+function defaultExpected(kind, title) {
+  if (kind === 'goal') return `Laporan akhir untuk "${String(title).slice(0, 80)}": hasil per bagian, keputusan yang dibutuhkan dari Owner, dan langkah berikutnya. Setiap angka/fakta disertai sumber; yang tidak ada datanya ditulis "data tidak tersedia".`;
+  if (kind === 'routine') return 'Ringkasan singkat hasil rutinitas (apa yang dicek, temuan, tindak lanjut) dengan sumber.';
+  return `Dokumen hasil "${String(title).slice(0, 80)}" yang siap dipakai, disertai sumber untuk setiap fakta/angka dan daftar hal yang belum bisa dipenuhi.`;
+}
+export function createTask({ title, description = '', assigneeId, createdBy = 'owner', parentId = null, priority = 'medium', kind = 'task', routineId = null, dueAt = null, expected = '', stage = 0 }) {
+  gov.checkCreate({ title, createdBy, parentId, kind, assigneeId });
   const a = emp(assigneeId) || emp('aria');
+  const parent = parentId ? task(parentId) : null;
   const t = {
     id: uid('t'), title: String(title).slice(0, 160), description: String(description).slice(0, 6000),
+    expected: String(expected || '').trim().slice(0, 600) || defaultExpected(kind, title),   // definition of done
+    rootId: parent ? (parent.rootId || parent.id) : null, stage: Math.max(0, Math.min(5, stage | 0)),
     divisionId: a.divisionId, assigneeId: a.id, createdBy, parentId, priority, kind, routineId,
     dueAt: dueAt || task(parentId)?.dueAt || Date.now() + ({ high: 1, medium: 3, low: 7 }[priority] || 3) * (kind === 'routine' ? 0.25 : 1) * 864e5,
     status: 'todo', output: '', summary: '', revisions: 0, failures: 0, log: [],
     createdAt: Date.now(), updatedAt: Date.now(),
   };
+  if (!t.rootId) t.rootId = t.id;
   store.upsert('tasks', t);
   logTask(t, createdBy, 'created', `Tugas dibuat untuk ${a.name}`);
   const by = emp(createdBy);
+  if (parent && depthOf(t) <= 2) goalNote(t, createdBy, `📨 **${by?.name || 'Sistem'} → ${a.name}**${t.stage ? ` · tahap ${t.stage}` : ''}: ${t.title}\n_Hasil diharapkan:_ ${t.expected.slice(0, 220)}`);
   if (parentId) event('delegated', createdBy, `${by?.name || 'Sistem'} mendelegasikan "${t.title}" ke ${a.name}`, { targetId: a.id, taskId: t.id });
   else event('task_created', createdBy, `${by?.name || 'Sistem'} membuat tugas "${t.title}" untuk ${a.name}`, { targetId: a.id, taskId: t.id });
   return t;
@@ -106,18 +127,67 @@ export function start() {
   stop();
   if (db().settings.autoApprove !== false) autoApprovePending();
   const loop = async () => {
-    try { await tick(); } catch (err) { console.error('tick error', err); }
+    await _passOnce();
     timer = setTimeout(loop, Math.max(800, db().settings.tickMs || 2500));
   };
   timer = setTimeout(loop, 1000);
 }
 export function stop() { clearTimeout(timer); timer = null; }
 
+// ───────── P7: hanya ruang kerja AKTIF yang di-tick ─────────
+// Aktif = ada pekerjaan terbuka (tugas todo/in_progress/waiting, rapat berjalan, job di memori, anggota sedang rapat) ATAU baru dipakai orang
+// (permintaan lewat store.run dalam ${ACTIVE_MS / 1000} detik terakhir) ATAU ruang kerja utama. Ruang kerja tidur dilewati sampai `wakeAt`
+// (rutinitas atau persetujuan berbatas waktu paling awal), jadi 1000 ruang kerja yang diam tidak memakan waktu tick.
+const ACTIVE_MS = config.get('TICK_ACTIVE_MS');
+const COLD_PER_PASS = 25;       // ruang kerja yang belum dimuat dibangunkan paling banyak segini per lintasan (menyebar beban saat boot)
+const WAKE_SCAN_MIN = 36 * 60;  // jadwal cron dicari sampai 36 jam ke depan; lewat itu dicek ulang
+/** keadaan kerja ruang kerja saat ini (dipanggil di dalam konteksnya) */
+function workState({ scan = true } = {}) {
+  const d = db(), ws = store.current(), now = Date.now();
+  const busy = d.tasks.some((t) => t.status === 'todo' || t.status === 'in_progress' || t.status === 'waiting')
+    || d.meetings.some((m) => m.status === 'running' || m.status === 'waiting_owner')
+    || [...jobs.values()].some((j) => (j.ws || 'main') === ws)
+    || d.employees.some((e) => e.meetingUntil);
+  if (busy || !scan) return { busy, wakeAt: 0 };
+  let wake = Infinity;
+  for (const a of d.approvals) if (a.status === 'pending' && a.expiresAt) wake = Math.min(wake, a.expiresAt);
+  if (d.settings.autonomy) {
+    for (const r of d.routines) {
+      if (!r.enabled) continue;
+      if (r.cron) {
+        const start = Math.floor(now / 60000) + 1;
+        let hit = start + WAKE_SCAN_MIN;
+        for (let m = start; m < start + WAKE_SCAN_MIN; m++) { if (collab.cronMatches(r.cron, new Date(m * 60000)) && r.lastMinute !== m) { hit = m; break; } }
+        wake = Math.min(wake, hit * 60000);
+      } else wake = Math.min(wake, (r.lastRunAt || 0) + (r.everyMinutes || 60) * 60000);
+    }
+  }
+  return { busy: false, wakeAt: Number.isFinite(wake) ? Math.max(wake, now + 1000) : now + WAKE_SCAN_MIN * 60000 };
+}
+/** satu lintasan penjadwal atas semua ruang kerja aktif (juga dipakai uji beban) */
+export async function _passOnce() {
+  const now = Date.now(); let cold = 0;
+  for (const ws of store.ids()) {
+    const a = store.activity(ws);
+    if (!(ws === 'main' || a.busy || now - a.lastTouch < ACTIVE_MS)) {
+      if (a.wakeAt > now) continue;
+      if (!a.loaded) { if (cold >= COLD_PER_PASS) continue; cold++; }
+    }
+    store.setActivity(ws, { ticks: (a.ticks || 0) + 1 });
+    try { await store.runQuiet(ws, tick); } catch (err) { console.error(`tick error [${ws}]`, err); }
+    const hot = ws === 'main' || now - a.lastTouch < ACTIVE_MS;   // yang masih hangat tidak perlu mencari jadwal berikutnya (mahal untuk banyak cron)
+    try { store.setActivity(ws, store.runQuiet(ws, () => workState({ scan: !hot }))); } catch (err) { console.error(`status aktivitas [${ws}]`, err); }
+  }
+  try { store.evictIdle(); } catch (err) { console.error('pelepasan memori:', err); }
+}
+
 async function tick() {
   const { settings } = db();
   const now = Date.now();
+  try { approvals.sweep(now); } catch (err) { console.warn('[tick] sweep persetujuan:', err.message); }   // kartu yang punya batas waktu (aksi browser) ditutup sebagai kedaluwarsa
   // meetings end
-  for (const e of db().employees) if (e.meetingUntil && e.meetingUntil < now) { delete e.meetingUntil; if (e.status === 'meeting') setStatus(e, e.currentTaskId ? 'working' : 'idle', e.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja'); }
+  try { collab.sweepOrphanMeetings(); } catch (err) { console.warn('[tick] sweep rapat:', err.message); }   // dead meetings must not keep agents "busy" or capture chat
+  for (const e of db().employees) if (e.meetingUntil && e.meetingUntil < now) { delete e.meetingUntil; delete e.kickoff; if (e.status === 'meeting') setStatus(e, e.currentTaskId ? 'working' : 'idle', e.currentTaskId ? 'Kembali bekerja' : 'Siap bekerja'); }
   if (!settings.autonomy) return;
 
   // routines
@@ -138,6 +208,14 @@ async function tick() {
     if (cs.length && cs.every((c) => c.status === 'done')) {
       t.status = 'todo'; t.synth = true;
       logTask(t, 'system', 'resumed', 'Semua subtugas selesai — kembali ke assignee untuk sintesis');
+    } else if (cs.length && cs.every((c) => c.status === 'done' || c.status === 'blocked')) {
+      // a blocked child must not leave the parent waiting forever: synthesize from what finished, or block when nothing did
+      if (cs.some((c) => c.status === 'done')) { t.status = 'todo'; t.synth = true; logTask(t, 'system', 'resumed', `${cs.filter((c) => c.status === 'blocked').length} subtugas diblokir — sintesis dari yang selesai`); }
+      else { t.status = 'blocked'; logTask(t, 'system', 'error', 'Semua subtugas diblokir — tugas induk ikut diblokir'); event('alert', 'system', `"${t.title}" diblokir karena semua subtugasnya gagal`, { taskId: t.id }); }
+    } else if (!cs.length && !jobs.has(t.id) && now - (t.waitingSince || (t.waitingSince = now)) > 30000) {
+      // orphan: waiting for subtasks that were never created — put it back to work instead of hanging
+      t.status = 'todo'; delete t.synth; delete t.waitingSince; t.noDelegate = true;
+      logTask(t, 'system', 'resumed', 'Tidak ada subtugas yang dibuat — tugas dikerjakan langsung oleh assignee');
     }
   }
 
@@ -145,25 +223,26 @@ async function tick() {
   const liveRunning = [...jobs.values()].filter((j) => j.mode === 'live').length;
   let slots = live ? Math.max(0, settings.maxConcurrent - liveRunning) : 6;
   const order = { high: 0, medium: 1, low: 2 };
-  const queue = db().tasks.filter((t) => t.status === 'todo' && !jobs.has(t.id) && (!t.retryAt || t.retryAt <= now))
+  const queue = db().tasks.filter((t) => t.status === 'todo' && !t.paused && !jobs.has(t.id) && (!t.retryAt || t.retryAt <= now) && stageReady(t))
     .sort((a, b) => order[a.priority] - order[b.priority] || a.createdAt - b.createdAt);
   for (const t of queue) {
     if (slots <= 0) break;
     const e = emp(t.assigneeId);
     if (!e || e.type !== 'ai' || e.status === 'offline') continue;
-    if ([...jobs.values()].some((j) => j.empId === e.id)) continue;
+    if ([...jobs.values()].some((j) => j.empId === e.id && (j.ws || 'main') === store.current())) continue;   // same ids exist in other workspaces
+    if (e.status === 'meeting' && e.meetingUntil && e.meetingUntil > now) continue;   // an agent in a meeting does not start a job in the middle of it
     if (live && llm.budgetLeft() <= 0) {
-      if (!budgetWarned) { budgetWarned = true; event('alert', 'system', `Budget harian $${settings.dailyBudgetUSD} habis — agen live dijeda. Naikkan budget di Pengaturan.`); }
+      if (!budgetWarnedWs.has(store.current())) { budgetWarnedWs.add(store.current()); event('alert', 'system', `Budget harian $${settings.dailyBudgetUSD} habis — agen live dijeda. Naikkan budget di Pengaturan.`); }
       break;
     }
-    budgetWarned = false;
+    budgetWarnedWs.delete(store.current());
     slots--;
     startJob(e, t, live ? 'live' : 'sim');
   }
 
   // advance simulation jobs one step each
   for (const [taskId, j] of jobs) {
-    if (j.mode !== 'sim' || j.busy) continue;
+    if (j.mode !== 'sim' || j.busy || (j.ws || 'main') !== store.current()) continue;   // each workspace advances only its own jobs
     if (Math.random() < 0.25) continue; // natural jitter so the office doesn't move in lockstep
     j.busy = true;
     try {
@@ -171,21 +250,39 @@ async function tick() {
       if (!step) { jobs.delete(taskId); continue; }
       const done = step();
       if (done || j.i >= j.steps.length) endJob(taskId);
-    } catch (err) { console.error(err); endJob(taskId); }
+    } catch (err) {
+      // a crashing step used to leave the task "in_progress" forever with no job: route it through the normal failure/retry/recovery path
+      console.error(err); const jt = task(taskId), je = emp(j.empId); endJob(taskId);
+      if (jt && je && jt.status === 'in_progress') failTask(je, jt, err);
+    }
     finally { j.busy = false; }
   }
 }
 
+/** stage gate: a stage-2 subtask waits until every earlier-stage sibling is done (riset dulu, baru eksekusi), so later work builds on real results and tokens are not spent on guesses */
+function stageReady(t) {
+  if (!t.stage || !t.parentId) return true;
+  const p = task(t.parentId); if (!p) return true;
+  const earlier = children(p).filter((c) => c.stage && c.stage < t.stage);
+  if (!earlier.every((c) => c.status === 'done' || c.status === 'blocked' || c.status === 'cancelled')) return false;
+  p.stagesOpened = p.stagesOpened || [];
+  if (earlier.length && !p.stagesOpened.includes(t.stage)) {
+    p.stagesOpened.push(t.stage); store.upsert('tasks', p);
+    const prev = earlier.filter((c) => c.status === 'done').map((c) => `${c.title.slice(0, 60)} (${emp(c.assigneeId)?.name})`).join('; ');
+    goalNote(p, p.assigneeId, `▶️ **Tahap ${t.stage} dimulai.** Dibangun di atas hasil tahap sebelumnya: ${prev || '-'}`);
+  }
+  return true;
+}
 function startJob(e, t, mode) {
   t.status = 'in_progress'; t.startedAt = t.startedAt || Date.now();
   logTask(t, e.id, 'started', t.synth ? 'Mulai menyusun hasil dari subtugas' : (mode === 'live' ? `Mulai bekerja (${llm.provider() === 'groq' ? 'Groq' : 'Claude'})` : 'Mulai bekerja (simulasi)'));
   setStatus(e, 'working', t.synth ? 'Menyusun hasil tim' : 'Membaca brief', t.id);
   event('task_started', e.id, `${e.name} mulai mengerjakan "${t.title}"`, { taskId: t.id });
   if (mode === 'live') {
-    jobs.set(t.id, { empId: e.id, mode });
+    jobs.set(t.id, { empId: e.id, mode, ws: store.current() });
     runLive(e, t).catch((err) => failTask(e, t, err)).finally(() => endJob(t.id));
   } else {
-    jobs.set(t.id, { empId: e.id, mode, i: 0, steps: simSteps(e, t) });
+    jobs.set(t.id, { empId: e.id, mode, i: 0, steps: simSteps(e, t), ws: store.current() });
   }
 }
 
@@ -229,18 +326,37 @@ function failTask(e, t, err) {
       const previous = e; t.assigneeId = backup.id; t.divisionId = backup.divisionId; t.failures = 0; t.recoveryCount = (t.recoveryCount || 0) + 1; t.retryAt = Date.now() + 2000;
       logTask(t, 'system', 'resumed', `Recovery handoff: ${previous.name} → ${backup.name}. Pelajaran: ${lesson}`);
       event('handoff', previous.id, `${previous.name} menyerahkan failure case "${t.title}" ke ${backup.name}`, { targetId: backup.id, taskId: t.id });
-    } else if ((t.recoveryCount || 0) >= 2) t.status = 'blocked';
+    } else if ((t.recoveryCount || 0) >= 2 || t.failures >= 5) t.status = 'blocked';   // nobody to hand over to: stop after 5 failures instead of retrying forever
   }
   logTask(t, e.id, 'error', `Error: ${msg.slice(0, 400)}${t.status === 'blocked' ? ' — diblokir setelah recovery lintas agen' : ' — retry adaptif dijadwalkan'}`);
+  if (t.status === 'blocked') goalNote(t, e.id, `⚠️ **Macet:** ${t.title} (${e.name}). Alasan: ${msg.slice(0, 180)}\nBuka **Butuh kamu** untuk mencoba lagi atau memindahkan tugas.`);
   event('alert', e.id, `${e.name} gagal mengerjakan "${t.title}": ${msg.slice(0, 160)}`, { taskId: t.id });
 }
 
 // ───────────────────────── completion / approvals ─────────────────────────
 const POLICY_RE = /\b(publikasi|publish|posting|kontrak|contract|penawaran resmi|harga|diskon|budget|anggaran|bayar|payment|transfer|rekrut|offer letter|pecat|kebijakan)\b/i;
 
-function finishTask(e, t, { summary, output, needsApproval }) {
+/** Check the evidence an agent cites: a Brain note that exists, a URL, an integration receipt, or real tool output gathered while working. Claims alone do not count. */
+function verifyEvidence(list, toolEvidence = 0) {
+  const items = (Array.isArray(list) ? list : String(list || '').split(/\n|;/)).map((x) => String(x || '').trim()).filter((x) => x && !/^(-|tidak ada|none|n\/a)$/i.test(x)).slice(0, 12);
+  const checked = items.map((text) => {
+    const title = text.replace(/^\[\[|\]\]$/g, '').replace(/^.*\[\[([^\]|]+).*$/, '$1').trim();
+    // a verified note (Owner / Drive / System), a URL or an integration receipt; an agent's own draft note is NOT evidence (it could cite what it just wrote)
+    // KONTRAK EKSEKUSI: id jalan staf ("run-xxxxx") hanya sah bila jalan itu benar ada, berstatus selesai, dan membawa bukti; id karangan = bukan bukti
+    const runIds = staff.kontrak.runIdsDari(text);
+    const ok = runIds.length ? runIds.every((id) => staff.kontrak.runBukti(store.current(), id)) : (/https?:\/\/\S+/.test(text) || brain.isVerified(brain.findNote(title)) || /\b(receipt|spreadsheetId|documentId|eventId|range)\b|docs\.google|drive\.google/i.test(text));
+    return { text: text.slice(0, 200), ok };
+  });
+  return { checked, verified: checked.filter((x) => x.ok).length + (toolEvidence > 0 ? 1 : 0) };
+}
+const needsOwnerReview = (t) => !t.parentId && t.kind !== 'routine' && emp(t.createdBy)?.type === 'human' && db().settings.ownerReview !== false;
+
+function finishTask(e, t, { summary, output, needsApproval, evidence = [], gaps = '', toolEvidence = 0 }) {
   t.output = String(output || summary || '').slice(0, 40000);
   t.summary = String(summary || '').slice(0, 600);
+  const ev = verifyEvidence(evidence, toolEvidence);
+  t.evidence = ev.checked; t.gaps = String(gaps || '').trim().slice(0, 800); t.unverified = ev.verified === 0;
+  if (t.unverified) logTask(t, e.id, 'note', '⚠️ Selesai tanpa bukti yang bisa dicek (catatan Brain, URL, receipt, atau hasil tool). Dianggap asumsi sampai ditinjau.');
   delete t.synth;
   if (t.output.length > 40) {
     // auto-filed into "<Division>/<Type>" with a clean title (same task overwrites; a different task gets a suffix)
@@ -256,10 +372,19 @@ function finishTask(e, t, { summary, output, needsApproval }) {
     event('note_written', e.id, `${e.name} menyimpan "${n.title}" ke ${n.folder}`, { noteId: n.id, taskId: t.id });
   }
   brain.remember(e, `Menyelesaikan "${t.title}"${t.summary ? ' — ' + t.summary.slice(0, 160) : ''}`);
+  // "Butuh kamu": what a human asked for is reviewed by that human before it counts as done (auto-approve never skips this)
+  if (needsOwnerReview(t)) {
+    t.status = 'review';
+    const a = approvals.create({ kind: 'review', taskId: t.id, requesterId: e.id, approverId: t.createdBy, title: t.title, summary: t.summary, expected: t.expected, evidence: t.evidence, gaps: t.gaps, unverified: t.unverified });
+    logTask(t, e.id, 'approval', 'Hasil diserahkan untuk direview Owner', { approvalId: a.id });
+    event('approval_requested', e.id, `${e.name} menyerahkan "${t.title}" untuk direview`, { taskId: t.id, targetId: t.createdBy });
+    goalNote(t, e.id, `🔎 **Hasil siap direview:** ${t.title}\n${t.summary || ''}\n_Bukti:_ ${t.evidence.filter((x) => x.ok).length}/${t.evidence.length} terverifikasi${t.unverified ? ' — ⚠️ belum ada bukti yang bisa dicek' : ''}${t.gaps ? `\n_Belum terpenuhi:_ ${t.gaps.slice(0, 240)}` : ''}\nSetujui atau minta revisi di **Butuh kamu**, atau balas di sini.`, { approvalId: a.id });
+    return;
+  }
   const approve = gov.needsHumanApproval(t, needsApproval) || (e.autonomy === 'ask' && !t.parentId);
   if (needsApproval && t.parentId) logTask(t, e.id, 'note', 'Ditandai untuk ditinjau orkestrator di atasnya (bukan manusia).');
   if (approve && db().settings.autoApprove !== false) {
-    const a = store.upsert('approvals', { id: uid('ap'), taskId: t.id, requesterId: e.id, approverId: 'owner', title: t.title, summary: t.summary, status: 'approved', decidedBy: 'system-auto', createdAt: Date.now(), decidedAt: Date.now(), feedback: 'Disetujui otomatis sesuai pengaturan perusahaan.' });
+    const a = approvals.recordAuto({ kind: 'policy', taskId: t.id, requesterId: e.id, approverId: 'owner', title: t.title, summary: t.summary });
     logTask(t, 'system', 'approved', 'Auto-approve aktif — dilanjutkan tanpa menunggu manusia', { approvalId: a.id });
     collab.recordFeedback(e, t, 'approve', 'Auto-approve');
     event('approved', 'system', `Auto-approve menyetujui "${t.title}"`, { taskId: t.id, targetId: e.id });
@@ -267,7 +392,7 @@ function finishTask(e, t, { summary, output, needsApproval }) {
   } else if (approve) {
     t.status = 'review';
     const approverId = t.createdBy && emp(t.createdBy)?.type === 'human' ? t.createdBy : 'owner';
-    const a = store.upsert('approvals', { id: uid('ap'), taskId: t.id, requesterId: e.id, approverId, title: t.title, summary: t.summary, status: 'pending', createdAt: Date.now() });
+    const a = approvals.create({ kind: 'policy', taskId: t.id, requesterId: e.id, approverId, title: t.title, summary: t.summary });
     logTask(t, e.id, 'approval', 'Meminta persetujuan manusia', { approvalId: a.id });
     event('approval_requested', e.id, `${e.name} meminta persetujuan untuk "${t.title}"`, { taskId: t.id, targetId: approverId });
   } else {
@@ -284,12 +409,15 @@ function completeTask(e, t) {
   if (e.type === 'ai' && t.liveRun) {
     collab.recordTraining(e, t, systemPrompt(e, t), taskContext(t));
     collab.reflect(e, t);
+    learn.afterTask(e, t, 'done');
   }
   // personal assistants report finished goals back to their human in DM
   if (!t.parentId && emp(t.createdBy)?.type === 'human') {
     const pa = db().employees.find((x) => x.isPA && x.ownerId === t.createdBy);
-    if (pa) postMessage(ensureDM(pa.id, t.createdBy), pa.id, `✅ **${t.title}** selesai${e.id !== pa.id ? ` (dikerjakan ${e.name})` : ''}.\n${t.summary || ''}`, { taskId: t.id });
-  }
+    const text = `✅ **${t.title}** selesai${e.id !== pa?.id ? ` (dikerjakan ${e.name})` : ''}.\n${t.summary || ''}${t.noteId ? `\nHasil lengkap: [[${db().notes.find((n) => n.id === t.noteId)?.title || t.title}]]` : ''}`;
+    if (t.kind === 'goal') goalNote(t, pa?.id || e.id, text);
+    else if (pa) postMessage(ensureDM(pa.id, t.createdBy), pa.id, text, { taskId: t.id });
+  } else if (t.parentId) goalNote(t, e.id, `✅ **${e.name}** menyelesaikan: ${t.title}${t.summary ? ` — ${t.summary.slice(0, 200)}` : ''}${t.unverified ? '\n⚠️ _tanpa bukti yang bisa dicek; dianggap asumsi_' : ''}`);
   const parent = t.parentId && task(t.parentId);
   if (parent) event('handoff', e.id, `${e.name} menyerahkan hasil "${t.title}" ke ${emp(parent.assigneeId)?.name}`, { targetId: parent.assigneeId, taskId: t.id });
   if (t.routineId === 'r-standup' || !t.parentId) {
@@ -299,13 +427,18 @@ function completeTask(e, t) {
 }
 
 export function decideApproval(approvalId, { decision, feedback = '', userId = 'owner' }) {
-  const a = db().approvals.find((x) => x.id === approvalId);
-  if (!a || a.status !== 'pending') throw new Error('Approval tidak ditemukan atau sudah diputuskan');
+  const a = approvals.decide(approvalId, { decision, feedback, userId });   // satu pintu: memeriksa kartu, mencatat keputusan; efek lanjutan di bawah
+  if (a.kind === 'automation') {   // kartu otomasi: menyetujui = menyalakan otomasi yang sudah lolos uji
+    otomasi.onDecision(a, decision).catch((err) => console.warn('[otomasi]', err.message));
+    return a;
+  }
+  if (a.kind === 'browser_action') {   // persetujuan aksi browser: hanya membuka/menutup satu aksi, tidak menyelesaikan atau merevisi tugasnya
+    event(decision === 'approve' ? 'approved' : 'rejected', userId, `${emp(userId)?.name || 'Owner'} ${decision === 'approve' ? 'menyetujui' : 'menolak'} aksi browser "${a.title}"`, { taskId: a.taskId, targetId: a.requesterId });
+    return a;
+  }
   const t = task(a.taskId);
   const e = emp(a.requesterId);
-  Object.assign(a, { status: decision === 'approve' ? 'approved' : 'rejected', decidedBy: userId, decidedAt: Date.now(), feedback });
-  store.upsert('approvals', a);
-  const who = emp(userId)?.name || 'Manusia';
+  const who =emp(userId)?.name || 'Manusia';
   if (decision === 'approve') {
     logTask(t, userId, 'approved', `${who} menyetujui${feedback ? ': ' + feedback : ''}`);
     collab.recordFeedback(e, t, 'approve', feedback);
@@ -314,15 +447,17 @@ export function decideApproval(approvalId, { decision, feedback = '', userId = '
   } else {
     t.status = 'todo'; t.revisions = (t.revisions || 0) + 1; t.feedback = feedback;
     collab.recordFeedback(e, t, 'reject', feedback);
+    if (e?.type === 'ai') learn.afterTask(e, t, 'revisi');
     logTask(t, userId, 'rejected', `${who} meminta revisi: ${feedback || '(tanpa catatan)'}`);
     event('rejected', userId, `${who} meminta revisi "${t.title}"`, { taskId: t.id, targetId: e.id });
+    if (a.kind === 'review') goalNote(t, userId, `↩️ **Revisi diminta** untuk "${t.title}": ${feedback || '(tanpa catatan)'}`);
   }
   return a;
 }
 
 export function autoApprovePending() {
   if (db().settings.autoApprove === false) return 0;
-  const pending = db().approvals.filter((a) => a.status === 'pending');
+  const pending = db().approvals.filter(approvals.autoApprovable);   // review, otomasi, dan aksi browser tidak pernah disetujui otomatis
   let count = 0;
   for (const a of pending) {
     try { decideApproval(a.id, { decision: 'approve', feedback: 'Auto-approve diaktifkan', userId: 'system-auto' }); count++; }
@@ -344,7 +479,9 @@ export function humanComplete(taskId, { userId, output = '' }) {
 export function submitGoal({ title, description, userId = 'owner', priority = 'high' }) {
   const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline');
   const master = db().employees.find((x) => x.isMaster) || emp('aria');
-  return createTask({ title, description, assigneeId: (pa || master).id, createdBy: userId, kind: 'goal', priority });
+  const t = createTask({ title, description, assigneeId: (pa || master).id, createdBy: userId, kind: 'goal', priority });
+  if (emp(userId)?.type === 'human') ensureGoalThread(t);   // the goal's own discussion: progress, questions and the review all land here
+  return t;
 }
 
 // ───────────────────────── context helpers ─────────────────────────
@@ -355,12 +492,18 @@ function taskContext(t) {
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const lines = [`# Tugas: ${t.title}`, `ID: ${t.id} · Prioritas: ${t.priority} · Jenis: ${t.kind} · Tanggal hari ini: ${today} (gunakan tahun ini saat riset data terbaru)`];
   if (t.description) lines.push('', '## Deskripsi', t.description);
+  lines.push('', '## Hasil yang diharapkan (definisi selesai)', t.expected || defaultExpected(t.kind, t.title), 'Saat complete_task: isi "evidence" hanya dengan sumber yang benar-benar ada ([[catatan Brain]], URL, receipt) dan isi "gaps" dengan bagian yang belum terpenuhi. Jujur lebih baik daripada lengkap tapi karangan.');
+  if (t.stage > 1 && t.parentId) {
+    const prev = children(task(t.parentId)).filter((c) => c.stage && c.stage < t.stage && c.status === 'done');
+    if (prev.length) { lines.push('', '## Hasil tahap sebelumnya (pakai sebagai dasar, jangan diulang)'); for (const c of prev) lines.push('', `### ${c.title} — ${emp(c.assigneeId)?.name}${c.unverified ? ' (tanpa bukti: perlakukan sebagai asumsi)' : ''}`, (c.summary || c.output || '').slice(0, 1500)); }
+  }
   let p = t.parentId && task(t.parentId); let d = 0;
   while (p && d < 3) { lines.push('', `## Konteks tugas induk (${emp(p.assigneeId)?.name}): ${p.title}`, p.description.slice(0, 1200)); p = p.parentId && task(p.parentId); d++; }
   if (t.feedback) lines.push('', `## Feedback revisi dari manusia (revisi ke-${t.revisions})`, t.feedback, 'Perbaiki hasil sebelumnya:', t.output.slice(0, 4000));
   if (t.synth) {
     lines.push('', '## Hasil subtugas (sudah selesai) — gabungkan menjadi hasil akhir');
-    for (const c of children(t)) lines.push('', `### ${c.title} — ${emp(c.assigneeId)?.name}`, (c.output || c.summary).slice(0, 5000));
+    lines.push('Bagian bertanda TANPA BUKTI adalah asumsi: jangan sajikan sebagai fakta. Gabungkan juga semua "belum terpenuhi" menjadi satu daftar jujur di hasil akhir.');
+    for (const c of children(t)) lines.push('', `### ${c.title} — ${emp(c.assigneeId)?.name}${c.status === 'blocked' ? ' (MACET, tidak ada hasil)' : c.unverified ? ' (TANPA BUKTI)' : ''}`, (c.output || c.summary || '').slice(0, 5000), c.gaps ? `Belum terpenuhi: ${c.gaps}` : '', c.evidence?.length ? `Sumber: ${c.evidence.filter((x) => x.ok).map((x) => x.text).join('; ')}` : '');
   }
   return lines.join('\n');
 }
@@ -391,49 +534,113 @@ function promptSkills(e, t) {
 export function systemPrompt(e, currentTask = null) {
   const { company } = db();
   const d = div(e.divisionId);
-  const team = teamOf(e).map((x) => `- ${x.id}: ${x.name}, ${x.title} (${x.type === 'ai' ? 'AI' : 'MANUSIA'})`).join('\n') || '- (tidak ada)';
-  const heads = leads().filter((x) => x.id !== e.id).map((x) => `- ${x.id}: ${x.name}, ${x.title} — ${div(x.divisionId).name}`).join('\n');
+  const mates = teamOf(e), TEAM_LINES = 12;   // daftar ringkas staf divisi sendiri; sisanya dimuat bertahap lewat company_status(scope: id divisi)
+  const team = (mates.slice(0, TEAM_LINES).map((x) => `- ${x.id}: ${x.name}, ${x.title} (${x.type === 'ai' ? 'AI' : 'MANUSIA'})`).join('\n') + (mates.length > TEAM_LINES ? `\n- …dan ${mates.length - TEAM_LINES} lainnya (company_status scope "${e.divisionId}")` : '')) || '- (tidak ada)';
+  const role = roleOf(e);
+  const ownLead = leads().find((x) => x.divisionId === e.divisionId && x.id !== e.id);
+  const heads = (e.isLead || e.isPA || e.isMaster ? leads().filter((x) => x.id !== e.id) : [ownLead].filter(Boolean)).map((x) => `- ${x.id}: ${x.name}, ${x.title} — ${div(x.divisionId).name}`).join('\n');
   const orchestrator = e.isPA || e.isMaster;
-  const everyone = orchestrator ? db().employees.filter((x) => x.type === 'ai' && x.id !== e.id && !x.isPA).map((x) => `- ${x.id}: ${x.name} · ${x.title} · ${div(x.divisionId)?.short}${x.isLead ? ' · ORKESTRATOR DIVISI' : ''}${x.isMaster ? ' · MASTER ORCHESTRATOR' : ''}`).join('\n') : '';
   const chans = db().channels.filter((c) => c.kind === 'channel').map((c) => `#${c.id}`).join(', ');
   const skills = promptSkills(e, currentTask);
-  const caps = CAPABILITIES.filter((c) => (c.required || (e.tools || CAP_IDS).includes(c.id)) && !(currentTask?.kind === 'routine' && ROUTINE_BLOCK.has(c.id)) && !(currentTask?.massMode && MASS_BLOCK.has(c.id)));
-  const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter(Boolean);
-  let kbBudget = 14000;
-  const kbText = kb.map((n) => { const body = n.content.slice(0, Math.max(0, Math.min(5000, kbBudget))).replace(/^#{1,6}\s+/gm, '### '); kbBudget -= body.length; return body ? `## ${n.title}\n${body}` : ''; }).filter(Boolean).join('\n\n');
-  const canDelegate = caps.some((c) => c.id === 'create_subtask');
+  // hanya alat dasar peran yang dijelaskan di prompt (stabil untuk cache); kelompok lain dibuka lewat buka_alat dan membawa deskripsinya sendiri
+  const baseIds = new Set(['complete_task', ...(ROLE_BASE[role] || ROLE_BASE.staff), ...(currentTask?.kind === 'routine' || currentTask?.massMode ? AUTO_OPEN.flatMap((g) => TOOL_GROUPS[g].tools) : [])]);
+  const caps = CAPABILITIES.filter((c) => baseIds.has(c.id) && (c.required || (e.tools || CAP_IDS).includes(c.id)) && roleAllows(e, c.id) && !(currentTask?.kind === 'routine' && ROUTINE_BLOCK.has(c.id)) && !(currentTask?.massMode && MASS_BLOCK.has(c.id)));
+  const doorGroups = currentTask?.transient ? [] : groupsFor(e).filter((g) => g !== 'browser' || browser.allowed(e));
+  const kb = (e.knowledgeIds || []).map((id) => db().notes.find((n) => n.id === id)).filter((n) => brain.canRead(n, { audience: e.audience || 'internal' }));   // enforce visibility on attached knowledge too
+  let kbBudget = orchestrator ? 9000 : 6000; // characters; the rest of a note is one Brain search away
+  const kbText = kb.map((n) => { const body = n.content.slice(0, Math.max(0, Math.min(2400, kbBudget))).replace(/^#{1,6}\s+/gm, '### '); kbBudget -= body.length; return body ? `## ${n.title}\n${body}` : ''; }).filter(Boolean).join('\n\n');
+  const canDelegate = caps.some((c) => c.id === 'create_subtask') || doorGroups.includes('tim');
+  const ROLE_LABEL = { pa: 'asisten pribadi', master: 'master orkestrator', manager: 'manajer divisi (orkestrator divisinya)', staff: 'staf' };
   const sections = [
-    `# IDENTITAS\nKamu adalah ${e.name}, ${e.title} di divisi ${d.name}${e.team ? ` (tim ${e.team}: ${db().employees.filter((x) => x.team === e.team && x.id !== e.id && x.divisionId === e.divisionId).map((x) => x.name).join(", ") || "-"})` : ""} perusahaan ${company.name} ("${company.tagline}"). Kamu karyawan AI otonom di kantor yang dipantau dan diawasi manusia. Jangan menyebut dirimu model AI generik; kamu ${e.name}.`,
+    `# IDENTITAS\nKamu adalah ${e.name}, ${e.title} di divisi ${d.name}${e.team ? ` (tim ${e.team}: ${db().employees.filter((x) => x.team === e.team && x.id !== e.id && x.divisionId === e.divisionId).map((x) => x.name).join(", ") || "-"})` : ""} perusahaan ${company.name} ("${company.tagline}"). Perananmu: ${ROLE_LABEL[role]}. Kamu bekerja untuk manusia dan semua hasilmu bisa ditinjau mereka. Jangan menyebut dirimu model AI generik; kamu ${e.name}.`,
     e.instructions?.trim() && `# INSTRUKSI SISTEM\n${e.instructions.trim()}`,
     `# TENTANG KAMU\n${e.about || e.persona}`,
     `# TUGAS & FUNGSI\n${e.taskAndFunction || ''}\nMisi divisi: ${d.mission}`,
-    skills.length && `# SKILL\nKamu memiliki akses ke seluruh ${e.skillRefs?.length || 0} skill perusahaan. Demi fokus, berikut metode paling relevan untuk pekerjaan ini:\n${skills.map((r) => `## ${r.s.name} · proficiency ${r.proficiency}/10\n${r.s.promptSnippet}${r.s.usageGuide ? `\nKapan dipakai: ${r.s.usageGuide}` : ''}`).join('\n\n')}`,
-    `# TOOL YANG BOLEH KAMU PAKAI\n${caps.map((c) => `- ${c.id}: ${c.guide}`).join('\n')}`,
+    learn.skillSection(e, currentTask, skills, skills.length && `# SKILL\nKamu memiliki akses ke seluruh ${e.skillRefs?.length || 0} skill perusahaan. Demi fokus, berikut metode paling relevan untuk pekerjaan ini:\n${skills.map((r) => `## ${r.s.name} · proficiency ${r.proficiency}/10\n${r.s.promptSnippet}${r.s.usageGuide ? `\nKapan dipakai: ${r.s.usageGuide}` : ''}`).join('\n\n')}`),
+    `# TOOL YANG BOLEH KAMU PAKAI\n${caps.map((c) => `- ${c.id}: ${c.guide}`).join('\n')}${doorGroups.length ? `\n- buka_alat: pintu untuk alat lain. Kelompok: ${doorGroups.join(', ')}. Buka hanya yang dibutuhkan tugas ini dengan satu kalimat alasan; alatnya muncul di giliran berikutnya.` : ''}`,
+    browser.promptSection(e),
+    otomasi.promptSection(e),
+    staff.promptSection(e),
     kbText && `# KNOWLEDGE WAJIB (sudah dilampirkan untukmu)\n${kbText}`,
-    orchestrator && `# HIERARKI KOMANDO\n${e.isPA ? `Kamu asisten pribadi ${emp(e.ownerId)?.name}. Kamu memahami maksud user, merencanakan, lalu menggerakkan seluruh perusahaan: goal lintas divisi → serahkan ke Master Orchestrator (${db().employees.find((x) => x.isMaster)?.name}); pekerjaan satu divisi → orkestrator divisinya; pekerjaan spesifik → langsung ke individu. Gunakan convene_meeting untuk keputusan bersama dan schedule_job untuk pekerjaan berulang. Laporkan hasil akhir dengan ringkas ke user.` : 'Kamu Master Orchestrator: tunduk pada asisten pribadi user, mengoordinasikan semua orkestrator divisi, memecah goal lintas divisi, memimpin rapat lintas divisi, dan menyintesis hasil.'}\nSemua karyawan AI yang bisa kamu tugaskan:\n${everyone}`,
-    `# ORGANISASI\nRekan satu divisi:\n${team}\nHead divisi lain:\n${heads}\nChannel: ${chans}`,
+    orchestrator && `# HIERARKI KOMANDO\n${e.isPA ? `Kamu asisten pribadi ${emp(e.ownerId)?.name}. Kamu memahami maksud user, merencanakan, lalu menggerakkan perusahaan: goal lintas divisi → serahkan ke Master Orchestrator (${db().employees.find((x) => x.isMaster)?.name}); pekerjaan satu divisi → manajer divisinya (daftar di ORGANISASI); pekerjaan sangat spesifik → staf yang tepat lewat company_status(scope: id divisi). Gunakan convene_meeting untuk keputusan bersama dan schedule_job (buka_alat kelola) untuk pekerjaan berulang. Laporkan hasil akhir dengan ringkas ke user.` : 'Kamu Master Orchestrator: tunduk pada asisten pribadi user, mengoordinasikan manajer divisi, memecah goal lintas divisi, memimpin rapat lintas divisi, dan menyintesis hasil. Daftar staf sebuah divisi dimuat bertahap lewat company_status(scope: id divisi).'}`,
+    `# ORGANISASI\nStruktur: asisten pribadi dan master → manajer divisi (satu per divisi, orkestrator divisinya) → staf.\n${e.isLead ? 'Stafmu' : 'Rekan satu divisi'}:\n${team}\n${e.isLead || orchestrator ? 'Manajer divisi' : 'Manajermu'}:\n${heads}\nChannel: ${chans}`,
     `# CARA BEKERJA\n- Kerjakan tugas sampai tuntas. Cari konteks tambahan di Brain bila knowledge di atas belum cukup.\n- Untuk jumlah, daftar, ID, status, atau cakupan agen/divisi, company_status adalah sumber kebenaran live. Jangan memakai catatan Brain sebagai registry karena bisa usang.\n- ${currentTask?.massMode ? 'MODE MASSAL HEMAT TOKEN: kamu mewakili divisimu. Konsultasikan maksimal 2 staf paling relevan, tantang asumsi mereka, lalu buat satu sintesis. Jangan membuat subtugas/rapat/jadwal baru; bagikan pelajaran ke channel divisi agar seluruh staf menerima.' : e.isLead && canDelegate ? `Sebagai head: delegasikan bagian yang lebih cocok untuk anggota tim atau divisi lain (maks 5 subtugas). Strategi divisi: ${DELEGATION[d.delegation] || DELEGATION.best_fit} Setelah mendelegasikan, akhiri giliranmu; kamu akan dipanggil lagi dengan hasil subtugas untuk disintesis.` : canDelegate ? 'Kerjakan sendiri. Delegasikan hanya bila jelas butuh keahlian divisi lain (ke head divisi itu).' : 'Kerjakan sendiri.'}\n- Jika tugas berisi hasil subtugas, gabungkan menjadi satu hasil akhir yang utuh — jangan delegasi lagi.\n- Simpan pengetahuan jangka panjang dengan write_note dan tautkan [[Judul Catatan]].\n- ${caps.some((c) => c.id === 'web_search') ? 'Untuk data pasar, harga, regulasi, tren, atau fakta terbaru, gunakan web_search dan cantumkan sumbernya. Jangan mengarang angka.' : 'Kamu tidak punya akses internet; tandai asumsi dengan jelas, jangan mengarang fakta.'}\n- Gunakan calculate untuk semua hitungan angka (budget, proyeksi, persentase).\n- EKSEKUSI EKSTERNAL: jangan pernah mengatakan data sudah masuk Google Sheets/Drive/Calendar atau sistem lain hanya berdasarkan rencana. Wajib panggil tool integrasi dan cantumkan receipt berupa ID/URL/range. Bila konektor belum aktif atau tool gagal, katakan BELUM TEREKSEKUSI.\n- Jika tool gagal atau data tidak ditemukan, tulis jelas "data tidak tersedia" beserta alasannya. DILARANG mengarang nama, angka, harga, atau sumber.\n- DISIPLIN LINGKUP: kerjakan hanya yang diminta brief. Jangan menciptakan proyek, produk, klien, atau inisiatif baru yang tidak diminta. Kamu tidak terhubung ke sistem eksternal (Teams, Slack, Planner, PowerBI, email, CRM) kecuali lewat tool yang tersedia — hasilmu berupa dokumen/rencana di Brain.\n- Hemat: gunakan tool seperlunya (biasanya 1-4 panggilan), lalu selesaikan.`,
     `# ESKALASI\n${e.escalation || ''}\nJika menyentuh Kebijakan Persetujuan (publikasi, uang, kontrak, HR, data pribadi), selesaikan dengan request_approval.`,
     `# FORMAT OUTPUT\nGunakan ${company.language}. Output akhir lewat complete_task dalam format ${(e.outputFormat || 'markdown').toUpperCase()}, lengkap dan siap pakai (bukan sekadar ringkasan). Langsung ke isi tanpa basa-basi pembuka.`,
   ];
-  sections.push(collab.learningSection(e), collab.selfSection(e)); // volatile parts last so the prompt prefix stays cacheable
+  sections.push(collab.learningSection(e), collab.selfSection(e), ...learn.promptTail(e, currentTask)); // volatile parts last so the prompt prefix stays cacheable
   return sections.filter(Boolean).join('\n\n---\n\n');
 }
 
 /** Task-specific context retrieved from the brain (kept out of the cached system prompt). */
 function retrievedContext(e, t) {
   const attached = new Set(e.knowledgeIds || []);
-  const hits = brain.search(`${t.title} ${t.description}`, { scopeEmployeeId: e.id, limit: 6 })
+  const hits = brain.search(`${t.title} ${t.description}`, { scopeEmployeeId: e.id, limit: 6, audience: e.audience || 'internal' })
     .filter((h) => !attached.has(brain.findNote(h.title)?.id)).slice(0, 3);
   const mem = brain.findNote(`Memori ${e.name}`);
   const memLines = mem ? mem.content.split('\n').slice(2).filter(Boolean).slice(-6).join('\n') : '';
   return [
-    hits.length && `## Catatan Brain yang mungkin relevan\n${hits.map((h) => `- [[${h.title}]] (${h.folder}): ${h.snippet}`).join('\n')}`,
+    hits.length && `## Catatan Brain yang mungkin relevan (hanya yang "terverifikasi" boleh dipakai sebagai fakta)\n${hits.map((h) => `- [[${h.title}]] (${h.folder}; ${h.trust}): ${h.snippet}`).join('\n')}`,
     memLines && `## Memori kerjamu terbaru\n${memLines}`,
   ].filter(Boolean).join('\n\n');
 }
 
-const toolsFor = (e, task) => TOOLS.filter((t) => t.name === 'complete_task' || ((e.tools || CAP_IDS).includes(t.name) && !(task?.kind === 'routine' && ROUTINE_BLOCK.has(t.name)) && !(task?.massMode && MASS_BLOCK.has(t.name))));
+// ───────────────────────── alat per peran + satu pintu (P2) ─────────────────────────
+// Yang dilihat agen = dasar peran (catalog.ROLE_BASE) + kelompok yang dibuka lewat `buka_alat` untuk tugas ini. leadOnly/paOnly/specialist ditegakkan di catalog.roleAllows.
+const openGroups = new Map();   // "ruangkerja:idTugas" -> Set(kelompok)
+const gkey = (t) => `${store.current()}:${t.id}`;
+const AUTO_OPEN = ['catatan', 'web', 'tim'];   // tugas rutin dan massal tidak punya waktu untuk giliran tambahan: kelompok ringan ini langsung terbuka
+const openOf = (t) => {
+  if (!t || t.transient) return new Set();
+  const s = new Set(openGroups.get(gkey(t)) || []);
+  if (t.kind === 'routine' || t.massMode) for (const g of AUTO_OPEN) s.add(g);
+  return s;
+};
+const MAX_OPEN_GROUPS = 4;
+
+/** alat inti (definisi dari TOOLS) yang terlihat untuk agen ini pada tugas ini; `extra` = kelompok tambahan (mis. obrolan) */
+const toolsFor = (e, task, extra = []) => {
+  const ids = new Set(coreToolIds(e, [...openOf(task), ...extra]));
+  return TOOLS.filter((t) => ids.has(t.name) && (t.name === 'complete_task' || (!(t.name.startsWith('google_') && !collab.googleWorkspaceConfigured()) && (e.tools || CAP_IDS).includes(t.name) && !(task?.kind === 'routine' && ROUTINE_BLOCK.has(t.name)) && !(task?.massMode && MASS_BLOCK.has(t.name)))));
+};
+
+/** kelompok yang ditawarkan di pintu: browser hanya untuk agen yang berhak (divisi/agen yang diizinkan Owner) */
+const doorGroups = (e) => groupsFor(e).filter((g) => g !== 'browser' || browser.allowed(e));
+const doorDef = (e) => ({
+  name: 'buka_alat',
+  description: `[Pintu alat] Membuka satu kelompok alat untuk tugas ini hanya bila memang dibutuhkan. Kelompok: ${doorGroups(e).map((g) => `${g} (${TOOL_GROUPS[g].hint})`).join('; ')}. Jelaskan alasannya; bila lolos, alat kelompok itu muncul di giliran berikutnya.`,
+  input_schema: { type: 'object', properties: { kelompok: { type: 'string', enum: doorGroups(e) }, alasan: { type: 'string', description: 'Satu kalimat: mengapa alat ini dibutuhkan untuk tugas ini' } }, required: ['kelompok', 'alasan'] },
+});
+
+/** SEMUA definisi alat yang dilihat agen pada giliran ini (inti + pintu + alat modul lain yang kelompoknya sudah dibuka). Satu-satunya sumber untuk runLive dan tes hitungan. */
+export async function visibleTools(e, t, { mcpDefs = [], withBrowser = true } = {}) {
+  const open = openOf(t);
+  const defs = [...toolsFor(e, t)];
+  if (t && !t.transient && doorGroups(e).length) defs.push(doorDef(e));
+  defs.push(...(await staff.toolDefs(e, t)));
+  if (open.has('otomasi')) defs.push(...(await otomasi.toolDefs(e, t)));
+  if (open.has('belajar')) defs.push(...learn.toolDefs(e, t));
+  if (open.has('mcp')) defs.push(...mcpDefs);
+  if (open.has('browser') && withBrowser) defs.push(...(await browser.toolDefs(e, t)));
+  return defs;
+}
+
+async function openToolGroup(e, t, input) {
+  const g = String(input.kelompok || ''), why = String(input.alasan || '').trim();
+  if (t.transient) return 'Pintu alat tidak tersedia di obrolan.';
+  if (!doorGroups(e).includes(g)) return `Kelompok "${g}" tidak ada atau bukan untuk perannmu. Pilih: ${doorGroups(e).join(', ')}.`;
+  if (why.length < 6) return 'Jelaskan alasannya dalam satu kalimat (mengapa alat ini dibutuhkan untuk tugas ini).';
+  if ((t.kind === 'routine' || t.massMode) && ['belajar', 'otomasi', 'browser', 'mcp', 'kelola'].includes(g)) return `Kelompok "${g}" tidak tersedia untuk tugas rutin atau massal.`;
+  const open = openGroups.get(gkey(t)) || new Set(); openGroups.set(gkey(t), open);
+  if (!open.has(g) && open.size >= MAX_OPEN_GROUPS) return `Sudah ${MAX_OPEN_GROUPS} kelompok alat terbuka untuk tugas ini. Selesaikan dengan yang ada.`;
+  let extra = '';
+  if (g === 'browser') { const r = await browser.unlockViaDoor(e, t, why); if (!r.ok) return r.text; extra = ` ${r.text}`; }   // satu langkah: alasan di pintu divalidasi dan langsung membuka browser (model kecil sering berhenti di langkah kedua)
+  open.add(g);
+  if (openGroups.size > 400) openGroups.delete(openGroups.keys().next().value);
+  const names = [...TOOL_GROUPS[g].tools.filter((x) => roleAllows(e, x)), ...(g === 'otomasi' ? ['otomatiskan'] : g === 'belajar' ? ['skill_view', 'skill_manage', 'memory', 'session_search'] : g === 'browser' ? ['browser_new_page', 'browser_take_snapshot', 'browser_click', 'browser_fill', '…'] : g === 'mcp' ? ['(tool MCP)'] : [])];
+  logTask(t, e.id, 'tool', `🧰 buka_alat(${g}): ${why.slice(0, 100)}`);
+  return `Kelompok "${g}" terbuka untuk tugas ini. Alat: ${names.join(', ')}. Pakai sekarang.${extra}`;
+}
 
 // ───────────────────────── live (Claude) agent ─────────────────────────
 const TOOLS = [
@@ -456,9 +663,9 @@ const TOOLS = [
   { name: 'search_brain', description: 'Cari catatan di Brain perusahaan (SOP, kebijakan, deliverable, memori). Kembalikan judul + cuplikan.', input_schema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
   { name: 'read_note', description: 'Baca isi lengkap satu catatan Brain berdasarkan judul.', input_schema: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } },
   { name: 'write_note', description: 'Buat atau perbarui catatan pengetahuan di Brain (Markdown, boleh [[wikilink]]).', input_schema: { type: 'object', properties: { title: { type: 'string' }, content: { type: 'string' }, folder: { type: 'string', description: 'mis. Knowledge, SOP, Research, Marketing' }, tags: { type: 'array', items: { type: 'string' } } }, required: ['title', 'content'] } },
-  { name: 'create_subtask', description: 'Delegasikan subtugas ke rekan (pakai id karyawan). Tugas induk akan menunggu sampai semua subtugas selesai.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string', description: 'Brief lengkap: konteks, ekspektasi output, batasan' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description', 'assignee_id'] } },
+  { name: 'create_subtask', description: 'Delegasikan subtugas ke rekan (pakai id karyawan). Tugas induk akan menunggu sampai semua subtugas selesai. Pakai "stage" untuk urutan: tahap 2 baru dimulai setelah semua tahap 1 selesai (mis. riset dulu, baru eksekusi).', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string', description: 'Brief lengkap: konteks, batasan' }, expected: { type: 'string', description: 'Hasil yang diharapkan / definisi selesai: apa persisnya yang diserahkan dan kriterianya' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] }, stage: { type: 'integer', description: '1 = langsung jalan; 2/3 = menunggu tahap sebelumnya selesai' } }, required: ['title', 'description', 'expected', 'assignee_id'] } },
   { name: 'send_message', description: 'Kirim pesan ke channel (mis. "general", "standup", "div-mkt") atau DM ke karyawan (pakai id karyawan).', input_schema: { type: 'object', properties: { to: { type: 'string' }, text: { type: 'string' } }, required: ['to', 'text'] } },
-  { name: 'complete_task', description: 'Selesaikan tugas dengan output akhir.', input_schema: { type: 'object', properties: { summary: { type: 'string', description: '1-2 kalimat' }, output: { type: 'string', description: 'Hasil lengkap dalam Markdown' } }, required: ['summary', 'output'] } },
+  { name: 'complete_task', description: 'Selesaikan tugas dengan output akhir, bukti, dan hal yang belum terpenuhi.', input_schema: { type: 'object', properties: { summary: { type: 'string', description: '1-2 kalimat' }, output: { type: 'string', description: 'Hasil lengkap dalam Markdown' }, evidence: { type: 'array', items: { type: 'string' }, description: 'Sumber yang bisa dicek: [[Judul catatan Brain]], URL, atau receipt ID. Kosong bila tidak ada; jangan mengarang.' }, gaps: { type: 'string', description: 'Bagian dari "hasil yang diharapkan" yang BELUM terpenuhi atau datanya tidak tersedia; string kosong bila semua terpenuhi' } }, required: ['summary', 'output', 'evidence', 'gaps'] } },
   { name: 'organize_brain', description: 'Audit kerapian Brain: jumlah per folder, catatan yang belum terklasifikasi (dengan saran folder), judul buruk (dengan saran), dan kandidat duplikat.', input_schema: { type: 'object', properties: { limit: { type: 'integer', description: 'maks item per daftar (5-40)' } }, required: ['limit'] } },
   { name: 'move_note', description: 'Pindahkan catatan ke folder "<Nama Divisi>/<Jenis>" (Jenis: Research, Strategy, Plan, Report, SOP, Policy, Content, Design, Analysis, Meeting, Data, Technical, Training, Knowledge).', input_schema: { type: 'object', properties: { note: { type: 'string', description: 'id atau judul' }, folder: { type: 'string' } }, required: ['note', 'folder'] } },
   { name: 'rename_note', description: 'Ganti judul catatan; semua [[wikilink]] ke catatan ini otomatis diperbarui.', input_schema: { type: 'object', properties: { note: { type: 'string', description: 'id atau judul' }, new_title: { type: 'string' } }, required: ['note', 'new_title'] } },
@@ -467,25 +674,41 @@ const TOOLS = [
   { name: 'request_approval', description: 'Serahkan hasil untuk disetujui manusia (untuk hal yang diatur Kebijakan Persetujuan).', input_schema: { type: 'object', properties: { summary: { type: 'string' }, output: { type: 'string' }, reason: { type: 'string' } }, required: ['summary', 'output', 'reason'] } },
 ];
 
-const STATUS_FOR_TOOL = { recruit_agent: 'Merekrut agen baru', create_division: 'Membentuk divisi', train_colleague: 'Melatih rekan', improve_skill: 'Menyempurnakan skill', acquire_skill: 'Mempelajari skill', ask_colleague: 'Konsultasi rekan', convene_meeting: 'Memimpin rapat', schedule_job: 'Menjadwalkan job', list_jobs: 'Cek jadwal', visit_url: 'Membuka situs', google_sheets_append: 'Menulis Google Sheets', google_drive_create: 'Membuat file Drive', google_calendar_create: 'Membuat acara Calendar', web_search: 'Riset web', calculate: 'Menghitung', company_status: 'Cek status tim', search_brain: 'Mencari di Brain', read_note: 'Membaca catatan', write_note: 'Menulis ke Brain', create_subtask: 'Mendelegasikan', send_message: 'Berkoordinasi', complete_task: 'Menyelesaikan', request_approval: 'Minta persetujuan', organize_brain: 'Mengaudit Brain', move_note: 'Merapikan folder', rename_note: 'Mengganti nama catatan', merge_notes: 'Menggabungkan duplikat', build_training_set: 'Menyusun dataset training' };
+const STATUS_FOR_TOOL = { buka_alat: 'Menyiapkan alat', staf: 'Menjalankan staf', otomatiskan: 'Menyiapkan otomasi', recruit_agent: 'Merekrut agen baru', create_division: 'Membentuk divisi', train_colleague: 'Melatih rekan', improve_skill: 'Menyempurnakan skill', acquire_skill: 'Mempelajari skill', ask_colleague: 'Konsultasi rekan', convene_meeting: 'Memimpin rapat', schedule_job: 'Menjadwalkan job', list_jobs: 'Cek jadwal', visit_url: 'Membuka situs', google_sheets_append: 'Menulis Google Sheets', google_drive_create: 'Membuat file Drive', google_calendar_create: 'Membuat acara Calendar', web_search: 'Riset web', calculate: 'Menghitung', company_status: 'Cek status tim', search_brain: 'Mencari di Brain', read_note: 'Membaca catatan', write_note: 'Menulis ke Brain', create_subtask: 'Mendelegasikan', send_message: 'Berkoordinasi', complete_task: 'Menyelesaikan', request_approval: 'Minta persetujuan', organize_brain: 'Mengaudit Brain', move_note: 'Merapikan folder', rename_note: 'Mengganti nama catatan', merge_notes: 'Menggabungkan duplikat', build_training_set: 'Menyusun dataset training', skill_view: 'Membuka panduan kerja', skill_manage: 'Mencatat cara kerja baru', memory: 'Mencatat hal penting', session_search: 'Mencari riwayat' };
 
-async function runTool(e, t, name, input, state) {
+export async function runTool(e, t, name, input, state) {
+  if (name === 'buka_alat') return openToolGroup(e, t, input || {});
+  if (name !== 'complete_task') {
+    if (!roleAllows(e, name)) return `Tool ${name} bukan untuk perannmu (${roleOf(e)}). Minta atasanmu (manajer divisi) bila itu memang dibutuhkan.`;   // leadOnly / paOnly / specialist
+    const g = groupOfTool(name);
+    if (g && !t.transient && !openOf(t).has(g)) return `Alat ${name} ada di kelompok "${g}". Panggil buka_alat(kelompok:"${g}", alasan) dulu.`;
+  }
   if (name.startsWith('mcp__')) {
     if (!(e.tools || []).includes('mcp')) return 'Tool MCP tidak diizinkan untuk ' + e.name + '.';
     logTask(t, e.id, 'tool', `🔌 ${name}(${JSON.stringify(input).slice(0, 120)})`);
     return collab.mcpCall(name, input).catch((err) => `MCP error: ${err.message}`);
   }
+  if (learn.isLearnTool(name)) return learn.call(e, t, name, input);   // skill_view / skill_manage / memory / session_search: tidak lewat daftar izin tool, dan tidak bisa mengubahnya
+  if (otomasi.isTool(name)) {
+    if (String(input?.aksi) === 'usulkan') { try { gov.chargeExec(1, 'otomasi'); } catch (err) { return err.message; } }   // mengusulkan = satu uji eksekusi nyata di n8n
+    logTask(t, e.id, 'tool', '⚙️ otomatiskan(' + JSON.stringify(input).slice(0, 120) + ')'); return otomasi.call(e, t, name, input); }
+  if (staff.isTool(name)) { logTask(t, e.id, 'tool', '🧑‍💼 staf(' + JSON.stringify(input).slice(0, 120) + ')'); return staff.call(e, t, name, input); }
+  if (browser.isBrowserTool(name)) {
+    if (t.transient || t.kind === 'routine') return 'Tool browser tidak tersedia untuk chat atau tugas rutin.';
+    logTask(t, e.id, 'tool', `🌐 ${name}(${JSON.stringify(input).slice(0, 120)})`);
+    return browser.call(e, t, name, input);
+  }
   if (name !== 'complete_task' && !(e.tools || CAP_IDS).includes(name)) return 'Tool ' + name + ' tidak diizinkan untuk ' + e.name + '.';
   switch (name) {
     case 'search_brain': {
-      const r = brain.search(input.query, { scopeEmployeeId: e.id, limit: 6 });
+      const r = brain.search(input.query, { scopeEmployeeId: e.id, limit: 6, audience: e.audience || 'internal' });
       logTask(t, e.id, 'tool', `🔎 search_brain("${input.query}") → ${r.length} hasil`, { results: r.map((x) => x.title) });
-      return r.length ? r.map((x) => `[[${x.title}]] (${x.folder}): ${x.snippet}`).join('\n\n') : 'Tidak ada hasil.';
+      return r.length ? r.map((x) => `[[${x.title}]] (${x.folder}; ${x.trust}): ${x.snippet}`).join('\n\n') + (r.some((x) => x.verified) ? '' : '\n\nCATATAN: tidak ada hasil terverifikasi. Jangan sajikan isi draf di atas sebagai fakta.') : 'Tidak ada hasil. Data ini belum ada di Brain: katakan "data belum tersedia", jangan mengarang.';
     }
     case 'read_note': {
       const n = brain.findNote(input.title);
       logTask(t, e.id, 'tool', `📖 read_note("${input.title}")${n ? '' : ' — tidak ditemukan'}`);
-      return n ? n.content.slice(0, 12000) : 'Catatan tidak ditemukan. Coba search_brain.';
+      return brain.canRead(n, { audience: e.audience || 'internal' }) ? n.content.slice(0, 12000) : 'Catatan tidak ditemukan. Coba search_brain.';
     }
     case 'write_note': {
       const f = String(input.folder || '');
@@ -502,7 +725,7 @@ async function runTool(e, t, name, input, state) {
       if (depthOf(t) >= 4) return 'Kedalaman delegasi maksimum tercapai — kerjakan sendiri.';
       if (children(t).length >= 5) return 'Maksimum 5 subtugas per tugas. Kerjakan sisanya sendiri.';
       if (t.kind === 'routine') return 'Tugas rutin tidak boleh didelegasikan.';
-      const c = createTask({ title: input.title, description: input.description, assigneeId: a.id, createdBy: e.id, parentId: t.id, priority: input.priority || t.priority });
+      const c = createTask({ title: input.title, description: input.description, expected: input.expected, stage: input.stage, assigneeId: a.id, createdBy: e.id, parentId: t.id, priority: input.priority || t.priority });
       state.delegated = true;
       logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${a.name}: ${c.title}`, { childId: c.id });
       return `Subtugas ${c.id} dibuat untuk ${a.name}${a.type === 'human' ? ' (manusia — akan dikerjakan manual)' : ''}.`;
@@ -622,6 +845,11 @@ async function runTool(e, t, name, input, state) {
     }
     case 'convene_meeting': {
       const ids = (input.participant_ids || []).filter((id) => emp(id));
+      const prev = (db().meetings || []).filter((x) => x.originTaskId === t.id).at(-1);
+      if (prev && Date.now() - (prev.endedAt || prev.startedAt || 0) < 45 * 60000) {
+        logTask(t, e.id, 'tool', '👥 rapat untuk tugas ini sudah ada — tidak diulang');
+        return prev.status === 'done' ? `Rapat untuk tugas ini SUDAH selesai, jangan adakan lagi. Lanjutkan dari notulen ini:\n${prev.minutes}` : 'Rapat untuk tugas ini sedang berlangsung. Jangan adakan rapat baru; selesaikan tugas setelah notulen keluar.';
+      }
       logTask(t, e.id, 'tool', `👥 convene_meeting("${String(input.topic).slice(0, 80)}") dengan ${ids.map((id) => emp(id).name).join(', ')}`);
       return collab.runMeeting({ topic: input.topic, agenda: input.agenda, participantIds: ids, chairId: e.id, rounds: input.rounds || 2, originTaskId: t.id })
         .then((m) => { logTask(t, e.id, 'tool', `👥 notulen: ${m.minutes.slice(0, 200)}`); return `Rapat selesai.\n${m.minutes}`; })
@@ -671,32 +899,46 @@ async function runTool(e, t, name, input, state) {
       const ch = target ? dmId(e.id, target.id) : db().channels.find((c) => c.id === input.to.replace(/^#/, '') || c.name === input.to.replace(/^#/, ''))?.id;
       if (!ch) return 'Channel/penerima tidak ditemukan.';
       if (target) ensureDM(e.id, target.id);
-      postMessage(ch, e.id, input.text);
-      event('message', e.id, `${e.name} → ${target ? target.name : '#' + ch}: ${input.text.slice(0, 80)}`, { targetId: target?.id, channelId: ch });
+      const sent = postMessage(ch, e.id, input.text);
+      event('message', e.id, `${e.name} → ${target ? target.name : '#' + ch}: ${input.text.slice(0, 80)}`, { targetId: target?.id, channelId: ch, messageId: sent.id });
       logTask(t, e.id, 'tool', `💬 send_message(${target ? target.name : '#' + ch})`);
       return 'Terkirim.';
     }
     case 'complete_task':
     case 'request_approval': {
+      // KONTRAK EKSEKUSI: tugas yang baru mendelegasikan subtugas belum boleh dinyatakan selesai; hasilnya baru ada setelah subtugas selesai
+      if (state?.delegated && !t.synth && children(t).some((c) => !['done', 'cancelled'].includes(c.status))) {
+        return 'Belum bisa dinyatakan selesai: subtugas yang kamu delegasikan belum selesai. Jangan memanggil complete_task sekarang. Akhiri giliranmu; hasilnya akan datang dan kamu gabungkan lalu.';
+      }
       state.finished = true;
       const needsApproval = name === 'request_approval';
       if (name === 'request_approval') logTask(t, e.id, 'tool', `🛑 request_approval: ${input.reason || ''}`);
-      finishTask(e, t, { summary: input.summary, output: input.output, needsApproval });
+      finishTask(e, t, { summary: input.summary, output: input.output, needsApproval, evidence: input.evidence, gaps: input.gaps, toolEvidence: realEvidence(state) });
       return 'Tercatat. Akhiri giliranmu.';
     }
     default: return 'Tool tidak dikenal.';
   }
 }
 
+/** tool results that are real evidence (Brain, web, live status, integrations), not chatter like send_message */
+const realEvidence = (state) => (state?.evidence || []).filter((x) => /^### (search_brain|read_note|web_search|company_status|calculate|visit_url|ask_colleague|google_|mcp__|browser_|staf)/.test(x) && !/Tidak ada hasil|tidak ditemukan|GAGAL|belum berhasil|Belum bisa|butuh izin|masih bekerja/i.test(x.slice(0, 200)) && (!/^### staf/.test(x) || stafBuktiSah(x))).length;
+/** hasil tool "staf" baru dihitung sebagai bukti bila ia menyebut id jalan yang benar-benar selesai dengan bukti (kontrak eksekusi) */
+const stafBuktiSah = (x) => { const ids = staff.kontrak.runIdsDari(x); return ids.length > 0 && ids.every((id) => staff.kontrak.runBukti(store.current(), id)); };
+
 async function runLive(e, t) {
-  const ctx = retrievedContext(e, t);
+  // TITIK SAMBUNG staf = workflow (belum ada cabang `staff.run` di sini; sesi fondasi memakai tool `staf` lewat visibleTools/runTool):
+  // bila kelak penerima punya workflowId dan store.staffModelOn(), cabangnya cukup SATU baris di sini: `return staff.run(e, t)` lalu hasil ke finishTask yang sama.
+  const ctx =retrievedContext(e, t);
   const messages = [{ role: 'user', content: ctx ? `${taskContext(t)}\n\n${ctx}` : taskContext(t) }];
+  const stafHint = staff.taskHint(e, t); if (stafHint) messages[0].content += '\n\n' + stafHint;   // jalur kerja nyata: kemampuan staf yang cocok sebagai langkah pertama (docs/UJI-NYATA.md)
   const state = { finished: false, delegated: false, toolCalls: new Map(), evidence: [] };
   const dm = llm.defaultModels();
   const tier = gov.modelTier(e, t);
   const model = e.model || dm[tier] || dm.worker;
   const mcpDefs = (e.tools || []).includes('mcp') && t.kind !== 'routine' ? (await collab.mcpToolDefs()).map(({ _mcp, ...d }) => d) : [];
-  const tools = [...toolsFor(e, t), ...mcpDefs];
+  const wantsBrowser = t.kind !== 'routine' && !t.massMode && !t.transient;
+  const buildTools = () => visibleTools(e, t, { mcpDefs, withBrowser: wantsBrowser });   // dihitung ulang tiap giliran: kelompok yang dibuka lewat buka_alat dan alat browser_* (setelah buka_browser lolos) muncul di giliran berikutnya
+  let tools = await buildTools();
   t.liveRun = true;
   const maxTurns = t.massMode ? 6 : t.kind === 'routine' ? 5 : 10;
   for (let turn = 0; turn < maxTurns && !state.finished; turn++) {
@@ -710,6 +952,7 @@ async function runLive(e, t) {
     if (finalTurn) messages.push({ role: 'user', content: 'Ini giliran final. Satu-satunya tool yang tersedia adalah complete_task. Panggil complete_task sekarang dengan hasil akhir lengkap berdasarkan pekerjaan dan bukti yang sudah terkumpul.' });
     gov.compact(messages);
     setStatus(e, 'working', turn === 0 ? 'Berpikir…' : 'Melanjutkan…', t.id);
+    tools = await buildTools();
     const res = await llm.call({ system: systemPrompt(e, t), messages, tools, model, employee: e, effort: e.effort, maxTokens: t.massMode ? 5000 : t.kind === 'routine' ? 4500 : 8000, taskId: t.id });
     const said = llm.textOf(res);
     if (said) {
@@ -722,15 +965,31 @@ async function runLive(e, t) {
     const uses = res.content.filter((b) => b.type === 'tool_use');
     if (!uses.length) {
       if (state.delegated) break;
+      // KONTRAK EKSEKUSI: bila sistem sudah menunjuk kemampuan staf tetapi agen menjawab teks saja (tanpa menjalankan staf atau mendelegasikan), ingatkan SEKALI sebelum hasilnya dianggap selesai
+      if (stafHint && (state.nudged || 0) >= 1 && !state.evidence.some((x) => /^### staf/.test(x))) {
+        // sudah diingatkan sekali dan tetap tidak menjalankan staf: asisten pribadi/master didelegasikan otomatis oleh sistem (deterministik, tanpa AI)
+        const auto = (e.isPA || e.isMaster) ? staff.delegasiOtomatis(e, t) : null;
+        if (auto) {
+          const c = createTask({ title: auto.title, description: auto.description, assigneeId: auto.assigneeId, createdBy: e.id, parentId: t.id, priority: t.priority });
+          state.delegated = true;
+          logTask(t, e.id, 'delegate', `➡️ Sistem mendelegasikan ke ${emp(auto.assigneeId)?.name}: ${c.title}`, { childId: c.id });
+          break;
+        }
+      }
+      if (stafHint && (state.nudged || 0) < 2 && !state.evidence.some((x) => /^### staf/.test(x))) {
+        state.nudged = (state.nudged || 0) + 1;
+        messages.push({ role: 'user', content: 'Kamu belum menjalankan langkah pertama dari sistem (kemampuan staf atau delegasi ke manajer). Lakukan SEKARANG dengan memanggil tool yang sesuai, lalu susun jawaban dari hasilnya. Jangan menjawab dari perkiraanmu sendiri.' });
+        continue;
+      }
       // Model ended without calling complete_task: treat its text as the output.
       const fallback = said || state.evidence.slice(-8).join('\n\n') || 'Pekerjaan selesai tanpa keluaran teks dari model.';
-      finishTask(e, t, { summary: fallback.slice(0, 200), output: fallback, needsApproval: false });
+      finishTask(e, t, { summary: fallback.slice(0, 200), output: fallback, needsApproval: false, toolEvidence: realEvidence(state), gaps: 'Agen tidak memanggil complete_task; hasil diambil dari teks terakhirnya.' });
       state.finished = true;
       break;
     }
     const results = [];
     for (const u of uses) {
-      setStatus(e, 'working', STATUS_FOR_TOOL[u.name] || u.name, t.id);
+      setStatus(e, 'working', STATUS_FOR_TOOL[u.name] || (browser.isBrowserTool(u.name) ? 'Menjelajah web' : u.name), t.id);
       let out;
       try {
         const signature = `${u.name}:${JSON.stringify(u.input || {})}`;
@@ -745,6 +1004,7 @@ async function runLive(e, t) {
     messages.push({ role: 'user', content: results });
     store.upsert('employees', e);
   }
+  browser.endTask(t.id).catch(() => {});   // tutup tab dan lepas browser untuk tugas ini
   if (!state.finished) {
     if (state.delegated) {
       t.status = 'waiting'; delete t.synth;
@@ -752,7 +1012,7 @@ async function runLive(e, t) {
     } else {
       const fallback = state.evidence.slice(-8).join('\n\n');
       if (fallback) {
-        finishTask(e, t, { summary: 'Tugas diselesaikan otomatis dari hasil tool yang telah dikumpulkan.', output: fallback, needsApproval: false });
+        finishTask(e, t, { summary: 'Tugas diselesaikan otomatis dari hasil tool yang telah dikumpulkan.', output: fallback, needsApproval: false, toolEvidence: realEvidence(state), gaps: 'Batas giliran tercapai sebelum agen menyusun hasil akhir; ini kumpulan hasil tool mentah.' });
         logTask(t, e.id, 'note', 'Engine menyelamatkan hasil tool setelah batas giliran tercapai.');
       } else throw new Error('Agen berhenti tanpa hasil yang dapat diselamatkan');
     }
@@ -761,7 +1021,7 @@ async function runLive(e, t) {
 
 // ───────────────────────── simulation agent ─────────────────────────
 const ROUTES = {
-  mkt: /market|konten|content|sosial|social|iklan|ads|campaign|kampanye|brand|seo|promosi|launch|peluncuran/i,
+  mkt: /market|konten|content|sosial|social|iklan|ads|campaign|kampanye|brand|seo|promo\w*|launch|peluncuran/i,
   sales: /sales|jual|penjualan|lead|klien|client|prospek|deal|revenue|omzet|pelanggan baru/i,
   eng: /aplikasi|app|fitur|feature|bug|website|web|develop|sistem|api|produk|teknis|integrasi/i,
   cs: /customer|support|komplain|tiket|layanan|retensi|churn|nps|onboarding/i,
@@ -779,7 +1039,7 @@ function simSteps(e, t) {
   const say = (text, status = 'working') => () => { setStatus(e, status, text, t.id); };
   const isGoal = t.kind === 'goal' && !t.synth;
   const team = teamOf(e).filter((x) => x.type === 'ai');
-  const canDelegate = e.isLead && !t.synth && t.kind !== 'routine' && depthOf(t) < 2 && team.length > 0 && !t.feedback;
+  const canDelegate = e.isLead && !t.noDelegate && !t.synth && t.kind !== 'routine' && depthOf(t) < 2 && team.length > 0 && !t.feedback;
 
   steps.push(say('Membaca brief'));
   let refs = [];
@@ -796,13 +1056,16 @@ function simSteps(e, t) {
       if (!divs.length) divs = ['data', 'mkt', 'ops'];
       divs = divs.slice(0, 5);
       const heads = divs.map((d) => emp(div(d)?.leadId)).filter((x) => x && x.id !== e.id);
+      if (!heads.length) { finishTask(e, t, { summary: `Goal "${t.title.slice(0, 80)}" dikerjakan langsung (tidak ada divisi lain yang relevan).`, output: simDeliverable(e, t, refs), needsApproval: false, evidence: refs.map((r) => `[[${r.title}]]`), gaps: 'Mode simulasi (tanpa AI).' }); return true; }
       const until = Date.now() + 9000;
-      for (const h of [e, ...heads]) if (h.status !== 'working' || h.id === e.id) { h.meetingUntil = until; setStatus(h, 'meeting', 'Rapat kickoff goal', h.currentTaskId); }
+      for (const h of [e, ...heads]) if (h.status !== 'working' || h.id === e.id) { h.meetingUntil = until; h.kickoff = true; setStatus(h, 'meeting', 'Rapat kickoff goal', h.currentTaskId); }
       event('meeting', e.id, `${e.name} memimpin rapat kickoff dengan ${heads.map((h) => h.name).join(', ')}`, { participants: heads.map((h) => h.id), taskId: t.id });
       logTask(t, e.id, 'thought', `Goal ini menyentuh divisi: ${divs.map((d) => div(d).name).join(', ')}. Saya pecah per divisi.`);
+      const staged = heads.length > 1 && heads.some((h) => h.divisionId === 'data');   // research first, then the divisions act on it
       for (const h of heads) {
+        if (children(t).some((x) => x.assigneeId === h.id)) continue;   // a retried step must not create the same part twice
         const d = div(h.divisionId);
-        const c = createTask({ title: `[${d.short}] ${t.title}`, description: `Bagian ${d.name} dari goal: "${t.title}".\n${t.description}\n\nFokus: ${d.mission}\nOutput: rencana & deliverable konkret untuk divisi ${d.name}.`, assigneeId: h.id, createdBy: e.id, parentId: t.id, priority: t.priority });
+        const c = createTask({ title: `[${d.short}] ${t.title}`, description: `Bagian ${d.name} dari goal: "${t.title}".\n${t.description}\n\nFokus: ${d.mission}`, expected: `Rencana & deliverable konkret divisi ${d.name} untuk goal ini, dengan sumber untuk setiap fakta dan daftar hal yang belum bisa dipenuhi.`, stage: staged ? (h.divisionId === 'data' ? 1 : 2) : 0, assigneeId: h.id, createdBy: e.id, parentId: t.id, priority: t.priority });
         logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${h.name}: ${c.title}`, { childId: c.id });
       }
       t.status = 'waiting';
@@ -824,6 +1087,7 @@ function simSteps(e, t) {
       const pick = [...team].sort(order).slice(0, count);
       logTask(t, e.id, 'thought', `Strategi delegasi ${strat}: ${pick.map((m) => m.name).join(', ')}`);
       for (const m of pick) {
+        if (children(t).some((x) => x.assigneeId === m.id)) continue;
         const c = createTask({ title: `${t.title.replace(/^\[[A-Z]+\]\s*/, '')} — ${m.skills[0]}`, description: `Dari ${e.name}: kerjakan bagian ${m.skills.join(', ')} untuk "${t.title}".\n${t.description.slice(0, 800)}`, assigneeId: m.id, createdBy: e.id, parentId: t.id, priority: t.priority });
         logTask(t, e.id, 'delegate', `➡️ Delegasi ke ${m.name}: ${c.title}`, { childId: c.id });
       }
@@ -855,7 +1119,7 @@ function simSteps(e, t) {
     const output = t.synth ? simSynthesis(e, t) : simDeliverable(e, t, refs);
     const summary = t.synth ? `Hasil ${children(t).length} subtugas digabung menjadi satu deliverable.` : `Deliverable ${e.title.toLowerCase()} untuk "${t.title}" siap (mode simulasi).`;
     if (t.routineId === 'r-standup') postMessage('standup', e.id, standupText());
-    finishTask(e, t, { summary, output, needsApproval: POLICY_RE.test(t.title) && !t.parentId });
+    finishTask(e, t, { summary, output, needsApproval: POLICY_RE.test(t.title) && !t.parentId, evidence: refs.map((r) => `[[${r.title}]]`), gaps: 'Mode simulasi (tanpa AI): isi berupa kerangka dari catatan Brain, belum dianalisis sungguhan.' });
     return true;
   });
   return steps;
@@ -874,7 +1138,7 @@ function simSynthesis(e, t) {
   const cs = children(t);
   return `## Ringkasan Eksekutif\n${t.title} telah dikerjakan oleh ${cs.length} kontributor: ${cs.map((c) => emp(c.assigneeId)?.name).join(', ')}.\n\n` +
     cs.map((c) => `## ${c.title}\n*Oleh ${emp(c.assigneeId)?.name}*${c.noteId ? ` · lihat [[${db().notes.find((n) => n.id === c.noteId)?.title}]]` : ''}\n\n${(c.summary || '').trim()}\n`).join('\n') +
-    `\n## Langkah Berikutnya\n1. Owner meninjau dan menyetujui hasil.\n2. Eksekusi dipantau di Kanban.\n3. Evaluasi hasil pada laporan KPI berikutnya ([[SOP Data - Laporan KPI]]).\n\n> ⚠️ Dibuat dalam **mode simulasi** — tambahkan API key Claude di Pengaturan untuk hasil kerja AI sungguhan.`;
+    `\n## Langkah Berikutnya\n1. Owner meninjau dan menyetujui hasil.\n2. Eksekusi dipantau di Kanban.\n3. Evaluasi hasil pada laporan KPI berikutnya ([[SOP Data - Laporan KPI]]).`;
 }
 
 const rnd = (a, b) => Math.round(a + Math.random() * (b - a));
@@ -893,7 +1157,7 @@ function simDeliverable(e, t, refs) {
     data: `## Snapshot KPI\n| Metrik | Aktual | Target | Status |\n|---|---|---|---|\n| Pelanggan baru | ${rnd(40, 110)} | 120 | ${'🟡'} |\n| MRR (Rp jt) | ${rnd(90, 160)} | 150 | 🟢 |\n| NPS | ${rnd(38, 62)} | 50 | 🟡 |\n| Churn | ${rnd(15, 45) / 10}% | <3% | 🟡 |\n\n## Insight\n1. Kanal organik tumbuh paling efisien.\n2. Churn terkonsentrasi di bulan pertama → perkuat onboarding.\n3. Paket Growth punya LTV tertinggi.`,
     exec: `## Ringkasan Eksekutif\n- Tujuan: ${topic}\n- Divisi terlibat: lihat subtugas\n- Risiko utama: kapasitas tim & budget\n\n## Keputusan yang dibutuhkan\n1. Persetujuan prioritas\n2. Persetujuan anggaran`,
   };
-  return `## Konteks\nTugas: **${topic}**\n${t.description ? `\n${t.description.slice(0, 500)}\n` : ''}\nReferensi Brain yang dipakai:\n${ctx}\n\n${blocks[e.divisionId] || blocks.exec}\n\n## Langkah Berikutnya\n1. Review oleh ${emp(e.reportsTo)?.name || 'atasan'}\n2. Eksekusi & pantau hasil\n\n> ⚠️ Dibuat dalam **mode simulasi** — tambahkan API key Claude di Pengaturan agar ${e.name} benar-benar bekerja dengan AI.`;
+  return `## Konteks\nTugas: **${topic}**\n${t.description ? `\n${t.description.slice(0, 500)}\n` : ''}\nReferensi Brain yang dipakai:\n${ctx}\n\n${blocks[e.divisionId] || blocks.exec}\n\n## Langkah Berikutnya\n1. Review oleh ${emp(e.reportsTo)?.name || 'atasan'}\n2. Eksekusi & pantau hasil`;
 }
 
 // ───────────────────────── chat ─────────────────────────
@@ -904,7 +1168,55 @@ export function ensureDM(a, b) {
   return id;
 }
 
+/** a group discussion: Owner + several agents in one channel; replies are taken in turns so each speaker sees the previous ones */
+export function ensureGroup(ownerId, memberIds) {
+  const members = [...new Set([ownerId, ...memberIds])].sort();
+  const id = 'grp-' + members.join('--').slice(0, 120);
+  if (!db().channels.some((c) => c.id === id)) store.upsert('channels', { id, kind: 'group', members, name: 'Diskusi: ' + members.filter((m) => m !== ownerId).map((m) => emp(m)?.name || m).join(', ') });
+  return id;
+}
+
+// ───────────────────────── goal threads: one discussion per goal (progress, questions, reviews in one place) ─────────────────────────
+const rootOf = (t) => { let r = t, d = 0; while (r?.parentId && d < 12) { r = task(r.parentId) || r; if (!r.parentId) break; d++; } return task(t.rootId) || r; };
+export function ensureGoalThread(root) {
+  if (!root) return null;
+  const id = `goal-${root.id}`;
+  if (!db().channels.some((c) => c.id === id)) {
+    const pa = db().employees.find((x) => x.isPA && x.ownerId === root.createdBy) || emp(root.assigneeId);
+    store.upsert('channels', { id, kind: 'group', goalId: root.id, members: [...new Set([root.createdBy, pa?.id, root.assigneeId].filter(Boolean))], name: `🎯 ${String(root.title).slice(0, 70)}`, topic: root.expected || '' });
+  }
+  return id;
+}
+/** a short, token-free progress line in the goal's thread (only when the task belongs to a goal a human asked for) */
+function goalNote(t, authorId, text, extra = {}) {
+  const root = t && rootOf(t);
+  if (!root || root.kind !== 'goal' || emp(root.createdBy)?.type !== 'human') return;
+  const ch = ensureGoalThread(root);
+  const c = db().channels.find((x) => x.id === ch);
+  if (authorId && emp(authorId)?.type === 'ai' && !c.members.includes(authorId)) { c.members.push(authorId); store.upsert('channels', c); }
+  postMessage(ch, emp(authorId) ? authorId : root.assigneeId, text, { taskId: t.id, progress: true, ...extra });
+}
+/** the real state of a goal, from the database: used to answer "progresnya gimana?" without inventing anything */
+export function goalStatus(root) {
+  const all = db().tasks.filter((x) => (x.rootId || x.id) === root.id && x.id !== root.id);
+  const label = { todo: 'antre', in_progress: 'dikerjakan', waiting: 'menunggu subtugas', review: 'menunggu review', blocked: 'MACET', done: 'selesai' };
+  const now = Date.now();
+  const lines = all.slice(0, 14).map((x) => `- ${x.stage ? `[tahap ${x.stage}] ` : ''}${x.title.slice(0, 70)} — ${emp(x.assigneeId)?.name || '?'}: ${label[x.status] || x.status}${OPEN.has(x.status) && x.dueAt && x.dueAt < now ? ' (LEWAT TENGGAT)' : ''}${x.status === 'done' && x.unverified ? ' (tanpa bukti)' : ''}`);
+  const done = all.filter((x) => x.status === 'done').length;
+  return `Goal "${root.title.slice(0, 90)}" — status ${label[root.status] || root.status}; ${done}/${all.length} bagian selesai.${all.length ? '\n' + lines.join('\n') : '\n(belum dipecah ke tim)'}`;
+}
+
 const WORK_RE = /\b(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tulis|cari|riset|rancang|lakukan|jalankan|pastikan|pelajari|harus|please|create|make|write|draft|prepare)\b/i;
+
+/** Does this sound like an instruction (goal) rather than a question or small talk? Questions are always chat; imperatives (-kan verbs, known work verbs) are goals. */
+const QUESTION_RE = /\?\s*$|^\s*(?:apa|apakah|siapa|kenapa|mengapa|bagaimana|gimana|berapa|kapan|dimana|di mana|mana|bisakah|boleh|hi|hai|halo|hello|hey|pagi|siang|sore|malam|terima kasih|makasih|thanks?)\b/i;
+const WORK_VERBS = /^(?:tolong\s+|coba\s+|segera\s+|mohon\s+)?(?:buat|bikin|susun|siapkan|kerjakan|analisis|analisa|tulis|cari|riset|rancang|lakukan|jalankan|pastikan|pelajari|evaluasi|tingkatkan|optimalkan|kirim|jadwalkan|ubah|perbarui|update|review|periksa|cek|hitung|bandingkan|rangkum|ringkas|terjemahkan|launch|plan|build|prepare|draft|write|create|make|analy[sz]e|research|\w{3,}kan)\b/i;
+export function looksLikeWork(text) {
+  const t = String(text || '').trim();
+  if (!t || QUESTION_RE.test(t)) return false;
+  if (WORK_VERBS.test(t)) return t.split(/\s+/).length >= 3;
+  return WORK_RE.test(t) && t.split(/\s+/).length >= 4;
+}
 
 function broadcastScope(ch, text) {
   if (/@(?:all|semua)\b|#(?:all|semua)\b|\b(?:semua|seluruh)\s+(?:ai\s+)?agen/i.test(text)) return { type: 'all' };
@@ -954,8 +1266,18 @@ export async function onHumanMessage(msg) {
   // In an owner-led meeting agents must not interrupt. The collaboration layer
   // only releases them after the owner explicitly says "selesai".
   if (ch.kind === 'meeting' && collab.handleOwnerMeetingMessage(msg)) return;
+  if ((ch.kind === 'dm' || ch.kind === 'group') && emp(msg.authorId)?.type === 'human') {
+    const mids = ch.members.filter((x) => x !== msg.authorId && emp(x)?.type === 'ai');
+    // the live room hears only the Owner's orchestrator thread (DM with the PA); a DM with a colleague or a goal thread stays that conversation
+    const orchestratorThread = !ch.goalId && mids.length > 0 && mids.every((x) => emp(x)?.isPA || emp(x)?.isMaster);
+    const guests = orchestratorThread || ch.goalId ? [] : mids;   // in the PA thread or a goal thread, guests come from the names in the sentence
+    const intent = meetingIntent(msg.text, guests, msg.authorId);
+    if (intent === 'say' && orchestratorThread) { const live = activeLiveMeeting(msg.authorId); postMessage(`mtg-${live.id}`, msg.authorId, msg.text); collab.ownerSpeaks(live.id, msg.text, msg.authorId); return; }
+    if (intent && intent !== 'say') { startChatMeeting({ text: msg.text, userId: msg.authorId, channelId: ch.id, ids: guests, intent }); return; }
+  }
   let targets = [];
-  if (ch.kind === 'dm') targets = ch.members.filter((m) => m !== msg.authorId).map(emp);
+  const closed = ch.kind === 'dm' || ch.kind === 'group';   // only the members of a DM/group may answer in it
+  if (ch.kind === 'dm' || ch.kind === 'group') targets = ch.members.filter((m) => m !== msg.authorId).map(emp);
   const scope = broadcastScope(ch, msg.text);
   if (scope) {
     const delivered = scope.type === 'all' ? db().employees.filter((e) => e.type === 'ai').length : scopeTargets(scope).length;
@@ -964,60 +1286,344 @@ export async function onHumanMessage(msg) {
     targets.push(db().employees.find((e) => e.isPA && e.ownerId === msg.authorId) || db().employees.find((e) => e.isMaster));
   }
   const mentions = [...msg.text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase());
-  for (const name of mentions) { const e = db().employees.find((x) => x.id === name || x.name.toLowerCase() === name); if (e) targets.push(e); }
+  if (ch.goalId) {   // goal thread: the PA answers by default; a named head/colleague (with or without @) joins the thread and answers instead
+    const named = [...new Set([...mentions.map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)?.id).filter(Boolean), ...namesIn(msg.text)])].map(emp).filter((x) => x?.type === 'ai').slice(0, 3);
+    for (const x of named) if (!ch.members.includes(x.id)) { ch.members.push(x.id); store.upsert('channels', ch); postMessage(ch.id, x.id, `👋 ${x.name} (${x.title}) bergabung ke diskusi goal ini.`); }
+    const owner = db().employees.find((x) => x.isPA && x.ownerId === msg.authorId) || emp(task(ch.goalId)?.assigneeId);
+    targets = named.length ? named : [owner].filter(Boolean);
+  } else if (ch.kind === 'group') { let only = mentions.map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter((e) => e && ch.members.includes(e.id)); if (!only.length) only = namesIn(msg.text).filter((id) => ch.members.includes(id)).map(emp); if (only.length) targets = only; }   // "maya gimana menurutmu" = only Maya answers (saves tokens)   // @name inside a group narrows who answers
+  else for (const name of mentions) { const e = db().employees.find((x) => x.id === name || x.name.toLowerCase() === name); if (e && (!closed || ch.members.includes(e.id))) targets.push(e); }
   if (!targets.length && ch.kind === 'channel') targets.push(ch.divisionId ? headOf(ch.divisionId) : db().employees.find((e) => e.isPA && e.ownerId === msg.authorId) || db().employees.find((e) => e.isMaster));
-  targets = [...new Set(targets.filter((e) => e && e.type === 'ai'))].slice(0, 3);
+  targets = [...new Set(targets.filter((e) => e && e.type === 'ai'))].slice(0, ch.kind === 'group' ? 4 : 3);
+  if (ch.kind === 'group') {   // turn-taking: one after another, so later speakers read what the earlier ones said
+    (async () => { for (const e of targets) { try { await replyAs(e, ch, msg); } catch (err) { postMessage(ch.id, e.id, `⚠️ Maaf, saya error: ${err.message}`); } } })();
+    return;
+  }
   for (const e of targets) replyAs(e, ch, msg).catch((err) => postMessage(ch.id, e.id, `⚠️ Maaf, saya error: ${err.message}`));
 }
 
 const TASK_RE = /^(tolong|buat|buatkan|bikin|susun|siapkan|kerjakan|analisis|tulis|cari|riset|rancang|please|create|make|write|draft|prepare)\b/i;
 
+const chatBusy = new Map();
 async function replyAs(e, ch, msg) {
+  // every reply is also SAID in the office: a speech bubble over the agent who answers
+  const reply = (text, extra = {}) => { const m = postMessage(ch.id, e.id, text, extra); event('message', e.id, `${e.name} → ${emp(msg.authorId)?.name || ''}: ${String(text).replace(/\s+/g, ' ').slice(0, 180)}`, { targetId: msg.authorId, channelId: ch.id, messageId: m.id }); return m; };
   const prev = { status: e.status, text: e.statusText };
+  const busyKey = store.current() + ':' + e.id;   // the same id can exist in several workspaces
+  chatBusy.set(busyKey, (chatBusy.get(busyKey) || 0) + 1);
+  // "ikuti saya" / "berhenti ikut": the agent walks with the person who asked (and stops when asked)
+  const wantsFollow = /\b(ikut(i)?\s+(saya|aku|gue|kami)|ayo\s+ikut|ikut\s+jalan|follow\s+me|jalan[- ]jalan|(?:datangi|hampiri|dekati|temui)\s+(?:saya|aku|gue|kami)|(?:sini|kemari|ke\s+sini|ke\s+tempat\s+(?:saya|aku))|come\s+(?:here|to\s+me))\b/i.test(msg.text);
+  const wantsStop = /\b(berhenti\s+(ikut|mengikuti)|stop\s+ikut|kembali\s+(ke\s+)?(meja|kerja)|balik\s+kerja)\b/i.test(msg.text);
+  if (wantsFollow) event('follow', e.id, `${e.name} mengikuti ${emp(msg.authorId)?.name}`, { targetId: msg.authorId });
+  if (wantsStop) event('unfollow', e.id, `${e.name} kembali bekerja`, { targetId: msg.authorId });
   if (e.status === 'idle') setStatus(e, 'chatting', `Membalas ${emp(msg.authorId)?.name}`);
-  event('message', msg.authorId, `${emp(msg.authorId)?.name} → ${e.name}: ${msg.text.slice(0, 80)}`, { targetId: e.id, channelId: ch.id });
+  event('message', msg.authorId, `${emp(msg.authorId)?.name} → ${e.name}: ${msg.text.slice(0, 80)}`, { targetId: e.id, channelId: ch.id, messageId: msg.id });
   try {
-    if (llm.isLive() && llm.budgetLeft() > 0) {
-      const history = db().messages.filter((m) => m.channelId === ch.id).slice(-16);
+    const quick = quickReply(e, msg, ch);
+    if (quick) {
+      await new Promise((r) => setTimeout(r, 500 + Math.random() * 600));
+      reply(quick);
+    } else if (llm.isLive() && llm.budgetLeft() > 0) {
+      const history = db().messages.filter((m) => m.channelId === ch.id).slice(-10);
       const convo = history.map((m) => `${emp(m.authorId)?.name || m.authorId}: ${m.text}`).join('\n');
-      const chatTools = toolsFor(e).filter((x) => ['search_brain', 'read_note', 'write_note', 'web_search', 'calculate', 'company_status', 'ask_colleague', 'convene_meeting', 'schedule_job', 'list_jobs', 'visit_url', 'google_sheets_append', 'google_drive_create', 'google_calendar_create'].includes(x.name)).concat([{
-        name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description'] },
+      const chatTools = toolsFor(e, undefined, ['tim']).filter((x) => ['search_brain', 'company_status', 'ask_colleague', 'web_search', 'calculate'].includes(x.name)).concat(learn.chatDefs(e)).concat([{
+        name: 'create_task', description: 'Buat tugas baru (untuk dirimu sendiri atau rekan) bila manusia meminta pekerjaan yang butuh waktu.', input_schema: { type: 'object', properties: { title: { type: 'string' }, description: { type: 'string' }, expected: { type: 'string', description: 'Hasil yang diharapkan / definisi selesai' }, assignee_id: { type: 'string' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'description', 'expected'] },
       }]);
-      const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : '#' + ch.name}:\n${convo}\n\nBalas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu. Jika diminta pekerjaan besar, buat tugas dengan create_task lalu konfirmasi.` }];
-      const pseudo = { id: 'chat', title: 'chat', log: [], transient: true };
+      const named = namesIn(msg.text).filter((id) => id !== e.id).slice(0, 4).map(emp).filter(Boolean);
+      // the company's own documents most relevant to this message ride along automatically: the model no longer has to remember to search
+      const brainFacts = relevantFacts(msg.text, 3);
+      const brainBlock = brainFacts ? `FAKTA DARI BRAIN PERUSAHAAN (dokumen asli Owner; kutip judulnya bila dipakai):\n${brainFacts}\n\n` : `BRAIN: tidak ada dokumen terverifikasi yang cocok dengan pesan ini. Jangan mengarang; katakan belum ada datanya dan tawarkan mencari dengan kata lain.\n\n`;
+      const goalRoot = ch.goalId ? task(ch.goalId) : null;
+      const goalFacts = goalRoot ? `KEADAAN NYATA GOAL INI (dari papan tugas; jangan mengarang progres di luar ini):\n${goalStatus(goalRoot)}\nDefinisi selesai: ${goalRoot.expected || '-'}\nBila Owner memberi arahan baru untuk goal ini, buat tugas lewat create_task dan sebutkan siapa pengerjanya.\n\n` : '';
+      const facts = brainBlock + goalFacts + (named.length ? `KEADAAN NYATA rekan yang disebut (pakai ini bila ditanya tentang mereka; jangan menjawab tentang dirimu sendiri):\n${named.map((x) => `- ${x.name} (${x.title || '-'}): ${colleagueState(x)}`).join('\n')}\n\n` : '');
+      const messages = [{ role: 'user', content: `Percakapan di ${ch.kind === 'dm' ? 'DM' : ch.kind === 'group' ? 'diskusi grup (' + ch.name + ')' : '#' + ch.name}:\n${convo}\n\n${facts}${wantsFollow ? 'Kamu SEKARANG ikut berjalan bersama orang ini di kantor 3D. Jawab singkat bahwa kamu ikut sambil mengobrol, jangan bilang tidak bisa ikut.\n\n' : ''}${wantsStop ? 'Kamu berhenti ikut dan kembali bekerja di meja. Jawab singkat.\n\n' : ''}Balas pesan terakhir dari ${emp(msg.authorId)?.name} sebagai ${e.name}. Singkat dan membantu.${ch.kind === 'group' ? ' Ini diskusi grup: baca jawaban peserta lain di atas, jangan mengulang isinya; tambahkan sudut pandang divisimu atau setuju/tidak setuju dengan singkat.' : ''} Jawab langsung dan natural seperti rekan kerja; JANGAN menyebut nama tool atau istilah teknis (mis. create_task) kepada manusia. Untuk sapaan atau obrolan ringan, balas satu atau dua kalimat saja. Jika diminta pekerjaan besar, panggil tool create_task lalu konfirmasi singkat apa yang sudah kamu buat dan siapa yang mengerjakan.` }];
+      const pseudo = { id: 'chat', title: 'chat', log: [], transient: true, agentId: e.id, createdBy: emp(msg.authorId)?.type === 'human' ? msg.authorId : undefined };
+      // model router: 20B (low reasoning) for everyday talk, 120B (medium reasoning) for complex questions, Qwen vision when pictures are attached
+      const route = chatRoute(msg, ch);
+      const pics = route.tier === 'vision' ? imageBlocks(msg) : [];
+      if (pics.length) messages[0].content = [{ type: 'text', text: messages[0].content + '\n\nPesan terakhir menyertakan gambar (terlampir). Jelaskan apa yang benar-benar terlihat; jangan menebak hal yang tidak tampak.' }, ...pics];
+      let posted = false;
       for (let i = 0; i < 5; i++) {
-        const res = await llm.call({ system: systemPrompt(e), messages, tools: chatTools, model: e.model || llm.defaultModels()[e.isPA || e.isMaster || e.isLead ? 'worker' : 'small'], employee: e, maxTokens: 4000 });
+        const res = await llm.call({ system: chatSystem(e), messages, tools: pics.length ? [] : chatTools, model: e.model && !pics.length ? e.model : llm.defaultModels()[route.tier], effort: route.effort, employee: e, maxTokens: route.tier === 'small' ? 1200 : 2400 });
         messages.push({ role: 'assistant', content: res.content });
         const uses = res.content.filter((b) => b.type === 'tool_use');
-        if (!uses.length) { postMessage(ch.id, e.id, (llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); break; }
+        if (!uses.length) { reply((llm.textOf(res) || '👍').replace(new RegExp(`^\\**${e.name}\\**\\s*:\\s*\\**\\s*`), '')); posted = true; break; }
         const results = [];
         for (const u of uses) {
           let out;
           try {
             if (u.name === 'create_task') {
-              const t = createTask({ title: u.input.title, description: u.input.description, assigneeId: emp(u.input.assignee_id) ? u.input.assignee_id : e.id, createdBy: msg.authorId, priority: u.input.priority || 'medium' });
-              out = `Tugas ${t.id} dibuat untuk ${emp(t.assigneeId).name}.`;
+              const g = ch.goalId && task(ch.goalId), inGoal = g && ['todo', 'in_progress', 'waiting'].includes(g.status);   // an instruction inside a goal thread becomes part of that goal
+              const t = createTask({ title: u.input.title, description: u.input.description, expected: u.input.expected, assigneeId: emp(u.input.assignee_id) ? u.input.assignee_id : e.id, createdBy: inGoal ? g.assigneeId : msg.authorId, parentId: inGoal ? g.id : null, priority: u.input.priority || 'medium' });              out = `Tugas ${t.id} dibuat untuk ${emp(t.assigneeId).name}.`;
             } else out = await runTool(e, pseudo, u.name, u.input, {});
           } catch (err) { out = `Error: ${err.message}`; }
           results.push({ type: 'tool_result', tool_use_id: u.id, content: String(out) });
         }
         messages.push({ role: 'user', content: results });
       }
+      if (!posted) reply('Saya sudah menjalankan beberapa langkah untuk permintaan ini, tetapi belum sempat merangkum hasilnya. Tanya lagi, atau minta saya membuat tugas.');
     } else {
       await new Promise((r) => setTimeout(r, 900 + Math.random() * 1200));
       const text = msg.text.replace(/@[\w-]+/g, '').trim();
-      if (TASK_RE.test(text)) {
+      const dup = ch.kind === 'group' && db().tasks.find((x) => x.createdBy === msg.authorId && x.description === text && Date.now() - x.createdAt < 120000);
+      if (dup) reply(`Setuju. Tugas itu sudah diambil **${emp(dup.assigneeId)?.name}**; saya siap membantu dari sisi ${e.title} bila diminta.`, { taskId: dup.id });
+      else if (TASK_RE.test(text)) {
         const t = createTask({ title: text.slice(0, 100), description: text, assigneeId: e.id, createdBy: msg.authorId, priority: 'medium' });
-        postMessage(ch.id, e.id, `Siap! Sudah saya masukkan ke antrean kerja: **${t.title}**. Pantau progresnya di Kanban atau lihat saya di kantor 3D 👀`, { taskId: t.id });
+        reply(`Siap! Sudah saya masukkan ke antrean kerja: **${t.title}**. Pantau progresnya di Kanban atau lihat saya di kantor 3D 👀`, { taskId: t.id });
       } else {
         const r = brain.search(text, { limit: 2 });
         const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status));
-        postMessage(ch.id, e.id, `Halo! Saya ${e.name}, ${e.title}. ${open.length ? `Saat ini saya pegang ${open.length} tugas (terbaru: "${open.at(-1).title}").` : 'Saat ini saya sedang luang.'}${r.length ? `\nMungkin relevan: ${r.map((x) => `[[${x.title}]]`).join(', ')}` : ''}\nMinta saya "buat …" / "tolong …" untuk memberi tugas. _(mode simulasi)_`);
+        {
+          const who = /^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : String(emp(msg.authorId)?.name || 'Owner').split(' ')[0];
+          const prev = db().messages.filter((m) => m.channelId === ch.id && m.authorId === e.id).slice(-3).map((m) => m.text);
+          const heads = [`Dicatat, ${who}.`, 'Baik, saya dengar.', `Oke ${who}, saya catat.`, 'Siap.'];
+          const head = heads.find((h) => !prev.some((p) => p.startsWith(h))) || heads[0];
+          const state = e.status === 'meeting' ? 'Saya sedang di rapat.' : open.filter((t) => t.status !== 'blocked').length ? `Saya sedang menangani "${String(open.filter((t) => t.status !== 'blocked').at(-1).title).slice(0, 50)}".` : 'Saya sedang luang.';
+          const hint = prev.some((p) => p.includes('beri tugas')) ? '' : ' Beri saya tugas ("buat …"), ajak rapat ("rapat dengan …"), atau tanya status. _(mode simulasi: tanpa AI)_';
+          reply(`${head} ${state}${r.length && String(text).split(/\s+/).length >= 3 ? `\nMungkin relevan: ${r.map((x) => `[[${x.title}]]`).join(', ')}` : ''}${hint}`);
+        }
       }
     }
+    if (!quick && String(msg.text || '').trim().split(/\s+/).length >= 6) { try { brain.remember(e, `${/^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : (emp(msg.authorId)?.name || 'Pengguna')} berkata kepadaku: "${String(msg.text).replace(/\s+/g, ' ').slice(0, 110)}"`); } catch { /* memory is best effort */ } }
   } finally {
-    if (e.status === 'chatting') setStatus(e, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);
+    const left = (chatBusy.get(busyKey) || 1) - 1; chatBusy.set(busyKey, left);
+    if (left === 0 && e.status === 'chatting') setStatus(e, prev.status === 'chatting' ? 'idle' : prev.status, prev.status === 'chatting' ? 'Siap bekerja' : prev.text);
   }
 }
 
-export const running = () => [...jobs.entries()].map(([taskId, j]) => ({ taskId, empId: j.empId, mode: j.mode }));
+export const running = () => [...jobs.entries()].filter(([, j]) => (j.ws || 'main') === store.current()).map(([taskId, j]) => ({ taskId, empId: j.empId, mode: j.mode }));
+
+// ───────────────────────── meetings and quick replies from chat ─────────────────────────
+// A chat sentence that asks for a meeting must REALLY start one (agents walk to the Conference Hall and talk in 3D). Before, the PA model only claimed it had.
+const MEETING_RE = /\b(rapat|meeting|rapatkan|kumpul(?:kan)?|berkumpul|ngumpul|briefing|town ?hall|sinkronisasi)\b|ayo\s+ke\s+ruang|ke\s+ruang\s+(?:rapat|meeting)|ke\s+conference/i;
+const PAST_MEETING_RE = /\b(notulen|hasil\s+(?:rapat|meeting)|rapat\s+(?:kemarin|tadi|sebelumnya)|jadwal\s+(?:rapat|meeting))\b/i;
+const CANCEL_MEETING_RE = /\b(batal(?:kan)?|hentikan|bubarkan|stop|sudahi)\b.*\b(rapat|meeting)\b|\b(rapat|meeting)\b.*\b(batal|dibatalkan|stop)\b/i;
+const INVITE_RE = /\b(undang|ajak|panggil|libatkan|tambah(?:kan)?|cuma|hanya)\b/i;
+
+/** ids of AI employees whose name appears in the text, with or without @ ("undang maya aja"); a first name several people share goes to the division head */
+export function namesIn(text) {
+  const t = ' ' + String(text || '').toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, ' ').replace(/\s+/g, ' ') + ' ';
+  const firsts = new Map(), out = new Set();
+  for (const e of db().employees) {
+    if (e.type !== 'ai') continue;
+    const full = String(e.name || '').toLowerCase().trim(); if (!full) continue;
+    if (full.includes(' ') && t.includes(' ' + full + ' ')) out.add(e.id);
+    if (String(e.id).length >= 4 && t.includes(' ' + String(e.id).toLowerCase() + ' ')) out.add(e.id);   // the id also works ("kenzo")
+    const first = full.split(/\s+/)[0]; const cur = firsts.get(first);
+    if (!cur || (e.isLead && !cur.isLead)) firsts.set(first, e);
+  }
+  for (const [first, e] of firsts) if (first.length >= 3 && t.includes(' ' + first + ' ')) out.add(e.id);
+  return [...out];
+}
+/** The meeting the Owner sits in right now. Only a meeting whose loop is alive in THIS process counts: a saved-but-dead meeting must never swallow messages or keep people "busy". */
+export const activeLiveMeeting = (userId) => db().meetings.find((m) => (m.status === 'waiting_owner' || m.status === 'running') && collab.liveLoops.has(m.id) && m.ownerLed && (!userId || m.ownerId === userId));
+const REPLACE_MEETING_RE = /\b(?:rapat|meeting)\s+baru\b|\b(?:undang|ajak|panggil|tambah(?:kan)?)\b/i;
+/** THE one place that decides what a message means for meetings: 'new' | 'replace' | 'cancel' | 'say' | null.
+ *  While the Owner is in a live meeting EVERYTHING is said in the room ("kita mulai rapat kita" included) unless it clearly cancels, or invites/replaces people. */
+export function meetingIntent(text, ids = [], userId = 'owner') {
+  const t = String(text || '').trim();
+  if (!t) return null;
+  const live = activeLiveMeeting(userId);
+  if (live) {
+    if (CANCEL_MEETING_RE.test(t)) return 'cancel';
+    if (REPLACE_MEETING_RE.test(t) && (ids.length || namesIn(t).some((id) => !(live.participants || []).includes(id)))) return 'replace';
+    return 'say';
+  }
+  if (/\?\s*$|^\s*(?:apa|apakah|siapa|kenapa|mengapa|bagaimana|gimana|berapa|kapan|dimana|mana|bisakah)\b/i.test(t) || PAST_MEETING_RE.test(t)) return null;   // questions about meetings are chat, not a request to hold one
+  return MEETING_RE.test(t) ? 'new' : null;
+}
+export function startChatMeeting({ text, userId = 'owner', channelId, ids = [], intent = 'new' }) {
+  const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
+  const say = (msg, extra = {}) => postMessage(channelId, pa.id, msg, extra);
+  const active = activeLiveMeeting(userId);
+  if (intent === 'cancel') { if (active && collab.cancelMeeting(active.id)) say('Rapat dibatalkan. Semua kembali ke pekerjaan masing-masing.'); else say('Tidak ada rapat yang sedang berjalan.'); return { action: 'meeting', cancelled: true }; }
+  const named = namesIn(text).filter((id) => id !== pa.id);
+  let invited = [...new Set([...ids, ...named])].filter((id) => emp(id)?.type === 'ai' && id !== pa.id);
+  if (/\b(semua|seluruh)\b/i.test(text) && !invited.length) invited = db().divisions.map((d) => d.leadId).filter((id) => emp(id)?.type === 'ai' && id !== pa.id);
+  if (!invited.length) { const m = db().employees.find((x) => x.isMaster && x.id !== pa.id); invited = [m?.id || db().divisions.map((d) => d.leadId).find((id) => id && id !== pa.id)].filter(Boolean); }
+  const nameSet = new Set([...invited, pa.id].flatMap((id) => [String(emp(id)?.name || '').toLowerCase().split(/\s+/)[0], String(id).toLowerCase()]));
+  const rest = String(text).replace(/@[\w-]+/g, ' ').replace(/\b(ayo|yuk|ya|tolong|coba|kita|ke|di|ruang|ruangan|rapat|meeting|conference|hall|kumpul|berkumpul|ngumpul|diskusi|undang|ajak|dengan|bareng|saja|aja|cuma|hanya|udah|sudah|sebisa|mungkin|hemat|token|loh|semua|semuanya|seluruh|dan|pergi|datang|masuk|segera|sekarang|skrg|sekarng|now|kalian|langsung)\b/gi, ' ').split(/\s+/).map((w) => w.replace(/^[,;:.!]+|[,;:.!]+$/g, '')).filter((w) => w && !nameSet.has(w.toLowerCase())).join(' ').replace(/^(?:soal|tentang|mengenai|untuk)\s+/i, '').trim();
+  const names = invited.map((id) => emp(id).name);
+  const topic = rest.length >= 8 ? rest.slice(0, 140) : 'Diskusi Owner dengan ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ` dan ${names.length - 3} lainnya` : '');
+  if (active && intent === 'replace') collab.cancelMeeting(active.id);   // "undang Maya saja" replaces the meeting that was just opened with default guests
+  let started = null;
+  const auto = /\b(tanpa\s+(?:saya|aku)|sendiri(?:an)?|laporkan\s+hasil|kabari\s+hasil|otomatis)\b/i.test(text);   // "rapat sendiri dulu" = agents only; otherwise the Owner is in the room
+  collab.runMeeting({ topic, participantIds: invited, chairId: pa.id, ownerLed: !auto, ownerId: userId, fromChat: true, mirrorChannelId: channelId, onStart: (m) => { started = m; } })
+    .catch((err) => { console.warn('[meeting]', err.message); say('⚠️ Rapat belum bisa dimulai: ' + err.message); });
+  if (started) {
+    const how = auto ? 'Mereka berdiskusi sendiri lalu menyusun notulen (1 panggilan AI saja).' : 'Setelah berkumpul, saya buka dengan usulan agenda. Tulis arahanmu di kotak ini: peserta menjawab setiap pesanmu. Ketik "selesai" atau "tutup rapat" untuk mengakhiri (otomatis ditutup bila 10 menit tanpa arahan).';
+    say(`📅 **Rapat dimulai** di Conference Hall bersama ${names.join(', ')}.\nTopik: ${topic}\n${how}`, { meetingId: started.id });
+  }
+  return { action: 'meeting', channelId, meetingId: started?.id || null, members: invited, orchestrator: pa.id };
+}
+
+/** A compact chat persona grounded in the agent's REAL state. The full work prompt (skills, knowledge, self-model: thousands of tokens) made chat expensive and let the model
+ *  invent work ("fokus pada kalender kampanye Q3") from old memories. Chat gets who-you-are + what is actually true right now, and a ban on inventing the rest. */
+function chatSystem(e) {
+  const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status) && t.status !== 'blocked').slice(0, 5);
+  const where = e.status === 'meeting' ? 'sedang di rapat' : e.status === 'working' ? 'sedang bekerja' : e.status === 'chatting' ? 'sedang mengobrol' : 'sedang luang';
+  const c = db().company;
+  const memNote = brain.findNote(`Memori ${e.name}`), memLines = memNote ? memNote.content.split('\n').slice(2).filter(Boolean).slice(-4).map((l) => l.replace(/^- /, '- ').slice(0, 160)).join('\n') : '';
+  return `Kamu ${e.name}, ${String(e.title || '').replace(/\s*[·\-–]\s*Anda \(Owner\)\s*$/i, '')} di divisi ${div(e.divisionId)?.name || '-'} ${c.name}. ${String(e.about || e.persona || '').slice(0, 280)}
+Keahlian: ${(e.skills || []).slice(0, 4).join(', ') || '-'}.
+
+# KEADAAN NYATA SAAT INI (satu-satunya sumber kebenaran tentang dirimu)
+- Status: ${where}${e.statusText ? ` (${String(e.statusText).slice(0, 60)})` : ''}
+- Tugas aktif: ${open.length ? open.map((t) => `"${String(t.title).slice(0, 60)}" [${t.status}]`).join('; ') : 'TIDAK ADA'}
+
+${memLines ? `# INGATANMU (kejadian nyata yang kamu alami; bukan berarti masih kamu kerjakan)\n${memLines}\n\n` : ''}${learn.chatBlock(e)}# ATURAN
+- Jawab 1-3 kalimat, natural, ${c.language}, seperti rekan kerja.
+- Format: untuk 2 hal atau lebih pakai daftar Markdown (satu baris per butir, "- " atau "1. "), bukan kalimat panjang bersambung. Perbandingan/angka berderet pakai tabel Markdown. Untuk grafik tulis blok \`\`\`chart berisi JSON {"type":"bar|line|pie","title":"…","labels":[…],"data":[…]} hanya dengan angka NYATA dari data di atas.
+- Data perusahaan yang sebenarnya (produk, harga, pelanggan, angka, target) ${db().notes.some((n) => n.kb === 'owner' || n.kb === 'drive') ? 'hanya yang ada di catatan Brain bertanda terverifikasi; selain itu belum ada' : 'BELUM diisi Owner'}. Jangan menebaknya; bila ditanya, katakan datanya belum ada.
+- Jawab dari blok "FAKTA DARI BRAIN" bila ada dan sebut judul dokumennya. DILARANG menyebut nama folder, file, atau dokumen yang tidak tercantum di pesan ini (jangan mengarang folder seperti "Data Perusahaan").
+- JANGAN mengarang pekerjaan, proyek, angka, atau status yang tidak tertulis di atas. Bila ditanya sedang apa atau di mana, jawab sesuai keadaan nyata; bila tidak ada tugas, katakan sedang luang.
+- Bila tidak tahu atau datanya tidak ada, katakan terus terang dan sebutkan cara mendapatkannya (cari di Brain, tanya rekan, riset). Jangan pura-pura sudah mengerjakan sesuatu.
+- Kritis, bukan penurut: bila permintaan kabur, tanyakan SATU hal yang paling penting dulu; bila ada risiko atau asumsi lemah, sebutkan singkat beserta alasannya.
+- Ditanya tentang rekan: jawab hanya dari blok "KEADAAN NYATA rekan" bila ada; jangan menceritakan dirimu sebagai gantinya.
+- Jangan menyebut nama tool atau istilah teknis.
+- Bila diminta pekerjaan besar, panggil create_task lalu konfirmasi singkat apa yang dibuat dan siapa pengerjanya.`;
+}
+
+/** one true sentence about a colleague, from the database (never invented) */
+// ───────────────────────── model router: cheap by default, strong only when it matters ─────────────────────────
+const COMPLEX_RE = /\b(analisis|analisa|analisislah|bandingkan|perbandingan|strategi|rencana|rancang|rancangan|susun(?:kan)?|evaluasi|hitung|proyeksi|kenapa|mengapa|jelaskan|uraikan|rangkum(?:kan)?|ringkas(?:kan)?|prioritas(?:kan)?|risiko|rekomendasi(?:kan)?|solusi|bagaimana cara|langkah[- ]langkah|pro(?:s)? (?:dan|&) kontra|kelebihan|kekurangan|tren|forecast|anggaran|budget)\b/i;
+/** a message worth the big model: long, analytical, or several questions at once */
+export const isComplex = (text) => { const t = String(text || ''); return t.split(/\s+/).length > 40 || COMPLEX_RE.test(t) || (t.match(/\?/g) || []).length >= 2; };
+/** pictures → vision model (Qwen); complex → 120B with medium reasoning; everything else → 20B with low reasoning (it still reasons, just briefly) */
+export function chatRoute(msg, ch = {}) {
+  if ((msg.attachments || []).some((a) => a.type === 'image')) return { tier: 'vision', effort: 'low', why: 'gambar' };
+  if (isComplex(msg.text) || ch.goalId) return { tier: 'smart', effort: 'medium', why: 'kompleks' };
+  return { tier: 'small', effort: 'low', why: 'biasa' };
+}
+// ── chat pictures: stored as files per workspace (never inside the database that is streamed to every browser)
+const uploadDir = () => path.join(config.dataDir(), 'uploads', store.current());
+const IMG_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' };
+export function saveImages(list = []) {
+  const out = [];
+  for (const img of (Array.isArray(list) ? list : []).slice(0, 3)) {
+    const m = /^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(img?.dataUrl || ''));
+    if (!m) continue;
+    const buf = Buffer.from(m[2], 'base64');
+    if (buf.length > 4 * 1048576) throw Object.assign(new Error('Gambar terlalu besar (maks 4 MB)'), { code: 413 });
+    const id = uid('img') + '.' + IMG_TYPES[m[1]];
+    fs.mkdirSync(uploadDir(), { recursive: true });
+    fs.writeFileSync(path.join(uploadDir(), id), buf);
+    out.push({ id, type: 'image', mime: m[1], name: String(img.name || 'gambar').slice(0, 80), url: `/api/files/${id}` });
+  }
+  return out;
+}
+export function readUpload(id) {
+  if (!/^img-[\w-]+\.(png|jpg|webp|gif)$/.test(String(id))) return null;
+  const f = path.join(uploadDir(), id);
+  return fs.existsSync(f) ? { data: fs.readFileSync(f), mime: Object.keys(IMG_TYPES).find((k) => IMG_TYPES[k] === id.split('.').pop()) } : null;
+}
+const imageBlocks = (msg) => (msg.attachments || []).filter((a) => a.type === 'image').map((a) => readUpload(a.id)).filter(Boolean).map((f) => ({ type: 'image', source: { type: 'base64', media_type: f.mime, data: f.data.toString('base64') } }));
+
+/** what the company's verified knowledge actually contains (Drive + Owner + System), grouped by folder; this is the only truthful answer to "data apa saja yang ada?" */
+export function brainOverview({ groups = 12, examples = 3 } = {}) {
+  const notes = db().notes.filter((n) => !n.archived && brain.isVerified(n) && n.visibility !== 'private');
+  if (!notes.length) return { total: 0, text: 'Brain belum berisi data terverifikasi. Isi lewat Google Drive (Pengaturan → Ambil dari Drive) atau tulis catatan sendiri di Brain.' };
+  const key = (n) => { const p = String(n.folder || '').split('/'); return p[0] === 'Drive' ? p.slice(1, 4).join(' › ') : p[0]; };   // Drive/Perusahaan/Raycorp/… → "Perusahaan › Raycorp › …"
+  const by = new Map();
+  for (const n of notes) { const k = key(n); if (!by.has(k)) by.set(k, []); by.get(k).push(n); }
+  const rows = [...by.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, groups);
+  const text = `Brain berisi ${notes.length} catatan terverifikasi:\n` + rows.map(([k, l]) => `- **${k}** (${l.length}): ${l.slice(0, examples).map((n) => n.title).join('; ')}${l.length > examples ? '; …' : ''}`).join('\n') + (by.size > groups ? `\n- …dan ${by.size - groups} folder lain.` : '');
+  return { total: notes.length, text };
+}
+/** the few verified notes most relevant to a question, as short facts for the prompt (keeps tokens low, keeps answers grounded) */
+function relevantFacts(text, limit = 3) {
+  return brain.search(text, { limit, verifiedOnly: true }).map((h) => `- [[${h.title}]] (${h.folder}): ${h.snippet}`).join('\n');
+}
+function colleagueState(x) {
+  const open = db().tasks.filter((t) => t.assigneeId === x.id && OPEN.has(t.status) && t.status !== 'blocked');
+  const mtg = db().meetings.find((m) => (m.status === 'running' || m.status === 'waiting_owner') && (m.participants || []).includes(x.id));
+  if (x.status === 'offline') return 'sedang offline.';
+  if (x.status === 'meeting') return mtg ? `sedang rapat "${String(mtg.topic).slice(0, 50)}".` : 'sedang rapat singkat.';
+  if (x.status === 'working' || open.length) return open.length ? `sedang mengerjakan "${String(open[0].title).slice(0, 60)}"${open.length > 1 ? ` (+${open.length - 1} tugas lain)` : ''}.` : 'sedang bekerja.';
+  if (x.status === 'chatting') return 'sedang mengobrol dengan seseorang.';
+  return 'sedang luang, tidak ada tugas aktif.';
+}
+const GREET_WORDS = new Set(['hai', 'halo', 'hi', 'hello', 'hey', 'p', 'tes', 'test', 'pagi', 'siang', 'sore', 'malam', 'oi', 'woi', 'assalamualaikum', 'selamat', 'ya', 'owner']);
+/** zero-token answers for greetings and "what can you do": the model adds nothing there, and it kept parroting tool names */
+function quickReply(e, msg, ch) {
+  const raw = String(msg.text || '').replace(/@[\w-]+/g, ' ').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+  const who = /^anda\b/i.test(emp(msg.authorId)?.name || '') ? 'Owner' : String(emp(msg.authorId)?.name || 'Owner').split(' ')[0];
+  const words = raw.split(' ').filter(Boolean);
+  const first = String(e.name || '').toLowerCase().split(' ')[0];
+  const title = String(e.title || '').replace(/\s*[·\-–]\s*Anda \(Owner\)\s*$/i, '').trim();
+  const mine = db().messages.filter((m) => m.channelId === ch.id && m.authorId === e.id);
+  const lastMine = new Set(mine.slice(-4).map((m) => m.text));
+  const pick = (arr) => arr.find((t) => !lastMine.has(t)) || arr[Math.floor(Date.now() / 1000) % arr.length];   // never repeat what was just said
+  const open = db().tasks.filter((t) => t.assigneeId === e.id && OPEN.has(t.status) && t.status !== 'blocked');
+  const state = e.status === 'meeting' ? 'Saya sedang di rapat.' : open.length ? `Saya sedang menangani "${String(open[0].title).slice(0, 50)}".` : 'Saya sedang luang.';
+  if (words.length && words.length <= 3 && words.every((w) => GREET_WORDS.has(w) || w === first)) {
+    const spokeRecently = mine.some((m) => Date.now() - (m.t || 0) < 6 * 3600e3);
+    if (!spokeRecently) return `Halo ${who}! Saya ${e.name}, ${title}. ${state} Mau beri tugas, ajak rapat, atau sekadar tanya?`;
+    if (words.length === 1 && words[0] === first) return pick([`Ya, ${who}? Saya di sini.`, `Iya ${who}, saya dengar.`, `Siap, ${who}. Ada yang bisa saya bantu?`]);
+    return pick([`Halo lagi, ${who}. ${state}`, `Hai ${who}! Ada yang bisa saya bantu?`, `Siap ${who}. Mau mulai dari mana?`, `Hai! ${state} Silakan beri arahan.`]);
+  }
+  // "list semua", "daftar lengkap", "apa lagi": EVERY document title, grouped by folder, straight from the Brain (complete and true, zero tokens)
+  if (words.length <= 10 && /\b(list|daftar|daftarkan|sebutkan)\b.*\b(semua|semuanya|lengkap|seluruh)\b|\b(semua|semuanya|seluruh)\b.*\b(list|daftar|judul|dokumen)\b|\bapa\s?lagi\b|\bapalgi\b/.test(raw)) {
+    const notes = db().notes.filter((n) => !n.archived && brain.isVerified(n) && n.visibility !== 'private');
+    if (!notes.length) return brainOverview().text;
+    const by = new Map();
+    for (const n of notes) { const k = String(n.folder || '').replace(/^Drive\//, '').split('/').join(' › '); if (!by.has(k)) by.set(k, []); by.get(k).push(n.title); }
+    const MAX = 150; let shown = 0;
+    const parts = [...by.entries()].sort((a, b) => a[0].localeCompare(b[0], 'id', { numeric: true })).map(([k, l]) => { const take = l.slice(0, Math.max(0, MAX - shown)); shown += take.length; return take.length ? `**${k}** (${l.length})\n${take.map((t) => `- ${t}`).join('\n')}` : ''; }).filter(Boolean);
+    return `Semua dokumen terverifikasi di Brain (${notes.length}):\n\n${parts.join('\n\n')}${notes.length > MAX ? `\n\n…dan ${notes.length - MAX} lagi. Buka halaman Brain untuk melihat semuanya.` : ''}`;
+  }
+  // "ada data apa aja?", "isi drive apa?": the Brain answers itself, zero tokens, no invented folders
+  if (words.length <= 10 && (/\b(data|dokumen|file|catatan|knowledge|pengetahuan|isi)\b.*\b(apa|apa aja|apa saja|aja|saja)\b/.test(raw) || /\b(isi|ada apa)\b.*\b(drive|brain|otak)\b|\b(drive|brain)\b.*\b(isi|ada apa|apa aja|apa saja)\b|\bdi folder drive\b/.test(raw))) {
+    const o = brainOverview();
+    return o.text + (o.total ? '\n\nTanya isi salah satunya, mis. "jelaskan struktur organisasi RayCorp", dan saya jawab dari dokumennya.' : '');
+  }
+  // "progresnya gimana?": answered straight from the task tree, zero tokens, nothing invented
+  if (/\b(progres\w*|progress\w*|status\w*|sampai\s+mana|sudah\s+sampai|update\w*|perkembangan\w*|kabar\w*)\b/.test(raw) && words.length <= 8) {
+    const root = ch.goalId ? task(ch.goalId) : (e.isPA ? db().tasks.filter((x) => x.kind === 'goal' && !x.parentId && x.createdBy === msg.authorId).at(-1) : null);
+    if (root) return goalStatus(root) + (root.status === 'review' ? '\nHasil akhirnya menunggu review-mu di **Butuh kamu**.' : '');
+  }
+  // "taufik lagi apa?", "sora?" asked to someone else: answer with the colleague's REAL state instead of the replier's own (it used to describe itself)
+  const others = namesIn(raw).filter((id) => id !== e.id && !(ch.members || []).includes(id)).map(emp).filter(Boolean);   // people in this thread answer for themselves
+  if (others.length && others.length <= 3 && (/\b(lagi|sedang|lg)\s+(apa|ngapain|dimana|di\s+mana|kerja\s+apa)\b|\bngapain\b|\b(dimana|di\s+mana|kemana|ke\s+mana)\b|\bstatus\b/.test(raw) || words.length <= 2)) {
+    return others.map((x) => `${x.name} ${colleagueState(x)}`).join(' ') + (words.length <= 2 ? ` Mau saya sampaikan sesuatu ke ${others[0].name}, atau kamu ajak bicara langsung lewat "+ Agen"?` : '');
+  }
+  if (/\b(bisa\s+apa|apa\s+(?:saja|aja)\s+(?:yang\s+)?bisa|bantuan|help|fitur)\b/.test(raw)) return pick(['Lewat kotak ini kamu bisa: beri tugas atau goal ("buat rencana promo akhir tahun") yang saya pecah ke tim; ajak rapat ("rapat dengan Maya soal promo") dan mereka berkumpul di Conference Hall; tanya status atau isi Brain; atau minta saya mendekat ("ikuti saya"). Beberapa agen sekaligus lewat "+ Agen".', 'Singkatnya: kasih saya tugas, ajak rapat, tanya status, atau minta saya mendekat. Contoh: "tolong rangkum laporan penjualan" atau "rapat dengan Maya".']);
+  return null;
+}
+
+// ───────────────────────── orchestrator entry point (one chat box for everything) ─────────────────────────
+/** One message from the Owner. mode: 'auto' | 'chat' | 'goal'. auto = goal when it reads like work and nobody was addressed, otherwise a chat (DM with one agent, group with several). */
+export function orchestrate({ text, userId = 'owner', to = [], mode = 'auto', channelId = null, images = [] }) {
+  text = String(text || '').trim().slice(0, 8000);
+  const attachments = saveImages(images);   // pictures become files; the message only carries links
+  if (!text && !attachments.length) throw new Error('Pesan kosong');
+  if (!text) text = '(gambar)';
+  if (attachments.length && mode === 'goal') mode = 'chat';   // a picture is something to look at and talk about, not a new goal
+  // replying inside a goal thread: the message stays in that thread (PA answers, named heads join), it is not a new goal
+  const thread = channelId && db().channels.find((c) => c.id === channelId && c.goalId && c.members.includes(userId));
+  if (thread && !(Array.isArray(to) && to.length)) {
+    const m = postMessage(thread.id, userId, text, attachments.length ? { attachments } : {});
+    onHumanMessage(m).catch((err) => { console.error('[orchestrate] goal thread', err); postMessage(thread.id, task(thread.goalId)?.assigneeId || userId, '⚠️ Maaf, ada galat: ' + err.message); });
+    return { action: 'chat', channelId: thread.id, members: thread.members.filter((x) => x !== userId), orchestrator: task(thread.goalId)?.assigneeId };
+  }
+  const pa = db().employees.find((x) => x.isPA && x.ownerId === userId && x.status !== 'offline') || db().employees.find((x) => x.isMaster) || emp('aria');
+  const mentioned = [...text.matchAll(/@([\w-]+)/g)].map((m) => m[1].toLowerCase()).map((n) => db().employees.find((x) => x.id === n || x.name.toLowerCase() === n)).filter(Boolean).map((e) => e.id);
+  const ids = [...new Set([...(Array.isArray(to) ? to : []), ...mentioned])].filter((id) => emp(id)?.type === 'ai');
+  // a goal only when nobody was addressed, no meeting is going on or asked for, and the sentence reads like work (or the Owner picked "Goal")
+  const meet = mode === 'goal' || attachments.length ? null : meetingIntent(text, ids, userId);
+  const action = mode === 'goal' ? 'goal' : mode === 'chat' || meet || attachments.length ? 'chat' : (!ids.length && looksLikeWork(text) ? 'goal' : 'chat');
+  if (action === 'goal') {
+    const t = submitGoal({ title: text.replace(/@[\w-]+/g, '').trim().slice(0, 150) || 'Goal dari Owner', description: text, userId });
+    const chId = ensureGoalThread(t) || ensureDM(userId, pa.id);
+    postMessage(chId, userId, text);
+    postMessage(chId, pa.id, `🎯 **Goal diterima** dan punya thread sendiri ini.\n_Definisi selesai:_ ${t.expected}\nKemajuan tiap bagian muncul di sini. Tanya "progresnya?" kapan saja, sebut nama kepala divisi untuk mengajaknya bicara, dan hasil akhirnya kamu review di **Butuh kamu** sebelum dianggap selesai.`, { taskId: t.id, goal: true });
+    postMessage(ensureDM(userId, pa.id), pa.id, `🎯 Goal baru: **${t.title.slice(0, 90)}**. Diskusinya pindah ke thread goal itu.`, { taskId: t.id, goal: true, channelRef: chId });
+    return { action: 'goal', channelId: chId, taskId: t.id, orchestrator: pa.id };
+  }
+  // everything else is a message in a conversation; onHumanMessage decides meeting / broadcast / reply in ONE place
+  const members = ids.length ? ids : [pa.id];
+  const chId = members.length === 1 ? ensureDM(userId, members[0]) : ensureGroup(userId, members);
+  const m = postMessage(chId, userId, text, attachments.length ? { attachments } : {});
+  onHumanMessage(m).catch((err) => { console.error('[orchestrate] chat error', err); postMessage(chId, pa.id, '⚠️ Maaf, ada galat saat memproses pesan: ' + err.message); });
+  return { action: meet && (meet !== 'say' || !ids.length) ? 'meeting' : 'chat', channelId: chId, members, orchestrator: pa.id };
+}

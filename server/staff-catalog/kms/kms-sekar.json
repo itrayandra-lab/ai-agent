@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-sekar",
+  "division": "kms",
+  "employeeId": "sekar",
+  "title": "AI Evaluation Analyst",
+  "version": 1,
+  "name": "Penilai hasil kerja dengan rubrik",
+  "ringkas": "Beri nilai berbobot pada satu hasil kerja berdasarkan rubrik, tampilkan nilai akhir dan kriteria terlemah.",
+  "kataKunci": [
+    "rubrik",
+    "penilaian",
+    "evaluasi",
+    "skor",
+    "kualitas"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Yang dinilai",
+      "required": true,
+      "contoh": "Ringkasan Laporan Penjualan"
+    },
+    {
+      "key": "rubrik",
+      "type": "longtext",
+      "label": "Rubrik (satu baris: kriteria | bobot)",
+      "required": true,
+      "contoh": "Ketepatan | 40\nKelengkapan | 30\nBahasa | 30"
+    },
+    {
+      "key": "nilai",
+      "type": "longtext",
+      "label": "Nilai 1 sampai 5 (satu baris: kriteria | skor)",
+      "required": true,
+      "contoh": "Ketepatan | 4\nKelengkapan | 5\nBahasa | 3"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung nilai",
+      "set": {
+        "rows": "baris(input.rubrik).slice(0, 12).map((l) => { const p = l.split('|').map((s) => s.trim()); const n = baris(input.nilai).map((x) => x.split('|').map((s) => s.trim())).find((x) => x[0].toLowerCase() === p[0].toLowerCase()); return { kriteria: p[0], bobot: num(p[1]), skor: n ? Math.min(5, Math.max(0, num(n[1]))) : 0, ada: !!n }; })",
+        "sumBobot": "v.rows.reduce((a, b) => a + b.bobot, 0)",
+        "persen": "v.sumBobot ? Math.round(v.rows.reduce((a, b) => a + b.bobot * b.skor, 0) / (v.sumBobot * 5) * 100) : 0",
+        "grade": "v.persen >= 85 ? 'A' : v.persen >= 70 ? 'B' : v.persen >= 55 ? 'C' : 'D'",
+        "lemah": "v.rows.slice().sort((x, y) => x.skor - y.skor)[0]"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ': skor ' + v.persen + '% (nilai ' + v.grade + ')'",
+    "teks": "'# Penilaian: ' + input.nama + '\\n\\n' + tabel(['Kriteria', 'Bobot', 'Skor (1-5)'], v.rows.map((r) => [r.kriteria, r.bobot, r.ada ? r.skor : 'belum dinilai'])) + '\\n\\n**Skor ' + v.persen + '% (nilai ' + v.grade + ')**' + (v.lemah ? '\\n\\nPaling lemah: ' + v.lemah.kriteria : '')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'penilaian-rubrik'",
+        "isi": "csv([['Kriteria', 'Bobot', 'Skor']].concat(v.rows.map((r) => [r.kriteria, r.bobot, r.skor])).concat([['Total persen', '', v.persen]]))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Analysis",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Ringkasan Laporan Penjualan",
+      "rubrik": "Ketepatan | 40\nKelengkapan | 30\nBahasa | 30",
+      "nilai": "Ketepatan | 4\nKelengkapan | 5\nBahasa | 3"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "80%",
+        "nilai B",
+        "Paling lemah: Bahasa"
+      ]
+    }
+  },
+  "kemampuan": [
+    "nilai-skor"
+  ],
+  "keahlian": {
+    "istilah": [
+      "rubrik",
+      "penilaian",
+      "evaluasi",
+      "skor",
+      "kualitas"
+    ],
+    "data": [
+      "yang dinilai",
+      "rubrik (satu baris: kriteria | bobot)",
+      "nilai 1 sampai 5 (satu baris: kriteria | skor)"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

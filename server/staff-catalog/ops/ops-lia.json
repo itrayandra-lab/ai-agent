@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ops-lia",
+  "division": "ops",
+  "employeeId": "lia",
+  "title": "PMO Manager",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Plan",
+    "simpan": true
+  },
+  "name": "Penyusun jadwal dan penanggung jawab proyek",
+  "ringkas": "Susun jadwal proyek dari daftar tugas, lama pengerjaan, dan keterkaitan antar tugas, lengkap dengan penanggung jawab dan tanggal selesai.",
+  "kataKunci": [
+    "jadwal proyek",
+    "timeline",
+    "raci",
+    "penanggung jawab",
+    "gantt"
+  ],
+  "inputs": [
+    {
+      "key": "proyek",
+      "type": "text",
+      "label": "Nama proyek",
+      "required": true,
+      "contoh": "Peluncuran Produk Baru"
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "penyetuju",
+      "type": "text",
+      "label": "Penyetuju akhir",
+      "required": true,
+      "contoh": "Bu Lia"
+    },
+    {
+      "key": "tugas",
+      "type": "longtext",
+      "label": "Tugas (nama | lama hari | penanggung jawab | nomor tugas yang harus selesai dulu, boleh kosong)",
+      "required": true,
+      "contoh": "Riset | 5 | Dina |"
+    }
+  ],
+  "steps": [
+    {
+      "id": "susun",
+      "use": "hitung",
+      "label": "Susun jadwal",
+      "set": {
+        "rows": "baris(input.tugas).slice(0, 40).reduce((acc, l, i) => { const p = l.split('|').map((s) => s.trim()); const dur = Math.max(1, Math.round(num(p[1]))); const dep = Math.round(num(p[3])); const mulai = dep > 0 && acc[dep - 1] ? acc[dep - 1].selesai : 0; return acc.concat([{ no: i + 1, tugas: p[0] || '-', dur: dur, pj: p[2] || '-', dep: dep > 0 && acc[dep - 1] ? dep : '', mulai: mulai, selesai: mulai + dur }]); }, [])",
+        "total": "Math.max.apply(null, v.rows.map((r) => r.selesai))",
+        "akhir": "new Date(Date.parse(input.mulai) + v.total * 864e5).toISOString().slice(0, 10)",
+        "tabelJ": "v.rows.map((r) => ({ no: r.no, tugas: r.tugas, pj: r.pj, dep: r.dep, mulai: new Date(Date.parse(input.mulai) + r.mulai * 864e5).toISOString().slice(0, 10), selesai: new Date(Date.parse(input.mulai) + r.selesai * 864e5).toISOString().slice(0, 10), akhir: r.selesai === v.total }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.proyek + ': ' + v.rows.length + ' tugas, total ' + v.total + ' hari, selesai ' + v.akhir",
+    "teks": "'# Jadwal proyek: ' + input.proyek + '\\n\\nMulai ' + input.mulai + ', perkiraan selesai **' + v.akhir + '** (' + v.total + ' hari)\\n\\n' + tabel(['No', 'Tugas', 'Mulai', 'Selesai', 'Mengerjakan', 'Menunggu tugas', 'Menentukan akhir'], v.tabelJ.map((r) => [r.no, r.tugas, r.mulai, r.selesai, r.pj, r.dep || '-', r.akhir ? 'Ya' : '-'])) + '\\n\\nPenyetuju akhir: ' + input.penyetuju",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-' + input.proyek",
+        "isi": "csv([['No', 'Tugas', 'Mulai', 'Selesai', 'Mengerjakan', 'Penyetuju', 'Menunggu tugas']].concat(v.tabelJ.map((r) => [r.no, r.tugas, r.mulai, r.selesai, r.pj, input.penyetuju, r.dep])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "proyek": "Peluncuran Produk Baru",
+      "mulai": "2026-12-01",
+      "penyetuju": "Bu Lia",
+      "tugas": "Riset | 5 | Dina |\nDesain | 7 | Eka | 1\nBuild | 10 | Fajar | 2\nUji | 4 | Gita | 3\nSosialisasi | 3 | Dina | 2"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "total 26 hari",
+        "selesai 2026-12-27",
+        "Sosialisasi"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-kerja"
+  ],
+  "keahlian": {
+    "istilah": [
+      "jadwal proyek",
+      "timeline",
+      "raci",
+      "penanggung jawab",
+      "gantt"
+    ],
+    "data": [
+      "nama proyek",
+      "mulai tanggal",
+      "penyetuju akhir",
+      "tugas (nama | lama hari | penanggung jawab | nomor tugas yan"
+    ],
+    "gaya": "praktis, fokus tenggat dan penanggung jawab",
+    "contoh": {
+      "baik": "Dua tugas lewat tenggat; tetapkan penanggung jawab hari ini.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan anggaran tetap di manajer."
+    ]
+  }
+}

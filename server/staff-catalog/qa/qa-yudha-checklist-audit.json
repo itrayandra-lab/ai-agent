@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-yudha-checklist-audit",
+  "division": "qa",
+  "employeeId": "yudha",
+  "title": "Documentation & CPKB Specialist",
+  "version": 1,
+  "name": "Pembuat daftar periksa audit internal",
+  "ringkas": "Buat daftar periksa audit internal siap cetak untuk gudang, produksi, laboratorium, dokumen, atau kebersihan.",
+  "kataKunci": [
+    "audit internal",
+    "daftar periksa",
+    "checklist",
+    "cpkb",
+    "inspeksi"
+  ],
+  "inputs": [
+    {
+      "key": "area",
+      "type": "choice",
+      "label": "Area yang diaudit",
+      "required": true,
+      "default": "gudang",
+      "choices": [
+        {
+          "v": "gudang",
+          "t": "Gudang"
+        },
+        {
+          "v": "produksi",
+          "t": "Produksi"
+        },
+        {
+          "v": "laboratorium",
+          "t": "Laboratorium"
+        },
+        {
+          "v": "dokumen",
+          "t": "Dokumen dan rekaman"
+        },
+        {
+          "v": "kebersihan",
+          "t": "Kebersihan dan sanitasi"
+        }
+      ]
+    },
+    {
+      "key": "dalam",
+      "type": "choice",
+      "label": "Seberapa rinci?",
+      "required": true,
+      "default": "lengkap",
+      "choices": [
+        {
+          "v": "inti",
+          "t": "Butir inti (5)"
+        },
+        {
+          "v": "lengkap",
+          "t": "Lengkap (8)"
+        }
+      ]
+    },
+    {
+      "key": "tanggal",
+      "type": "date",
+      "label": "Tanggal audit",
+      "required": true,
+      "contoh": "2026-12-02"
+    },
+    {
+      "key": "auditor",
+      "type": "text",
+      "label": "Nama auditor",
+      "required": false,
+      "contoh": "Fitri"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun daftar periksa",
+      "set": {
+        "semua": "({\"gudang\":[[\"Bahan diterima dengan identitas, nomor batch, dan status karantina yang jelas\",\"Penerimaan bahan\"],[\"Bahan karantina, lulus, dan ditolak disimpan terpisah dan berlabel\",\"Pemisahan status\"],[\"Suhu dan kelembapan gudang tercatat dan dalam batas\",\"Kondisi simpan\"],[\"Bahan yang kedaluwarsa lebih dulu dikeluarkan lebih dulu, tidak ada yang kedaluwarsa tercampur\",\"Rotasi stok\"],[\"Bahan tidak diletakkan langsung di lantai dan ada jarak dari dinding\",\"Penataan\"],[\"Tidak ada tanda hama, kemasan bocor, atau tumpahan\",\"Kebersihan dan hama\"],[\"Kartu stok sama dengan jumlah fisik (cek tiga sampel)\",\"Rekonsiliasi stok\"],[\"Akses gudang dibatasi pada petugas berwenang\",\"Keamanan\"]],\"produksi\":[[\"Ruang dan lini sudah dibersihkan dan ada label status kebersihan\",\"Verifikasi lini\"],[\"Catatan batch diisi tepat waktu dan tanpa kolom kosong\",\"Dokumentasi batch\"],[\"Penimbangan memakai timbangan terkalibrasi dan diverifikasi\",\"Penimbangan\"],[\"Operator memakai pakaian dan perlengkapan sesuai ketentuan\",\"Higiene personel\"],[\"Peralatan berlabel status (bersih, sedang dipakai, perlu perawatan)\",\"Peralatan\"],[\"Pengendalian proses (suhu, waktu, kecepatan) sesuai catatan\",\"Parameter proses\"],[\"Bahan sisa dan limbah ditangani sesuai prosedur\",\"Limbah\"],[\"Penyimpangan dilaporkan segera dan tercatat\",\"Penyimpangan\"]],\"laboratorium\":[[\"Alat ukur punya label kalibrasi yang masih berlaku\",\"Kalibrasi\"],[\"Pereaksi dan standar berlabel tanggal buka dan kedaluwarsa\",\"Pereaksi\"],[\"Sampel berlabel dan dapat ditelusuri ke batch\",\"Ketertelusuran\"],[\"Data mentah dicatat langsung, tidak di kertas lepas\",\"Integritas data\"],[\"Hasil di luar spesifikasi diinvestigasi sesuai prosedur\",\"Hasil OOS\"],[\"Metode uji memakai versi dokumen yang berlaku\",\"Metode\"],[\"Limbah kimia dan biologi dipisah dan dibuang sesuai aturan\",\"Limbah\"],[\"Analis sudah dilatih dan catatan pelatihannya ada\",\"Pelatihan\"]],\"dokumen\":[[\"Dokumen yang dipakai di lapangan adalah revisi terbaru\",\"Pengendalian dokumen\"],[\"Salinan lama ditarik atau ditandai tidak berlaku\",\"Penarikan\"],[\"Perubahan dokumen punya persetujuan dan tanggal berlaku\",\"Perubahan\"],[\"Rekaman diisi dengan tinta, bertanggal, dan diparaf\",\"Praktik pencatatan\"],[\"Rekaman disimpan sesuai masa simpan dan mudah ditemukan\",\"Arsip\"],[\"Daftar induk dokumen sesuai kenyataan\",\"Daftar induk\"],[\"Pelatihan SOP baru tercatat dan dipahami petugas\",\"Pelatihan\"],[\"Koreksi catatan memakai coretan satu garis dan paraf\",\"Koreksi\"]],\"kebersihan\":[[\"Lantai, dinding, dan langit-langit bersih dan tidak rusak\",\"Fasilitas\"],[\"Jadwal pembersihan dan catatan pelaksanaannya lengkap\",\"Jadwal\"],[\"Bahan pembersih sesuai daftar dan berlabel\",\"Bahan pembersih\"],[\"Tempat sampah tertutup dan dikosongkan teratur\",\"Sampah\"],[\"Toilet dan ruang ganti bersih serta perlengkapan tersedia\",\"Sanitasi\"],[\"Perangkap hama diperiksa dan dicatat\",\"Pengendalian hama\"],[\"Wastafel cuci tangan berfungsi dan ada sabun dan petunjuk\",\"Higiene\"],[\"Saluran air bebas genangan dan bau\",\"Drainase\"]]})[input.area]",
+        "butir": "v.semua.slice(0, input.dalam === 'inti' ? 5 : 8).map((b, i) => ({ no: i + 1, butir: b[0], acuan: b[1] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.butir.length + ' butir periksa untuk audit ' + input.area + ' pada ' + tgl(input.tanggal)",
+    "teks": "'# Daftar periksa audit: ' + input.area + '\\n\\nTanggal: ' + tgl(input.tanggal) + ' · Auditor: ' + (input.auditor || '-') + '\\n\\n' + tabel(['No', 'Butir yang diperiksa', 'Acuan umum', 'Sesuai?', 'Catatan'], v.butir.map((b) => [b.no, b.butir, b.acuan, '', ''])) + '\\n\\n_Butir ini acuan umum praktik pembuatan yang baik. Sesuaikan dengan SOP dan pedoman resmi perusahaan sebelum dipakai sebagai catatan audit._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'daftar-periksa-' + input.area",
+        "isi": "csv([['No', 'Butir yang diperiksa', 'Acuan umum', 'Sesuai (Ya/Tidak)', 'Bukti atau catatan', 'Tindak lanjut']].concat(v.butir.map((b) => [b.no, b.butir, b.acuan, '', '', ''])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "area": "gudang",
+      "dalam": "lengkap",
+      "tanggal": "2026-12-02",
+      "auditor": "Fitri"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "8 butir periksa untuk audit gudang",
+        "Rotasi stok"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "susun-daftar-periksa"
+  ],
+  "keahlian": {
+    "istilah": [
+      "audit internal",
+      "daftar periksa",
+      "checklist",
+      "cpkb",
+      "inspeksi"
+    ],
+    "data": [
+      "area yang diaudit",
+      "seberapa rinci?",
+      "tanggal audit",
+      "nama auditor"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

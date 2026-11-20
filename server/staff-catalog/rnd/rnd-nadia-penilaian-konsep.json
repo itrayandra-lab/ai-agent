@@ -1,0 +1,249 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-nadia-penilaian-konsep",
+  "division": "rnd",
+  "employeeId": "nadia",
+  "title": "Product Development Specialist (NPD)",
+  "version": 1,
+  "name": "Penilai kelayakan konsep produk",
+  "ringkas": "Beri nilai lima sisi sebuah konsep produk dengan bobot, hitung skor akhir, dan putuskan lanjut, perbaiki, atau hentikan.",
+  "kataKunci": [
+    "konsep produk",
+    "kelayakan",
+    "stage gate",
+    "penilaian ide",
+    "prioritas produk"
+  ],
+  "inputs": [
+    {
+      "key": "konsep",
+      "type": "text",
+      "label": "Nama konsep produk",
+      "required": true,
+      "contoh": "Serum anti noda hitam"
+    },
+    {
+      "key": "pasar",
+      "type": "choice",
+      "label": "Kebutuhan pasar",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 - sangat kecil"
+        },
+        {
+          "v": "2",
+          "t": "2 - kecil"
+        },
+        {
+          "v": "3",
+          "t": "3 - sedang"
+        },
+        {
+          "v": "4",
+          "t": "4 - besar"
+        },
+        {
+          "v": "5",
+          "t": "5 - sangat besar"
+        }
+      ]
+    },
+    {
+      "key": "teknis",
+      "type": "choice",
+      "label": "Kemudahan membuatnya",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 - sangat sulit"
+        },
+        {
+          "v": "2",
+          "t": "2 - sulit"
+        },
+        {
+          "v": "3",
+          "t": "3 - sedang"
+        },
+        {
+          "v": "4",
+          "t": "4 - mudah"
+        },
+        {
+          "v": "5",
+          "t": "5 - sangat mudah"
+        }
+      ]
+    },
+    {
+      "key": "margin",
+      "type": "choice",
+      "label": "Keuntungan yang diharapkan",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 - sangat tipis"
+        },
+        {
+          "v": "2",
+          "t": "2 - tipis"
+        },
+        {
+          "v": "3",
+          "t": "3 - cukup"
+        },
+        {
+          "v": "4",
+          "t": "4 - baik"
+        },
+        {
+          "v": "5",
+          "t": "5 - sangat baik"
+        }
+      ]
+    },
+    {
+      "key": "regulasi",
+      "type": "choice",
+      "label": "Keamanan dari sisi aturan (klaim dan bahan)",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 - sangat berisiko"
+        },
+        {
+          "v": "2",
+          "t": "2 - berisiko"
+        },
+        {
+          "v": "3",
+          "t": "3 - cukup aman"
+        },
+        {
+          "v": "4",
+          "t": "4 - aman"
+        },
+        {
+          "v": "5",
+          "t": "5 - sangat aman"
+        }
+      ]
+    },
+    {
+      "key": "brand",
+      "type": "choice",
+      "label": "Kecocokan dengan brand",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "1",
+          "t": "1 - tidak cocok"
+        },
+        {
+          "v": "2",
+          "t": "2 - kurang cocok"
+        },
+        {
+          "v": "3",
+          "t": "3 - cukup"
+        },
+        {
+          "v": "4",
+          "t": "4 - cocok"
+        },
+        {
+          "v": "5",
+          "t": "5 - sangat cocok"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Hitung skor",
+      "set": {
+        "kriteria": "[['Kebutuhan pasar', Number(input.pasar), 30], ['Kemudahan membuat', Number(input.teknis), 25], ['Keuntungan', Number(input.margin), 20], ['Keamanan aturan', Number(input.regulasi), 15], ['Kecocokan brand', Number(input.brand), 10]]",
+        "skor": "Math.round(v.kriteria.reduce((s, k) => s + k[1] * k[2], 0) / 5)",
+        "lemah": "v.kriteria.filter((k) => k[1] <= 2).map((k) => k[0])",
+        "putusan": "v.skor >= 75 ? 'Lanjutkan ke tahap berikutnya' : v.skor >= 60 ? 'Perbaiki konsep dulu' : 'Hentikan atau rancang ulang'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.konsep + ': skor ' + v.skor + ' dari 100. ' + v.putusan",
+    "teks": "'# Penilaian konsep: ' + input.konsep + '\\n\\n' + tabel(['Sisi', 'Nilai (1-5)', 'Bobot %'], v.kriteria.map((k) => [k[0], k[1], k[2]])) + '\\n\\n**Skor akhir: ' + v.skor + '/100 - ' + v.putusan + '**\\n\\nPatokan: 75 ke atas lanjut, 60 sampai 74 perbaiki, di bawah 60 hentikan.' + (v.lemah.length ? '\\n\\nSisi yang lemah (nilai 2 ke bawah): ' + v.lemah.join(', ') : '')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'penilaian-konsep-' + input.konsep",
+        "isi": "csv([['Sisi', 'Nilai', 'Bobot']].concat(v.kriteria).concat([['Skor akhir', v.skor, 100]]))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Product",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "konsep": "Serum anti noda hitam",
+      "pasar": "4",
+      "teknis": "4",
+      "margin": "3",
+      "regulasi": "2",
+      "brand": "5"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "skor 72 dari 100",
+        "Perbaiki konsep dulu",
+        "Keamanan aturan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "nilai-skor"
+  ],
+  "keahlian": {
+    "istilah": [
+      "konsep produk",
+      "kelayakan",
+      "stage gate",
+      "penilaian ide",
+      "prioritas produk"
+    ],
+    "data": [
+      "nama konsep produk",
+      "kebutuhan pasar",
+      "kemudahan membuatnya",
+      "keuntungan yang diharapkan"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
+  }
+}

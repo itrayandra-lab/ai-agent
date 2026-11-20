@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "qa-yudha",
+  "division": "qa",
+  "employeeId": "yudha",
+  "title": "Documentation & CPKB Specialist",
+  "version": 1,
+  "name": "Pemantau masa tinjau dokumen mutu",
+  "ringkas": "Cek daftar SOP dan dokumen mutu, hitung kapan harus ditinjau ulang, dan tandai yang terlambat atau segera jatuh tempo.",
+  "kataKunci": [
+    "sop",
+    "dokumen mutu",
+    "tinjau ulang",
+    "revisi",
+    "cpkb"
+  ],
+  "inputs": [
+    {
+      "key": "acuan",
+      "type": "date",
+      "label": "Cek per tanggal",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "dokumen",
+      "type": "longtext",
+      "label": "Dokumen (kode | judul | revisi | berlaku sejak YYYY-MM-DD | siklus tinjau dalam bulan)",
+      "required": true,
+      "contoh": "SOP-QC-001 | Pengambilan sampel | 02 | 2024-10-01 | 24"
+    },
+    {
+      "key": "jendela",
+      "type": "choice",
+      "label": "Anggap \"segera\" bila jatuh tempo dalam",
+      "required": true,
+      "default": "60",
+      "choices": [
+        {
+          "v": "30",
+          "t": "30 hari"
+        },
+        {
+          "v": "60",
+          "t": "60 hari"
+        },
+        {
+          "v": "90",
+          "t": "90 hari"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung tinjauan",
+      "set": {
+        "rows": "baris(input.dokumen).slice(0, 300).map((l) => { const p = l.split('|').map((s) => s.trim()); const t = new Date(Date.parse(p[3])); t.setUTCMonth(t.getUTCMonth() + num(p[4])); const sisa = Math.floor((t.getTime() - Date.parse(input.acuan)) / 864e5); const ok = !Number.isNaN(sisa); return { kode: p[0] || '-', judul: p[1] || '-', rev: p[2] || '-', berlaku: p[3] || '-', tinjau: ok ? t.toISOString().slice(0, 10) : '-', sisa: ok ? sisa : 0, status: !ok ? 'Tanggal tidak terbaca' : sisa < 0 ? 'Terlambat ditinjau' : sisa <= num(input.jendela) ? 'Segera ditinjau' : 'Masih berlaku' }; }).sort((a, b) => a.sisa - b.sisa)",
+        "telat": "v.rows.filter((r) => r.status === 'Terlambat ditinjau').length",
+        "segera": "v.rows.filter((r) => r.status === 'Segera ditinjau').length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.telat + ' dokumen terlambat ditinjau dan ' + v.segera + ' segera jatuh tempo dari ' + v.rows.length + ' dokumen'",
+    "teks": "'# Masa tinjau dokumen mutu per ' + tgl(input.acuan) + '\\n\\n' + tabel(['Kode', 'Judul', 'Rev', 'Berlaku sejak', 'Tinjau paling lambat', 'Sisa hari', 'Status'], v.rows.map((r) => [r.kode, r.judul, r.rev, r.berlaku, r.tinjau, r.sisa, r.status])) + '\\n\\nDokumen yang terlambat perlu ditinjau atau diperpanjang masa berlakunya secara resmi lewat pengendalian perubahan.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'masa-tinjau-dokumen'",
+        "isi": "csv([['Kode', 'Judul', 'Revisi', 'Berlaku sejak', 'Tinjau paling lambat', 'Sisa hari', 'Status']].concat(v.rows.map((r) => [r.kode, r.judul, r.rev, r.berlaku, r.tinjau, r.sisa, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "acuan": "2026-11-18",
+      "dokumen": "SOP-QC-001 | Pengambilan sampel | 02 | 2024-10-01 | 24\nSOP-PR-004 | Pengisian botol | 01 | 2025-01-15 | 24\nSOP-WH-002 | Penyimpanan bahan | 03 | 2026-05-01 | 24",
+      "jendela": "60"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "1 dokumen terlambat ditinjau dan 1 segera jatuh tempo dari 3 dokumen",
+        "2026-10-01",
+        "Terlambat ditinjau"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "sop",
+      "dokumen mutu",
+      "tinjau ulang",
+      "revisi",
+      "cpkb"
+    ],
+    "data": [
+      "cek per tanggal",
+      "dokumen (kode | judul | revisi | berlaku sejak yyyy-mm-dd | ",
+      "anggap \"segera\" bila jatuh tempo dalam"
+    ],
+    "gaya": "berbasis bukti, sebut batas mutu dan hasil ukur",
+    "contoh": {
+      "baik": "Satu hasil uji di luar batas; tahan batch sampai diperiksa ulang.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Keputusan meluluskan batch tetap di tangan penanggung jawab mutu."
+    ]
+  }
+}

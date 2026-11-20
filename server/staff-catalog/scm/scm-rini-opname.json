@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "scm-rini-opname",
+  "division": "scm",
+  "employeeId": "rini",
+  "title": "Warehouse & Inventory Specialist",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "name": "Pencocok stok sistem dengan stok fisik",
+  "ringkas": "Bandingkan hasil hitung fisik gudang dengan catatan sistem, tandai selisihnya, dan hitung tingkat ketepatan stok.",
+  "kataKunci": [
+    "stock opname",
+    "stok fisik",
+    "selisih stok",
+    "rekonsiliasi",
+    "ketepatan stok"
+  ],
+  "inputs": [
+    {
+      "key": "toleransi",
+      "type": "choice",
+      "label": "Selisih yang masih dimaklumi",
+      "required": true,
+      "default": "0",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tidak ada"
+        },
+        {
+          "v": "2",
+          "t": "Sampai 2%"
+        },
+        {
+          "v": "5",
+          "t": "Sampai 5%"
+        }
+      ]
+    },
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Hitungan (barang | stok di sistem | stok fisik)",
+      "required": true,
+      "contoh": "Botol | 400 | 395"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Cocokkan stok",
+      "set": {
+        "rows": "baris(input.data).slice(0, 500).map((l) => { const p = l.split('|').map((s) => s.trim()); const a = num(p[1]); const b = num(p[2]); const sel = b - a; const pct = a ? Math.round(Math.abs(sel) / a * 1000) / 10 : (sel ? 100 : 0); return { barang: p[0] || '-', sistem: a, fisik: b, sel: sel, pct: pct, status: pct <= num(input.toleransi) ? 'Sesuai' : sel < 0 ? 'Kurang' : 'Lebih' }; })",
+        "akurasi": "v.rows.length ? Math.round(v.rows.filter((r) => r.status === 'Sesuai').length / v.rows.length * 1000) / 10 : 0"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Ketepatan stok ' + v.akurasi + '%: ' + v.rows.filter((r) => r.status === 'Kurang').length + ' barang kurang, ' + v.rows.filter((r) => r.status === 'Lebih').length + ' lebih'",
+    "teks": "'# Hasil pencocokan stok\\n\\nKetepatan: **' + v.akurasi + '%**\\n\\n' + tabel(['Barang', 'Sistem', 'Fisik', 'Selisih', 'Selisih %', 'Status'], v.rows.map((r) => [r.barang, r.sistem, r.fisik, r.sel, r.pct, r.status]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pencocokan-stok'",
+        "isi": "csv([['Barang', 'Sistem', 'Fisik', 'Selisih', 'Selisih %', 'Status']].concat(v.rows.map((r) => [r.barang, r.sistem, r.fisik, r.sel, r.pct, r.status])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "toleransi": "0",
+      "data": "Botol | 400 | 395\nKardus | 900 | 900\nLakban | 50 | 52"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "33.3%",
+        "Kurang",
+        "Lebih"
+      ]
+    }
+  },
+  "kemampuan": [
+    "cocokkan-bersihkan-data"
+  ],
+  "keahlian": {
+    "istilah": [
+      "stock opname",
+      "stok fisik",
+      "selisih stok",
+      "rekonsiliasi",
+      "ketepatan stok"
+    ],
+    "data": [
+      "selisih yang masih dimaklumi",
+      "hitungan (barang | stok di sistem | stok fisik)"
+    ],
+    "gaya": "berbasis angka stok dan waktu kirim",
+    "contoh": {
+      "baik": "Stok serum cukup 9 hari; pesan ulang sebelum Jumat.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka perkiraan bergantung pada data yang dimasukkan."
+    ]
+  }
+}

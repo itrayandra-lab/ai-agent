@@ -1,0 +1,362 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-cocokkan-bersihkan-data",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan cocokkan dan bersihkan data",
+  "version": 1,
+  "name": "Rapikan dan cocokkan daftar",
+  "ringkas": "Rapikan daftar dari spasi dan duplikat, bandingkan dua daftar, cari catatan mirip, dan periksa kolom kosong pada tabel.",
+  "kataKunci": [
+    "bersihkan",
+    "duplikat",
+    "bandingkan",
+    "daftar",
+    "kolom kosong",
+    "mirip"
+  ],
+  "kemampuan": {
+    "id": "cocokkan-bersihkan-data",
+    "kelompok": "data",
+    "tujuanAwam": "Merapikan daftar nama atau barang, membandingkan dua daftar, menemukan catatan ganda atau mirip, dan memeriksa tabel yang bolong."
+  },
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Daftar ini tentang apa?",
+      "required": true,
+      "contoh": "Daftar pelanggan"
+    },
+    {
+      "key": "mode",
+      "type": "choice",
+      "label": "Mau diapakan daftarnya?",
+      "required": true,
+      "default": "bersih",
+      "choices": [
+        {
+          "v": "bersih",
+          "t": "Rapikan satu daftar"
+        },
+        {
+          "v": "banding",
+          "t": "Bandingkan dua daftar"
+        },
+        {
+          "v": "mirip",
+          "t": "Cari catatan yang mirip"
+        },
+        {
+          "v": "kualitas",
+          "t": "Periksa tabel yang bolong"
+        }
+      ]
+    },
+    {
+      "key": "peka",
+      "type": "choice",
+      "label": "Huruf besar dan kecil dianggap sama?",
+      "required": true,
+      "default": "ya",
+      "choices": [
+        {
+          "v": "ya",
+          "t": "Ya, dianggap sama"
+        },
+        {
+          "v": "tidak",
+          "t": "Tidak, dibedakan"
+        }
+      ]
+    },
+    {
+      "key": "daftar_a",
+      "type": "longtext",
+      "label": "Daftar pertama (satu catatan per baris; untuk tabel pisahkan kolom dengan garis tegak |)",
+      "required": true,
+      "contoh": "Apel\napel \nJeruk\nMangga"
+    },
+    {
+      "key": "daftar_b",
+      "type": "longtext",
+      "label": "Daftar kedua (hanya untuk membandingkan)",
+      "required": false,
+      "contoh": "jeruk\nPisang"
+    }
+  ],
+  "steps": [
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca dan rapikan isian",
+      "set": {
+        "a": "baris(input.daftar_a).map((t) => String(t).split(' ').filter((x) => x.trim() !== '').join(' ').trim()).filter((t) => t !== '').slice(0, 3000)",
+        "b": "baris(input.daftar_b || '').map((t) => String(t).split(' ').filter((x) => x.trim() !== '').join(' ').trim()).filter((t) => t !== '').slice(0, 3000)",
+        "ka": "v.a.map((t) => input.peka === 'tidak' ? t : t.toLowerCase())",
+        "kb": "v.b.map((t) => input.peka === 'tidak' ? t : t.toLowerCase())"
+      }
+    },
+    {
+      "id": "unik",
+      "use": "hitung",
+      "label": "Buang catatan ganda",
+      "set": {
+        "ukA": "v.a.filter((t, i) => v.ka.indexOf(v.ka[i]) === i)",
+        "ukaA": "v.ka.filter((t, i) => v.ka.indexOf(t) === i)",
+        "ukB": "v.b.filter((t, i) => v.kb.indexOf(v.kb[i]) === i)",
+        "ukaB": "v.kb.filter((t, i) => v.kb.indexOf(t) === i)",
+        "dupA": "v.a.length - v.ukA.length",
+        "dupB": "v.b.length - v.ukB.length"
+      }
+    },
+    {
+      "id": "banding",
+      "use": "hitung",
+      "label": "Bandingkan dua daftar",
+      "set": {
+        "hanyaA": "v.ukA.filter((t, i) => v.ukaB.indexOf(v.ukaA[i]) < 0)",
+        "hanyaB": "v.ukB.filter((t, i) => v.ukaA.indexOf(v.ukaB[i]) < 0)",
+        "sama": "v.ukA.filter((t, i) => v.ukaB.indexOf(v.ukaA[i]) >= 0)",
+        "km": "v.a.map((t) => t.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(' ').filter((x) => x !== '').sort().join(' '))",
+        "mirip": "v.a.map((t, i) => [t, v.a[v.km.indexOf(v.km[i])]]).filter((p) => p[0] !== p[1])"
+      }
+    },
+    {
+      "id": "tabel",
+      "use": "hitung",
+      "label": "Periksa tabel",
+      "set": {
+        "baris": "v.a.map((t) => (t.indexOf('|') >= 0 ? t.split('|') : t.replace(/[;,]/g, '|').split('|')).map((c) => c.trim()))",
+        "lebar": "v.baris.reduce((m, r) => Math.max(m, r.length), 0)",
+        "isi": "v.baris.slice(1)",
+        "kosongKolom": "v.baris.length ? v.baris[0].map((h, j) => [h || 'kolom ' + (j + 1), v.isi.filter((r) => (r[j] || '') === '').length]) : []",
+        "kosong": "v.kosongKolom.reduce((s, k) => s + k[1], 0)",
+        "pendek": "v.isi.filter((r) => r.length < v.lebar).length"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "!v.a.length ? 'Daftar kosong, isi dulu catatannya' : input.mode === 'banding' ? 'Perbandingan ' + input.nama + ': ' + v.sama.length + ' sama, ' + v.hanyaA.length + ' hanya di daftar pertama, ' + v.hanyaB.length + ' hanya di daftar kedua' : input.mode === 'mirip' ? 'Ditemukan ' + v.mirip.length + ' catatan mirip dari ' + v.a.length + ' catatan ' + input.nama : input.mode === 'kualitas' ? 'Tabel ' + input.nama + ': ' + v.isi.length + ' baris, ' + v.kosong + ' sel kosong, ' + v.pendek + ' baris kurang kolom' : v.a.length + ' catatan ' + input.nama + ' dirapikan: ' + v.ukA.length + ' unik, ' + v.dupA + ' ganda dibuang'",
+    "teks": "'# Pemeriksaan data ' + input.nama + '\\n\\n' + (input.mode === 'banding' ? tabel(['Kelompok', 'Jumlah', 'Isi'], [['Sama di kedua daftar', v.sama.length, v.sama.join(', ') || '-'], ['Hanya di daftar pertama', v.hanyaA.length, v.hanyaA.join(', ') || '-'], ['Hanya di daftar kedua', v.hanyaB.length, v.hanyaB.join(', ') || '-'], ['Ganda dibuang (pertama / kedua)', v.dupA + ' / ' + v.dupB, '-']]) : input.mode === 'mirip' ? tabel(['Catatan', 'Mirip dengan'], v.mirip.length ? v.mirip : [['tidak ada', '-']]) : input.mode === 'kualitas' ? tabel(['Kolom', 'Sel kosong'], v.kosongKolom.length ? v.kosongKolom : [['tidak ada data', 0]]) + '\\n\\nBaris kurang kolom: ' + v.pendek : tabel(['Ukuran', 'Nilai'], [['Catatan awal', v.a.length], ['Catatan unik', v.ukA.length], ['Ganda dibuang', v.dupA]]) + '\\n\\n' + v.ukA.map((t) => '- ' + t).join('\\n'))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'data-' + cut(String(input.nama).toLowerCase(), 30)",
+        "isi": "csv([['kelompok', 'isi']].concat(v.ukA.map((t) => ['unik', t])).concat(v.hanyaA.map((t) => ['hanya pertama', t])).concat(v.hanyaB.map((t) => ['hanya kedua', t])).concat(v.mirip.map((p) => ['mirip', p[0] + ' ~ ' + p[1]])))"
+      }
+    ],
+    "data": "({ awal: v.a.length, unik: v.ukA.length, duplikat: v.dupA, hanyaA: v.hanyaA.length, hanyaB: v.hanyaB.length, sama: v.sama.length, mirip: v.mirip.length, kosong: v.kosong, barisPendek: v.pendek })"
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Daftar buah",
+      "mode": "banding",
+      "peka": "ya",
+      "daftar_a": "Apel\napel \nJeruk\nMangga",
+      "daftar_b": "jeruk\nPisang"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2 hanya di daftar pertama",
+        "1 hanya di daftar kedua"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "petugas data yang menjelaskan hasil perapian dan pencocokan daftar kepada orang awam",
+    "tujuan": "Jelaskan apa yang berubah atau berbeda pada daftar, mengapa itu penting, dan langkah merapikan yang sebaiknya dilakukan.",
+    "gaya": "ramah, rinci, sebut contoh catatan dari hasil hitung",
+    "pedoman": [
+      "Pakai hanya catatan dan angka dari hasil hitung; jangan menambah catatan baru.",
+      "Jelaskan akibat nyata bila catatan ganda atau kolom kosong dibiarkan.",
+      "Beri langkah perbaikan yang bisa dilakukan sendiri tanpa alat khusus."
+    ],
+    "skema": {
+      "pembahasan": "teks",
+      "poin": "daftar",
+      "langkah": "daftar",
+      "kualitas": "pilihan:baik|cukup|perlu_perbaikan"
+    },
+    "contoh": {
+      "baik": "Dua catatan hanya ada di daftar pertama, jadi cek apakah memang belum masuk ke daftar kedua.",
+      "buruk": "Daftarnya berantakan."
+    },
+    "batas": {
+      "pembahasan": 600,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "daftar"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Sebagian catatan hanya ada di salah satu daftar, jadi daftar belum sepenuhnya sama. Catatan ganda juga sudah dibuang agar hitungan tidak berlebih.\",\"poin\":[\"Ada catatan yang hanya muncul di satu daftar\",\"Catatan ganda sudah dibuang\"],\"langkah\":[\"Cek catatan yang hanya ada di satu daftar\",\"Simpan daftar yang sudah rapi\"],\"kualitas\":\"cukup\"}"
+  },
+  "evaluasi": [
+    {
+      "nama": "bandingkan dua daftar buah",
+      "input": {
+        "nama": "Daftar buah",
+        "mode": "banding",
+        "peka": "ya",
+        "daftar_a": "Apel\napel \nJeruk\nMangga",
+        "daftar_b": "jeruk\nPisang"
+      },
+      "ai": "{\"pembahasan\":\"Apel dan Mangga belum ada di daftar kedua, sedangkan Pisang hanya ada di daftar kedua. Jeruk sama di kedua daftar.\",\"poin\":[\"Dua catatan hanya di daftar pertama\"],\"langkah\":[\"Cek apakah Pisang perlu masuk daftar pertama\"],\"kualitas\":\"cukup\"}",
+      "kriteria": {
+        "mengandung": [
+          "daftar",
+          "Pisang"
+        ],
+        "mengandungAturan": [
+          "Mangga",
+          "Pisang"
+        ],
+        "panjangMin": 80,
+        "panjangMaks": 2000,
+        "nilai": [
+          {
+            "path": "data.sama",
+            "min": 1,
+            "max": 1
+          },
+          {
+            "path": "data.hanyaA",
+            "min": 2,
+            "max": 2
+          },
+          {
+            "path": "data.hanyaB",
+            "min": 1,
+            "max": 1
+          },
+          {
+            "path": "data.duplikat",
+            "min": 1,
+            "max": 1
+          }
+        ]
+      }
+    },
+    {
+      "nama": "rapikan daftar dengan spasi dan baris kosong",
+      "input": {
+        "nama": "Nama pelanggan",
+        "mode": "bersih",
+        "peka": "ya",
+        "daftar_a": "  Budi   Santoso \nbudi santoso\n\n\nSITI\nSiti",
+        "daftar_b": ""
+      },
+      "ai": "{\"pembahasan\":\"Empat catatan menjadi dua nama unik setelah spasi berlebih dan huruf yang berbeda disamakan. Daftar jadi lebih pendek dan lebih mudah dipakai.\",\"poin\":[\"Dua catatan ganda dibuang\"],\"langkah\":[\"Pakai daftar yang sudah rapi\"],\"kualitas\":\"baik\"}",
+      "kriteria": {
+        "mengandung": [
+          "daftar",
+          "unik"
+        ],
+        "mengandungAturan": [
+          "2 unik",
+          "Budi Santoso"
+        ],
+        "panjangMin": 80,
+        "panjangMaks": 2000,
+        "nilai": [
+          {
+            "path": "data.awal",
+            "min": 4,
+            "max": 4
+          },
+          {
+            "path": "data.unik",
+            "min": 2,
+            "max": 2
+          },
+          {
+            "path": "data.duplikat",
+            "min": 2,
+            "max": 2
+          }
+        ]
+      }
+    },
+    {
+      "nama": "periksa tabel yang bolong",
+      "input": {
+        "nama": "Data murid",
+        "mode": "kualitas",
+        "peka": "ya",
+        "daftar_a": "nama | umur | kota\nBudi | 20 | Solo\nSiti | | Bali\nAni | 30",
+        "daftar_b": ""
+      },
+      "ai": "{\"pembahasan\":\"Dua sel masih kosong dan satu baris kurang kolom, jadi data murid belum lengkap untuk dipakai. Lengkapi umur Siti dan kota Ani lebih dulu.\",\"poin\":[\"Dua sel kosong\",\"Satu baris kurang kolom\"],\"langkah\":[\"Lengkapi umur Siti\",\"Lengkapi kota Ani\"],\"kualitas\":\"perlu_perbaikan\"}",
+      "kriteria": {
+        "mengandung": [
+          "kosong",
+          "murid"
+        ],
+        "mengandungAturan": [
+          "2 sel kosong",
+          "kurang kolom"
+        ],
+        "panjangMin": 80,
+        "panjangMaks": 2000,
+        "nilai": [
+          {
+            "path": "data.kosong",
+            "min": 2,
+            "max": 2
+          },
+          {
+            "path": "data.barisPendek",
+            "min": 1,
+            "max": 1
+          }
+        ]
+      }
+    },
+    {
+      "nama": "cari catatan mirip",
+      "input": {
+        "nama": "Nama perusahaan",
+        "mode": "mirip",
+        "peka": "ya",
+        "daftar_a": "PT Maju Jaya\nJaya Maju PT\nCV Sentosa",
+        "daftar_b": ""
+      },
+      "ai": "{\"pembahasan\":\"Dua nama perusahaan kemungkinan sama, hanya urutan katanya berbeda, jadi sebaiknya digabung menjadi satu catatan.\",\"poin\":[\"Satu pasangan mirip\"],\"langkah\":[\"Gabungkan catatan mirip\"],\"kualitas\":\"cukup\"}",
+      "kriteria": {
+        "mengandung": [
+          "mirip",
+          "gabung"
+        ],
+        "mengandungAturan": [
+          "1 catatan mirip",
+          "Jaya Maju PT"
+        ],
+        "panjangMin": 60,
+        "panjangMaks": 2000,
+        "nilai": [
+          {
+            "path": "data.mirip",
+            "min": 1,
+            "max": 1
+          }
+        ]
+      }
+    }
+  ]
+}

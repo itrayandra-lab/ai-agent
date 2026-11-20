@@ -1,0 +1,871 @@
+{
+ "mulai": "2026-11-18T19:10:56.917Z",
+ "model": "openai/gpt-oss-20b",
+ "batasUSD": 0.11,
+ "jalur": "penuh = pesan → Pemandu → asisten/master → manajer → staf; manajer = pekerjaan langsung ke manajer divisi",
+ "skenario": [
+  {
+   "id": "rnd-satuan",
+   "divisi": "rnd",
+   "jalur": "manajer",
+   "jenis": "hitung",
+   "kemampuan": "hitung-teknis",
+   "pesan": "Ubah 2,5 kg jadi gram, ya.",
+   "lulus": true,
+   "lulusKetat": true,
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 3721,
+   "biaya": 0.000681,
+   "panggilan": 4,
+   "token": 4593,
+   "status": "done",
+   "pertanyaan": null,
+   "jalan": [
+    {
+     "staf": "kap-hitung-teknis",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhycnr007ey",
+     "oleh": "anisa",
+     "status": "review"
+    }
+   ],
+   "cuplikan": "**Konversi Berat** - 2,5 kg = 2 500 g **Penjelasan** Konversi satuan sederhana: 1 kg = 1 000 g. Jadi, 2,5 kg × 1 000 g/kg = 2 500 g. Angka ini sudah akurat dan tidak memerlukan data tambahan. **Langkah Selanjutnya** 1. Pastikan timbangan Anda dikalibrasi sebel"
+  },
+  {
+   "id": "qa-sampel",
+   "divisi": "qa",
+   "jalur": "manajer",
+   "jenis": "hitung",
+   "kemampuan": "hitung-teknis",
+   "pesan": "Populasi produk 1000 unit. Berapa jumlah sampel yang perlu diperiksa dengan tingkat keyakinan 95 persen?",
+   "lulus": true,
+   "lulusKetat": false,
+   "jargonHasil": [
+    "error"
+   ],
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 14484,
+   "biaya": 0.004909,
+   "panggilan": 9,
+   "token": 35309,
+   "status": "done",
+   "pertanyaan": null,
+   "jalan": [
+    {
+     "staf": "kap-hitung-teknis",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhyfjo096bu",
+     "oleh": "lestari",
+     "status": "review"
+    }
+   ],
+   "cuplikan": "Jumlah sampel yang diperlukan untuk populasi 1.000 unit, dengan tingkat keyakinan 95 % dan margin error 5 %, adalah **sekitar 278 unit** (dihitung dengan rumus Cochran dan koreksi populasi terbatas). **Sumber:** - “Cochran’s Sample Size Calculator” – statcalc."
+  },
+  {
+   "id": "eng-tanggal",
+   "divisi": "eng",
+   "jalur": "manajer",
+   "jenis": "hitung",
+   "kemampuan": "hitung-teknis",
+   "pesan": "Tenggat proyek 30 hari setelah 2026-01-31. Jatuh pada tanggal berapa?",
+   "lulus": false,
+   "lulusKetat": false,
+   "kemampuanLain": false,
+   "alasan": [
+    "tidak ada staf yang menyelesaikan pekerjaan (hasil tidak berasal dari staf)",
+    "hasil tidak memuat kata kunci: [[\"2026-03-02\",\"2 Maret 2026\",\"02-03-2026\",\"2/3/2026\",\"2 Mar\"]]"
+   ],
+   "ms": 7589,
+   "biaya": 0.00148,
+   "panggilan": 3,
+   "token": 13213,
+   "status": "done",
+   "pertanyaan": null,
+   "jalan": [],
+   "pohon": [
+    {
+     "id": "t-mwmhyqq00jy5q",
+     "oleh": "nara",
+     "status": "review"
+    }
+   ],
+   "jejak": [
+    "nara: 🌐 web_search(\"February 2026 days 2026-02 days\")",
+    "nara: 🌐 hasil riset: Februari 2026 memiliki **28 hari** (bukan tahun kabisat). **Sumber:** - *February 2026 Calendar* – Time and Date (menampilkan tanggal 1‑28) Sumb"
+   ],
+   "cuplikan": "**Tanggal tenggat proyek 30 hari setelah 31 Januari 2026 adalah 2 Maret 2026.** ### Cara menghitung 1. 31 Januari 2026 + 1 hari = 1 Februari 2026. 2. Februari 2026 memiliki 28 hari (bukan tahun kabisat). 28 hari setelah 1 Februari 2026 berakhir pada 28 Februar"
+  },
+  {
+   "id": "hr-onboarding",
+   "divisi": "hr",
+   "jalur": "manajer",
+   "jenis": "berkas",
+   "kemampuan": "susun-daftar-periksa",
+   "pesan": "Buatkan daftar periksa onboarding karyawan baru yang mencakup akun, peralatan, dan perkenalan tim.",
+   "lulus": true,
+   "lulusKetat": false,
+   "jargonHasil": [
+    "tools"
+   ],
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 6869,
+   "biaya": 0.002921,
+   "panggilan": 5,
+   "token": 33549,
+   "status": "done",
+   "pertanyaan": null,
+   "jalan": [
+    {
+     "staf": "kap-susun-daftar-periksa",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 5,
+     "berkas": [
+      "csv",
+      "md",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhywkt0q62d",
+     "oleh": "sari",
+     "status": "review"
+    }
+   ],
+   "cuplikan": "**Daftar Periksa Onboarding Karyawan Baru** | No | Area | Item yang Diperiksa | Penanggung Jawab | Status | |----|---------------|----------------------------------------------------------------|------------------|--------| | 1 | Akun | Akses email perusahaan "
+  },
+  {
+   "id": "kms-panduan",
+   "divisi": "kms",
+   "jalur": "manajer",
+   "jenis": "berkas",
+   "kemampuan": "kelola-pengetahuan",
+   "pesan": "Rapikan catatan ini jadi panduan kerja singkat: cara balas keluhan pelanggan - baca dulu, minta maaf, tawarkan solusi, tutup dengan terima kasih.",
+   "lulus": true,
+   "lulusKetat": false,
+   "jargonHasil": [
+    "agen"
+   ],
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 8666,
+   "biaya": 0.002952,
+   "panggilan": 5,
+   "token": 19756,
+   "status": "done",
+   "pertanyaan": null,
+   "jalan": [
+    {
+     "staf": "kap-kelola-pengetahuan",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 5,
+     "berkas": [
+      "csv",
+      "md",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhz1vn109c2",
+     "oleh": "pustaka",
+     "status": "review"
+    }
+   ],
+   "cuplikan": "# Panduan Balasan Keluhan Pelanggan ## Ringkasan Panduan ini mempermudah siapa saja untuk menanggapi keluhan pelanggan dengan cepat, empatik, dan terstruktur: 1. Baca keluhan dengan teliti. 2. Minta maaf. 3. Tawarkan solusi. 4. Tutup dengan ucapan terima kasih"
+  },
+  {
+   "id": "eng-struktur",
+   "divisi": "eng",
+   "jalur": "manajer",
+   "jenis": "berkas",
+   "kemampuan": "rancang-struktur",
+   "pesan": "Ubah uraian ini jadi rancangan bernomor: aplikasi pemesanan kopi, pelanggan memilih menu, membayar, lalu kasir menerima pesanan.",
+   "lulus": true,
+   "lulusKetat": false,
+   "jargonHasil": [
+    "persetujuan",
+    "model",
+    "api"
+   ],
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 3619,
+   "biaya": 0.00089,
+   "panggilan": 3,
+   "token": 6014,
+   "status": "done",
+   "pertanyaan": null,
+   "jalan": [
+    {
+     "staf": "kap-rancang-struktur",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 5,
+     "berkas": [
+      "csv",
+      "md",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhz8kf19z1d",
+     "oleh": "nara",
+     "status": "review"
+    }
+   ],
+   "cuplikan": "# Rancangan Aplikasi Pemesanan Kopi Berikut rancangan bernomor (alur layar) untuk aplikasi pemesanan kopi. Desain ini ditujukan agar mudah dipahami oleh orang awam dan dapat langsung dipakai oleh tim pengembangan. | No | Layar / Proses | Tujuan | Aksi Utama | "
+  },
+  {
+   "id": "fin-laba",
+   "divisi": "fin",
+   "jalur": "penuh",
+   "jenis": "hitung",
+   "kemampuan": "hitung-harga-biaya",
+   "pesan": "Aku jual produk Rp150.000, modalnya Rp100.000. Berapa labaku per produk dan berapa persen marginnya?",
+   "lulus": true,
+   "lulusKetat": true,
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 22964,
+   "biaya": 0.008363,
+   "panggilan": 23,
+   "token": 82960,
+   "status": "result",
+   "pertanyaan": 0,
+   "jalan": [
+    {
+     "staf": "kap-hitung-harga-biaya",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    },
+    {
+     "staf": "kap-hitung-harga-biaya",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    },
+    {
+     "staf": "kap-hitung-harga-biaya",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhzc9r1ihkd",
+     "oleh": "pa-owner",
+     "status": "review"
+    },
+    {
+     "id": "t-mwmhzdyd1l2x6",
+     "oleh": "wira",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmhzj4v20lzk",
+     "oleh": "wira",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmhznnh2fkg1",
+     "oleh": "wira",
+     "status": "done"
+    }
+   ],
+   "cuplikan": "# Laporan Laba dan Margin Produk **Harga jual per unit** : Rp 150.000 **Modal per unit** : Rp 100.000 ## 1. Laba per unit - **Perhitungan** : Rp 150.000 – Rp 100.000 = Rp 50.000 - **Hasil** : **Rp 50.000** per produk ## 2. Margin (persentase laba) - **Perhitun"
+  },
+  {
+   "id": "sales-diskon",
+   "divisi": "sales",
+   "jalur": "penuh",
+   "jenis": "hitung",
+   "kemampuan": "hitung-harga-biaya",
+   "pesan": "Pelanggan minta diskon bertingkat 10 persen lalu 5 persen dari harga Rp1.000.000. Jadi dia bayar berapa?",
+   "lulus": false,
+   "lulusKetat": false,
+   "kemampuanLain": false,
+   "alasan": [
+    "pekerjaan tidak sampai ke hasil (melebihi-biaya)",
+    "hasil terlalu pendek (0)",
+    "angka 855000 tidak ada di hasil"
+   ],
+   "ms": 107127,
+   "biaya": 0.018979,
+   "panggilan": 36,
+   "token": 196101,
+   "status": "melebihi-biaya",
+   "pertanyaan": 0,
+   "jalan": [
+    {
+     "staf": "kap-hitung-harga-biaya",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    },
+    {
+     "staf": "kap-tulis-pesan-pelanggan",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 5,
+     "berkas": [
+      "md",
+      "csv",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmhztu62wjlj",
+     "oleh": "pa-owner",
+     "status": "cancelled"
+    },
+    {
+     "id": "t-mwmhzwd52znhd",
+     "oleh": "maya",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi046f3dqxb",
+     "oleh": "wira",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi04rf3h8v9",
+     "oleh": "maya",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi0xmc433vb",
+     "oleh": "wira",
+     "status": "cancelled"
+    }
+   ],
+   "jejak": [
+    "pa-owner: 🧰 buka_alat(tim): Perlu mengakses fungsi create_subtask untuk menugaskan tugas ke manajer Wira",
+    "pa-owner: ➡️ Delegasi ke Maya: Tulis pesan pelanggan tentang diskon bertingkat 10% dan 5%",
+    "pa-owner: Menunggu 1 subtugas",
+    "pa-owner: ➡️ Delegasi ke Wira: Diskon bertingkat 10% dan 5% - Hitung harga akhir",
+    "pa-owner: ➡️ Delegasi ke Maya: Tulis Pesan Diskon Bertingkat untuk Pelanggan",
+    "pa-owner: Menunggu 2 subtugas",
+    "pa-owner: ➡️ Delegasi ke Wira: Hitung harga akhir diskon bertingkat 10% lalu 5%",
+    "pa-owner: 🧮 1000000*(1-0.10)*(1-0.05) = 855000",
+    "maya: 🧑‍💼 staf({\"aksi\":\"jalankan_kemampuan\",\"isian\":{\"jenis\":\"diskon\",\"nilai\":\"1000000\",\"persen\":\"10\"},\"kemampuan\":\"hitung-harga-biaya\")",
+    "maya: 🧮 (1000000 * 0.9) * 0.95 = 855000",
+    "wira: 🧑‍💼 staf({\"aksi\":\"daftar\",\"cari\":\"hitung-harga-biaya\",\"divisi\":\"\"})",
+    "wira: 🧑‍💼 staf({\"aksi\":\"lihat\",\"divisi\":\"\",\"staf\":\"alat-diskon-bertingkat\"})",
+    "wira: 🧮 1000000*(1-0.10)*(1-0.05) = 855000",
+    "wira: 🧑‍💼 staf({\"aksi\":\"jalankan_kemampuan\",\"isian\":{\"d1\":10,\"d2\":5,\"harga\":1000000,\"jenis\":\"diskon\"},\"kemampuan\":\"hitung-harga-biaya\"})",
+    "wira: 🧑‍💼 staf({\"aksi\":\"jalankan_kemampuan\",\"isian\":{\"d1\":10,\"d2\":5,\"harga\":1000000},\"kemampuan\":\"alat-diskon-bertingkat\"})",
+    "wira: 🌐 web_search(\"diskon bertingkat 10% 5% perhitungan contoh\")"
+   ],
+   "cuplikan": ""
+  },
+  {
+   "id": "hr-gaji",
+   "divisi": "hr",
+   "jalur": "penuh",
+   "jenis": "hitung",
+   "kemampuan": "hitung-sdm",
+   "pesan": "Hitung gaji bersih karyawan: gaji pokok Rp5.000.000 dan tunjangan Rp500.000. Berapa yang dia terima?",
+   "lulus": true,
+   "lulusKetat": true,
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 68511,
+   "biaya": 0.010956,
+   "panggilan": 27,
+   "token": 114616,
+   "status": "result",
+   "pertanyaan": 0,
+   "jalan": [
+    {
+     "staf": "kap-hitung-harga-biaya",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    },
+    {
+     "staf": "kap-hitung-sdm",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    },
+    {
+     "staf": "kap-hitung-sdm",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmi2nqe4d2m4",
+     "oleh": "pa-owner",
+     "status": "review"
+    },
+    {
+     "id": "t-mwmi36124wpje",
+     "oleh": "sari",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi39mb59ixs",
+     "oleh": "sari",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi3etl5n3o2",
+     "oleh": "sari",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi3j4a5yxl1",
+     "oleh": "sari",
+     "status": "in_progress"
+    }
+   ],
+   "cuplikan": "# Hitung Gaji Bersih Karyawan **Berikut rangkuman singkat yang akan disampaikan oleh Sari:** | Komponen | Jumlah | |---|---| | Gaji pokok | Rp5.000.000 | | Tunjangan tetap | Rp500.000 | | **Penghasilan kotor** | **Rp5.500.000** | | **Potongan BPJS Kesehatan (1"
+  },
+  {
+   "id": "data-janggal",
+   "divisi": "data",
+   "jalur": "penuh",
+   "jenis": "hitung",
+   "kemampuan": "analisis-angka",
+   "pesan": "Penjualan harian toko: 100 102 98 101 99 103 250 97. Ada angka yang janggal? Berapa rata-ratanya?",
+   "lulus": false,
+   "lulusKetat": false,
+   "kemampuanLain": false,
+   "alasan": [
+    "tidak ada staf yang menyelesaikan pekerjaan (hasil tidak berasal dari staf)",
+    "angka 118.75 tidak ada di hasil",
+    "hasil tidak memuat kata kunci: [[\"250\"]]"
+   ],
+   "ms": 7108,
+   "biaya": 0.00337,
+   "panggilan": 8,
+   "token": 36943,
+   "status": "result",
+   "pertanyaan": 0,
+   "jalan": [
+    {
+     "staf": "kap-hitung-sdm",
+     "status": "jalan",
+     "pakaiAI": null,
+     "bukti": 0,
+     "berkas": []
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmi3lbp667sq",
+     "oleh": "pa-owner",
+     "status": "review"
+    }
+   ],
+   "jejak": [
+    "pa-owner: 🧰 buka_alat(tim): Untuk delegasi subtugas ke manajer Putri",
+    "pa-owner: ⚠️ Selesai tanpa bukti yang bisa dicek (catatan Brain, URL, receipt, atau hasil tool). Dianggap asumsi sampai ditinjau."
+   ],
+   "cuplikan": "Selesai menugaskan analisis data penjualan harian ke manajer Putri. Mohon menunggu laporan lengkapnya."
+  },
+  {
+   "id": "mkt-caption",
+   "divisi": "mkt",
+   "jalur": "penuh",
+   "jenis": "tulis",
+   "kemampuan": "tulis-konten-pemasaran",
+   "pesan": "Buatkan caption Instagram untuk promo kopi susu literan, diskon 20 persen khusus akhir pekan ini.",
+   "lulus": false,
+   "lulusKetat": false,
+   "kemampuanLain": false,
+   "alasan": [
+    "pekerjaan tidak sampai ke hasil (error)",
+    "hasil terlalu pendek (0)",
+    "hasil tidak memuat kata kunci: [[\"kopi\"],[\"20\"]]"
+   ],
+   "ms": 139413,
+   "biaya": 0.007316,
+   "panggilan": 17,
+   "token": 68767,
+   "status": "error",
+   "pertanyaan": 0,
+   "jalan": [
+    {
+     "staf": "kap-tulis-konten-pemasaran",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 5,
+     "berkas": [
+      "csv",
+      "md",
+      "md"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmi3q3b6eqb1",
+     "oleh": "pa-owner",
+     "status": "blocked"
+    },
+    {
+     "id": "t-mwmi3x6r6i05i",
+     "oleh": "kenzo",
+     "status": "blocked"
+    }
+   ],
+   "jejak": [
+    "pa-owner: 🧰 buka_alat(tim): Perlu menugaskan subtugas kepada manajer marketing maya untuk membuat caption Instagram promo kopi s",
+    "pa-owner: ➡️ Delegasi ke Maya: Caption Instagram Promo Kopi Susu Literan",
+    "pa-owner: Menunggu 1 subtugas",
+    "pa-owner: Semua subtugas diblokir — tugas induk ikut diblokir",
+    "kenzo: 🧑‍💼 staf({\"aksi\":\"kemampuan\",\"divisi\":\"mkt\",\"halaman\":1})",
+    "kenzo: 🧑‍💼 staf({\"aksi\":\"jalankan_kemampuan\",\"isian\":{\"batas\":\"140\",\"jenis\":\"caption\",\"nada\":\"ramah\",\"poin\":[\"Diskon 20%\",\"Akhir pekan\",)",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — retry adaptif dijadwalkan",
+    "kenzo: Error: fetch failed — diblokir setelah recovery lintas agen"
+   ],
+   "cuplikan": ""
+  },
+  {
+   "id": "cs-balasan",
+   "divisi": "cs",
+   "jalur": "penuh",
+   "jenis": "tulis",
+   "kemampuan": "tulis-pesan-pelanggan",
+   "pesan": "Pelanggan marah karena paketnya telat 3 hari. Tolong tuliskan balasan yang sopan dan menenangkan.",
+   "lulus": false,
+   "lulusKetat": false,
+   "kemampuanLain": false,
+   "alasan": [
+    "pekerjaan tidak sampai ke hasil (error)",
+    "hasil terlalu pendek (0)",
+    "tidak ada staf yang menyelesaikan pekerjaan (hasil tidak berasal dari staf)",
+    "hasil tidak memuat kata kunci: [[\"maaf\"]]",
+    "tidak ada Catatan yang tersimpan"
+   ],
+   "ms": 62475,
+   "biaya": 0,
+   "panggilan": 0,
+   "token": 0,
+   "status": "error",
+   "pertanyaan": 0,
+   "jalan": [],
+   "pohon": [
+    {
+     "id": "t-mwmi6pnx7qsfl",
+     "oleh": "dewi",
+     "status": "blocked"
+    }
+   ],
+   "jejak": [
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — retry adaptif dijadwalkan",
+    "dewi: Error: fetch failed — diblokir setelah recovery lintas agen"
+   ],
+   "cuplikan": ""
+  },
+  {
+   "id": "konfirmasi-otomasi",
+   "divisi": "exec",
+   "jalur": "penuh",
+   "jenis": "konfirmasi",
+   "kemampuan": null,
+   "pesan": "Buatkan konten Instagram ucapan terima kasih untuk pelanggan setia kopi kami.",
+   "lulus": true,
+   "lulusKetat": false,
+   "jargonHasil": [
+    "pemandu",
+    "approval"
+   ],
+   "kemampuanLain": false,
+   "alasan": [],
+   "ms": 63513,
+   "biaya": 0.008524,
+   "panggilan": 24,
+   "token": 78277,
+   "status": "result",
+   "pertanyaan": null,
+   "jalan": [],
+   "catatanSistem": "kartu konfirmasi muncul; sebelum setuju 0 alur menyala; batal = 0 alur menyala",
+   "cuplikan": "# Laporan Akhir: Membuat Konten Instagram Ucapan Terima Kasih Pelanggan ## Ringkasan Pengguna meminta 5 caption ucapan terima kasih pelanggan setia kopi, disertai jadwal posting Senin‑Jumat, dan dokumen markdown yang siap dipakai. Subtugas telah dialokasikan k"
+  },
+  {
+   "id": "saluran-wa",
+   "divisi": "cs",
+   "jalur": "penuh",
+   "jenis": "saluran",
+   "kemampuan": null,
+   "pesan": "Tuliskan balasan untuk pelanggan yang menanyakan stok, lalu kirim langsung lewat WhatsApp ke nomor pelanggan itu sekarang juga.",
+   "lulus": false,
+   "lulusKetat": false,
+   "jargonHasil": [
+    "persetujuan"
+   ],
+   "kemampuanLain": false,
+   "alasan": [
+    "hasil tidak menyebut dengan jelas bahwa WhatsApp belum tersambung / pengguna yang perlu mengirim"
+   ],
+   "ms": 20475,
+   "biaya": 0.007524,
+   "panggilan": 20,
+   "token": 71462,
+   "status": "result",
+   "pertanyaan": 0,
+   "jalan": [
+    {
+     "staf": "kap-perkiraan-stok-kapasitas",
+     "status": "selesai",
+     "pakaiAI": true,
+     "bukti": 4,
+     "berkas": [
+      "csv",
+      "md"
+     ]
+    },
+    {
+     "staf": "kap-tulis-pesan-pelanggan",
+     "status": "selesai",
+     "pakaiAI": false,
+     "bukti": 4,
+     "berkas": [
+      "md",
+      "csv"
+     ]
+    }
+   ],
+   "pohon": [
+    {
+     "id": "t-mwmi9evoa5dmm",
+     "oleh": "pa-owner",
+     "status": "review"
+    },
+    {
+     "id": "t-mwmi9iz5af6uf",
+     "oleh": "hadi",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi9m4gakd7j",
+     "oleh": "maya",
+     "status": "done"
+    },
+    {
+     "id": "t-mwmi9suhb5lqs",
+     "oleh": "maya",
+     "status": "in_progress"
+    }
+   ],
+   "jejak": [
+    "pa-owner: 🧰 buka_alat(tim): memerlukan akses ke fungsi create_subtask yang berada dalam kelompok 'tim'",
+    "pa-owner: ➡️ Delegasi ke Hadi: Perkirakan kapan stok habis dan bahan baku yang kurang",
+    "pa-owner: ➡️ Delegasi ke Maya: Menulis balasan pelanggan tentang stok",
+    "pa-owner: Menunggu 2 subtugas",
+    "pa-owner: ➡️ Delegasi ke Maya: tulis-pesan-pelanggan",
+    "hadi: 🧑‍💼 staf({\"aksi\":\"jalankan_kemampuan\",\"isian\":{\"daftar\":[],\"jenis\":\"stok\",\"kedua\":\"\",\"keempat\":\"\",\"ketiga\":\"\",\"nilai\":\"\"},\"kemamp)",
+    "maya: 🧑‍💼 staf({\"aksi\":\"jalankan_kemampuan\",\"isian\":{\"jenis\":\"komunitas\",\"nada\":\"singkat\",\"nama\":\"Nama Produk\",\"situasi\":\"menanyakan st)"
+   ],
+   "catatanSistem": "WhatsApp belum tersambung di instalasi ini",
+   "cuplikan": "# Balasan WhatsApp Pelanggan **Pesan Utama** Halo! Produk **Nama Produk** masih tersedia. Jika mau pesan, tinggal balas pesan ini atau kunjungi link berikut: [link]. **Versi A** Halo! Produk **Nama Produk** masih tersedia. Silakan konfirmasi pesan ini atau kun"
+  }
+ ],
+ "kemampuan": [],
+ "berhenti": null,
+ "selesai": "2026-11-18T19:19:53.487Z",
+ "biayaTotal": 0.078864,
+ "panggilanTotal": 184,
+ "tokenTotal": 761560,
+ "tokenMasuk": 698196,
+ "tokenKeluar": 63364,
+ "perModel": {
+  "openai/gpt-oss-20b": {
+   "calls": 177,
+   "tokens": 727523,
+   "cost": 0.07195134000000002
+  },
+  "openai/gpt-oss-120b": {
+   "calls": 7,
+   "tokens": 34037,
+   "cost": 0.00691296
+  }
+ },
+ "perDivisi": {
+  "rnd": {
+   "total": 1,
+   "lulus": 1,
+   "biaya": 0.000681,
+   "ms": 3721,
+   "msRata": 3721
+  },
+  "qa": {
+   "total": 1,
+   "lulus": 1,
+   "biaya": 0.004909,
+   "ms": 14484,
+   "msRata": 14484
+  },
+  "eng": {
+   "total": 2,
+   "lulus": 1,
+   "biaya": 0.00237,
+   "ms": 11208,
+   "msRata": 5604
+  },
+  "hr": {
+   "total": 2,
+   "lulus": 2,
+   "biaya": 0.013877,
+   "ms": 75380,
+   "msRata": 37690
+  },
+  "kms": {
+   "total": 1,
+   "lulus": 1,
+   "biaya": 0.002952,
+   "ms": 8666,
+   "msRata": 8666
+  },
+  "fin": {
+   "total": 1,
+   "lulus": 1,
+   "biaya": 0.008363,
+   "ms": 22964,
+   "msRata": 22964
+  },
+  "sales": {
+   "total": 1,
+   "lulus": 0,
+   "biaya": 0.018979,
+   "ms": 107127,
+   "msRata": 107127
+  },
+  "data": {
+   "total": 1,
+   "lulus": 0,
+   "biaya": 0.00337,
+   "ms": 7108,
+   "msRata": 7108
+  },
+  "mkt": {
+   "total": 1,
+   "lulus": 0,
+   "biaya": 0.007316,
+   "ms": 139413,
+   "msRata": 139413
+  },
+  "cs": {
+   "total": 2,
+   "lulus": 0,
+   "biaya": 0.007524,
+   "ms": 82950,
+   "msRata": 41475
+  },
+  "exec": {
+   "total": 1,
+   "lulus": 1,
+   "biaya": 0.008524,
+   "ms": 63513,
+   "msRata": 63513
+  }
+ },
+ "ringkasan": {
+  "skenario": {
+   "total": 14,
+   "dijalankan": 14,
+   "lulus": 8,
+   "lulusKetat": 3,
+   "dilewati": 0,
+   "penuh": {
+    "total": 8,
+    "lulus": 3
+   },
+   "manajer": {
+    "total": 6,
+    "lulus": 5
+   },
+   "stafDipakai": 10
+  },
+  "kemampuan": {
+   "total": 0,
+   "kasus": 0,
+   "lulus": 0,
+   "ketat": 0,
+   "aiSah": 0,
+   "kemampuanLulusSemua": 0
+  }
+ }
+}

@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-sinta",
+  "division": "mkt",
+  "employeeId": "sinta",
+  "title": "Social Media Specialist",
+  "version": 1,
+  "name": "Penyusun kalender konten dua minggu",
+  "ringkas": "Buat jadwal posting dua minggu berisi tanggal, jam, jenis konten, dan ide untuk satu topik.",
+  "kataKunci": [
+    "kalender konten",
+    "jadwal posting",
+    "instagram",
+    "tiktok",
+    "ide konten"
+  ],
+  "inputs": [
+    {
+      "key": "topik",
+      "type": "text",
+      "label": "Topik atau produk yang dipromosikan",
+      "required": true,
+      "contoh": "Kopi susu gula aren"
+    },
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Posting di mana?",
+      "required": true,
+      "default": "instagram",
+      "choices": [
+        {
+          "v": "instagram",
+          "t": "Instagram"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "linkedin",
+          "t": "LinkedIn"
+        }
+      ]
+    },
+    {
+      "key": "mulai",
+      "type": "date",
+      "label": "Mulai tanggal",
+      "required": true,
+      "contoh": "2026-12-01"
+    },
+    {
+      "key": "per_minggu",
+      "type": "choice",
+      "label": "Berapa kali posting seminggu?",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3 kali"
+        },
+        {
+          "v": "5",
+          "t": "5 kali"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun kalender",
+      "set": {
+        "kalender": "(() => { const pilar = ['Edukasi', 'Bukti dari pelanggan', 'Di balik layar', 'Ajakan beli', 'Hiburan ringan']; const bentuk = ({ instagram: ['Carousel', 'Reels', 'Foto tunggal', 'Story', 'Reels'], tiktok: ['Video 30 detik', 'Video 15 detik', 'Video tren', 'Video tanya jawab', 'Video 30 detik'], linkedin: ['Artikel pendek', 'Poster', 'Polling', 'Cerita pengalaman', 'Artikel pendek'] })[input.platform]; const jam = ({ instagram: '19:00', tiktok: '20:00', linkedin: '08:00' })[input.platform]; const ide = [' 3 hal yang perlu diketahui tentang ', 'Cerita pelanggan yang puas memakai ', 'Proses pembuatan ', 'Penawaran khusus untuk ', 'Momen lucu seputar ']; const hariAktif = input.per_minggu === '5' ? [0, 1, 2, 3, 4] : [0, 2, 4]; return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].filter((d) => hariAktif.includes(d % 7)).map((d, i) => ({ tanggal: new Date(Date.parse(input.mulai) + d * 864e5).toISOString().slice(0, 10), jam: jam, pilar: pilar[i % 5], bentuk: bentuk[i % 5], ide: ide[i % 5].trim() + ' ' + input.topik })); })()"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.kalender.length + ' posting terjadwal di ' + input.platform + ' dari ' + tgl(input.mulai)",
+    "teks": "'# Kalender konten: ' + input.topik + '\\n\\n' + tabel(['Tanggal', 'Jam', 'Tema', 'Bentuk', 'Ide'], v.kalender.map((k) => [k.tanggal, k.jam, k.pilar, k.bentuk, k.ide]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'kalender-konten'",
+        "isi": "csv([['Tanggal', 'Jam', 'Tema', 'Bentuk', 'Ide']].concat(v.kalender.map((k) => [k.tanggal, k.jam, k.pilar, k.bentuk, k.ide])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "topik": "Kopi susu gula aren",
+      "platform": "instagram",
+      "mulai": "2026-12-01",
+      "per_minggu": "3"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "6 posting",
+        "Carousel"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-jadwal"
+  ],
+  "keahlian": {
+    "istilah": [
+      "kalender konten",
+      "jadwal posting",
+      "instagram",
+      "tiktok",
+      "ide konten"
+    ],
+    "data": [
+      "topik atau produk yang dipromosikan",
+      "posting di mana?",
+      "mulai tanggal",
+      "berapa kali posting seminggu?"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

@@ -1,0 +1,2245 @@
+{
+ "mulai": "2026-11-18T18:36:43.000Z",
+ "model": "openai/gpt-oss-20b",
+ "batasUSD": 0.08,
+ "jalur": "penuh = pesan → Pemandu → asisten/master → manajer → staf; manajer = pekerjaan langsung ke manajer divisi",
+ "skenario": [],
+ "kemampuan": [
+  {
+   "id": "analisis-angka",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "ada angka janggal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Penjualan harian menampilkan rata‑rata 118,75 dan median 100,5. Perbedaan signifikan antara keduanya menandakan satu nilai berada jauh di atas sisanya, yaitu angka janggal. Nilai ini dapat menurunkan kestabilan data dan memengaruhi perencan",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"8 angka\" tidak ada"
+     ],
+     "ms": 2468,
+     "biaya": 0.000126,
+     "panggilan": 1,
+     "token": 863,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-statistik-angka"
+    },
+    {
+     "nama": "angka rapi tanpa janggal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Skor kepuasan rata‑rata 4,33 dari 6 nilai (4,5,4,4,5,4) menunjukkan tingkat kepuasan baik. Median 4 memberi indikasi setengah nilai di atas 4 dan setengah di bawah. Tidak ada nilai janggal, semua berada di kisaran 4‑5. Data cukup representa",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"6 angka\" tidak ada",
+      "kata kunci \"stabil\" tidak ada"
+     ],
+     "ms": 905,
+     "biaya": 0.000112,
+     "panggilan": 1,
+     "token": 817,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-statistik-teks"
+    },
+    {
+     "nama": "angka format Indonesia dan tren turun",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Omzet mingguan Anda berjumlah 4 data. Rata‑rata 1.312.500 dan median 1.325.000 menunjukkan sebaran yang cukup konsisten, tanpa angka janggal. Nilai rata‑rata mendekati median berarti tidak ada tren ekstrim positif atau negatif. Secara kesel",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"4 angka\" tidak ada"
+     ],
+     "ms": 1467,
+     "biaya": 0.000113,
+     "panggilan": 1,
+     "token": 830,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-ayu"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "analisis-hasil-uji",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "dua batas dengan nama dan koma desimal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "catatan": "AI sedang tidak bisa dipakai, hasil memakai aturan saja",
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 19141,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "data-citra-uji-ab"
+    },
+    {
+     "nama": "hanya batas atas dengan angka sebaris",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Data uji terdiri dari 4 nilai. Karena kurang dari 5 angka, estimasi performa model masih lemah. Dari 4 hasil, 1 di luar batas, 2 mendekati batas, dan 1 berada di dalam batas. Tidak cukup data untuk menghitung precision, recall, atau F1.",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"1 dari 4 hasil di luar batas\"",
+      "kata kunci \"batas atas\" tidak ada",
+      "jargon: model"
+     ],
+     "ms": 3704,
+     "biaya": 0.000143,
+     "panggilan": 1,
+     "token": 977,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-naufal-evaluasi-model"
+    },
+    {
+     "nama": "dua kelompok berbeda nyata",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Data hanya mencantumkan nilai kelompok B tanpa nilai kelompok A. Tanpa data A, tidak dapat menghitung selisih atau menilai apakah perbedaan 3 detik adalah nyata.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 673,
+     "biaya": 0.000134,
+     "panggilan": 1,
+     "token": 942,
+     "model": "openai/gpt-oss-20b",
+     "staf": "qa-bunga"
+    },
+    {
+     "nama": "dua kelompok tidak beda nyata dan data sedikit",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Hasil uji skor kepuasan tidak berkaitan dengan penurunan mikroba, sehingga analisis log reduksi tidak dapat dilakukan. Data yang diberikan hanya skor rata‑rata, tidak memenuhi kriteria pengujian mikrobiologi. Keputusan akhir tetap di tangan",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1701,
+     "biaya": 0.000124,
+     "panggilan": 1,
+     "token": 925,
+     "model": "openai/gpt-oss-20b",
+     "staf": "qa-fitri-challenge-test"
+    },
+    {
+     "nama": "sebelum dan sesudah dengan pemisah campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Data yang diberikan hanya mencakup nilai ujian sebelum (70, 65, 80, 75, 60). Karena nilai sesudah tidak tersedia, analisis perbandingan tidak dapat dilakukan. Hasil rata‑rata naik 6.2 (8.86%) disebutkan, namun tanpa data kelompok B tidak da",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1735,
+     "biaya": 0.000125,
+     "panggilan": 1,
+     "token": 527,
+     "model": "openai/gpt-oss-20b",
+     "staf": "qa-fitri"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 3,
+   "total": 5,
+   "aiSah": 4
+  },
+  {
+   "id": "analisis-kinerja-penjualan",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "calon pembeli dengan tahap macet",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Ada 7 prospek, total nilai 23.5M, 28.6% (2 orang) selesai deal, 2 tahap macet",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tujuh\" tidak ada"
+     ],
+     "ms": 890,
+     "biaya": 0.000138,
+     "panggilan": 1,
+     "token": 1006,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-bagus"
+    },
+    {
+     "nama": "hasil iklan dengan satu yang merugi",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Iklan B macet, Iklan A dan C berjalan baik. Iklan A menghasilkan ROAS 3 (1,5M/0,5M), Iklan C ROAS 1,5 (300k/0,2M). Total biaya 1M, pendapatan 1,8M, ROAS 1,8. Iklan B merugi karena nol pendapatan.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 4277,
+     "biaya": 0.000165,
+     "panggilan": 1,
+     "token": 696,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-nabila"
+    },
+    {
+     "nama": "untung rugi dengan baris rusak dan pemisah titik koma",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Toko A merugi Rp 200.000, Toko C data tidak dapat diproses, jadi 2 baris merugi. Toko B menonjol dengan untung Rp 1.500.000.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 709,
+     "biaya": 0.000118,
+     "panggilan": 1,
+     "token": 927,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-salsabila-performa"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 2,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "bandingkan-pilihan",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "tiga pilihan seimbang",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Berbagai faktor—biaya, mutu, dan keseimbangan—dimasukkan dalam perbandingan. Toko B menawarkan biaya terendah (950.000) meski mutu sedikit lebih rendah (5). Namun skor keseluruhan 75/100 menunjukkan nilai terbaik.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1522,
+     "biaya": 0.000227,
+     "panggilan": 2,
+     "token": 1756,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-samudra-pasar"
+    },
+    {
+     "nama": "utamakan murah dan baris berformat aneh",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Kurir X (Rp 9.000) adalah harga termurah, diikuti Kurir Y (Rp 12.000) dan Kurir Z (Rp 15.000). Meskipun mutu Kurir X 6, skor 88 menunjukkan keseimbangan. Prioritas utama adalah kehematan, sehingga Kurir X unggul secara harga. Namun mutu 6 c",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 652,
+     "biaya": 0.000153,
+     "panggilan": 1,
+     "token": 999,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-bayu"
+    },
+    {
+     "nama": "satu pilihan saja",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Percetakan Maju menempati posisi teratas dengan skor mutu 86, biaya Rp500.000. Ini berarti kualitas terbaik dibanding biaya. Mutu jadi kriteria utama, sehingga opsi ini paling efisien.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pembanding\" tidak ada"
+     ],
+     "ms": 2009,
+     "biaya": 0.000077,
+     "panggilan": 1,
+     "token": 714,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-sekar-bandingkan"
+    },
+    {
+     "nama": "tidak ada pilihan terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 2001,
+     "biaya": 0.000134,
+     "panggilan": 2,
+     "token": 1001,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-ilham-pemasok-kemasan"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "catat-produksi-mutu",
+   "kelompok": "operasional",
+   "kasus": [
+    {
+     "nama": "hasil produksi terhadap target",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "OEE B1=79,2 %; B2=56,0 %; B3=89,8 %. Bagian paling perlu diperbaiki adalah jalur B2 dengan OEE terendah. Hasil produksi di B2 menunjukkan downtime tinggi, kecepatan menurun, dan kualitas turun, yang dapat memperlambat output keseluruhan dan",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"87.2 persen\"",
+      "format hasil aturan berbeda dari kriteria tiruan: \"lebih 50\""
+     ],
+     "ms": 1407,
+     "biaya": 0.000204,
+     "panggilan": 1,
+     "token": 1193,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-budi-oee"
+    },
+    {
+     "nama": "efektivitas mesin tanpa target",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Efektivitas rata‑rata lini 56.5 %, kedua mesin di bawah 85 %. Hasil produksi kurang memenuhi target.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 504,
+     "biaya": 0.000112,
+     "panggilan": 1,
+     "token": 847,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-sigit"
+    },
+    {
+     "nama": "kejadian kerja dengan baris tanpa pemisah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Laporan insiden Gudang dan Dapur per 5‑12 Jan 2025: 1 kejadian berat (jari terjepit Gudang 09 Jan), 1 sedang (air panas Dapur 10 Jan), 2 ringan (terpeleset Gudang 05 Jan, hampir celaka forklift 12 Jan). Gudang menampung mayoritas insiden. D",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"keselamatan\" tidak ada"
+     ],
+     "ms": 1128,
+     "biaya": 0.000151,
+     "panggilan": 1,
+     "token": 1028,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-surya-laporan-insiden"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "cocokkan-bersihkan-data",
+   "kelompok": "data",
+   "kasus": [
+    {
+     "nama": "bandingkan dua daftar buah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "catatan": "AI sedang tidak bisa dipakai, hasil memakai aturan saja",
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 21164,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "alat-bandingkan-daftar"
+    },
+    {
+     "nama": "rapikan daftar dengan spasi dan baris kosong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "catatan": "AI sedang tidak bisa dipakai, hasil memakai aturan saja",
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"2 unik\"",
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 10672,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "alat-bersihkan-daftar"
+    },
+    {
+     "nama": "periksa tabel yang bolong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Daftar berisi 3 baris, 2 kolom kosong, 1 baris kurang kolom. Kolom kosong mengakibatkan nilai tidak terisi, baris kurang kolom membuat data tidak konsisten. CSV perlu 3 kolom: nama, umur, kota. Tanpa koreksi, Excel menampilkan sel kosong da",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"2 sel kosong\"",
+      "jargon: error"
+     ],
+     "ms": 9946,
+     "biaya": 0.000131,
+     "panggilan": 1,
+     "token": 921,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-csv-dari-teks"
+    },
+    {
+     "nama": "cari catatan mirip",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Dari dua daftar Nama perusahaan, ditemukan satu pasangan catatan yang mirip: 'PT Maju Jaya' dan 'Jaya Maju PT'. Selisih lainnya hanya perbedaan urutan dan penggunaan huruf kapital, tidak ada nilai uang yang terlibat. Catatan duplikat atau k",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"1 catatan mirip\"",
+      "kata kunci \"gabung\" tidak ada"
+     ],
+     "ms": 1202,
+     "biaya": 0.000136,
+     "panggilan": 1,
+     "token": 933,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-ihsan-cocokkan"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 0,
+   "total": 4,
+   "aiSah": 2
+  },
+  {
+   "id": "desain-visual-teknis",
+   "kelompok": "desain",
+   "kasus": [
+    {
+     "nama": "kontras abu-abu di latar putih",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Kontras 4.48:1 cukup rendah untuk teks biasa—kita butuh minimal 7:1 agar mudah dibaca. Kalau teks besar masih dapat dibaca, tapi di layar kecil akan susah.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil menunjukkan\" tidak ada",
+      "kata kunci \"abu-abu\" tidak ada"
+     ],
+     "ms": 500,
+     "biaya": 0.000088,
+     "panggilan": 1,
+     "token": 724,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-kayla-frame"
+    },
+    {
+     "nama": "video panjang untuk YouTube",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Ukuran video 1920x1080 cocok untuk YouTube. Kontras warna teks #112233 vs #ffffff sangat tinggi (≈25:1), memenuhi WCAG dan mudah dibaca. Lama video 1200 detik melebihi rekomendasi 600 detik, tetapi masih dapat diupload. Ruang tepi 1 cm cuku",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil menunjukkan\" tidak ada",
+      "kata kunci \"dipotong\" tidak ada"
+     ],
+     "ms": 551,
+     "biaya": 0.000091,
+     "panggilan": 1,
+     "token": 351,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-mira"
+    },
+    {
+     "nama": "pola kotak 10 x 5 x 15",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Pola kemasan 33,5×27 cm (inkl. bleed 1 cm) cocok bagi box berukuran 10×5×15 cm. Satu lembar A3 (29,7×42 cm) cukup muat satu pola. Warna dua (#112233 & #ffffff) konsisten dengan panduan merek. Penggunaan bleed 1 cm memastikan tidak ada area ",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil menunjukkan\" tidak ada"
+     ],
+     "ms": 3417,
+     "biaya": 0.000277,
+     "panggilan": 2,
+     "token": 1458,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-tegar"
+    },
+    {
+     "nama": "label produk belum lengkap",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Video reels seharusnya 30 detik, resolusi 1080x1920, bitrate 4 Mbps, format MP4. File kira‑kira 50 MB. Warna #112233 dan #ffffff sudah cocok; kemasan 1 cm lipatan, isi 150 g. Tanggal kedaluwarsa dan cara simpan belum terisi, jadi tidak dapa",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"hasil\" tidak ada",
+      "kata kunci \"Hasil menunjukkan\" tidak ada"
+     ],
+     "ms": 5659,
+     "biaya": 0.000119,
+     "panggilan": 1,
+     "token": 860,
+     "model": "openai/gpt-oss-20b",
+     "staf": "studio-bintang-ekspor"
+    },
+    {
+     "nama": "warna tidak terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Warna tidak sesuai pedoman merek. #112233 dan #ffffff tidak terdaftar sebagai warna standar, sehingga tampilannya tidak konsisten.\\nKontras antara keduanya terlalu tinggi, membuat teks menjadi sulit dibaca di layar kecil.\\nUkuran video reel",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Hasil pemeriksaan\" tidak ada",
+      "kata kunci \"tanda pagar\" tidak ada"
+     ],
+     "ms": 4146,
+     "biaya": 0.000148,
+     "panggilan": 2,
+     "token": 777,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-kayla-frame"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 0,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "hitung-harga-biaya",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "harga jual dan laba",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Margin dihitung sebagai selisih harga jual dan modal dibagi harga jual. Dalam contoh, margin 33.33% dan laba Rp50.000 per satuan. Ini berarti harga jual Rp150.000, modal Rp100.000, laba Rp50.000. Margin 25% yang diminta tidak konsisten deng",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"sepertiga\" tidak ada"
+     ],
+     "ms": 2421,
+     "biaya": 0.000104,
+     "panggilan": 1,
+     "token": 854,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-cicilan-pinjaman"
+    },
+    {
+     "nama": "diskon bertingkat format Indonesia",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Harga awal Rp 1.000.000, setelah diskon bertingkat 10% lalu 5% menjadi Rp 855.000, sehingga diskon efektif 14,5%.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"margin\" tidak ada"
+     ],
+     "ms": 1863,
+     "biaya": 0.00024,
+     "panggilan": 2,
+     "token": 1401,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-diskon-bertingkat"
+    },
+    {
+     "nama": "cicilan dengan bunga tahunan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Total pembayaran selama 12 bulan adalah 12 bulanan × Rp 1.066.185 = Rp 12.794.220. Perbandingan dengan harga awal Rp 12.000.000 menunjukkan tambahan Rp 794.220, setara 6,6% kenaikan atas harga dasar, mencerminkan biaya tambahan (margin, bun",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 960,
+     "biaya": 0.000147,
+     "panggilan": 1,
+     "token": 974,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-hitung-ppn"
+    },
+    {
+     "nama": "PPN tanpa persentase diisi",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Perhitungan PPN 11% atas nilai jual 1.000.000 menghasilkan pajak 110.000, total 1.110.000. Margin bersih 0 karena tidak ada biaya lain yang disebutkan.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 686,
+     "biaya": 0.000064,
+     "panggilan": 1,
+     "token": 279,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-gading"
+    },
+    {
+     "nama": "titik impas dengan angka bertitik",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Berdasarkan data, impas terjadi pada 250 satuan dengan penjualan Rp12.500.000. Biaya pokok per unit Rp30.000 dan biaya tetap Rp5.000.000. Total biaya untuk 250 unit = 7.500.000 + 5.000.000 = 12.500.000. Margin = 0.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 652,
+     "biaya": 0.000111,
+     "panggilan": 1,
+     "token": 876,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-laksmi"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 3,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "hitung-hemat-otomasi",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "otomatisasi cepat balik modal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Hemat 45 jam/bulan menghasilkan Rp 2.050.000 bersih, balik modal 1,5 bulan. Perhitungan: 200 tugas × 15 menit = 3.000 menit = 50 jam; 50 jam × Rp 50.000 = Rp 2.500.000. Biaya otomatisasi Rp 3.000.000 + langganan Rp 200.000 = Rp 3.200.000. S",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"penghematan\" tidak ada"
+     ],
+     "ms": 2746,
+     "biaya": 0.00015,
+     "panggilan": 1,
+     "token": 1000,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-gilang"
+    },
+    {
+     "nama": "otomatisasi tidak menutup biaya",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Dari data, tiap bulan dilakukan 10 pekerjaan. Setiap pekerjaan memakan 5 menit = 0,083 jam. Total waktu 0,83 jam. Dengan tarif 20.000 Rp/jam, biaya manual 16.600 Rp per bulan. Otomatisasi menghemat 0,8 jam, setara 16.000 Rp. Setelah dikuran",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"belum layak\" tidak ada"
+     ],
+     "ms": 1024,
+     "biaya": 0.000093,
+     "panggilan": 1,
+     "token": 436,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-naufal"
+    },
+    {
+     "nama": "biaya layanan per bulan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Manfaat otomatisasi: biaya manual Rp200.000.000 per bulan (50.000 kali × Rp4.000 per jam). Biaya otomatisasi = Rp500.000 (sekali bayar) + Rp300.000 + 20 % × Rp1.000.000 (biaya layanan) = Rp800.000 per bulan. Biaya total per bulan = Rp1.000.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 969,
+     "biaya": 0.000173,
+     "panggilan": 1,
+     "token": 671,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-aksa"
+    },
+    {
+     "nama": "biaya kebanyakan ikut pemakaian dan isian kurang",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Biaya layanan otomatisasi Rp 5.000.000 per bulan. Dengan 1.000.000 kali pekerjaan per bulan, biaya per pekerjaan Rp 5.00. Total biaya tetap Rp 5.000.000. ROI tidak relevan karena biaya tetap. Layanan layak jika Anda tidak dapat menurunkan b",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1081,
+     "biaya": 0.000104,
+     "panggilan": 1,
+     "token": 804,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ops-eko"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "hitung-sdm",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "sisa cuti dengan masa kerja separuh tahun",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Karyawan memiliki jatah cuti 6 hari per tahun. Ia telah menggunakan 5 hari, sehingga sisa cuti saat ini adalah 1 hari. Sisa cuti tahun lalu 2 hari dapat digabungkan, jadi total sisa cuti saat ini adalah 3 hari. Karena sisa cuti mendekati ba",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"hasil\" tidak ada",
+      "kata kunci \"hasil\" tidak ada"
+     ],
+     "ms": 4481,
+     "biaya": 0.000143,
+     "panggilan": 1,
+     "token": 991,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri-cuti"
+    },
+    {
+     "nama": "cuti terpakai melebihi jatah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Perhitungan sisa cuti: jatah 12 hari dikurangi cuti terpakai 15 hari menghasilkan sisa cuti -3 hari.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"minus\" tidak ada"
+     ],
+     "ms": 3153,
+     "biaya": 0.000098,
+     "panggilan": 1,
+     "token": 814,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri"
+    },
+    {
+     "nama": "gaji dengan tunjangan dan angka bertitik",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "catatan": "AI sedang tidak bisa dipakai, hasil memakai aturan saja",
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 19137,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "hr-intan-evaluasi"
+    },
+    {
+     "nama": "gaji tinggi melewati batas iuran",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "catatan": "AI sedang tidak bisa dipakai, hasil memakai aturan saja",
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 10643,
+     "biaya": 0,
+     "panggilan": 0,
+     "token": 0,
+     "model": null,
+     "staf": "hr-fikri-cuti"
+    },
+    {
+     "nama": "efektivitas pelatihan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Poin pelatihan meningkat 15 poin, setara 25% kenaikan kompetensi. Hal ini mengindikasikan peningkatan kualitas kerja karyawan dan potensi kontribusi bagi perusahaan. Sesuai kebijakan HR, pencatatan kenaikan ini harus dikonfirmasi pada siste",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"seperempat\" tidak ada"
+     ],
+     "ms": 3472,
+     "biaya": 0.00008,
+     "panggilan": 1,
+     "token": 391,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-fikri"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 0,
+   "total": 5,
+   "aiSah": 3
+  },
+  {
+   "id": "hitung-teknis",
+   "kelompok": "hitungan",
+   "kasus": [
+    {
+     "nama": "ubah satuan dengan huruf besar dan koma desimal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "2.5 kg sama dengan 2500 g",
+     "alasan": [],
+     "catatanMutu": [
+      "panjang pembahasan 25 di luar 30-500",
+      "kata kunci \"kilogram\" tidak ada"
+     ],
+     "ms": 1488,
+     "biaya": 0.000076,
+     "panggilan": 1,
+     "token": 687,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-konversi-satuan"
+    },
+    {
+     "nama": "tambah hari melewati akhir bulan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Tanggal 2026-01-31 ditambah 30 hari menjadi 2026-03-02. Durasi antara tanggal awal dan akhir adalah 30 hari, setara 4 minggu dan 2 hari.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"maret\" tidak ada"
+     ],
+     "ms": 815,
+     "biaya": 0.000098,
+     "panggilan": 1,
+     "token": 753,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-selisih-tanggal"
+    },
+    {
+     "nama": "terbilang angka bertitik",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Terbilang rupiah: Rp 1.250.500 dibaca satu juta dua ratus lima puluh ribu lima ratus rupiah",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kuitansi\" tidak ada"
+     ],
+     "ms": 415,
+     "biaya": 0.000048,
+     "panggilan": 1,
+     "token": 189,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-tambah-hari"
+    },
+    {
+     "nama": "persen ke gram dengan baris campur",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berikut terbilang gram setiap bahan pada adonan 2000 gram. Air: 70 % = 1400 gram, Gliserin: 5,5 % = 110 gram, Pengawet: 0,5 % = 10 gram, Emulsi: 24 % = 480 gram.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"takaran\" tidak ada",
+      "kata kunci \"seratus\" tidak ada"
+     ],
+     "ms": 425,
+     "biaya": 0.000066,
+     "panggilan": 1,
+     "token": 285,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-terbilang-rupiah"
+    },
+    {
+     "nama": "jumlah sampel dari populasi",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Survei menargetkan 1000 orang, margin kesalahan 5 %, tingkat keyakinan 95 %. Rumus ukuran sampel: n = N·Z²·p(1‑p)/(E²·(N‑1)+Z²·p(1‑p)). Dengan p = 0.5, Z = 1.96, E = 0.05 → n ≈ 278 responden. \n\nPeriksa dua kali: \n1. Apakah persentase respon",
+     "alasan": [],
+     "catatanMutu": [
+      "panjang pembahasan 541 di luar 30-500"
+     ],
+     "ms": 1014,
+     "biaya": 0.000151,
+     "panggilan": 1,
+     "token": 948,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-bayu-ukuran-sampel"
+    },
+    {
+     "nama": "pengenceran",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Estimasi pengenceran: volume pekat 17.86 ml + pelarut 232.14 ml = 250.00 ml. Persentase pekat = 17.86/250=7.14%.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 973,
+     "biaya": 0.000077,
+     "panggilan": 1,
+     "token": 313,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-arif-estimasi-fitur"
+    }
+   ],
+   "lulus": 6,
+   "ketat": 1,
+   "total": 6,
+   "aiSah": 6
+  },
+  {
+   "id": "kelola-pengetahuan",
+   "kelompok": "pengetahuan",
+   "kasus": [
+    {
+     "nama": "indeks catatan dengan satu catatan sendirian",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berikut rangkaian rapian catatan layanan: 3 catatan utama, 2 tautan saling terhubung, 1 catatan belum terhubung. Semua judul sudah disamarkan data pribadi. Catatan masih dalam struktur folder \"pelayanan\" dan \"penjualan\". Tidak ada catatan y",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kata ciri\" tidak ada"
+     ],
+     "ms": 526,
+     "biaya": 0.000131,
+     "panggilan": 1,
+     "token": 931,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-arsa"
+    },
+    {
+     "nama": "nama kembar dan judul penuh tanda baca",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Berhasil membagi 3 catatan menjadi set train 2 dan test 1, nama kembar dipisah, data pribadi disamarkan.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 804,
+     "biaya": 0.000136,
+     "panggilan": 1,
+     "token": 943,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-gita-pembagi"
+    },
+    {
+     "nama": "samarkan email dan nomor, buang pendek dan ganda",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Dari 4 catatan percakapan, 2 masih dipertahankan setelah penyaringan. Semua data pribadi (email, nomor, NIK, link) dalam 2 catatan tersebut telah disamarkan sesuai kebijakan. Catatan lain sudah tidak mengandung data sensitif.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1974,
+     "biaya": 0.000064,
+     "panggilan": 1,
+     "token": 307,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-gita"
+    },
+    {
+     "nama": "panduan kerja dengan peringatan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Skill Kelola catatan dan panduan: Buka toko",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"empat langkah\" tidak ada"
+     ],
+     "ms": 909,
+     "biaya": 0.000057,
+     "panggilan": 1,
+     "token": 292,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-hafiz"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "klasifikasi-pilah",
+   "kelompok": "data",
+   "kasus": [
+    {
+     "nama": "pilah pesan dengan penanda mendesak",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Penyortiran pesan 4 pelanggan: Tagihan (1), Pengiriman (1), Komplain (1), Lainnya (1). Prioritas tinggi diberikan pada Pengiriman dan Komplain yang mendesak.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 3360,
+     "biaya": 0.000114,
+     "panggilan": 1,
+     "token": 886,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-wulan"
+    },
+    {
+     "nama": "kelompokkan pelanggan menurut belanja",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Dari data, 3 pelanggan masuk Kecil: Budi, Siti, Ani, total belanja 1.250.000. Rudi tidak valid, jadi diabaikan.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pesan\" tidak ada"
+     ],
+     "ms": 4175,
+     "biaya": 0.000122,
+     "panggilan": 1,
+     "token": 884,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-bagus-katakunci"
+    },
+    {
+     "nama": "aturan kosong dan isi berantakan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Dari 2 laporan harian, 1 bersifat mendesak dan 2 masuk ke kelompok Lainnya. 1 yang mendesak harus diprioritaskan.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pesan\" tidak ada"
+     ],
+     "ms": 1208,
+     "biaya": 0.000096,
+     "panggilan": 1,
+     "token": 783,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-doni"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "laporan-ringkasan-kerja",
+   "kelompok": "pelaporan",
+   "kasus": [
+    {
+     "nama": "produksi harian dengan target",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Pencapaian Tim Dapur harian 125 unit vs target 150, 83% hampir tercapai. Kue brownies 40 unit selesai tepat waktu, kue lapis 25 unit terhambat karena bahan telat, roti 60 unit selesai tanpa catatan khusus.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1322,
+     "biaya": 0.000096,
+     "panggilan": 1,
+     "token": 593,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-karin"
+    },
+    {
+     "nama": "penjualan angka format Indonesia",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Capaian penjualan mingguan Toko online mencapai Rp4.000.000, 133% dari target Rp3.000.000. Terpenuhi target dengan baik. Keberhasilan didukung promo pada Selasa.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 822,
+     "biaya": 0.000089,
+     "panggilan": 1,
+     "token": 764,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-budi"
+    },
+    {
+     "nama": "tugas tanpa jumlah dan baris tidak terbaca",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Laporan bulanan Tim admin menunjukkan tiga tugas utama. 1. Rekap stok (jumlah tidak tercantum). 2. Balas pesan (jumlah banyak, tertunda). 3. Cetak faktur (hasil nyata 3). Tidak ada target sehingga tidak bisa dinilai naik atau turun. Tugas s",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2788,
+     "biaya": 0.000076,
+     "panggilan": 1,
+     "token": 305,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-karin"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 3,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "nilai-skor",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "tiga calon ambang sedang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 4159,
+     "biaya": 0.000223,
+     "panggilan": 2,
+     "token": 1639,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-gading-seleksi"
+    },
+    {
+     "nama": "ambang ketat dan nilai kosong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berdasarkan data, Ani mendapat skor tertinggi (34) dibandingkan Rudi dan Dewi. Prioritas tinggi karena jangkauan dan kecocokan maksimal. Rudi memiliki skor lebih rendah; Dewi tidak memiliki data lengkap, sehingga sulit menilai.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"ambang\" tidak ada"
+     ],
+     "ms": 2074,
+     "biaya": 0.000071,
+     "panggilan": 1,
+     "token": 359,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-fajar"
+    },
+    {
+     "nama": "bobot aneh dan nilai kurang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1888,
+     "biaya": 0.000241,
+     "panggilan": 2,
+     "token": 1840,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-sekar"
+    },
+    {
+     "nama": "daftar calon kosong",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 4007,
+     "biaya": 0.000122,
+     "panggilan": 2,
+     "token": 1011,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-tasya"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 0,
+   "total": 4,
+   "aiSah": 1
+  },
+  {
+   "id": "periksa-kepatuhan",
+   "kelompok": "pemeriksaan",
+   "kasus": [
+    {
+     "nama": "label kemasan kurang satu syarat",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Label produk memenuhi 4 dari 5 syarat: nama produk, berat bersih, komposisi, dan tanggal kedaluwarsa tercantum dengan benar. Namun, nomor izin edar tidak disebutkan, sehingga tidak lengkap menurut ketentuan. Tidak ditemukan kata terlarang.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1925,
+     "biaya": 0.000235,
+     "panggilan": 2,
+     "token": 1893,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-rara-kecocokan-bahan"
+    },
+    {
+     "nama": "klaim iklan melanggar dengan huruf besar",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Iklan ini tidak memenuhi syarat: tidak ada syarat & ketentuan, kata klaim menipu (menyembuhkan, terbaik sedunia) dan ada kata terlarang. Diperlukan revisi untuk mematuhi kebijakan.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 552,
+     "biaya": 0.000104,
+     "panggilan": 1,
+     "token": 874,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-arman-hak"
+    },
+    {
+     "nama": "syarat halal tanpa penanda dan tanpa larangan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Skor kepatuhan 33/100 menunjukkan banyak kekurangan. Hanya 1 dari 3 syarat terpenuhi: (1) Sertifikat halal sudah tercantum. Syarat lainnya, nomor sertifikat dan logo, belum ada. Hal ini penting karena otoritas halal memerlukan bukti identit",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 792,
+     "biaya": 0.000114,
+     "panggilan": 1,
+     "token": 874,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-tiara-audit"
+    },
+    {
+     "nama": "syarat tidak terbaca",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Pemeriksaan menunjukkan teks tidak mencantumkan syarat terkait batasan penggunaan, hak distribusi, atau larangan pemanfaatan. Tanpa ketentuan tersebut, pengguna tidak mengetahui batasan hak atas foto, sehingga risiko pelanggaran hak cipta m",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1579,
+     "biaya": 0.000095,
+     "panggilan": 1,
+     "token": 784,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-yohana"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 4,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "periksa-mutu-teks",
+   "kelompok": "pemeriksaan",
+   "kasus": [
+    {
+     "nama": "slogan baik",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1828,
+     "biaya": 0.000139,
+     "panggilan": 2,
+     "token": 953,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-reza"
+    },
+    {
+     "nama": "klaim ragu dan panjang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Teks klaim ini menyampaikan ide bahwa produk lebih baik dan akan disukai karena kualitas istimewa, namun bahasa tidak spesifik dan terlalu umum.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"bukti\" tidak ada"
+     ],
+     "ms": 1079,
+     "biaya": 0.00008,
+     "panggilan": 1,
+     "token": 718,
+     "model": "openai/gpt-oss-20b",
+     "staf": "kms-hafiz-uji-arahan"
+    },
+    {
+     "nama": "arahan panjang dengan baris berantakan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Slogan ini jelas dan singkat, langsung menekankan batasan 100 kata dan format poin serta menambahkan contoh judul. Tidak ada klaim berlebihan atau ambiguitas. Kelemahan: penggunaan kata 'ara' pada awal kalimat terasa kurang formal, serta fr",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pembaca\" tidak ada"
+     ],
+     "ms": 540,
+     "biaya": 0.000114,
+     "panggilan": 1,
+     "token": 820,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-kirana-uji-slogan"
+    },
+    {
+     "nama": "teks tombol layar terlalu pendek",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Layar 'OK' cukup jelas, namun masih ada ruang untuk meningkatkan kemudahan pakai. Skor 71 menunjukkan potensi perbaikan pada konsistensi dan kejelasan. Perlu menambah konteks agar pengguna paham tindakan yang akan terjadi.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tombol\" tidak ada"
+     ],
+     "ms": 671,
+     "biaya": 0.00005,
+     "panggilan": 1,
+     "token": 200,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-reza"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 0,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "perkiraan-stok-kapasitas",
+   "kelompok": "perkiraan",
+   "kasus": [
+    {
+     "nama": "stok sudah di titik pesan ulang",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Titik pesan ulang 210 sudah tercapai, stok saat ini 200. Perlu segera pesanan ulang untuk menghindari kehabisan. Risiko tertundanya dapat menambah kerugian penjualan. Estimasi akurat, tapi bisa berubah bila pemakaian naik.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1422,
+     "biaya": 0.000109,
+     "panggilan": 1,
+     "token": 835,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-gilang-sla-downtime"
+    },
+    {
+     "nama": "kebutuhan bahan dengan baris campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Dari perhitungan, Tepung dan Telur akan kurang stok. Tepung diperlukan 50, stok 40, kurang 10. Telur diperlukan 300, stok 250, kurang 50. Gula cukup. Karena dua bahan harus dibeli, segera pesan untuk menghindari kekurangan produksi.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1606,
+     "biaya": 0.000147,
+     "panggilan": 1,
+     "token": 984,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-lukas-batas-laju"
+    },
+    {
+     "nama": "perkiraan permintaan dengan pemisah campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Perkiraan permintaan minggu depan 140, tren naik 10 per minggu. Stok saat ini 100,110,120,130,140. Perlu cek apakah stok cukup, hitung kursi tidak terpakai tiap bulan (misalnya 140-120=20).",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 774,
+     "biaya": 0.000101,
+     "panggilan": 1,
+     "token": 779,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-doni-lisensi"
+    },
+    {
+     "nama": "kapasitas disk bertambah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Disk mencapai kapasitas penuh dalam 75 hari (≈2,5 bulan).",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"delapan puluh\" tidak ada"
+     ],
+     "ms": 2082,
+     "biaya": 0.000192,
+     "panggilan": 2,
+     "token": 1187,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-rangga-kapasitas-disk"
+    },
+    {
+     "nama": "disk tidak bertambah dan stok tanpa pemakaian",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berhitung kebutuhan bahan untuk 1000 batch dengan pemakaian rata‑rata per hari 1 unit, jaga stok minimal 200 unit untuk pengiriman 200 hari.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pantau\" tidak ada"
+     ],
+     "ms": 414,
+     "biaya": 0.000095,
+     "panggilan": 1,
+     "token": 772,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-dodi"
+    }
+   ],
+   "lulus": 5,
+   "ketat": 3,
+   "total": 5,
+   "aiSah": 5
+  },
+  {
+   "id": "peta-risiko",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "tiga risiko beragam tingkat",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Berikut urutan risiko peluncuran toko online berdasarkan skor (kemungkinan × dampak). 1. Pemasok terlambat (12) – risiko tinggi, perlu koordinasi pengiriman. 2. Server mati (10) – risiko tinggi, perlukan redundansi. 3. Salah ketik harga (1)",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2258,
+     "biaya": 0.000134,
+     "panggilan": 1,
+     "token": 950,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-salsa-risiko"
+    },
+    {
+     "nama": "nilai di luar batas dan teks aneh",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berikut peta risiko untuk data pelanggan toko. Kebocoran data (skor 10) adalah risiko kritis yang harus ditangani segera. Formulir tanpa sandi (skor 11) tidak memiliki pemilik, jadi perlu ditunjuk. Catatan lain belum terukur, sehingga diang",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"Belum ditentukan\""
+     ],
+     "ms": 927,
+     "biaya": 0.000213,
+     "panggilan": 1,
+     "token": 1220,
+     "model": "openai/gpt-oss-20b",
+     "staf": "legal-arman"
+    },
+    {
+     "nama": "keselamatan kerja dengan satu risiko",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Di gudang barang terdapat risiko lantai licin dengan kemungkinan 3 (sedang) dan keparahan 4 (berbahaya). Skor 12 menunjukkan tingkat risiko tinggi yang harus diutamakan.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 473,
+     "biaya": 0.000096,
+     "panggilan": 1,
+     "token": 809,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mfg-surya"
+    },
+    {
+     "nama": "tidak ada risiko terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1376,
+     "biaya": 0.000131,
+     "panggilan": 2,
+     "token": 1360,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ops-lia-risiko"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 2,
+   "total": 4,
+   "aiSah": 3
+  },
+  {
+   "id": "prioritas-keputusan",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "urutan prioritas empat pilihan",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Menghitung prioritas berdasarkan dampak dan usaha (impact ÷ effort). Iklan baru (4/2 = 2.0) paling tinggi, diikuti Ganti kemasan dan Buka cabang (5/5 = 1.0), lalu Rapikan gudang (2/1 = 2.0). Dengan aturan, Iklan baru dikerjakan pertama.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1107,
+     "biaya": 0.000103,
+     "panggilan": 1,
+     "token": 457,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-matriks-prioritas"
+    },
+    {
+     "nama": "timbangan untung rugi dengan baris salah",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berdasarkan nilai seimbang (9 positif, 7 negatif) dan data SWOT, keputusan membuka kelas online masih bergantung pada prioritas. Kelebihan utama: tim solid (nilai 4) dan pasar tumbuh (5). Risiko: pesaing besar (4) dan modal terbatas (3).",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pilihan\" tidak ada",
+      "jargon: model"
+     ],
+     "ms": 3047,
+     "biaya": 0.00012,
+     "panggilan": 1,
+     "token": 912,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-ardi-gate-rilis"
+    },
+    {
+     "nama": "tiga skenario angka dengan sikap berani",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Data pilihan untuk skenario target omzet belum lengkap, sehingga tidak dapat menghitung skor otomasi uji.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"pilihan optimis\" tidak ada"
+     ],
+     "ms": 1082,
+     "biaya": 0.000218,
+     "panggilan": 2,
+     "token": 1505,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-ardi"
+    },
+    {
+     "nama": "nilai prioritas tidak terbaca",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Opsi Y dipilih dengan skor 1, menandakan nilai tertinggi sesuai matriks dampak dan usaha. Dengan risiko seimbang, aktivitas ini paling seimbang antara manfaat dan tenaga yang diperlukan.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"isi ulang\" tidak ada"
+     ],
+     "ms": 968,
+     "biaya": 0.000102,
+     "panggilan": 1,
+     "token": 816,
+     "model": "openai/gpt-oss-20b",
+     "staf": "exec-kenzo-skenario"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 1,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "rancang-struktur",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "tabel data pesanan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 19930,
+     "biaya": 0.000088,
+     "panggilan": 1,
+     "token": 743,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-pembuat-utm"
+    },
+    {
+     "nama": "papan cerita lengkap",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Dashboard \"Video toko\" akan menampilkan alur pengalaman pelanggan: pembuka, produk, kepuasan, dan ajakan. Pilih grafik batang untuk kuantitas produk, pie untuk kepuasan, line untuk tren penjualan, dan icon call‑to‑action untuk ajakan. Tata ",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Rancangan video\" tidak ada",
+      "kata kunci \"dua puluh detik\" tidak ada"
+     ],
+     "ms": 2665,
+     "biaya": 0.000109,
+     "panggilan": 1,
+     "token": 814,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-karin-rencana-dashboard"
+    },
+    {
+     "nama": "dashboard dengan uraian berantakan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Storyboard ringkasan toko: 6 baris utama – Penjualan, Stok, Pelanggan, Biaya, Laba, Retur. Tujuan tampil data cepat, fokus tiap panel. Periksa urutan logis, ikon konsisten, warna merek, teks singkat, ruang interaksi. Bisa terlewat: menempat",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"Rancangan dashboard\" tidak ada",
+      "kata kunci \"tiga kartu\" tidak ada"
+     ],
+     "ms": 1118,
+     "biaya": 0.000158,
+     "panggilan": 2,
+     "token": 1030,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-kayla"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "ringkas-umpan-balik",
+   "kelompok": "analisis",
+   "kasus": [
+    {
+     "nama": "ulasan campuran",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Empat komentar tentang layanan antar makanan menunjukkan dua positif dan dua negatif dengan tema utama harga.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"4 komentar\" tidak ada"
+     ],
+     "ms": 385,
+     "biaya": 0.000086,
+     "panggilan": 1,
+     "token": 753,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-faisal"
+    },
+    {
+     "nama": "fokus keluhan saja",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Survei menunjukkan 2 komentar negatif dan 0 positif, semua terkait Toko online dengan tema utama harga. Nilai rata‑rata tidak tersedia, namun nada umum buruk.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 493,
+     "biaya": 0.000054,
+     "panggilan": 1,
+     "token": 253,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-dafa-survei"
+    },
+    {
+     "nama": "komentar kosong dan tidak jelas",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": false,
+     "pembahasan": "",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"Tidak ada komentar\"",
+      "jawaban AI tidak sah (jatuh ke aturan)"
+     ],
+     "ms": 1083,
+     "biaya": 0.000119,
+     "panggilan": 2,
+     "token": 906,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-keisha-rekap-liputan"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "riset-halaman-web",
+   "kelompok": "riset",
+   "kasus": [
+    {
+     "nama": "nilai pencarian halaman produk",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Halaman Example Domain dinilai SEO dengan skor 30/100. Tidak ada gambar dan tautan, sehingga kurang SEO friendly. Penilaian per banding harga tidak relevan karena halaman tidak menjual. Untuk meningkatkan peringkat, perbaiki konten, meta ta",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"Sepatu Kulit Pria\"",
+      "format hasil aturan berbeda dari kriteria tiruan: \"2 gambar\"",
+      "format hasil aturan berbeda dari kriteria tiruan: \"2 tautan\""
+     ],
+     "ms": 7531,
+     "biaya": 0.000106,
+     "panggilan": 1,
+     "token": 800,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-cek-halaman-web"
+    },
+    {
+     "nama": "bandingkan harga dengan harga sendiri",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Halaman pesaing tidak mengandung harga rupiah, sehingga perbandingan tidak dapat dihitung. Tanpa data harga, tidak ada analisis kekuatan atau kelemahan terkait penawaran produk.",
+     "alasan": [],
+     "catatanMutu": [
+      "format hasil aturan berbeda dari kriteria tiruan: \"Rp\""
+     ],
+     "ms": 1658,
+     "biaya": 0.000181,
+     "panggilan": 2,
+     "token": 1515,
+     "model": "openai/gpt-oss-20b",
+     "staf": "data-bayu-baca-halaman-kompetitor"
+    },
+    {
+     "nama": "keamanan isi dengan kata berformat aneh",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Halaman Example Domain menampilkan skor keamanan 100/100 karena tidak ada gambar, tautan, atau skrip eksternal. Namun, skor pencarian rendah 30/100 menunjukkan konten minimal, memicu risiko SEO dan kebingungan pengunjung.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1913,
+     "biaya": 0.000109,
+     "panggilan": 1,
+     "token": 802,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-salsa"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "susun-daftar-periksa",
+   "kelompok": "pemeriksaan",
+   "kasus": [
+    {
+     "nama": "pemeriksaan stok tiga area",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Gunakan checklist 15 butir sesuai tiga area: Rak A, Rak B, Gudang depan. Setiap butir harus spesifik: hitung, catat kondisi, verifikasi stok. Pastikan penanggung jawab Budi diberi penandatangan di akhir laporan. Hal ini memudahkan audit dan",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 976,
+     "biaya": 0.000117,
+     "panggilan": 1,
+     "token": 843,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-tegar-label"
+    },
+    {
+     "nama": "pembersihan rinci dengan pemisah campur",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Gunakan daftar periksa bersih-bersih akhir pekan 24 butir, bagi 3 area (Dapur, Toilet, Teras). Catat setiap butir, tandai selesai, dan assign penanggung jawab setelah selesai.",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1606,
+     "biaya": 0.000148,
+     "panggilan": 2,
+     "token": 1017,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-cindy-audit"
+    },
+    {
+     "nama": "area kosong jadi umum",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "1. Uji kosong: field area harus diisi. 2. Uji batas atas: maksimal 3 butir per area, jadi buat 3 butir dan cek tidak lebih. 3. Uji salah: tipe butir tidak sesuai (harus singkat). 4. Uji valid: Rina terdaftar sebagai penanggung jawab",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 419,
+     "biaya": 0.0001,
+     "panggilan": 1,
+     "token": 793,
+     "model": "openai/gpt-oss-20b",
+     "staf": "eng-tania"
+    },
+    {
+     "nama": "terlalu banyak area dipotong",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Buat 12 lembar per area (a1‑a14) berisi 8 butir tiap area, total 96 butir. Gunakan format tabel: kolom 1 – No. butir, kolom 2 – pertanyaan, kolom 3 – ruang catatan, kolom 4 – tanda ‘✓’ jika selesai. Tetapkan penanggung jawab setelah evaluas",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 723,
+     "biaya": 0.000116,
+     "panggilan": 1,
+     "token": 858,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-galih-wawancara"
+    }
+   ],
+   "lulus": 4,
+   "ketat": 4,
+   "total": 4,
+   "aiSah": 4
+  },
+  {
+   "id": "susun-jadwal",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "konten bergiliran mingguan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Jadwal konten mingguan berulang 4 kali: 2026-03-02 Video pendek, 2026-03-09 Foto produk, 2026-03-16 Tulisan blog, 2026-03-23 Video pendek (ulang).",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"ritmenya\" tidak ada"
+     ],
+     "ms": 649,
+     "biaya": 0.000103,
+     "panggilan": 1,
+     "token": 405,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-dafa"
+    },
+    {
+     "nama": "giliran kerja harian berulang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Shift dijadwalkan 14 kegiatan, 7 hari berturut-turut dari 2026-03-02 sampai 2026-03-08. Setiap hari terdiri dari dua sesi: Pagi dan Sore. Jadwal berulang setiap hari sehingga pola mudah diingat. Hari paling padat adalah 2026-03-04 (Pagi, So",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"dua giliran\" tidak ada"
+     ],
+     "ms": 1072,
+     "biaya": 0.000137,
+     "panggilan": 1,
+     "token": 526,
+     "model": "openai/gpt-oss-20b",
+     "staf": "it-rangga"
+    },
+    {
+     "nama": "tanggal dan jumlah tidak terbaca",
+     "lulus": true,
+     "ketat": true,
+     "ditolakSopan": true,
+     "alasan": [],
+     "pesanTolak": "Tanggal mulai: tulis tanggal seperti 2026-11-18"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "susun-rencana-kerja",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "rencana lengkap dengan penanggung jawab",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Rencana 4 tugas, 3 tahap, 16 hari, mulai 02 Mar 2026, selesai 17 Mar 2026. Tugas berurutan: Rancang materi (02-03), Siapkan ruang (04), Latih peserta (05-07), Uji hasil (08-09).",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 741,
+     "biaya": 0.000106,
+     "panggilan": 1,
+     "token": 858,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-dika"
+    },
+    {
+     "nama": "tanpa daftar tugas, pakai kerangka bawaan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Rencana onboarding 10 hari dengan 5 tugas, belum ada penanggung jawab. Urutan: hari 1‑3 orientasi, hari 4‑6 pelatihan, hari 7‑8 evaluasi, hari 9‑10 follow‑up. Bagian berisiko: penyusunan materi, jadwal, koordinasi. Prioritas: tentukan siapa",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"lima tugas\" tidak ada"
+     ],
+     "ms": 642,
+     "biaya": 0.000114,
+     "panggilan": 1,
+     "token": 851,
+     "model": "openai/gpt-oss-20b",
+     "staf": "cs-rara"
+    },
+    {
+     "nama": "isian berantakan dan tenggat menumpuk",
+     "lulus": true,
+     "ketat": true,
+     "ditolakSopan": true,
+     "alasan": [],
+     "pesanTolak": "Tanggal mulai: tulis tanggal seperti 2026-11-18"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 2,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "susun-rencana-pemasaran",
+   "kelompok": "perencanaan",
+   "kasus": [
+    {
+     "nama": "kampanye penjualan dengan bagian jelas",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Co‑branding kampanye Kopi susu botol dengan anggaran Rp5.000.000, 3 channel promosi (Instagram 50%, TikTok 30%, Iklan berbayar 20%). Sasaran omzet kasar Rp18.000.000 dalam 14 hari. Anggaran terdistribusi seimbang, namun 20% untuk iklan berb",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 703,
+     "biaya": 0.00011,
+     "panggilan": 1,
+     "token": 875,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-laksmi-cobranding"
+    },
+    {
+     "nama": "tantangan interaksi tanpa daftar tempat",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Anggaran 1M dibagi 3 promosi: 500k (iklan Shopee), 300k (social media), 200k (influencer). Target 1800 interaksi 7 hari, hitungan 257 interaksi/hari. Margin masih sehat, tapi iklan Shopee mahal per interaksi.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tujuh hari\" tidak ada"
+     ],
+     "ms": 3959,
+     "biaya": 0.000115,
+     "panggilan": 1,
+     "token": 852,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-putra-bundling"
+    },
+    {
+     "nama": "anggaran kosong dan isian aneh",
+     "lulus": true,
+     "ketat": true,
+     "ditolakSopan": true,
+     "alasan": [],
+     "pesanTolak": "Anggaran total (rupiah): tulis angka saja (contoh: 150000)"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 2,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "tulis-dokumen-kerja",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "kebutuhan produk setengah lengkap",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Dokumen kebutuhan produk: Fitur pembayaran QR",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 2008,
+     "biaya": 0.000193,
+     "panggilan": 2,
+     "token": 1553,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-notulen-rapat"
+    },
+    {
+     "nama": "laporan masalah lengkap",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Dokumen bug: Tombol bayar tidak bisa ditekan. Deskripsi: Pada ponsel, browser terbaru, saat klik bayar halaman berhenti dan muncul error. Langkah: buka keranjang lalu klik bayar. Harus masuk ke halaman pembayaran. Dampak: pelanggan tidak bi",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tujuan\" tidak ada",
+      "kata kunci \"5 dari 5\" tidak ada",
+      "jargon: error"
+     ],
+     "ms": 756,
+     "biaya": 0.000122,
+     "panggilan": 1,
+     "token": 862,
+     "model": "openai/gpt-oss-20b",
+     "staf": "design-mira-brief"
+    },
+    {
+     "nama": "catatan rapat berantakan tanpa kata kunci",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berikut brief singkat untuk notulen rapat mingguan. 2 dari 5 bagian sudah ada, sisanya masih kosong. 1. Judul dokumen: Rapat mingguan 2. Bagian yang sudah ada: \"ok\" (2/5). 3. Bagian yang masih kosong: agenda, peserta, keputusan, tindak lanj",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"tujuan\" tidak ada"
+     ],
+     "ms": 1086,
+     "biaya": 0.000118,
+     "panggilan": 1,
+     "token": 817,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-nabila-brief"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 1,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "tulis-konten-pemasaran",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "caption produk makanan",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Nikmati kopi susu gula aren, dibuat dari kopi lokal, tanpa pengawet, hanya Rp18.000!",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"3 bagian\" tidak ada"
+     ],
+     "ms": 1524,
+     "biaya": 0.000141,
+     "panggilan": 2,
+     "token": 1003,
+     "model": "openai/gpt-oss-20b",
+     "staf": "ecom-cindy"
+    },
+    {
+     "nama": "klaim berlebihan terdeteksi",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berikut contoh konten pemasaran untuk produk madu hutan dengan empat bagian, masing-masing kurang dari 150 kata. Konten menyertakan dua klaim berlebihan yang perlu diperbaiki sesuai aturan. \n1. **Keunggulan**: Madu hutan ini adalah \"Madu te",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kopi\" tidak ada"
+     ],
+     "ms": 1557,
+     "biaya": 0.000155,
+     "panggilan": 1,
+     "token": 965,
+     "model": "openai/gpt-oss-20b",
+     "staf": "hr-galih"
+    },
+    {
+     "nama": "slogan dengan poin bernomor dan batas sendiri",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Slogan untuk jasa antar sayur harus singkat, menggugah, dan menghindari klaim berlebihan. Fokus pada keunggulan: segar, cepat sampai jam 9, dan murah. Sesuaikan dengan nada santai, maksimal 8 kata.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"kopi\" tidak ada"
+     ],
+     "ms": 789,
+     "biaya": 0.000097,
+     "panggilan": 1,
+     "token": 799,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-keisha"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 3
+  },
+  {
+   "id": "tulis-naskah-video",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "video 30 detik tanpa naskah",
+     "lulus": true,
+     "ketat": true,
+     "pakaiAI": true,
+     "pembahasan": "Tiga detik pertama: “Gak mau sayur jadi basi? Yuk, simpan dengan benar!”\\nMasalah: sayur cepat layu kalau disimpan salah.\\nIsi: cuci, keringkan, simpan di wadah tertutup.\\nBukti: sayur tetap segar 2‑3 hari.\\nAjakan: Ikuti akun kami!",
+     "alasan": [],
+     "catatanMutu": [],
+     "ms": 1827,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 807,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-nayla"
+    },
+    {
+     "nama": "naskah ada tapi terlalu panjang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Naskah 49 kata, 20 detik. Target 38 kata 15 detik. 1.3 kata/sek.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"sayur\" tidak ada"
+     ],
+     "ms": 497,
+     "biaya": 0.000105,
+     "panggilan": 1,
+     "token": 855,
+     "model": "openai/gpt-oss-20b",
+     "staf": "studio-elang-hitung-kata"
+    },
+    {
+     "nama": "format tidak dikenal dan poin berantakan",
+     "lulus": true,
+     "ketat": true,
+     "ditolakSopan": true,
+     "alasan": [],
+     "pesanTolak": "Berapa lama videonya?: pilih salah satu tombol yang tersedia"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 2,
+   "total": 3,
+   "aiSah": 2
+  },
+  {
+   "id": "tulis-pesan-pelanggan",
+   "kelompok": "menulis",
+   "kasus": [
+    {
+     "nama": "email untuk pelanggan kesal",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Berikut email yang mengakui kekecewaan pelanggan, menjelaskan status pengiriman, mengonfirmasi estimasi tiba, meminta maaf, dan menyatakan langkah selanjutnya.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"5 bagian\" tidak ada"
+     ],
+     "ms": 616,
+     "biaya": 0.000126,
+     "panggilan": 1,
+     "token": 888,
+     "model": "openai/gpt-oss-20b",
+     "staf": "alat-templat-email"
+    },
+    {
+     "nama": "rangkaian tiga pesan resmi tanpa nama",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Calon pelanggan menanyakan paket katering kantor untuk 50 orang dan menginginkan uji coba.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"maaf\" tidak ada",
+      "kata kunci \"3 bagian\" tidak ada"
+     ],
+     "ms": 919,
+     "biaya": 0.000164,
+     "panggilan": 1,
+     "token": 996,
+     "model": "openai/gpt-oss-20b",
+     "staf": "bizdev-prasetyo"
+    },
+    {
+     "nama": "jawaban cepat dengan keterangan sangat singkat dan kata terlarang",
+     "lulus": true,
+     "ketat": false,
+     "pakaiAI": true,
+     "pembahasan": "Terima kasih atas pertanyaanmu mengenai harga.",
+     "alasan": [],
+     "catatanMutu": [
+      "kata kunci \"maaf\" tidak ada",
+      "kata kunci \"2 bagian\" tidak ada"
+     ],
+     "ms": 5248,
+     "biaya": 0.00016,
+     "panggilan": 2,
+     "token": 1411,
+     "model": "openai/gpt-oss-20b",
+     "staf": "mkt-aldi-balasan-komunitas"
+    }
+   ],
+   "lulus": 3,
+   "ketat": 0,
+   "total": 3,
+   "aiSah": 3
+  }
+ ],
+ "berhenti": null,
+ "selesai": "2026-11-18T18:41:29.246Z",
+ "biayaTotal": 0.013362,
+ "panggilanTotal": 127,
+ "tokenTotal": 92427,
+ "tokenMasuk": 64394,
+ "tokenKeluar": 28033,
+ "perModel": {
+  "openai/gpt-oss-20b": {
+   "calls": 127,
+   "tokens": 92427,
+   "cost": 0.013362330000000004
+  }
+ },
+ "perDivisi": {},
+ "ringkasan": {
+  "skenario": {
+   "total": 0,
+   "dijalankan": 0,
+   "lulus": 0,
+   "lulusKecualiJargon": 0,
+   "dilewati": 0,
+   "penuh": {
+    "total": 0,
+    "lulus": 0
+   },
+   "manajer": {
+    "total": 0,
+    "lulus": 0
+   },
+   "stafDipakai": 0
+  },
+  "kemampuan": {
+   "total": 31,
+   "kasus": 116,
+   "lulus": 116,
+   "ketat": 44,
+   "aiSah": 99,
+   "kemampuanLulusSemua": 31
+  }
+ }
+}

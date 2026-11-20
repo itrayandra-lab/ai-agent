@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "rnd-nadia",
+  "division": "rnd",
+  "employeeId": "nadia",
+  "title": "Product Development Specialist (NPD)",
+  "version": 1,
+  "name": "Pembanding produk dengan pesaing",
+  "ringkas": "Bandingkan harga per ukuran produkmu dengan pesaing, tentukan posisinya, dan sajikan klaim utama tiap pesaing.",
+  "kataKunci": [
+    "pesaing",
+    "benchmark",
+    "harga per ml",
+    "posisi harga",
+    "analisis kompetitor"
+  ],
+  "inputs": [
+    {
+      "key": "nama",
+      "type": "text",
+      "label": "Nama produkmu",
+      "required": true,
+      "contoh": "Serum Ray"
+    },
+    {
+      "key": "harga",
+      "type": "number",
+      "label": "Harga produkmu (Rp)",
+      "required": true,
+      "contoh": "120000"
+    },
+    {
+      "key": "ukuran",
+      "type": "number",
+      "label": "Ukuran produkmu (ml atau gram)",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "pesaing",
+      "type": "longtext",
+      "label": "Pesaing (satu baris: nama | harga | ukuran | klaim utama)",
+      "required": true,
+      "contoh": "Merek A | 150000 | 30 | mencerahkan"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Bandingkan",
+      "set": {
+        "rows": "[{ nama: input.nama + ' (kamu)', harga: Number(input.harga), ukuran: Number(input.ukuran), klaim: '-', kamu: true }].concat(baris(input.pesaing).slice(0, 30).map((l) => { const p = l.split('|').map((s) => s.trim()); return { nama: p[0] || '-', harga: num(p[1]), ukuran: num(p[2]), klaim: p[3] || '-', kamu: false }; })).map((r) => ({ nama: r.nama, harga: r.harga, ukuran: r.ukuran, klaim: r.klaim, kamu: r.kamu, per10: Math.round(r.harga / Math.max(1, r.ukuran) * 10) })).sort((x, y) => x.per10 - y.per10)",
+        "peringkat": "v.rows.findIndex((r) => r.kamu) + 1",
+        "posisi": "v.peringkat === 1 ? 'Termurah per ukuran' : v.peringkat === v.rows.length ? 'Termahal per ukuran' : 'Di tengah'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "input.nama + ' di urutan ' + v.peringkat + ' dari ' + v.rows.length + ' (1 = termurah per ukuran): ' + v.posisi",
+    "teks": "'# Pembanding harga\\n\\n' + tabel(['Peringkat', 'Produk', 'Harga', 'Ukuran', 'Harga per 10 ml/g', 'Klaim utama'], v.rows.map((r, i) => [i + 1, r.nama, rp(r.harga), r.ukuran, rp(r.per10), r.klaim])) + '\\n\\nPosisi: **' + v.posisi + '**'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'pembanding-pesaing'",
+        "isi": "csv([['Peringkat', 'Produk', 'Harga', 'Ukuran', 'Harga per 10', 'Klaim']].concat(v.rows.map((r, i) => [i + 1, r.nama, r.harga, r.ukuran, r.per10, r.klaim])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Product",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "nama": "Serum Ray",
+      "harga": 120000,
+      "ukuran": 30,
+      "pesaing": "Merek A | 150000 | 30 | mencerahkan\nMerek B | 89000 | 20 | melembapkan\nMerek C | 210000 | 50 | anti penuaan"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "urutan 1 dari 4",
+        "Termurah per ukuran",
+        "Rp 40.000"
+      ]
+    }
+  },
+  "kemampuan": [
+    "bandingkan-pilihan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "pesaing",
+      "benchmark",
+      "harga per ml",
+      "posisi harga",
+      "analisis kompetitor"
+    ],
+    "data": [
+      "nama produkmu",
+      "harga produkmu (rp)",
+      "ukuran produkmu (ml atau gram)",
+      "pesaing (satu baris: nama | harga | ukuran | klaim utama)"
+    ],
+    "gaya": "ingin tahu tapi hati-hati, bedakan temuan dan dugaan",
+    "contoh": {
+      "baik": "Formula B lebih stabil di uji 2 minggu; ulangi dengan sampel lebih besar.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil uji kecil belum cukup untuk klaim."
+    ]
+  }
+}

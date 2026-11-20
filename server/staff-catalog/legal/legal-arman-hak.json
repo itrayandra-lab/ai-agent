@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "legal-arman-hak",
+  "division": "legal",
+  "employeeId": "arman",
+  "title": "Data Privacy Officer",
+  "version": 1,
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Policy",
+    "simpan": true
+  },
+  "name": "Penghitung tenggat permintaan data pelanggan",
+  "ringkas": "Catat permintaan pelanggan atas datanya, hitung tenggat jawaban sesuai kebijakan internal, dan siapkan langkah penanganannya.",
+  "kataKunci": [
+    "permintaan data",
+    "hak pelanggan",
+    "hapus data",
+    "akses data",
+    "tenggat"
+  ],
+  "inputs": [
+    {
+      "key": "pemohon",
+      "type": "text",
+      "label": "Nama pemohon",
+      "required": true,
+      "contoh": "Budi"
+    },
+    {
+      "key": "terima",
+      "type": "date",
+      "label": "Tanggal permintaan diterima",
+      "required": true,
+      "contoh": "2026-11-18"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis permintaan",
+      "required": true,
+      "default": "akses",
+      "choices": [
+        {
+          "v": "akses",
+          "t": "Minta salinan data"
+        },
+        {
+          "v": "perbaikan",
+          "t": "Minta memperbaiki data"
+        },
+        {
+          "v": "hapus",
+          "t": "Minta menghapus data"
+        },
+        {
+          "v": "tarik",
+          "t": "Menarik persetujuan"
+        }
+      ]
+    },
+    {
+      "key": "tenggat",
+      "type": "choice",
+      "label": "Tenggat jawaban menurut kebijakan kita",
+      "required": true,
+      "default": "7",
+      "choices": [
+        {
+          "v": "3",
+          "t": "3 hari"
+        },
+        {
+          "v": "7",
+          "t": "7 hari"
+        },
+        {
+          "v": "14",
+          "t": "14 hari"
+        },
+        {
+          "v": "30",
+          "t": "30 hari"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung tenggat",
+      "set": {
+        "batas": "new Date(Date.parse(input.terima) + num(input.tenggat) * 864e5).toISOString().slice(0, 10)",
+        "ingat": "new Date(Date.parse(input.terima) + Math.max(1, num(input.tenggat) - 2) * 864e5).toISOString().slice(0, 10)",
+        "langkah": "['Pastikan identitas pemohon benar', ({ akses: 'Kumpulkan semua data pemohon dari seluruh sistem', perbaikan: 'Periksa data yang diminta diperbaiki dan buktinya', hapus: 'Periksa apakah ada kewajiban menyimpan data (pajak, kontrak) sebelum menghapus', tarik: 'Hentikan pemakaian data yang berdasar persetujuan itu' })[input.jenis], ({ akses: 'Kirim salinan lewat saluran yang aman', perbaikan: 'Perbarui data di semua sistem', hapus: 'Hapus data dari semua sistem dan cadangan sesuai jadwal', tarik: 'Catat penarikan dan beri tahu pihak yang menerima data' })[input.jenis], 'Catat tanggal, tindakan, dan pelaksananya', 'Beri tahu pemohon bahwa permintaannya selesai']"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Permintaan ' + input.pemohon + ' harus dijawab paling lambat ' + v.batas + ' (pengingat ' + v.ingat + ')'",
+    "teks": "'# Penanganan permintaan data: ' + input.pemohon + '\\n\\n_' + \"Daftar ini alat bantu awal, bukan nasihat hukum. Konfirmasikan dengan penasihat hukum sebelum dipakai sebagai dasar keputusan.\" + ' Tenggat memakai kebijakan internal; periksa kewajiban hukum yang berlaku._\\n\\n- Diterima: ' + input.terima + '\\n- Tenggat jawaban: **' + v.batas + '**\\n- Pengingat: ' + v.ingat + '\\n\\n## Langkah\\n' + v.langkah.map((l, i) => (i + 1) + '. ' + l).join('\\n')",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'permintaan-data-' + input.pemohon",
+        "isi": "csv([['No', 'Langkah', 'Tenggat', 'Selesai']].concat(v.langkah.map((l, i) => [i + 1, l, v.batas, ''])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "pemohon": "Budi",
+      "terima": "2026-11-18",
+      "jenis": "akses",
+      "tenggat": "7"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "2026-11-25",
+        "Kumpulkan semua data pemohon",
+        "pengingat 2026-11-23"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "permintaan data",
+      "hak pelanggan",
+      "hapus data",
+      "akses data",
+      "tenggat"
+    ],
+    "data": [
+      "nama pemohon",
+      "tanggal permintaan diterima",
+      "jenis permintaan",
+      "tenggat jawaban menurut kebijakan kita"
+    ],
+    "gaya": "hati-hati, bedakan fakta dan saran",
+    "contoh": {
+      "baik": "Klausul pembayaran belum menyebut denda; minta pihak hukum menambahkannya.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Bukan nasihat hukum final; selalu sarankan tinjauan pihak hukum."
+    ]
+  }
+}

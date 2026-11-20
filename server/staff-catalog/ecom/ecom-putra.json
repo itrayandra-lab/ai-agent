@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-putra",
+  "division": "ecom",
+  "employeeId": "putra",
+  "title": "Marketplace Specialist (Shopee & Tokopedia)",
+  "version": 1,
+  "name": "Kalkulator harga jual setelah biaya marketplace",
+  "ringkas": "Hitung harga jual agar tetap untung setelah potongan komisi, biaya layanan, voucher, dan ongkir yang kita tanggung.",
+  "kataKunci": [
+    "harga jual",
+    "komisi marketplace",
+    "shopee",
+    "tokopedia",
+    "voucher"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Serum Wajah 30ml"
+    },
+    {
+      "key": "hpp",
+      "type": "number",
+      "label": "Harga pokok (Rp)",
+      "required": true,
+      "contoh": "45000"
+    },
+    {
+      "key": "komisi",
+      "type": "number",
+      "label": "Komisi marketplace (%) sesuai kategori di toko Anda",
+      "required": true,
+      "contoh": "6",
+      "default": "6"
+    },
+    {
+      "key": "layanan",
+      "type": "number",
+      "label": "Biaya layanan dan transaksi (%)",
+      "required": true,
+      "contoh": "4",
+      "default": "4"
+    },
+    {
+      "key": "voucher",
+      "type": "choice",
+      "label": "Voucher yang dibebankan ke toko",
+      "required": true,
+      "default": "3",
+      "choices": [
+        {
+          "v": "0",
+          "t": "Tanpa voucher"
+        },
+        {
+          "v": "3",
+          "t": "3% dari harga"
+        },
+        {
+          "v": "5",
+          "t": "5% dari harga"
+        }
+      ]
+    },
+    {
+      "key": "ongkir",
+      "type": "number",
+      "label": "Subsidi ongkir per pesanan (Rp)",
+      "required": false,
+      "contoh": "3000",
+      "default": "0"
+    },
+    {
+      "key": "untung",
+      "type": "choice",
+      "label": "Untung bersih yang diinginkan",
+      "required": true,
+      "default": "20",
+      "choices": [
+        {
+          "v": "15",
+          "t": "15%"
+        },
+        {
+          "v": "20",
+          "t": "20%"
+        },
+        {
+          "v": "30",
+          "t": "30%"
+        }
+      ]
+    },
+    {
+      "key": "kemas",
+      "type": "number",
+      "label": "Biaya kemas per pesanan (Rp)",
+      "required": false,
+      "contoh": "2000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung harga",
+      "set": {
+        "potongan": "num(input.komisi) + num(input.layanan) + num(input.voucher) + num(input.untung)",
+        "tetap": "num(input.hpp) + num(input.ongkir) + num(input.kemas)",
+        "harga": "v.potongan >= 100 ? 0 : Math.ceil(v.tetap / (1 - v.potongan / 100) / 500) * 500",
+        "uraian": "[['Harga jual', v.harga], ['Komisi ' + input.komisi + '%', Math.round(v.harga * num(input.komisi) / 100)], ['Biaya layanan ' + input.layanan + '%', Math.round(v.harga * num(input.layanan) / 100)], ['Voucher ' + input.voucher + '%', Math.round(v.harga * num(input.voucher) / 100)], ['Harga pokok', num(input.hpp)], ['Ongkir dan kemas', num(input.ongkir) + num(input.kemas)]]",
+        "bersih": "v.harga - v.uraian.slice(1).reduce((a, b) => a + b[1], 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.harga ? 'Harga jual ' + input.produk + ' sebaiknya ' + rp(v.harga) + '; untung bersih sekitar ' + rp(v.bersih) + ' per pesanan' : 'Potongan terlalu besar, kurangi untung atau voucher'",
+    "teks": "'# Harga ' + input.produk + '\\n\\n' + tabel(['Komponen', 'Nilai'], v.uraian.map((u) => [u[0], rp(u[1])]).concat([['**Untung bersih**', rp(v.bersih)]]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'harga-marketplace'",
+        "isi": "csv([['Komponen', 'Nilai']].concat(v.uraian).concat([['Untung bersih', v.bersih]]))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Wajah 30ml",
+      "hpp": "45000",
+      "komisi": "6",
+      "layanan": "4",
+      "voucher": "3",
+      "ongkir": "3000",
+      "untung": "20",
+      "kemas": "2000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "sebaiknya Rp 75.000",
+        "Voucher 3%",
+        "untung bersih sekitar Rp 15.250"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "harga jual",
+      "komisi marketplace",
+      "shopee",
+      "tokopedia",
+      "voucher"
+    ],
+    "data": [
+      "nama produk",
+      "harga pokok (rp)",
+      "komisi marketplace (%) sesuai kategori di toko anda",
+      "biaya layanan dan transaksi (%)"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}

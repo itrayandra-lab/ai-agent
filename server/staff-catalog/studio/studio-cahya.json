@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "studio-cahya",
+  "division": "studio",
+  "employeeId": "cahya",
+  "title": "Photographer — Product & Lifestyle",
+  "version": 1,
+  "name": "Perencana sesi foto produk",
+  "ringkas": "Susun daftar foto yang harus diambil per varian untuk toko online, lengkap dengan perkiraan waktu sesi.",
+  "kataKunci": [
+    "foto produk",
+    "katalog",
+    "sesi foto",
+    "marketplace",
+    "varian"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk",
+      "required": true,
+      "contoh": "Kaos Polos Premium"
+    },
+    {
+      "key": "varian",
+      "type": "number",
+      "label": "Berapa varian (warna/ukuran)?",
+      "required": true,
+      "contoh": "3"
+    },
+    {
+      "key": "marketplace",
+      "type": "choice",
+      "label": "Untuk toko online mana?",
+      "required": true,
+      "default": "shopee",
+      "choices": [
+        {
+          "v": "shopee",
+          "t": "Shopee"
+        },
+        {
+          "v": "tokopedia",
+          "t": "Tokopedia"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok Shop"
+        }
+      ]
+    },
+    {
+      "key": "lengkap",
+      "type": "choice",
+      "label": "Seberapa lengkap?",
+      "required": true,
+      "default": "dasar",
+      "choices": [
+        {
+          "v": "dasar",
+          "t": "Dasar (5 foto)"
+        },
+        {
+          "v": "lengkap",
+          "t": "Lengkap (8 foto)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Susun foto",
+      "set": {
+        "foto": "['Utama latar putih', 'Samping kiri', 'Samping kanan', 'Belakang atau label', 'Detail bahan'].concat(input.lengkap === 'lengkap' ? ['Ukuran dibanding tangan', 'Isi kemasan', 'Suasana pemakaian'] : [])",
+        "total": "v.foto.length * Math.max(1, num(input.varian))",
+        "menit": "v.total * 6 + Math.max(1, num(input.varian)) * 15"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.total + ' foto untuk ' + Math.max(1, num(input.varian)) + ' varian, perkiraan ' + v.menit + ' menit'",
+    "teks": "'# Rencana foto ' + input.produk + ' (' + input.marketplace + ')\\n\\nUkuran disarankan 1200 x 1200 piksel (kotak), latar bersih, cahaya merata.\\n\\n' + v.foto.map((f, i) => (i + 1) + '. ' + f).join('\\n') + '\\n\\nUlangi untuk tiap varian. Waktu: 6 menit per foto + 15 menit siap-siap per varian.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-foto'",
+        "isi": "csv([['No', 'Foto', 'Ulangi per varian']].concat(v.foto.map((f, i) => [i + 1, f, Math.max(1, num(input.varian))])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Kaos Polos Premium",
+      "varian": "3",
+      "marketplace": "shopee",
+      "lengkap": "dasar"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "15 foto",
+        "135 menit"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "foto produk",
+      "katalog",
+      "sesi foto",
+      "marketplace",
+      "varian"
+    ],
+    "data": [
+      "nama produk",
+      "berapa varian (warna/ukuran)?",
+      "untuk toko online mana?",
+      "seberapa lengkap?"
+    ],
+    "gaya": "visual dan hidup, adegan pendek, tanpa klaim berlebihan",
+    "contoh": {
+      "baik": "Adegan 1: wajah lelah, narasi pendek, lalu produk muncul.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hak cipta musik dan gambar harus aman."
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "bizdev",
+  "nama": "Business Development & Partnerships",
+  "misi": "Membuka sumber pertumbuhan baru lewat kemitraan klinik/salon, co-branding, ekspor, penjualan korporat, dan jaringan reseller & integrator RayFlow.",
+  "manajer": {
+    "id": "wira",
+    "nama": "Wira",
+    "jabatan": "Head of Business Development"
+  },
+  "staf": [
+    "bizdev-laksmi",
+    "bizdev-samudra",
+    "bizdev-prasetyo",
+    "bizdev-gading"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

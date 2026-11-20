@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kms-aksa",
+  "division": "kms",
+  "employeeId": "aksa",
+  "title": "Automation & Integration Engineer",
+  "version": 1,
+  "name": "Penghitung penghematan otomasi",
+  "ringkas": "Hitung berapa jam dan rupiah yang dihemat oleh sebuah otomasi, kapan balik modal, dan layak dibuat atau belum.",
+  "kataKunci": [
+    "otomasi",
+    "penghematan",
+    "roi",
+    "balik modal",
+    "efisiensi"
+  ],
+  "inputs": [
+    {
+      "key": "kerja",
+      "type": "text",
+      "label": "Pekerjaan yang mau diotomatiskan",
+      "required": true,
+      "contoh": "Rekap penjualan harian"
+    },
+    {
+      "key": "kali",
+      "type": "number",
+      "label": "Berapa kali dikerjakan per minggu?",
+      "required": true,
+      "contoh": "10"
+    },
+    {
+      "key": "menit",
+      "type": "number",
+      "label": "Berapa menit tiap kali?",
+      "required": true,
+      "contoh": "30"
+    },
+    {
+      "key": "gaji",
+      "type": "number",
+      "label": "Biaya per jam orang yang mengerjakan (Rp)",
+      "required": true,
+      "contoh": "50000"
+    },
+    {
+      "key": "bangun",
+      "type": "number",
+      "label": "Biaya membuat otomasi (Rp)",
+      "required": true,
+      "contoh": "2000000"
+    },
+    {
+      "key": "bulanan",
+      "type": "number",
+      "label": "Biaya jalan per bulan (Rp)",
+      "required": false,
+      "contoh": "100000",
+      "default": "0"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "jam": "Math.round(num(input.kali) * 4.33 * num(input.menit) / 60 * 10) / 10",
+        "hemat": "Math.round(num(input.kali) * 4.33 * num(input.menit) / 60 * num(input.gaji))",
+        "bersih": "v.hemat - num(input.bulanan)",
+        "payback": "v.bersih > 0 ? Math.round(num(input.bangun) / v.bersih * 10) / 10 : 0",
+        "roi": "num(input.bangun) > 0 ? Math.round((v.bersih * 12 - num(input.bangun)) / num(input.bangun) * 100) : 0",
+        "keputusan": "v.bersih <= 0 ? 'Belum layak' : v.payback <= 3 ? 'Sangat layak' : v.payback <= 12 ? 'Layak' : 'Belum layak'"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Hemat ' + rp(v.hemat) + ' per bulan, balik modal ' + v.payback + ' bulan: ' + v.keputusan",
+    "teks": "'# Hitungan otomasi: ' + input.kerja + '\\n\\n' + tabel(['Hal', 'Nilai'], [['Jam dihemat per bulan', v.jam], ['Penghematan per bulan', rp(v.hemat)], ['Setelah biaya jalan', rp(v.bersih)], ['Balik modal', v.payback + ' bulan'], ['Untung bersih 12 bulan', v.roi + '%'], ['Keputusan', v.keputusan]])",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hitungan-otomasi'",
+        "isi": "csv([['Pekerjaan', 'Jam per bulan', 'Hemat', 'Bersih', 'Balik modal (bulan)', 'Keputusan'], [input.kerja, v.jam, v.hemat, v.bersih, v.payback, v.keputusan]])"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Plan",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "kerja": "Rekap penjualan harian",
+      "kali": "10",
+      "menit": "30",
+      "gaji": "50000",
+      "bangun": "2000000",
+      "bulanan": "100000"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 1.082.500",
+        "Sangat layak"
+      ]
+    }
+  },
+  "kemampuan": [
+    "hitung-hemat-otomasi"
+  ],
+  "keahlian": {
+    "istilah": [
+      "otomasi",
+      "penghematan",
+      "roi",
+      "balik modal",
+      "efisiensi"
+    ],
+    "data": [
+      "pekerjaan yang mau diotomatiskan",
+      "berapa kali dikerjakan per minggu?",
+      "berapa menit tiap kali?",
+      "biaya per jam orang yang mengerjakan (rp)"
+    ],
+    "gaya": "rapi dan mudah dicari, ringkas, sebut sumber",
+    "contoh": {
+      "baik": "Catatan ini cocok digabung dengan panduan retur yang sudah ada.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menghapus catatan tanpa persetujuan."
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "studio",
+  "nama": "Content Studio",
+  "misi": "Memproduksi foto, video, live, dan naskah berkualitas tinggi untuk RayFlow dan Ray Beauty secara cepat, konsisten dengan brand, dan terukur dampaknya.",
+  "manajer": {
+    "id": "dirga",
+    "nama": "Dirga",
+    "jabatan": "Head of Content Studio"
+  },
+  "staf": [
+    "studio-kinanti",
+    "studio-bintang",
+    "studio-cahya",
+    "studio-puspa",
+    "studio-elang"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

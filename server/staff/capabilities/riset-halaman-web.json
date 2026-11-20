@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-riset-halaman-web",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan riset halaman web",
+  "version": 1,
+  "name": "Periksa halaman web",
+  "ringkas": "Baca satu halaman web terbuka, ambil judul dan deskripsinya, hitung gambar dan tautan, lalu nilai kesiapan pencarian, keamanan isi, dan harga.",
+  "kataKunci": ["halaman web", "riset", "judul", "deskripsi", "harga pesaing", "keamanan isi"],
+  "kemampuan": {
+    "id": "riset-halaman-web",
+    "kelompok": "riset",
+    "tujuanAwam": "Memeriksa satu halaman web publik: apakah mudah ditemukan di pencarian, apakah isinya tampak aman, dan berapa harga yang tertera."
+  },
+  "inputs": [
+    { "key": "alamat", "type": "url", "label": "Alamat halaman web yang diperiksa", "required": true, "contoh": "https://contoh.id/produk" },
+    { "key": "fokus", "type": "choice", "label": "Mau menilai dari sisi mana?", "required": true, "default": "seo", "choices": [{ "v": "seo", "t": "Mudah ditemukan di pencarian" }, { "v": "aman", "t": "Keamanan isi halaman" }, { "v": "harga", "t": "Harga yang tertera" }, { "v": "umum", "t": "Gambaran umum" }] },
+    { "key": "kata", "type": "text", "label": "Kata yang ingin ditemukan orang (boleh kosong)", "required": false, "contoh": "sepatu kulit" },
+    { "key": "harga_sendiri", "type": "number", "label": "Harga Anda sendiri untuk dibandingkan (boleh kosong)", "required": false, "contoh": "500000" }
+  ],
+  "steps": [
+    { "id": "buka", "use": "ambil_web", "dari": "alamat", "simpan": "web" },
+    {
+      "id": "baca",
+      "use": "hitung",
+      "label": "Baca isi halaman",
+      "set": {
+        "html": "v.web && v.web.html ? String(v.web.html).slice(0, 400000) : ''",
+        "ok": "!!v.html && v.web.status >= 200 && v.web.status < 400",
+        "judul": "String(ambil(v.html, 'title') || '').trim()",
+        "desk": "String(meta(v.html, 'description') || '').trim()",
+        "gambar": "hitungTag(v.html, 'img')",
+        "tautan": "hitungTag(v.html, 'a')",
+        "h1": "hitungTag(v.html, 'h1')",
+        "tanpaAlt": "v.html.toLowerCase().split('<img').slice(1).filter((s) => s.slice(0, s.indexOf('>')).indexOf('alt=') < 0).length",
+        "teks": "String(plain(v.html) || '')",
+        "ts": "v.teks.split(' ').filter((x) => x !== '')",
+        "kata": "v.ts.length"
+      }
+    },
+    {
+      "id": "harga",
+      "use": "hitung",
+      "label": "Cari harga dan tanda janggal",
+      "set": {
+        "harga": "v.ts.map((t, i) => t.toLowerCase().indexOf('rp') === 0 ? num((t.length > 2 ? t.slice(2) : v.ts[i + 1] || '').replace(/[.,]$/g, '')) : NaN).filter((x) => Number.isFinite(x) && x > 0)",
+        "hMin": "v.harga.length ? Math.min.apply(null, v.harga) : 0",
+        "hMax": "v.harga.length ? Math.max.apply(null, v.harga) : 0",
+        "hRata": "v.harga.length ? Math.round(v.harga.reduce((a, b) => a + b, 0) / v.harga.length) : 0",
+        "skrip": "v.html.toLowerCase().split('<script').length - 1",
+        "frame": "v.html.toLowerCase().split('<iframe').length - 1",
+        "tanpaAman": "v.html.toLowerCase().split('href=\"http:').length - 1",
+        "curiga": "['pemenang', 'hadiah gratis', 'kirim uang', 'transfer sekarang', 'verifikasi akun', 'kata sandi'].filter((k) => v.teks.toLowerCase().indexOf(k) >= 0)",
+        "banding": "input.harga_sendiri > 0 && v.hRata > 0 ? Math.round((input.harga_sendiri - v.hRata) / v.hRata * 100) : 0"
+      }
+    },
+    {
+      "id": "nilai",
+      "use": "hitung",
+      "label": "Beri nilai",
+      "set": {
+        "skorSeo": "!v.ok ? 0 : (v.judul.length >= 10 && v.judul.length <= 65 ? 20 : v.judul ? 10 : 0) + (v.desk.length >= 50 && v.desk.length <= 160 ? 20 : v.desk ? 10 : 0) + (v.h1 === 1 ? 20 : v.h1 > 1 ? 10 : 0) + (v.gambar === 0 ? 10 : v.tanpaAlt === 0 ? 20 : 10) + (v.kata >= 300 ? 10 : v.kata >= 100 ? 5 : 0) + (String(input.kata || '').trim() === '' ? 10 : v.judul.toLowerCase().indexOf(String(input.kata).trim().toLowerCase()) >= 0 ? 10 : 0)",
+        "skorAman": "!v.ok ? 0 : Math.max(0, 100 - v.curiga.length * 25 - v.frame * 10 - Math.min(v.tanpaAman, 3) * 5 - (v.skrip > 5 ? 10 : 0))",
+        "catat": "!v.ok ? ['Halaman tidak bisa dibaca (kode ' + (v.web ? v.web.status : 0) + ')'] : [].concat(v.judul ? [] : ['Judul halaman belum ada']).concat(v.desk ? [] : ['Deskripsi halaman belum ada']).concat(v.h1 === 1 ? [] : ['Judul besar (H1) sebaiknya tepat satu, sekarang ' + v.h1]).concat(v.tanpaAlt ? [v.tanpaAlt + ' gambar belum punya teks pengganti'] : []).concat(v.curiga.length ? ['Ada kata mencurigakan: ' + v.curiga.join(', ')] : []).concat(v.frame ? [v.frame + ' bingkai tertanam dari tempat lain'] : []).concat(v.tanpaAman ? [v.tanpaAman + ' tautan masih tanpa gembok (http)'] : [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "!v.ok ? 'Halaman tidak bisa dibaca, periksa alamatnya' : 'Halaman ' + cut(v.judul || 'tanpa judul', 60) + ': nilai pencarian ' + v.skorSeo + '/100, nilai keamanan isi ' + v.skorAman + '/100, ' + v.gambar + ' gambar, ' + v.tautan + ' tautan' + (v.harga.length ? ', harga ' + rp(v.hMin) + ' sampai ' + rp(v.hMax) : '')",
+    "teks": "'# Periksa halaman web\\n\\n' + tabel(['Hal yang diperiksa', 'Hasil'], [['Alamat', input.alamat], ['Judul', v.judul || '-'], ['Deskripsi', cut(v.desk || '-', 160)], ['Jumlah gambar', v.gambar], ['Gambar tanpa teks pengganti', v.tanpaAlt], ['Jumlah tautan', v.tautan], ['Jumlah kata', v.kata], ['Nilai pencarian', v.skorSeo + '/100'], ['Nilai keamanan isi', v.skorAman + '/100'], ['Harga terendah / tertinggi', v.harga.length ? rp(v.hMin) + ' / ' + rp(v.hMax) : 'tidak ditemukan'], ['Selisih dengan harga Anda', v.harga.length && input.harga_sendiri > 0 ? v.banding + ' persen dari rata-rata halaman' : '-']]) + '\\n\\n## Catatan\\n\\n' + (v.catat.length ? v.catat.map((c) => '- ' + c).join('\\n') : 'Tidak ada catatan, halaman tampak baik.')",
+    "berkas": [
+      { "jenis": "csv", "nama": "'halaman-web-' + cut(String(input.alamat).toLowerCase().replace(/[^a-z0-9]/g, '-'), 30)", "isi": "csv([['ukuran', 'nilai'], ['judul', v.judul], ['deskripsi', v.desk], ['gambar', v.gambar], ['gambar tanpa teks pengganti', v.tanpaAlt], ['tautan', v.tautan], ['kata', v.kata], ['nilai pencarian', v.skorSeo], ['nilai keamanan isi', v.skorAman], ['harga terendah', v.hMin], ['harga tertinggi', v.hMax]])" },
+      { "jenis": "md", "nama": "'catatan-halaman-web'", "isi": "'# Catatan halaman web\\n\\n' + (v.catat.length ? v.catat.map((c) => '- ' + c).join('\\n') : 'Tidak ada catatan.')" }
+    ],
+    "data": "({ ok: v.ok ? 1 : 0, gambar: v.gambar, tautan: v.tautan, tanpaAlt: v.tanpaAlt, kata: v.kata, skorSeo: v.skorSeo, skorAman: v.skorAman, hargaMin: v.hMin, hargaMax: v.hMax, hargaRata: v.hRata, selisihPersen: v.banding, curiga: v.curiga.length })"
+  },
+  "schedule": { "allowed": false },
+  "risk": "low",
+  "confirm": false,
+  "brain": { "folder": "Report", "simpan": true },
+  "sample": {
+    "input": { "alamat": "https://contoh.id/produk", "fokus": "seo", "kata": "sepatu kulit", "harga_sendiri": 500000 },
+    "web": { "web": "<html><head><title>Sepatu Kulit Pria Asli - Toko Contoh</title><meta name=\"description\" content=\"Sepatu kulit pria asli buatan lokal, nyaman dipakai kerja. Gratis ongkir ke seluruh Indonesia.\"></head><body><h1>Sepatu Kulit Pria</h1><img src=\"a.jpg\" alt=\"sepatu\"><img src=\"b.jpg\"><a href=\"/beranda\">Beranda</a><a href=\"https://lain.example/x\">Lain</a><p>Harga Rp 450.000 saja. Diskon dari Rp550.000.</p><script>var a = 1;</script></body></html>" },
+    "expect": { "berkas": 2, "mengandung": ["2 gambar", "2 tautan"] }
+  },
+  "otakProfil": {
+    "peran": "peneliti web yang menjelaskan hasil pemeriksaan halaman kepada orang awam",
+    "tujuan": "Terangkan kelemahan dan kekuatan halaman, apa dampaknya bagi pengunjung, dan perbaikan yang paling berguna lebih dulu.",
+    "gaya": "praktis, jelas, sebut angka dari hasil hitung",
+    "pedoman": ["Pakai hanya angka dan catatan dari hasil hitung; jangan mengarang isi halaman.", "Urutkan perbaikan dari yang paling berdampak.", "Bila harga dibandingkan, jelaskan bahwa itu hanya harga yang tertera di satu halaman."],
+    "skema": { "pembahasan": "teks", "poin": "daftar", "langkah": "daftar", "penilaian": "pilihan:baik|cukup|perlu_perbaikan" },
+    "contoh": { "baik": "Satu gambar belum punya teks pengganti dan deskripsi masih singkat; lengkapi dua hal itu dulu.", "buruk": "Halamannya kurang bagus." },
+    "batas": { "pembahasan": 700, "butir": 5 },
+    "model": "kecil",
+    "kriteria": { "kataKunci": ["halaman"], "minPanjang": 40, "maksPanjang": 700 },
+    "contohAI": "{\"pembahasan\":\"Halaman sudah punya judul dan deskripsi yang cukup jelas, tetapi satu gambar belum punya teks pengganti sehingga kurang ramah bagi pencarian. Perbaikan kecil itu paling cepat dilakukan.\",\"poin\":[\"Judul dan deskripsi sudah ada\",\"Satu gambar tanpa teks pengganti\"],\"langkah\":[\"Beri teks pengganti pada gambar\",\"Perpanjang isi halaman\"],\"penilaian\":\"cukup\"}"
+  },
+  "evaluasi": [
+    { "nama": "nilai pencarian halaman produk", "input": { "alamat": "https://contoh.id/produk", "fokus": "seo", "kata": "sepatu kulit", "harga_sendiri": 500000 }, "ai": "{\"pembahasan\":\"Halaman sudah punya judul dan deskripsi, tetapi satu gambar belum punya teks pengganti dan isinya masih pendek. Lengkapi dulu bagian itu agar lebih mudah ditemukan.\",\"poin\":[\"Satu gambar tanpa teks pengganti\"],\"langkah\":[\"Beri teks pengganti pada gambar\"],\"penilaian\":\"cukup\"}", "kriteria": { "mengandung": ["halaman", "gambar"], "mengandungAturan": ["Sepatu Kulit Pria", "2 gambar", "2 tautan"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.gambar", "min": 2, "max": 2 }, { "path": "data.tautan", "min": 2, "max": 2 }, { "path": "data.tanpaAlt", "min": 1, "max": 1 }, { "path": "data.skorSeo", "min": 60, "max": 100 }] } },
+    { "nama": "bandingkan harga dengan harga sendiri", "input": { "alamat": "https://contoh.id/produk", "fokus": "harga", "kata": "", "harga_sendiri": 400000 }, "ai": "{\"pembahasan\":\"Harga di halaman berkisar antara 450 ribu dan 550 ribu, sedangkan harga Anda lebih rendah dari rata-rata halaman ini. Itu bisa jadi keunggulan, tetapi hanya dari satu halaman.\",\"poin\":[\"Harga Anda lebih rendah\"],\"langkah\":[\"Cek beberapa halaman pesaing lain\"],\"penilaian\":\"baik\"}", "kriteria": { "mengandung": ["harga", "halaman"], "mengandungAturan": ["Rp", "Selisih dengan harga Anda"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.hargaMin", "min": 450000, "max": 450000 }, { "path": "data.hargaMax", "min": 550000, "max": 550000 }, { "path": "data.hargaRata", "min": 500000, "max": 500000 }, { "path": "data.selisihPersen", "min": -21, "max": -19 }] } },
+    { "nama": "keamanan isi dengan kata berformat aneh", "input": { "alamat": "https://contoh.id/produk", "fokus": "aman", "kata": "  SEPATU   ", "harga_sendiri": 0 }, "ai": "{\"pembahasan\":\"Tidak ada kata mencurigakan di halaman ini dan hanya ada satu skrip biasa, jadi isi halaman tampak aman. Tetap periksa tautan keluar secara berkala.\",\"poin\":[\"Tidak ada kata mencurigakan\"],\"langkah\":[\"Periksa tautan keluar berkala\"],\"penilaian\":\"baik\"}", "kriteria": { "mengandung": ["aman", "halaman"], "mengandungAturan": ["Nilai keamanan isi", "100/100"], "panjangMin": 120, "panjangMaks": 3500, "nilai": [{ "path": "data.skorAman", "min": 100, "max": 100 }, { "path": "data.curiga", "min": 0, "max": 0 }] } }
+  ]
+}

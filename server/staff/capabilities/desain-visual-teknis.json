@@ -1,0 +1,365 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "kap-desain-visual-teknis",
+  "division": "kap",
+  "employeeId": null,
+  "title": "Kemampuan hitungan teknis desain",
+  "version": 1,
+  "name": "Cek teknis desain visual",
+  "ringkas": "Hitung dan periksa hal teknis desain: kontras warna, ukuran video per platform, ukuran pola kemasan, dan daftar cek label produk.",
+  "kataKunci": [
+    "desain",
+    "kontras",
+    "warna",
+    "ukuran video",
+    "kemasan",
+    "label"
+  ],
+  "kemampuan": {
+    "id": "desain-visual-teknis",
+    "kelompok": "desain",
+    "tujuanAwam": "Memastikan desain terbaca jelas dan berukuran tepat: warna cukup kontras, ukuran video sesuai, pola kemasan muat, dan label produk lengkap."
+  },
+  "inputs": [
+    {
+      "key": "cek",
+      "type": "choice",
+      "label": "Mau memeriksa apa?",
+      "required": true,
+      "default": "kontras",
+      "choices": [
+        {
+          "v": "kontras",
+          "t": "Kontras dua warna"
+        },
+        {
+          "v": "ukuran-video",
+          "t": "Ukuran video"
+        },
+        {
+          "v": "pola-kemasan",
+          "t": "Ukuran pola kemasan"
+        },
+        {
+          "v": "daftar-label",
+          "t": "Kelengkapan label"
+        }
+      ]
+    },
+    {
+      "key": "masukan",
+      "type": "longtext",
+      "label": "Isian: dua warna (#112233 #ffffff), lama video detik, panjang lebar tinggi kotak cm, atau tulisan label",
+      "required": true,
+      "contoh": "#000000 #ffffff"
+    },
+    {
+      "key": "platform",
+      "type": "choice",
+      "label": "Platform video (hanya untuk ukuran video)",
+      "required": false,
+      "default": "reels",
+      "choices": [
+        {
+          "v": "reels",
+          "t": "Reels"
+        },
+        {
+          "v": "tiktok",
+          "t": "TikTok"
+        },
+        {
+          "v": "youtube",
+          "t": "YouTube"
+        },
+        {
+          "v": "feed",
+          "t": "Gambar persegi"
+        },
+        {
+          "v": "potret",
+          "t": "Gambar potret"
+        }
+      ]
+    },
+    {
+      "key": "margin",
+      "type": "number",
+      "label": "Ruang tepi lipatan (cm, untuk kemasan)",
+      "required": false,
+      "default": 1,
+      "contoh": "1"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung dan periksa",
+      "set": {
+        "tok": "baris(input.masukan).join(' ').replace(/[,;]/g, ' ').split(' ').filter((t) => t !== '')",
+        "hv": "(() => { const P = { reels: ['Reels', 1080, 1920, 60, '9:16'], tiktok: ['TikTok', 1080, 1920, 60, '9:16'], youtube: ['YouTube', 1920, 1080, 600, '16:9'], feed: ['Gambar persegi', 1080, 1080, 60, '1:1'], potret: ['Gambar potret', 1080, 1350, 60, '4:5'] }; const p = P[input.platform] || P.reels; const d = Math.min(7200, v.tok.map((t) => num(t)).filter((t) => t > 0)[0] || 30); const mb = Math.round(d * (input.platform === 'youtube' ? 12 : 8) / 8 * 10) / 10; const ok = d <= p[3]; return { judul: ['Pemeriksaan', 'Hasil'], baris: [['Platform', p[0]], ['Ukuran frame', p[1] + ' x ' + p[2] + ' piksel'], ['Rasio layar', p[4]], ['Lama video', d + ' detik'], ['Saran lama maksimal', p[3] + ' detik'], ['Kecepatan gambar', '30 gambar per detik'], ['Perkiraan ukuran berkas', mb + ' MB'], ['Lama sesuai saran', ok ? 'Ya' : 'Terlalu panjang']], kesimpulan: p[0] + ' ' + p[1] + ' x ' + p[2] + ', ' + d + ' detik, sekitar ' + mb + ' MB' + (ok ? '' : ', melebihi saran lama ' + p[3] + ' detik'), kunci: { lebar: p[1], tinggi: p[2], detik: d, mb: mb, sesuai: ok ? 1 : 0 } }; })()",
+        "hp": "(() => { const n3 = v.tok.map((t) => num(t)).filter((t) => t > 0).slice(0, 3); if (n3.length < 3) { return { judul: ['Pemeriksaan', 'Hasil'], baris: [['Masukan', 'Isi tiga ukuran: panjang lebar tinggi dalam sentimeter']], kesimpulan: 'Ukuran kotak belum lengkap, isi panjang, lebar, dan tinggi dalam sentimeter', kunci: { lembarP: 0, lembarL: 0, perA3: 0, luas: 0 } }; } const m = Math.min(5, Math.max(0, Number(input.margin) || 0)); const lp = Math.round((2 * (n3[0] + n3[1]) + 1.5 + 2 * m) * 10) / 10; const ll = Math.round((n3[2] + 2 * n3[1] + 2 * m) * 10) / 10; const per = Math.max(Math.floor(42 / lp) * Math.floor(29.7 / ll), Math.floor(42 / ll) * Math.floor(29.7 / lp)); const luas = Math.round(lp * ll); return { judul: ['Pemeriksaan', 'Hasil'], baris: [['Ukuran kotak (panjang x lebar x tinggi)', n3[0] + ' x ' + n3[1] + ' x ' + n3[2] + ' cm'], ['Ruang tepi', m + ' cm'], ['Lembar pola (panjang x lebar)', lp + ' x ' + ll + ' cm'], ['Luas satu pola', luas + ' cm persegi'], ['Muat per lembar A3 (42 x 29,7 cm)', per + ' buah'], ['Muat di A3', per >= 1 ? 'Ya' : 'Tidak, perkecil kotak']], kesimpulan: 'Pola ' + lp + ' x ' + ll + ' cm, muat ' + per + ' buah per lembar A3 (perkiraan awal, cocokkan dengan percetakan)', kunci: { lembarP: lp, lembarL: ll, perA3: per, luas: luas } }; })()",
+        "hl": "(() => { const teks = baris(input.masukan).join(' ').toLowerCase(); const W = [['Nama produk', ['nama', 'produk', 'merek']], ['Isi bersih', ['isi bersih', 'netto', 'berat', 'volume']], ['Komposisi', ['komposisi', 'bahan']], ['Tanggal kedaluwarsa', ['kedaluwarsa', 'exp', 'baik digunakan']], ['Produsen dan alamat', ['produksi', 'produsen', 'alamat', 'dibuat']], ['Izin edar atau sertifikasi', ['izin', 'bpom', 'pirt', 'halal', 'sni']], ['Cara simpan', ['simpan', 'penyimpanan']]]; const r = W.map((w) => [w[0], w[1].some((k) => teks.includes(k)) ? 'Ada' : 'Belum ada']); const ada = r.filter((x) => x[1] === 'Ada').length; const kurang = r.filter((x) => x[1] !== 'Ada').map((x) => x[0]); return { judul: ['Butir label', 'Status'], baris: r, kesimpulan: ada + ' dari ' + W.length + ' butir label terisi' + (kurang.length ? ', lengkapi: ' + kurang.join(', ') : ', label sudah lengkap'), kunci: { terisi: ada, total: W.length, persen: Math.round(ada / W.length * 100) } }; })()",
+        "hk": "(() => { const hx = v.tok.filter((t) => t.slice(0, 1) === '#').map((t) => t.slice(1)).filter((h) => (h.length === 3 || h.length === 6) && h.split('').every((c) => '0123456789abcdefABCDEF'.includes(c))).slice(0, 2).map((h) => (h.length === 3 ? h.split('').map((c) => c + c).join('') : h).toLowerCase()); if (!hx.length) { return { judul: ['Pemeriksaan', 'Hasil'], baris: [['Masukan', 'Tulis dua warna dengan awalan #, contoh #112233 #ffffff']], kesimpulan: 'Warna belum terbaca, tulis dua warna dengan awalan #, contoh #112233 #ffffff', kunci: { rasio: 0, lulusBiasa: 0, lulusBesar: 0, lulusSangat: 0 } }; } const c1 = hx[0]; const c2 = hx.length > 1 ? hx[1] : 'ffffff'; const lum = (h) => { const f = (i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4); }; const a = lum(c1); const b = lum(c2); const r = Math.round((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) * 100) / 100; const yn = (x) => x ? 'Lulus' : 'Tidak lulus'; return { judul: ['Pemeriksaan', 'Hasil'], baris: [['Warna pertama', '#' + c1], ['Warna kedua', '#' + c2 + (hx.length > 1 ? '' : ' (putih, karena hanya satu warna ditulis)')], ['Rasio kontras', r + ' : 1'], ['Teks biasa (butuh 4.5)', yn(r >= 4.5)], ['Teks besar (butuh 3)', yn(r >= 3)], ['Teks sangat jelas (butuh 7)', yn(r >= 7)]], kesimpulan: 'Kontras ' + r + ' : 1, teks biasa ' + (r >= 4.5 ? 'terbaca jelas' : r >= 3 ? 'kurang jelas, hanya cukup untuk teks besar' : 'sulit dibaca'), kunci: { rasio: r, lulusBiasa: r >= 4.5 ? 1 : 0, lulusBesar: r >= 3 ? 1 : 0, lulusSangat: r >= 7 ? 1 : 0 } }; })()",
+        "hasil": "({ 'ukuran-video': v.hv, 'pola-kemasan': v.hp, 'daftar-label': v.hl }[input.cek] || v.hk)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.hasil.kesimpulan",
+    "teks": "'# Cek teknis: ' + input.cek + '\\n\\n' + tabel(v.hasil.judul, v.hasil.baris) + '\\n\\n**Kesimpulan:** ' + v.hasil.kesimpulan",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'cek-' + cut(String(input.cek).toLowerCase(), 30)",
+        "isi": "csv([v.hasil.judul].concat(v.hasil.baris))"
+      }
+    ],
+    "data": "Object.assign({ cek: input.cek }, v.hasil.kunci)"
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "cek": "kontras",
+      "masukan": "#000000 #ffffff",
+      "platform": "reels",
+      "margin": 1
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandungAturan": [
+        "21 : 1",
+        "terbaca jelas"
+      ]
+    }
+  },
+  "otakProfil": {
+    "peran": "pemeriksa teknis desain yang menjelaskan hasil kepada orang awam",
+    "tujuan": "Jelaskan hasil pemeriksaan dengan bahasa sederhana: apa artinya bagi tampilan atau cetakan, dan apa yang perlu diperbaiki.",
+    "gaya": "praktis, jelas, tanpa istilah teknis yang tidak perlu",
+    "pedoman": [
+      "Pakai hanya angka dari hasil pemeriksaan; jangan menambah angka baru.",
+      "Terangkan arti angka dengan contoh sehari-hari.",
+      "Beri satu perbaikan konkret bila ada yang tidak lulus."
+    ],
+    "skema": {
+      "pembahasan": "teks",
+      "perbaikan": "daftar",
+      "langkah": "daftar"
+    },
+    "contoh": {
+      "baik": "Tulisan abu-abu di latar putih agak sulit dibaca di bawah sinar matahari; gelapkan sedikit warnanya.",
+      "buruk": "Hasilnya kurang bagus."
+    },
+    "batas": {
+      "pembahasan": 500,
+      "butir": 5
+    },
+    "model": "kecil",
+    "kriteria": {
+      "kataKunci": [
+        "hasil"
+      ],
+      "minPanjang": 40,
+      "maksPanjang": 600
+    },
+    "contohAI": "{\"pembahasan\":\"Hasil pemeriksaan menunjukkan desain ini cukup jelas untuk dipakai, namun ada satu bagian yang bisa diperbaiki agar lebih nyaman dibaca.\",\"perbaikan\":[\"Periksa bagian yang tidak lulus\"],\"langkah\":[\"Uji tampilan di layar ponsel\"]}"
+  },
+  "evaluasi": [
+    {
+      "nama": "kontras abu-abu di latar putih",
+      "input": {
+        "cek": "kontras",
+        "masukan": "#777 #fff",
+        "platform": "reels",
+        "margin": 1
+      },
+      "ai": "{\"pembahasan\":\"Hasil menunjukkan tulisan abu-abu di latar putih nyaris cukup jelas, tetapi masih sedikit di bawah batas untuk teks biasa.\",\"perbaikan\":[\"Gelapkan sedikit warna abu-abu\"],\"langkah\":[\"Uji di layar ponsel\"]}",
+      "kriteria": {
+        "mengandung": [
+          "Hasil menunjukkan",
+          "abu-abu"
+        ],
+        "mengandungAturan": [
+          "Rasio kontras",
+          "Tidak lulus"
+        ],
+        "panjangMin": 120,
+        "panjangMaks": 3000,
+        "nilai": [
+          {
+            "path": "data.rasio",
+            "min": 4.4,
+            "max": 4.6
+          },
+          {
+            "path": "data.lulusBiasa",
+            "min": 0,
+            "max": 0
+          },
+          {
+            "path": "data.lulusBesar",
+            "min": 1,
+            "max": 1
+          }
+        ]
+      }
+    },
+    {
+      "nama": "video panjang untuk YouTube",
+      "input": {
+        "cek": "ukuran-video",
+        "masukan": "1200",
+        "platform": "youtube",
+        "margin": 1
+      },
+      "ai": "{\"pembahasan\":\"Hasil menunjukkan video dua puluh menit ini berukuran besar dan melebihi saran lama, jadi pertimbangkan dipotong.\",\"perbaikan\":[\"Potong menjadi dua bagian\"],\"langkah\":[\"Kompres sebelum diunggah\"]}",
+      "kriteria": {
+        "mengandung": [
+          "Hasil menunjukkan",
+          "dipotong"
+        ],
+        "mengandungAturan": [
+          "1920 x 1080",
+          "Terlalu panjang"
+        ],
+        "panjangMin": 120,
+        "panjangMaks": 3000,
+        "nilai": [
+          {
+            "path": "data.mb",
+            "min": 1800,
+            "max": 1800
+          },
+          {
+            "path": "data.sesuai",
+            "min": 0,
+            "max": 0
+          },
+          {
+            "path": "data.lebar",
+            "min": 1920,
+            "max": 1920
+          }
+        ]
+      }
+    },
+    {
+      "nama": "pola kotak 10 x 5 x 15",
+      "input": {
+        "cek": "pola-kemasan",
+        "masukan": "10 x 5 x 15",
+        "platform": "reels",
+        "margin": 1
+      },
+      "ai": "{\"pembahasan\":\"Hasil menunjukkan satu pola muat sekali di lembar A3 sehingga sisa kertas cukup banyak dan perlu dicocokkan dengan percetakan.\",\"perbaikan\":[\"Tanyakan ukuran lembar cetak\"],\"langkah\":[\"Buat contoh dari kertas biasa\"]}",
+      "kriteria": {
+        "mengandung": [
+          "Hasil menunjukkan",
+          "percetakan"
+        ],
+        "mengandungAturan": [
+          "33.5 x 27 cm",
+          "1 buah"
+        ],
+        "panjangMin": 120,
+        "panjangMaks": 3000,
+        "nilai": [
+          {
+            "path": "data.lembarP",
+            "min": 33.4,
+            "max": 33.6
+          },
+          {
+            "path": "data.lembarL",
+            "min": 26.9,
+            "max": 27.1
+          },
+          {
+            "path": "data.perA3",
+            "min": 1,
+            "max": 1
+          },
+          {
+            "path": "data.luas",
+            "min": 904,
+            "max": 906
+          }
+        ]
+      }
+    },
+    {
+      "nama": "label produk belum lengkap",
+      "input": {
+        "cek": "daftar-label",
+        "masukan": "Nama produk: Keripik Singkong\nIsi bersih 150 g\nKomposisi singkong, garam\nDiproduksi oleh UD Maju, Bogor\nPIRT 123",
+        "platform": "reels",
+        "margin": 1
+      },
+      "ai": "{\"pembahasan\":\"Hasil menunjukkan label sudah memuat lima dari tujuh butir, tinggal tanggal kedaluwarsa dan cara simpan yang perlu ditambahkan.\",\"perbaikan\":[\"Tambah tanggal kedaluwarsa\",\"Tambah cara simpan\"],\"langkah\":[\"Cetak ulang contoh label\"]}",
+      "kriteria": {
+        "mengandung": [
+          "Hasil menunjukkan",
+          "cara simpan"
+        ],
+        "mengandungAturan": [
+          "Tanggal kedaluwarsa",
+          "Belum ada",
+          "5 dari 7"
+        ],
+        "panjangMin": 120,
+        "panjangMaks": 3000,
+        "nilai": [
+          {
+            "path": "data.terisi",
+            "min": 5,
+            "max": 5
+          },
+          {
+            "path": "data.persen",
+            "min": 70,
+            "max": 72
+          }
+        ]
+      }
+    },
+    {
+      "nama": "warna tidak terbaca",
+      "input": {
+        "cek": "kontras",
+        "masukan": "hitam putih",
+        "platform": "reels",
+        "margin": 1
+      },
+      "ai": "{\"pembahasan\":\"Hasil pemeriksaan belum ada karena warna tidak terbaca, jadi tulis ulang dua warna dengan awalan tanda pagar.\",\"perbaikan\":[\"Tulis kode warna\"],\"langkah\":[\"Ulangi pemeriksaan\"]}",
+      "kriteria": {
+        "mengandung": [
+          "Hasil pemeriksaan",
+          "tanda pagar"
+        ],
+        "mengandungAturan": [
+          "Warna belum terbaca"
+        ],
+        "panjangMin": 100,
+        "panjangMaks": 3000,
+        "nilai": [
+          {
+            "path": "data.rasio",
+            "min": 0,
+            "max": 0
+          }
+        ]
+      }
+    }
+  ]
+}

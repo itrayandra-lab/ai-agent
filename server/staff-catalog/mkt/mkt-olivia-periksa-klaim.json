@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-olivia-periksa-klaim",
+  "division": "mkt",
+  "employeeId": "olivia",
+  "title": "Brand Manager — Ray Beauty",
+  "version": 1,
+  "name": "Pemeriksa klaim dan gaya materi",
+  "ringkas": "Periksa naskah materi: kata klaim yang berisiko, seruan berlebihan, huruf kapital berlebih, dan kata yang dilarang brand.",
+  "kataKunci": [
+    "klaim",
+    "naskah iklan",
+    "konsistensi brand",
+    "bpom",
+    "periksa materi"
+  ],
+  "inputs": [
+    {
+      "key": "materi",
+      "type": "longtext",
+      "label": "Naskah yang diperiksa",
+      "required": true,
+      "contoh": "Serum ajaib menyembuhkan jerawat, dijamin sembuh permanen!!!"
+    },
+    {
+      "key": "hindari",
+      "type": "text",
+      "label": "Kata yang dihindari brand, pisahkan koma (boleh kosong)",
+      "required": false,
+      "contoh": "murah, diskon gila"
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Periksa naskah",
+      "set": {
+        "low": "String(input.materi).toLowerCase()",
+        "klaim": "['menyembuhkan', 'sembuh', 'permanen', 'dijamin', '100% aman', 'ajaib', 'instan', 'tanpa efek samping', 'obat', 'nomor 1', 'terbaik'].filter((k) => v.low.includes(k))",
+        "larang": "String(input.hindari || '').toLowerCase().split(',').map((s) => s.trim()).filter((s) => s && v.low.includes(s))",
+        "seru": "(String(input.materi).match(/!/g) || []).length",
+        "kapital": "(String(input.materi).match(/\\b[A-Z]{4,}\\b/g) || []).length",
+        "temuan": "v.klaim.map((k) => ['Klaim berisiko', k, 'Ganti dengan pernyataan yang bisa dibuktikan, misalnya hasil uji']).concat(v.larang.map((k) => ['Kata dilarang brand', k, 'Hapus atau ganti'])).concat(v.seru > 2 ? [['Tanda seru berlebihan', v.seru + ' kali', 'Maksimal 2']] : []).concat(v.kapital > 0 ? [['Huruf kapital berlebihan', v.kapital + ' kata', 'Gunakan huruf biasa']] : [])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.temuan.length ? v.temuan.length + ' temuan, termasuk ' + v.klaim.length + ' kata klaim berisiko: perlu direvisi' : 'Tidak ada temuan, naskah aman untuk ditinjau akhir'",
+    "teks": "'# Hasil pemeriksaan naskah\\n\\n' + (v.temuan.length ? tabel(['Jenis', 'Temuan', 'Saran'], v.temuan) : 'Tidak ada temuan.') + '\\n\\n_Pemeriksaan otomatis berdasarkan daftar kata. Klaim kesehatan tetap perlu ditinjau bagian regulasi dan hukum._'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'hasil-periksa-naskah'",
+        "isi": "csv([['Jenis', 'Temuan', 'Saran']].concat(v.temuan))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Brand",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "materi": "Serum ajaib menyembuhkan jerawat, dijamin sembuh permanen!!!",
+      "hindari": "murah, diskon gila"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "5 kata klaim berisiko",
+        "menyembuhkan",
+        "Tanda seru berlebihan"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "klaim",
+      "naskah iklan",
+      "konsistensi brand",
+      "bpom",
+      "periksa materi"
+    ],
+    "data": [
+      "naskah yang diperiksa",
+      "kata yang dihindari brand, pisahkan koma (boleh kosong)"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

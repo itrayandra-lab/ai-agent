@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "bizdev-gading",
+  "division": "bizdev",
+  "employeeId": "gading",
+  "title": "Channel Partner Manager — RayFlow Resellers & Integrators",
+  "version": 1,
+  "name": "Penghitung komisi dan tingkat mitra",
+  "ringkas": "Tentukan tingkat tiap mitra (perunggu sampai platinum) dari omzet bulanannya dan hitung komisi yang harus dibayar.",
+  "kataKunci": [
+    "komisi",
+    "tingkat mitra",
+    "reseller",
+    "integrator",
+    "program kemitraan"
+  ],
+  "inputs": [
+    {
+      "key": "data",
+      "type": "longtext",
+      "label": "Omzet mitra bulan ini (satu baris: mitra | omzet)",
+      "required": true,
+      "contoh": "Mitra Satu | 15000000\nMitra Dua | 45000000\nMitra Tiga | 120000000"
+    },
+    {
+      "key": "program",
+      "type": "choice",
+      "label": "Program komisi",
+      "required": true,
+      "default": "standar",
+      "choices": [
+        {
+          "v": "standar",
+          "t": "Standar (5% sampai 15%)"
+        },
+        {
+          "v": "bonus",
+          "t": "Dengan bonus 2 poin (musim promo)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung komisi",
+      "set": {
+        "tambah": "input.program === 'bonus' ? 2 : 0",
+        "rows": "baris(input.data).slice(0, 80).map((l) => { const p = l.split('|').map((s) => s.trim()); const o = num(p[1]); const t = o >= 100000000 ? ['Platinum', 15] : o >= 50000000 ? ['Gold', 12] : o >= 20000000 ? ['Silver', 8] : ['Bronze', 5]; const k = t[1] + v.tambah; return { mitra: p[0] || '-', omzet: o, tingkat: t[0], persen: k, komisi: Math.round(o * k / 100) }; }).sort((a, b) => b.omzet - a.omzet)",
+        "total": "v.rows.reduce((a, b) => a + b.komisi, 0)",
+        "omzet": "v.rows.reduce((a, b) => a + b.omzet, 0)"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.rows.length + ' mitra, total komisi ' + rp(v.total) + ' dari omzet ' + rp(v.omzet)",
+    "teks": "'# Komisi mitra\\n\\n' + tabel(['Mitra', 'Omzet', 'Tingkat', 'Komisi %', 'Komisi'], v.rows.map((r) => [r.mitra, rp(r.omzet), r.tingkat, r.persen + '%', rp(r.komisi)])) + '\\n\\nBatas tingkat: Silver mulai Rp 20 juta, Gold Rp 50 juta, Platinum Rp 100 juta.'",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'komisi-mitra'",
+        "isi": "csv([['Mitra', 'Omzet', 'Tingkat', 'Komisi %', 'Komisi']].concat(v.rows.map((r) => [r.mitra, r.omzet, r.tingkat, r.persen, r.komisi])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "data": "Mitra Satu | 15000000\nMitra Dua | 45000000\nMitra Tiga | 120000000",
+      "program": "standar"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "3 mitra",
+        "Rp 22.350.000",
+        "Platinum"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "komisi",
+      "tingkat mitra",
+      "reseller",
+      "integrator",
+      "program kemitraan"
+    ],
+    "data": [
+      "omzet mitra bulan ini (satu baris: mitra | omzet)",
+      "program komisi"
+    ],
+    "gaya": "strategis tapi membumi, bandingkan peluang dengan usaha",
+    "contoh": {
+      "baik": "Kerja sama klinik lebih cepat balik modal daripada toko modern.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Angka kemitraan perlu disepakati tertulis."
+    ]
+  }
+}

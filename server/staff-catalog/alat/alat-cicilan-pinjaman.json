@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "alat-cicilan-pinjaman",
+  "division": "alat",
+  "employeeId": null,
+  "title": "Alat umum",
+  "version": 1,
+  "name": "Penghitung cicilan pinjaman",
+  "ringkas": "Hitung cicilan bulanan, total bunga, dan tabel angsuran untuk pinjaman dengan bunga flat atau anuitas.",
+  "kataKunci": [
+    "cicilan",
+    "pinjaman",
+    "bunga",
+    "kredit",
+    "angsuran"
+  ],
+  "inputs": [
+    {
+      "key": "pokok",
+      "type": "number",
+      "label": "Jumlah pinjaman (Rp)",
+      "required": true,
+      "contoh": "12000000"
+    },
+    {
+      "key": "bunga",
+      "type": "number",
+      "label": "Bunga per tahun (%)",
+      "required": true,
+      "contoh": "12"
+    },
+    {
+      "key": "tenor",
+      "type": "number",
+      "label": "Lama cicilan (bulan, maks 120)",
+      "required": true,
+      "contoh": "12"
+    },
+    {
+      "key": "jenis",
+      "type": "choice",
+      "label": "Jenis bunga",
+      "required": true,
+      "default": "anuitas",
+      "choices": [
+        {
+          "v": "anuitas",
+          "t": "Anuitas (bunga menurun)"
+        },
+        {
+          "v": "flat",
+          "t": "Flat (bunga tetap)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "h",
+      "use": "hitung",
+      "label": "Hitung",
+      "set": {
+        "n": "Math.min(120, Math.max(1, Math.round(input.tenor)))",
+        "r": "input.bunga / 1200",
+        "cicil": "input.jenis === 'flat' ? Math.round((input.pokok + input.pokok * input.bunga / 100 * v.n / 12) / v.n) : (v.r === 0 ? Math.round(input.pokok / v.n) : Math.round(input.pokok * v.r / (1 - Math.pow(1 + v.r, -v.n))))",
+        "jadwal": "''.padEnd(v.n, '0').split('').reduce((acc, z, i) => { const sisa = i === 0 ? input.pokok : acc[i - 1].sisa; const bunga = input.jenis === 'flat' ? Math.round(input.pokok * input.bunga / 1200) : Math.round(sisa * v.r); const pokok = v.cicil - bunga; return acc.concat([{ ke: i + 1, bunga: bunga, pokok: pokok, sisa: Math.max(0, sisa - pokok) }]); }, [])",
+        "totalBayar": "v.cicil * v.n"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Cicilan ' + rp(v.cicil) + ' per bulan selama ' + v.n + ' bulan; total bayar ' + rp(v.totalBayar)",
+    "teks": "'- Cicilan per bulan: **' + rp(v.cicil) + '**\\n- Total bayar: ' + rp(v.totalBayar) + '\\n- Total bunga: ' + rp(v.totalBayar - input.pokok) + '\\n\\n' + tabel(['Bulan', 'Bunga', 'Pokok', 'Sisa'], v.jadwal.slice(0, 12).map((j) => [j.ke, rp(j.bunga), rp(j.pokok), rp(j.sisa)]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'jadwal-cicilan'",
+        "isi": "csv([['Bulan', 'Cicilan', 'Bunga', 'Pokok', 'Sisa']].concat(v.jadwal.map((j) => [j.ke, v.cicil, j.bunga, j.pokok, j.sisa])))"
+      }
+    ]
+  },
+  "sample": {
+    "input": {
+      "pokok": "12000000",
+      "bunga": "12",
+      "tenor": "12",
+      "jenis": "anuitas"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "Rp 1.066.185",
+        "12 bulan"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": false
+  },
+  "kemampuan": [
+    "hitung-harga-biaya"
+  ],
+  "keahlian": {
+    "istilah": [
+      "cicilan",
+      "pinjaman",
+      "bunga",
+      "kredit",
+      "angsuran"
+    ],
+    "data": [
+      "jumlah pinjaman (rp)",
+      "bunga per tahun (%)",
+      "lama cicilan (bulan, maks 120)",
+      "jenis bunga"
+    ],
+    "gaya": "netral dan singkat, jelaskan arti hasil hitung untuk orang awam",
+    "contoh": {
+      "baik": "Total sudah termasuk PPN 11 persen; periksa apakah klien perlu faktur pajak.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Hasil hitung bergantung pada isian yang benar."
+    ]
+  }
+}

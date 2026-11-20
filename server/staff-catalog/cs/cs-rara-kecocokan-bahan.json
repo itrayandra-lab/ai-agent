@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "cs-rara-kecocokan-bahan",
+  "division": "cs",
+  "employeeId": "rara",
+  "title": "Beauty Advisor",
+  "version": 1,
+  "name": "Pemeriksa kecocokan dua bahan aktif",
+  "ringkas": "Cek apakah dua bahan aktif boleh dipakai bersamaan dan bagaimana mengatur waktunya agar kulit tidak iritasi.",
+  "kataKunci": [
+    "bahan aktif",
+    "retinol",
+    "vitamin c",
+    "dipakai bersamaan",
+    "kecocokan"
+  ],
+  "inputs": [
+    {
+      "key": "a",
+      "type": "choice",
+      "label": "Bahan pertama",
+      "required": true,
+      "default": "retinol",
+      "choices": [
+        {
+          "v": "retinol",
+          "t": "Retinol"
+        },
+        {
+          "v": "aha_bha",
+          "t": "AHA atau BHA (asam pengelupas)"
+        },
+        {
+          "v": "vitamin_c",
+          "t": "Vitamin C"
+        },
+        {
+          "v": "niacinamide",
+          "t": "Niacinamide"
+        },
+        {
+          "v": "benzoyl",
+          "t": "Benzoyl peroxide"
+        },
+        {
+          "v": "peptida",
+          "t": "Peptida"
+        }
+      ]
+    },
+    {
+      "key": "b",
+      "type": "choice",
+      "label": "Bahan kedua",
+      "required": true,
+      "default": "aha_bha",
+      "choices": [
+        {
+          "v": "retinol",
+          "t": "Retinol"
+        },
+        {
+          "v": "aha_bha",
+          "t": "AHA atau BHA (asam pengelupas)"
+        },
+        {
+          "v": "vitamin_c",
+          "t": "Vitamin C"
+        },
+        {
+          "v": "niacinamide",
+          "t": "Niacinamide"
+        },
+        {
+          "v": "benzoyl",
+          "t": "Benzoyl peroxide"
+        },
+        {
+          "v": "peptida",
+          "t": "Peptida"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Cek kecocokan",
+      "set": {
+        "nama": "({ retinol: 'Retinol', aha_bha: 'AHA atau BHA', vitamin_c: 'Vitamin C', niacinamide: 'Niacinamide', benzoyl: 'Benzoyl peroxide', peptida: 'Peptida' })",
+        "kunci": "[input.a, input.b].sort().join('|')",
+        "tabelKecocokan": "({ 'aha_bha|retinol': ['Jangan dipakai bersamaan', 'Pakai di malam berbeda; kulit mudah perih dan mengelupas'], 'benzoyl|retinol': ['Jangan dipakai bersamaan', 'Pakai di waktu berbeda (benzoyl pagi, retinol malam) dan tambah pelembap'], 'retinol|vitamin_c': ['Bisa, tapi dipisah', 'Vitamin C pagi, retinol malam'], 'aha_bha|vitamin_c': ['Hati-hati', 'Pakai di waktu berbeda agar tidak iritasi'], 'aha_bha|peptida': ['Hati-hati', 'Beri jeda; asam bisa mengurangi kerja peptida'], 'niacinamide|vitamin_c': ['Aman', 'Boleh dipakai bergantian atau berlapis dengan produk yang pH-nya cocok'], 'niacinamide|retinol': ['Aman', 'Niacinamide membantu mengurangi iritasi retinol'], 'benzoyl|vitamin_c': ['Hati-hati', 'Pakai di waktu berbeda'] })",
+        "hasil": "input.a === input.b ? ['Pilih salah satu', 'Tidak perlu dua produk dengan bahan sama; cukup satu agar tidak berlebihan'] : (v.tabelKecocokan[v.kunci] || ['Umumnya aman', 'Tidak ada larangan khusus; tetap uji tempel dan kenalkan satu per satu'])"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.nama[input.a] + ' dan ' + v.nama[input.b] + ': ' + v.hasil[0]",
+    "teks": "'# Kecocokan bahan\\n\\n**' + v.nama[input.a] + '** + **' + v.nama[input.b] + '**\\n\\nHasil: **' + v.hasil[0] + '**\\n\\n' + v.hasil[1] + '\\n\\n_Saran umum. Kulit sensitif, hamil, atau sedang dalam perawatan dokter sebaiknya bertanya dulu ke dokter kulit._'",
+    "berkas": []
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Advice",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "a": "retinol",
+      "b": "aha_bha"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "Retinol dan AHA atau BHA: Jangan dipakai bersamaan",
+        "malam berbeda"
+      ]
+    }
+  },
+  "kemampuan": [
+    "periksa-kepatuhan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "bahan aktif",
+      "retinol",
+      "vitamin c",
+      "dipakai bersamaan",
+      "kecocokan"
+    ],
+    "data": [
+      "bahan pertama",
+      "bahan kedua"
+    ],
+    "gaya": "ramah, empatik, tenang, jangan menyalahkan pelanggan",
+    "contoh": {
+      "baik": "Mohon maaf atas keterlambatan; kami cek pesanan Anda dan kabari dalam 2 jam.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Jangan menjanjikan ganti rugi tanpa persetujuan."
+    ]
+  }
+}

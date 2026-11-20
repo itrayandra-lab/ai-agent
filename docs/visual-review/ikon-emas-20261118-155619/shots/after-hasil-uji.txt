@@ -1,0 +1,79 @@
+dark-390 nav imgs: {"n":0,"broken":[]}
+dark-390 nav items: []
+dark-390 menu dialog: []
+dark-390 browser view:  | localhost
+dark-390 office toolbar: []
+dark-390 dropdown: ERR TypeError: Cannot read properties of null (reading 'getBoundingClientRect')
+    at <anonymous>:1:61
+    at <anonymous>:1:354
+dark-820 nav imgs: {"n":0,"broken":[]}
+dark-820 nav items: []
+dark-820 more-list: []
+dark-820 office toolbar: []
+dark-820 dropdown: ERR TypeError: Cannot read properties of null (reading 'getBoundingClientRect')
+    at <anonymous>:1:61
+    at <anonymous>:1:354
+dark-1440 nav imgs: {"n":0,"broken":[]}
+dark-1440 nav items: []
+dark-1440 more-list: []
+dark-1440 office toolbar: []
+dark-1440 dropdown: ERR TypeError: Cannot read properties of null (reading 'getBoundingClientRect')
+    at <anonymous>:1:61
+    at <anonymous>:1:354
+light-390 nav imgs: {"n":0,"broken":[]}
+light-390 nav items: []
+light-390 menu dialog: []
+light-390 browser view:  | localhost
+light-390 office toolbar: []
+light-390 dropdown: ERR TypeError: Cannot read properties of null (reading 'getBoundingClientRect')
+    at <anonymous>:1:61
+    at <anonymous>:1:354
+light-820 nav imgs: {"n":0,"broken":[]}
+light-820 nav items: []
+light-820 more-list: []
+light-820 office toolbar: []
+light-820 dropdown: ERR TypeError: Cannot read properties of null (reading 'getBoundingClientRect')
+    at <anonymous>:1:61
+    at <anonymous>:1:354
+light-1440 nav imgs: {"n":0,"broken":[]}
+light-1440 nav items: []
+light-1440 more-list: []
+light-1440 office toolbar: []
+light-1440 dropdown: ERR TypeError: Cannot read properties of null (reading 'getBoundingClientRect')
+    at <anonymous>:1:61
+    at <anonymous>:1:354
+aksi labels: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"toggleLabels clicked"}
+aksi visual: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:53"}
+aksi sound: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:55"}
+aksi apps: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:55"}
+aksi me: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:56"}
+aksi info: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'classList')\n    at <anonymous>:1:57"}
+aksi hint: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'classList')\n    at <anonymous>:1:63"}
+aksi tele: {"menuClosed":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:36","probe":"ERR TypeError: Cannot read properties of null (reading 'hidden')\n    at <anonymous>:1:55"}
+play0: ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+play->on (klik pada gambar): ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+exit by button: ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+play again: ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+exit by Esc: ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+play 3rd: ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+exit by Esc (synthetic): ERR TypeError: Cannot read properties of null (reading 'textContent')
+    at <anonymous>:1:88
+    at <anonymous>:1:334
+fullscreen: TypeError: Cannot read properties of null (reading 'click')
+setelah navigasi: {"n":0}
+FOKUS keyboard: ERR TypeError: Cannot read properties of null (reading 'focus')
+    at <anonymous>:1:70
+    at <anonymous>:1:151
+ERRORS: ["NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=0 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=0 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=0 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=0 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=0 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=light&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_CONNECTION_REFUSED","NETFAIL http://localhost:4511/?t=dark&c=1 net::ERR_ABORTED"]

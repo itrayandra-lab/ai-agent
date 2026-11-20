@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "mkt-olivia",
+  "division": "mkt",
+  "employeeId": "olivia",
+  "title": "Brand Manager — Ray Beauty",
+  "version": 1,
+  "name": "Perencana peluncuran produk baru",
+  "ringkas": "Susun jadwal mundur dari hari peluncuran (kemasan, konten, penyebaran ke kreator, pesan awal, evaluasi) sesuai besar peluncuran.",
+  "kataKunci": [
+    "peluncuran",
+    "go to market",
+    "produk baru",
+    "jadwal rilis",
+    "launch"
+  ],
+  "inputs": [
+    {
+      "key": "produk",
+      "type": "text",
+      "label": "Nama produk baru",
+      "required": true,
+      "contoh": "Serum Cerah Ray"
+    },
+    {
+      "key": "rilis",
+      "type": "date",
+      "label": "Tanggal peluncuran",
+      "required": true,
+      "contoh": "2027-01-15"
+    },
+    {
+      "key": "skala",
+      "type": "choice",
+      "label": "Besar peluncuran",
+      "required": true,
+      "default": "sedang",
+      "choices": [
+        {
+          "v": "kecil",
+          "t": "Kecil (hanya online)"
+        },
+        {
+          "v": "sedang",
+          "t": "Sedang"
+        },
+        {
+          "v": "besar",
+          "t": "Besar (dengan acara)"
+        }
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "s1",
+      "use": "hitung",
+      "label": "Susun jadwal mundur",
+      "set": {
+        "semua": "[[-60, 'Finalkan klaim dan kemasan bersama peneliti dan bagian hukum', 'Brand dan R&D', 'sedang'], [-45, 'Siapkan foto, video, dan naskah konten', 'Brand dan Konten', 'sedang'], [-30, 'Kirim contoh produk ke kreator dan media', 'Kreator dan PR', 'semua'], [-21, 'Pasang halaman produk dan daftar tunggu', 'Digital', 'sedang'], [-14, 'Buka pesan awal (pre-order)', 'Penjualan', 'semua'], [-7, 'Gladi resik acara dan cek stok', 'Brand dan Operasi', 'besar'], [0, 'Hari peluncuran: unggahan serentak dan iklan mulai', 'Semua tim', 'semua'], [7, 'Cek penjualan dan umpan balik minggu pertama', 'Brand', 'semua'], [30, 'Evaluasi hasil dan putuskan langkah lanjut', 'Brand', 'semua']]",
+        "langkah": "v.semua.filter((s) => s[3] === 'semua' || (s[3] === 'sedang' && input.skala !== 'kecil') || (s[3] === 'besar' && input.skala === 'besar')).map((s) => ({ tanggal: new Date(Date.parse(input.rilis) + s[0] * 864e5).toISOString().slice(0, 10), hari: s[0], tugas: s[1], pemilik: s[2] }))"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "v.langkah.length + ' langkah peluncuran ' + input.produk + ', mulai ' + v.langkah[0].tanggal + ' sampai ' + v.langkah[v.langkah.length - 1].tanggal",
+    "teks": "'# Rencana peluncuran: ' + input.produk + '\\n\\nPeluncuran ' + tgl(input.rilis) + ' (skala ' + input.skala + ')\\n\\n' + tabel(['Tanggal', 'Hari', 'Tugas', 'Pemilik'], v.langkah.map((l) => [l.tanggal, l.hari === 0 ? 'H' : (l.hari < 0 ? 'H' + l.hari : 'H+' + l.hari), l.tugas, l.pemilik]))",
+    "berkas": [
+      {
+        "jenis": "csv",
+        "nama": "'rencana-peluncuran-' + input.produk",
+        "isi": "csv([['Tanggal', 'Hari', 'Tugas', 'Pemilik', 'Selesai']].concat(v.langkah.map((l) => [l.tanggal, l.hari, l.tugas, l.pemilik, ''])))"
+      }
+    ]
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Brand",
+    "simpan": true
+  },
+  "sample": {
+    "input": {
+      "produk": "Serum Cerah Ray",
+      "rilis": "2027-01-15",
+      "skala": "sedang"
+    },
+    "expect": {
+      "berkas": 1,
+      "mengandung": [
+        "8 langkah peluncuran",
+        "2026-11-16",
+        "2027-02-14"
+      ]
+    }
+  },
+  "kemampuan": [
+    "susun-rencana-pemasaran"
+  ],
+  "keahlian": {
+    "istilah": [
+      "peluncuran",
+      "go to market",
+      "produk baru",
+      "jadwal rilis",
+      "launch"
+    ],
+    "data": [
+      "nama produk baru",
+      "tanggal peluncuran",
+      "besar peluncuran"
+    ],
+    "gaya": "hangat dan kreatif, jelas manfaat bagi pembeli",
+    "contoh": {
+      "baik": "Buka dengan keluhan kulit kusam, lalu tunjukkan cara pakai tiga langkah.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Tanpa janji berlebihan atau klaim medis."
+    ]
+  }
+}

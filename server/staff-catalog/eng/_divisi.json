@@ -1,0 +1,20 @@
+{
+  "id": "eng",
+  "nama": "Product & Engineering",
+  "misi": "Merancang, membangun, dan merilis produk yang andal dan aman.",
+  "manajer": {
+    "id": "nara",
+    "nama": "Nara",
+    "jabatan": "CTO"
+  },
+  "staf": [
+    "eng-fajar",
+    "eng-arif",
+    "eng-tania",
+    "eng-gilang",
+    "eng-naufal",
+    "eng-lukas",
+    "eng-ardi"
+  ],
+  "catatan": "Isi rintisan staf divisi ini. Boleh menambah staf tambahan (kunci baru \"<divisi>-<karyawan>-<topik>\") untuk pekerjaan spesifik, ditugaskan ke karakter yang paling cocok."
+}

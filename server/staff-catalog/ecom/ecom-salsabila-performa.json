@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "status": "siap",
+  "key": "ecom-salsabila-performa",
+  "division": "ecom",
+  "employeeId": "salsabila",
+  "title": "TikTok Shop & Live Commerce Specialist",
+  "version": 1,
+  "name": "Penganalisis hasil siaran langsung",
+  "ringkas": "Hitung penonton yang bertahan, yang memasukkan ke keranjang, yang membeli, dan untung siaran, lalu beri catatan perbaikan.",
+  "kataKunci": [
+    "performa live",
+    "penonton",
+    "konversi",
+    "evaluasi live",
+    "omzet live"
+  ],
+  "inputs": [
+    {
+      "key": "durasi",
+      "type": "number",
+      "label": "Lama siaran (menit)",
+      "required": true,
+      "contoh": "90"
+    },
+    {
+      "key": "puncak",
+      "type": "number",
+      "label": "Penonton terbanyak sekaligus",
+      "required": true,
+      "contoh": "350"
+    },
+    {
+      "key": "rata",
+      "type": "number",
+      "label": "Rata-rata penonton",
+      "required": true,
+      "contoh": "180"
+    },
+    {
+      "key": "masuk",
+      "type": "number",
+      "label": "Total orang yang masuk siaran",
+      "required": true,
+      "contoh": "2400"
+    },
+    {
+      "key": "keranjang",
+      "type": "number",
+      "label": "Yang memasukkan ke keranjang",
+      "required": true,
+      "contoh": "120"
+    },
+    {
+      "key": "pesanan",
+      "type": "number",
+      "label": "Jumlah pesanan",
+      "required": true,
+      "contoh": "45"
+    },
+    {
+      "key": "omzet",
+      "type": "number",
+      "label": "Omzet (Rp)",
+      "required": true,
+      "contoh": "6750000"
+    },
+    {
+      "key": "biaya",
+      "type": "number",
+      "label": "Biaya siaran: iklan, hadiah, tim (Rp)",
+      "required": true,
+      "contoh": "1500000"
+    }
+  ],
+  "steps": [
+    {
+      "id": "hitung",
+      "use": "hitung",
+      "label": "Hitung hasil",
+      "set": {
+        "bertahan": "num(input.puncak) ? Math.round(num(input.rata) / num(input.puncak) * 1000) / 10 : 0",
+        "keranjangPct": "num(input.masuk) ? Math.round(num(input.keranjang) / num(input.masuk) * 1000) / 10 : 0",
+        "beliPct": "num(input.masuk) ? Math.round(num(input.pesanan) / num(input.masuk) * 1000) / 10 : 0",
+        "aov": "num(input.pesanan) ? Math.round(num(input.omzet) / num(input.pesanan)) : 0",
+        "roas": "num(input.biaya) ? Math.round(num(input.omzet) / num(input.biaya) * 100) / 100 : 0",
+        "perMenit": "num(input.durasi) ? Math.round(num(input.omzet) / num(input.durasi)) : 0",
+        "catatan": "[v.bertahan < 40 ? 'Penonton cepat pergi: perbaiki pembuka dan beri alasan bertahan (kuis atau hadiah).' : 'Penonton cukup bertahan.', v.keranjangPct < 4 ? 'Sedikit yang memasukkan keranjang: tonjolkan harga dan penawaran kilat.' : 'Minat ke keranjang baik.', num(input.keranjang) && num(input.pesanan) / num(input.keranjang) < 0.3 ? 'Banyak keranjang tidak jadi dibeli: ingatkan batas waktu dan mudahkan pembayaran.' : 'Keranjang banyak yang jadi pesanan.']"
+      }
+    }
+  ],
+  "output": {
+    "ringkas": "'Omzet ' + rp(input.omzet) + ', balik modal ' + v.roas + ' kali, ' + v.beliPct + '% penonton membeli'",
+    "teks": "'# Hasil siaran\\n\\n' + tabel(['Ukuran', 'Hasil'], [['Penonton bertahan', v.bertahan + '%'], ['Masuk keranjang', v.keranjangPct + '%'], ['Membeli', v.beliPct + '%'], ['Rata-rata nilai pesanan', rp(v.aov)], ['Omzet per menit', rp(v.perMenit)], ['Balik modal', v.roas + ' kali']]) + '\\n\\n## Catatan\\n' + v.catatan.map((c) => '- ' + c).join('\\n')",
+    "data": "({ roas: v.roas, beliPct: v.beliPct })"
+  },
+  "sample": {
+    "input": {
+      "durasi": "90",
+      "puncak": "350",
+      "rata": "180",
+      "masuk": "4000",
+      "keranjang": "120",
+      "pesanan": "45",
+      "omzet": "6750000",
+      "biaya": "1500000"
+    },
+    "expect": {
+      "berkas": 0,
+      "mengandung": [
+        "balik modal 4.5 kali",
+        "1.1% penonton membeli",
+        "Rp 150.000",
+        "Sedikit yang memasukkan keranjang"
+      ]
+    }
+  },
+  "schedule": {
+    "allowed": false
+  },
+  "risk": "low",
+  "confirm": false,
+  "brain": {
+    "folder": "Report",
+    "simpan": true
+  },
+  "kemampuan": [
+    "analisis-kinerja-penjualan"
+  ],
+  "keahlian": {
+    "istilah": [
+      "performa live",
+      "penonton",
+      "konversi",
+      "evaluasi live",
+      "omzet live"
+    ],
+    "data": [
+      "lama siaran (menit)",
+      "penonton terbanyak sekaligus",
+      "rata-rata penonton",
+      "total orang yang masuk siaran"
+    ],
+    "gaya": "cepat dan praktis, bahasa pasar online, sebut angka",
+    "contoh": {
+      "baik": "Naikkan harga 3 persen pada produk laris; margin tetap aman setelah biaya platform.",
+      "buruk": "Jawaban umum tanpa angka atau langkah yang jelas."
+    },
+    "batasan": [
+      "Ikuti aturan platform marketplace."
+    ]
+  }
+}
