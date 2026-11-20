@@ -39,3 +39,12 @@ test('label halaman konsisten: Hasil Saya, tanpa "Hasil saya"', () => {
 test('loadState menolak respons galat server (T-06)', () => {
   assert.match(baca('public/js/core.js'), /if \(!r\.ok\) throw/);
 });
+
+test('catatan yang disebut jelas ("di catatanku") dicari di kode sebelum menjawab', async () => {
+  const src = baca('server/pemandu-chat.js');
+  assert.match(src, /PAKAI_CATATAN/);
+  const m = /const PAKAI_CATATAN = (\/.*\/[a-z]*);/.exec(src);
+  const re = new RegExp(m[1].slice(1, m[1].lastIndexOf('/')), 'i');
+  assert.ok(re.test('berapa harga latte di catatanku?')); assert.ok(re.test('cek catatan saya soal pajak'));
+  assert.ok(!re.test('buat catatan rapat besok')); assert.ok(!re.test('catatan kaki itu apa'));
+});

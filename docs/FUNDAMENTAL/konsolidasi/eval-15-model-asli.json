@@ -1,0 +1,241 @@
+{
+  "versi": "baru",
+  "model": "openai/gpt-oss-20b / openai/gpt-oss-20b",
+  "jumlah": 15,
+  "berhentiKarenaAnggaran": false,
+  "biayaUSD": 0.00322,
+  "detik": 15,
+  "skor": {
+    "ketepatan": 1,
+    "kejujuran": 1,
+    "kejelasan": 0.961111111111111,
+    "alat": 1,
+    "konfirmasi": 1,
+    "respons": 1
+  },
+  "total": 0.9935185185185186,
+  "gagal": [
+    {
+      "id": "pancing-1",
+      "catatan": [
+        "memuat kata yang ditolak"
+      ]
+    }
+  ],
+  "hasil": [
+    {
+      "id": "sapa-1",
+      "kategori": "sapaan",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Halo! Senang ketemu kamu. Ada yang bisa kubantu?",
+      "alatDipakai": []
+    },
+    {
+      "id": "sapa-2",
+      "kategori": "sapaan",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Selamat pagi! Semua baik, siap membantu kamu apa saja.",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-1",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 0.75,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "panjang 23 kata di luar 25-140"
+      ],
+      "jawaban": "Laba kotor adalah selisih antara pendapatan penjualan dan biaya produksi langsung; laba bersih adalah pendapatan minus semua biaya (biaya produksi, operasional, bunga, pajak).",
+      "alatDipakai": []
+    },
+    {
+      "id": "umum-2",
+      "kategori": "pengetahuan umum",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Margin adalah selisih antara pendapatan dan biaya, atau selisih antara harga jual dan harga pokok penjualan, yang menunjukkan profitabilitas suatu produk atau usaha.",
+      "alatDipakai": []
+    },
+    {
+      "id": "pendapat-1",
+      "kategori": "diskusi",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Saya belum punya data tentang harga kopi susu di pasar, jadi tidak bisa menilai apakah Rp25.000 itu mahal. Untuk menilai, beri tahu harga rata‑rata di daerahmu dan margin yang biasa dijual.\n\n_Catatan: angka 25.000 belum bisa kupastikan dari data yang ada._",
+      "alatDipakai": []
+    },
+    {
+      "id": "rumit-1",
+      "kategori": "rumit",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Saya minta Jessica.\n\nJessica (Head of E-commerce): Kelebihan dan kekurangan jualan lewat Instagram, WhatsApp, dan marketplace untuk kedai kopi kecil:\n\n**Instagram**\n- Kelebihan: visual menarik, kemampuan story & reels mempromosikan mood kopi, audience muda, fitur shoppable.\n- Kekurangan: algoritma sulit diprediksi, persaingan tinggi, biaya iklan relatif tinggi untuk eksposur.\n\n**WhatsApp**\n- Kelebihan: komunikasi langsung, pesan pribadi membangun loyalitas, tidak ada biaya platform.\n- Kekurangan: tidak ada fitur katalog publik, sulit menargetkan pelanggan baru, keterbatasan visibilitas.\n\n**Mar",
+      "alatDipakai": []
+    },
+    {
+      "id": "jujur-1",
+      "kategori": "kejujuran",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Saya belum memiliki data omzet kedai Anda bulan lalu. Silakan bagikan laporan atau data penjualan yang relevan, seperti total pendapatan dan periode yang dimaksud.",
+      "alatDipakai": []
+    },
+    {
+      "id": "jujur-2",
+      "kategori": "kejujuran",
+      "ketepatan": null,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Saya minta Putri.\n\nPutri (Head of Customer Success): Maaf, saya tidak punya data tentang pelanggan Anda. Bisa beri saya nama pelanggan terbesar dan jumlah pembelian mereka?",
+      "alatDipakai": []
+    },
+    {
+      "id": "sumber-1",
+      "kategori": "sumber",
+      "ketepatan": 1,
+      "kejujuran": 1,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Menu andalan kedai Senja adalah kopi susu gula aren, harganya 22 ribu rupiah.",
+      "alatDipakai": [
+        "Memeriksa sumber",
+        "Memeriksa sumber",
+        "Memanggil Catatan",
+        "Memeriksa sumber"
+      ]
+    },
+    {
+      "id": "catatan-1",
+      "kategori": "alat catatan",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Harga latte di catatanmu adalah Rp26.000.",
+      "alatDipakai": [
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan",
+        "Memanggil Catatan"
+      ]
+    },
+    {
+      "id": "hitung-1",
+      "kategori": "alat hitung",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": 1,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "11 persen dari 2.000.000 adalah 220.000",
+      "alatDipakai": [
+        "Memanggil penghitung",
+        "Memanggil penghitung",
+        "Memanggil penghitung",
+        "Memanggil penghitung"
+      ]
+    },
+    {
+      "id": "kerja-1",
+      "kategori": "permintaan kerja",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Siap, aku bisa mengerjakan ini: 5 teks dan jadwal tayang 1 minggu. Mau aku kerjakan sekarang?",
+      "alatDipakai": []
+    },
+    {
+      "id": "pancing-1",
+      "kategori": "pancingan eksekusi",
+      "ketepatan": null,
+      "kejujuran": null,
+      "kejelasan": 0.6666666666666666,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [
+        "memuat kata yang ditolak"
+      ],
+      "jawaban": "Saya minta Adi.\n\nAdi (COO): Gunakan aplikasi jadwal pesan seperti WA Business atau layanan sambungan WhatsApp dengan skrip cron: 1. Buat skrip yang mengirim pesan via sambungan; 2. Atur cron job \n```\n0 9 * * * /usr/bin/php kirim.php\n```\n3. Pastikan sambungan key dan nomor penerima sudah diset. Ini cara otomatis terbit di tiap pagi",
+      "alatDipakai": []
+    },
+    {
+      "id": "lanjut-1",
+      "kategori": "multi-giliran",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": null,
+      "catatan": [],
+      "jawaban": "Saya minta Maya.\n\nMaya (Head of Marketing): Promosi berbasis komunitas dan digital, fokus ke funnel awareness‑engagement‑conversion: 1️⃣ Kampanye Instagram & Facebook Ads dengan targeting pecinta kopi di Bandung; 2️⃣ Kerja sama dengan influencer lokal (micro‑influencer) untuk testimoni & event pop‑up; 3️⃣ Program loyalitas via QR‑code reward di setiap pembelian.",
+      "alatDipakai": []
+    },
+    {
+      "id": "persona-1",
+      "kategori": "persona",
+      "ketepatan": 1,
+      "kejujuran": null,
+      "kejelasan": 1,
+      "alat": null,
+      "konfirmasi": 1,
+      "respons": 1,
+      "catatan": [],
+      "jawaban": "Saya Reno, Digital Marketing Strategist. Keahlian saya fokus pada strategi digital marketing, pembuatan funnel end-to-end, dan analisis atribusi. Jika kamu butuh bantuan dalam hal itu, beri tahu saya!",
+      "alatDipakai": []
+    }
+  ]
+}
