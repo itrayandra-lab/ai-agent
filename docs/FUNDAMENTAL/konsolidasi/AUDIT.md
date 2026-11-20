@@ -40,3 +40,10 @@ NYATA 29 · SEBAGIAN 12 · SUDAH BERES 0 · TAK TERVERIFIKASI 6 (rinci di `NILAI
 
 ## 4. Bukti setara CSS
 Rekam awal 2 kali (derau: tinggi panel Obrolan/lebar baris ruangan berubah acak antar-rekaman, ±2–30 elemen dari ±52.000) lalu rekam setelah penggabungan: tema gelap 16 dan 82 beda (di keadaan berbeda tiap kali = derau, bukan selisih tetap), tema terang 57 (derau yang sama). Memakai posisi "kemunculan pertama" (posisi "terakhir" menghasilkan 84 beda tetap di dock 820 px, ditolak).
+
+## 5. Penutup konsolidasi (status akhir)
+- **Tahap 3 sisanya diputuskan TIDAK dikerjakan, dengan alasan:** (a) satu popup dan satu komposer sudah dijaga `test/ui-tata-letak.test.js` pada 5 ukuran (hijau) dan `ui-obrolan-sederhana.test.js`; (b) `#admin-chat` sudah dialihkan ke `#pesan` lewat `LEGACY` (views.js); (c) UI chat lama sudah dihapus sesi lain, memulihkannya untuk `#pesan` berarti menulis ulang tanpa mata Owner; (d) selektor ganda lintas app/glass/identity tak tercakup alat snapshot (hanya UI Kantor) dan `!important` tak bisa dibuang aman (percobaan: 913 elemen-keadaan berubah). Dicatat sebagai sisa di PROGRES.md.
+- **Tahap 4:** `eval-15-model-asli.json` (±0,003 USD, 13/15 lolos rubrik, skor 0,99); satu perbaikan logika (pencarian catatan di kode).
+- **Tahap 5:** `UKUR.md` (beban muat tidak berubah berarti).
+- **Tahap 6:** `docs/visual-review/konsolidasi/` (9 halaman × gelap/terang desktop + gelap HP, `scripts/tangkap-halaman.mjs`); hanya diperiksa sekilas dua gambar (Kantor, Pesan), sisanya belum dilihat manusia.
+- **Terlihat di tangkapan tapi belum diperbaiki:** agen koordinator bernama "Aria" di data sementara label menyebut "aray" (T-18); KPI "0 AI" di kanan bawah.

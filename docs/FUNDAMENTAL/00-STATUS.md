@@ -56,3 +56,6 @@ aray menjadi pintu bawaan Obrolan (menjawab sendiri atau "Saya minta Reno." lalu
 
 ## Konsolidasi menyeluruh (2026-11-20)
 Audit berbukti (`scripts/inventaris.mjs`), 12 peneruskan yatim diarsipkan ke `_arsip-kode/`, `office-layout.css` dilebur dari v4..v12 (dibuktikan setara dengan `scripts/snapshot-gaya.mjs`), 7 temuan peta halaman diperbaiki, tes kontrak `test/konsolidasi.test.js`. Rincian dan yang belum: `docs/FUNDAMENTAL/konsolidasi/AUDIT.md`, `UKUR.md`.
+
+### Penutup konsolidasi (2026-11-20)
+Suite penuh 494 lolos/0 gagal, mascot 109/0. Evaluasi model asli 13/15 (skor 0,99), beban muat tidak berubah berarti (`konsolidasi/UKUR.md`), tangkapan layar di `docs/visual-review/konsolidasi/`. Sisa dan keputusan: `konsolidasi/AUDIT.md` §5, `PROGRES.md`.

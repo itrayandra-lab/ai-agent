@@ -6,7 +6,7 @@ Alat: `scripts/inventaris.mjs` (ukuran) dan `scripts/ukur-konsolidasi.mjs` (Chro
 |---|---|---|
 | CSS total (byte) | 262.701 | ~259.700 (office-layout.css 43.574 → 40.539) |
 | JS klien (byte) | 1.193.229 | 1.193.523 (+ perbaikan T-06/T-08/T-09/T-11/T-22/T-45) |
-| JS server (byte) | 1.956.316 | ~1.954.400 (12 peneruskan yatim diarsipkan; 107 berkas dari 119) |
+| JS server (byte) | 1.956.316 | 1.955.189 (12 peneruskan yatim diarsipkan; 107 berkas dari 119) |
 | Permintaan saat muat (median) | 144 | 144 |
 | Byte terkirim (KB, median) | 12.312 | 12.314 |
 | Dock siap (ms, median) | 1.188 | 1.200 |
